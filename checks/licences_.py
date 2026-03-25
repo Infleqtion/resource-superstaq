@@ -21,4 +21,3 @@ import checks_superstaq as checks
 
 if __name__ == "__main__":
     sys.exit(checks.licenses.run(*sys.argv[1:]))
- 
