@@ -163,5 +163,7 @@ skip_covered = true
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "@overload"]
 
 [tool.coverage.run]
-include = ["./tests/*.py", "./resource_estimation/*.py", "scripts/*.py"]
+include = ["./*"]
+patch=["subprocess"]
+parallel=true
 concurrency = ["thread"]
