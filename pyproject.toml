@@ -173,9 +173,10 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "@overload"]
 
 [tool.coverage.run]
 include = ["./*"]
+patch=["subprocess"]
+parallel=true
 concurrency = ["thread"]
-parallel = true
-patch = ["subprocess"]
+
 
 [tool.licensepy]
 license_header_template = """Copyright {year} {licensee}
