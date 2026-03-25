@@ -1,0 +1,7 @@
+pygridsynth>=1.2.0
+checks-superstaq~=0.5.53
+cirq-superstaq~=0.5.53
+magic-state-cultivation @ git+https://git@github.com/Infleqtion/magic-state-cultivation.git@toberoi/add_fold_traversal
+openfermion>=1.7.1
+qiskit-superstaq~=0.5.53
+sorger_shor @ git+https://github.com/vtomole/sorger_shor.git
