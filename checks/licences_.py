@@ -15,11 +15,10 @@
 
 from __future__ import annotations
 
-
-import os
 import sys
 
 import checks_superstaq as checks
 
 if __name__ == "__main__":
-    sys.exit(checks.format_.run(*sys.argv[1:]))
+    sys.exit(checks.licenses.run(*sys.argv[1:]))
+ 
