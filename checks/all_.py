@@ -12,9 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import annotations
+
 import sys
 
 import checks_superstaq as checks
 
 if __name__ == "__main__":
-    sys.exit(checks.coverage_.run(*sys.argv[1:]))
+    args = [*sys.argv[1:], "--licensepy"]
+
+    if sys.version_info.minor >= 12:
+        args += ["--sysmon"]
+    sys.exit(checks.all_.run(*args))
