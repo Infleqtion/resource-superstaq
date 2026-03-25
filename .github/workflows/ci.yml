@@ -1,0 +1,53 @@
+name: Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review] # These are the defaults, plus ready_for_review
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  format:
+    name: Format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          check-latest: true
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install checks-superstaq
+      - name: Ruff format
+        run: |
+          python checks/format_.py
+  coverage:
+    name: Run coverage checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          check-latest: true
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Pytest and Coverage check (3.11)
+        run: |
+          python checks/coverage_.py
+
+      - name: Report coverage
+        run: |
+          coverage report
