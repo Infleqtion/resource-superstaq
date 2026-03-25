@@ -48,6 +48,3 @@ jobs:
         run: |
           python checks/coverage_.py
 
-      - name: Report coverage
-        run: |
-          coverage report
