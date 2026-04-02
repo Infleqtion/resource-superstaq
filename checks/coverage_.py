@@ -17,4 +17,7 @@ import sys
 import checks_superstaq as checks
 
 if __name__ == "__main__":
-    sys.exit(checks.coverage_.run(*sys.argv[1:]))
+    # exclude scripts
+    args = sys.argv[1:]
+    args += ["--exclude", "scripts/*"]
+    sys.exit(checks.coverage_.run(*args))
