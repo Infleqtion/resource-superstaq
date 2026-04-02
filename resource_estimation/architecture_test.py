@@ -83,7 +83,7 @@ def test_movement_gate_costs(d):
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
 
     # Check Cultivate
-    
+
     op = lsp.Cultivate(pi / 4).on(qubit_a)
     cost = arc.gate_cost(op)
     if d < 7:
@@ -187,7 +187,7 @@ def test_movement_gate_costs(d):
 @pytest.mark.parametrize("d", (3, 5, 7))
 def test_lattice_gate_costs(d):
     # Test that gate costs are exact for lattice architectures
-    
+
     arc = arch.DefaultLattice(d=d)
     qubit_a, qubit_b, qubit_c = (
         cirq.GridQubit(0, 0),
@@ -265,7 +265,7 @@ def test_lattice_gate_costs(d):
     assert cost == expected_cost
 
     # Check Cultivate
-    
+
     op = lsp.Cultivate(pi / 4).on(qubit_a)
     cost = arc.gate_cost(op)
     if d < 7:
