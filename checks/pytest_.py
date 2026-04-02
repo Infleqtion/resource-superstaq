@@ -22,5 +22,5 @@ import checks_superstaq as checks
 if __name__ == "__main__":
     args = sys.argv[1:]
     # notebook check
-    args += ["--notebook", "hello_estimate.ipynb"]
+    args += ["--notebook", "notebooks/hello_estimate.ipynb"]
     sys.exit(checks.pytest_.run(*args))
