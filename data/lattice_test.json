@@ -1,0 +1,11 @@
+{
+    "movement": false,
+    "idling": true,
+    "post_op_correction": true,
+    "d": 7,
+    "cultivation_repetition": 1,
+    "syndrome_rounds": 1,
+    "gate_times": {
+        "CZ": 99
+    }
+}
