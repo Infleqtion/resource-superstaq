@@ -287,7 +287,7 @@ class Architecture(abc.ABC):
     # In the future, they could be the counts of a NISQ compiler on a single Primitive
     # Some are cached because they can be expensive to call repeatedly
 
-    # HOT TAKE: Everybody handles t in their own way
+    # Since there are many ways to generate T states, each Architecture subclass must specify their particular method
     @cached_property
     def _cultivate_t_cost(self):  # pragma: no cover
         raise NotImplementedError
