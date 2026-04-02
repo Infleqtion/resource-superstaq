@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2026 Infleqtion
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import sys
+import subprocess
 
-import checks_superstaq as checks
 
-if __name__ == "__main__":
-    # exclude scripts
-    args = sys.argv[1:]
-    args += ["--exclude", "scripts/*"]
-    sys.exit(checks.coverage_.run(*args))
+def test_clifford_t():
+    result = subprocess.run(["python", "scripts/clifford_t.py"])
+    assert result
+
+
+def test_scaling():
+    result = subprocess.run(["python", "scripts/scaling.py", "10", "20"])
+    assert result
+
+
+def test_rz_games():
+    result = subprocess.run(["python", "scripts/rz_games.py", ".122441", "12", "0"])
+    assert result

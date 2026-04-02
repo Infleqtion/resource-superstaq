@@ -25,13 +25,71 @@ jobs:
       - name: Ruff format
         run: |
           python checks/format_.py
+
+  license:
+    name: License check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          check-latest: true
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install checks-superstaq
+      - name: License check
+        run: |
+          python checks/licenses.py
+  
+  requirements:
+    name: Requirements check
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          check-latest: true
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install checks-superstaq
+          pip install -r requirements.txt
+      - name: Requirements check
+        run: |
+          python checks/requirements.py
+          
+  pytest:
+    name: Pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          check-latest: true
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install checks-superstaq
+          pip install -r requirements.txt
+      - name: Run pytest
+        run: |
+          python checks/pytest_.py
+          
   coverage:
     name: Run coverage checks
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -47,4 +105,26 @@ jobs:
       - name: Pytest and Coverage check (3.11)
         run: |
           python checks/coverage_.py
+  
+  docs:
+    name: Build docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          check-latest: true
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install checks-superstaq
+          pip install -r requirements.txt
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+      - name: Build docs
+        run: |
+          python checks/build_docs.py
 

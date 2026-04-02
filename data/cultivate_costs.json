@@ -1,0 +1,890 @@
+{
+    "3": {
+        "cnot": {
+            "serial": {
+                "ResetChannel": 215,
+                "PhasedXZGate": 215,
+                "CZ": 624,
+                "MeasurementGate": 215
+            },
+            "parallel": {
+                "ResetChannel": 8,
+                "PhasedXZGate": 16,
+                "CZ": 32,
+                "MeasurementGate": 8
+            }
+        },
+        "memory_d_rounds": {
+            "serial": {
+                "ResetChannel": 33,
+                "PhasedXZGate": 24,
+                "CZ": 72,
+                "MeasurementGate": 33
+            },
+            "parallel": {
+                "ResetChannel": 3,
+                "PhasedXZGate": 6,
+                "CZ": 12,
+                "MeasurementGate": 3
+            }
+        },
+        "memory_1_round": {
+            "serial": {
+                "ResetChannel": 17,
+                "PhasedXZGate": 8,
+                "CZ": 24,
+                "MeasurementGate": 17
+            },
+            "parallel": {
+                "ResetChannel": 1,
+                "PhasedXZGate": 2,
+                "CZ": 4,
+                "MeasurementGate": 1
+            }
+        },
+        "cultivate": {
+            "gidney": {
+                "serial": {
+                    "ResetChannel": 528,
+                    "PhasedXZGate": 535,
+                    "CZ": 1749,
+                    "MeasurementGate": 472
+                },
+                "parallel": {
+                    "ResetChannel": 13,
+                    "PhasedXZGate": 28,
+                    "CZ": 101,
+                    "MeasurementGate": 12
+                }
+            },
+            "yale": {
+                "serial": {
+                    "ResetChannel": 275,
+                    "PhasedXZGate": 258,
+                    "CZ": 819,
+                    "MeasurementGate": 239
+                },
+                "parallel": {
+                    "ResetChannel": 12,
+                    "PhasedXZGate": 23,
+                    "CZ": 47,
+                    "MeasurementGate": 10
+                }
+            }
+        }
+    },
+    "5": {
+        "cnot": {
+            "serial": {
+                "ResetChannel": 911,
+                "PhasedXZGate": 911,
+                "CZ": 3000,
+                "MeasurementGate": 911
+            },
+            "parallel": {
+                "ResetChannel": 12,
+                "PhasedXZGate": 24,
+                "CZ": 48,
+                "MeasurementGate": 12
+            }
+        },
+        "memory_d_rounds": {
+            "serial": {
+                "ResetChannel": 145,
+                "PhasedXZGate": 120,
+                "CZ": 400,
+                "MeasurementGate": 145
+            },
+            "parallel": {
+                "ResetChannel": 5,
+                "PhasedXZGate": 10,
+                "CZ": 20,
+                "MeasurementGate": 5
+            }
+        },
+        "memory_1_round": {
+            "serial": {
+                "ResetChannel": 49,
+                "PhasedXZGate": 24,
+                "CZ": 80,
+                "MeasurementGate": 49
+            },
+            "parallel": {
+                "ResetChannel": 1,
+                "PhasedXZGate": 2,
+                "CZ": 4,
+                "MeasurementGate": 1
+            }
+        },
+        "cultivate": {
+            "gidney": {
+                "serial": {
+                    "ResetChannel": 528,
+                    "PhasedXZGate": 535,
+                    "CZ": 1749,
+                    "MeasurementGate": 472
+                },
+                "parallel": {
+                    "ResetChannel": 13,
+                    "PhasedXZGate": 28,
+                    "CZ": 101,
+                    "MeasurementGate": 12
+                }
+            },
+            "yale": {
+                "serial": {
+                    "ResetChannel": 275,
+                    "PhasedXZGate": 258,
+                    "CZ": 819,
+                    "MeasurementGate": 239
+                },
+                "parallel": {
+                    "ResetChannel": 12,
+                    "PhasedXZGate": 23,
+                    "CZ": 47,
+                    "MeasurementGate": 10
+                }
+            }
+        }
+    },
+    "7": {
+        "cnot": {
+            "serial": {
+                "ResetChannel": 2383,
+                "PhasedXZGate": 2383,
+                "CZ": 8288,
+                "MeasurementGate": 2383
+            },
+            "parallel": {
+                "ResetChannel": 16,
+                "PhasedXZGate": 32,
+                "CZ": 64,
+                "MeasurementGate": 16
+            }
+        },
+        "memory_d_rounds": {
+            "serial": {
+                "ResetChannel": 385,
+                "PhasedXZGate": 336,
+                "CZ": 1176,
+                "MeasurementGate": 385
+            },
+            "parallel": {
+                "ResetChannel": 7,
+                "PhasedXZGate": 14,
+                "CZ": 28,
+                "MeasurementGate": 7
+            }
+        },
+        "memory_1_round": {
+            "serial": {
+                "ResetChannel": 97,
+                "PhasedXZGate": 48,
+                "CZ": 168,
+                "MeasurementGate": 97
+            },
+            "parallel": {
+                "ResetChannel": 1,
+                "PhasedXZGate": 2,
+                "CZ": 4,
+                "MeasurementGate": 1
+            }
+        },
+        "cultivate": {
+            "gidney": {
+                "serial": {
+                    "ResetChannel": 528,
+                    "PhasedXZGate": 535,
+                    "CZ": 1749,
+                    "MeasurementGate": 472
+                },
+                "parallel": {
+                    "ResetChannel": 13,
+                    "PhasedXZGate": 28,
+                    "CZ": 101,
+                    "MeasurementGate": 12
+                }
+            },
+            "yale": {
+                "serial": {
+                    "ResetChannel": 275,
+                    "PhasedXZGate": 258,
+                    "CZ": 819,
+                    "MeasurementGate": 239
+                },
+                "parallel": {
+                    "ResetChannel": 12,
+                    "PhasedXZGate": 23,
+                    "CZ": 47,
+                    "MeasurementGate": 10
+                }
+            }
+        }
+    },
+    "9": {
+        "cnot": {
+            "serial": {
+                "ResetChannel": 4919,
+                "PhasedXZGate": 4919,
+                "CZ": 17640,
+                "MeasurementGate": 4919
+            },
+            "parallel": {
+                "ResetChannel": 20,
+                "PhasedXZGate": 40,
+                "CZ": 80,
+                "MeasurementGate": 20
+            }
+        },
+        "memory_d_rounds": {
+            "serial": {
+                "ResetChannel": 801,
+                "PhasedXZGate": 720,
+                "CZ": 2592,
+                "MeasurementGate": 801
+            },
+            "parallel": {
+                "ResetChannel": 9,
+                "PhasedXZGate": 18,
+                "CZ": 36,
+                "MeasurementGate": 9
+            }
+        },
+        "memory_1_round": {
+            "serial": {
+                "ResetChannel": 161,
+                "PhasedXZGate": 80,
+                "CZ": 288,
+                "MeasurementGate": 161
+            },
+            "parallel": {
+                "ResetChannel": 1,
+                "PhasedXZGate": 2,
+                "CZ": 4,
+                "MeasurementGate": 1
+            }
+        },
+        "cultivate": {
+            "gidney": {
+                "serial": {
+                    "ResetChannel": 1014,
+                    "PhasedXZGate": 1008,
+                    "CZ": 3439,
+                    "MeasurementGate": 926
+                },
+                "parallel": {
+                    "ResetChannel": 15,
+                    "PhasedXZGate": 32,
+                    "CZ": 117,
+                    "MeasurementGate": 14
+                }
+            },
+            "yale": {
+                "serial": {
+                    "ResetChannel": 435,
+                    "PhasedXZGate": 403,
+                    "CZ": 1299,
+                    "MeasurementGate": 371
+                },
+                "parallel": {
+                    "ResetChannel": 12,
+                    "PhasedXZGate": 23,
+                    "CZ": 47,
+                    "MeasurementGate": 10
+                }
+            }
+        }
+    },
+    "11": {
+        "cnot": {
+            "serial": {
+                "ResetChannel": 8807,
+                "PhasedXZGate": 8807,
+                "CZ": 32208,
+                "MeasurementGate": 8807
+            },
+            "parallel": {
+                "ResetChannel": 24,
+                "PhasedXZGate": 48,
+                "CZ": 96,
+                "MeasurementGate": 24
+            }
+        },
+        "memory_d_rounds": {
+            "serial": {
+                "ResetChannel": 1441,
+                "PhasedXZGate": 1320,
+                "CZ": 4840,
+                "MeasurementGate": 1441
+            },
+            "parallel": {
+                "ResetChannel": 11,
+                "PhasedXZGate": 22,
+                "CZ": 44,
+                "MeasurementGate": 11
+            }
+        },
+        "memory_1_round": {
+            "serial": {
+                "ResetChannel": 241,
+                "PhasedXZGate": 120,
+                "CZ": 440,
+                "MeasurementGate": 241
+            },
+            "parallel": {
+                "ResetChannel": 1,
+                "PhasedXZGate": 2,
+                "CZ": 4,
+                "MeasurementGate": 1
+            }
+        },
+        "cultivate": {
+            "gidney": {
+                "serial": {
+                    "ResetChannel": 1740,
+                    "PhasedXZGate": 1717,
+                    "CZ": 6025,
+                    "MeasurementGate": 1612
+                },
+                "parallel": {
+                    "ResetChannel": 17,
+                    "PhasedXZGate": 36,
+                    "CZ": 133,
+                    "MeasurementGate": 16
+                }
+            },
+            "yale": {
+                "serial": {
+                    "ResetChannel": 635,
+                    "PhasedXZGate": 584,
+                    "CZ": 1907,
+                    "MeasurementGate": 535
+                },
+                "parallel": {
+                    "ResetChannel": 12,
+                    "PhasedXZGate": 23,
+                    "CZ": 47,
+                    "MeasurementGate": 10
+                }
+            }
+        }
+    },
+    "13": {
+        "cnot": {
+            "serial": {
+                "ResetChannel": 14335,
+                "PhasedXZGate": 14335,
+                "CZ": 53144,
+                "MeasurementGate": 14335
+            },
+            "parallel": {
+                "ResetChannel": 28,
+                "PhasedXZGate": 56,
+                "CZ": 112,
+                "MeasurementGate": 28
+            }
+        },
+        "memory_d_rounds": {
+            "serial": {
+                "ResetChannel": 2353,
+                "PhasedXZGate": 2184,
+                "CZ": 8112,
+                "MeasurementGate": 2353
+            },
+            "parallel": {
+                "ResetChannel": 13,
+                "PhasedXZGate": 26,
+                "CZ": 52,
+                "MeasurementGate": 13
+            }
+        },
+        "memory_1_round": {
+            "serial": {
+                "ResetChannel": 337,
+                "PhasedXZGate": 168,
+                "CZ": 624,
+                "MeasurementGate": 337
+            },
+            "parallel": {
+                "ResetChannel": 1,
+                "PhasedXZGate": 2,
+                "CZ": 4,
+                "MeasurementGate": 1
+            }
+        },
+        "cultivate": {
+            "gidney": {
+                "serial": {
+                    "ResetChannel": 2754,
+                    "PhasedXZGate": 2710,
+                    "CZ": 9699,
+                    "MeasurementGate": 2578
+                },
+                "parallel": {
+                    "ResetChannel": 19,
+                    "PhasedXZGate": 40,
+                    "CZ": 149,
+                    "MeasurementGate": 18
+                }
+            },
+            "yale": {
+                "serial": {
+                    "ResetChannel": 875,
+                    "PhasedXZGate": 801,
+                    "CZ": 2643,
+                    "MeasurementGate": 731
+                },
+                "parallel": {
+                    "ResetChannel": 12,
+                    "PhasedXZGate": 23,
+                    "CZ": 47,
+                    "MeasurementGate": 10
+                }
+            }
+        }
+    },
+    "15": {
+        "cnot": {
+            "serial": {
+                "ResetChannel": 21791,
+                "PhasedXZGate": 21791,
+                "CZ": 81600,
+                "MeasurementGate": 21791
+            },
+            "parallel": {
+                "ResetChannel": 32,
+                "PhasedXZGate": 64,
+                "CZ": 128,
+                "MeasurementGate": 32
+            }
+        },
+        "memory_d_rounds": {
+            "serial": {
+                "ResetChannel": 3585,
+                "PhasedXZGate": 3360,
+                "CZ": 12600,
+                "MeasurementGate": 3585
+            },
+            "parallel": {
+                "ResetChannel": 15,
+                "PhasedXZGate": 30,
+                "CZ": 60,
+                "MeasurementGate": 15
+            }
+        },
+        "memory_1_round": {
+            "serial": {
+                "ResetChannel": 449,
+                "PhasedXZGate": 224,
+                "CZ": 840,
+                "MeasurementGate": 449
+            },
+            "parallel": {
+                "ResetChannel": 1,
+                "PhasedXZGate": 2,
+                "CZ": 4,
+                "MeasurementGate": 1
+            }
+        },
+        "cultivate": {
+            "gidney": {
+                "serial": {
+                    "ResetChannel": 4104,
+                    "PhasedXZGate": 4035,
+                    "CZ": 14653,
+                    "MeasurementGate": 3872
+                },
+                "parallel": {
+                    "ResetChannel": 21,
+                    "PhasedXZGate": 44,
+                    "CZ": 165,
+                    "MeasurementGate": 20
+                }
+            },
+            "yale": {
+                "serial": {
+                    "ResetChannel": 1155,
+                    "PhasedXZGate": 1054,
+                    "CZ": 3507,
+                    "MeasurementGate": 959
+                },
+                "parallel": {
+                    "ResetChannel": 12,
+                    "PhasedXZGate": 23,
+                    "CZ": 47,
+                    "MeasurementGate": 10
+                }
+            }
+        }
+    },
+    "17": {
+        "cnot": {
+            "serial": {
+                "ResetChannel": 31463,
+                "PhasedXZGate": 31463,
+                "CZ": 118728,
+                "MeasurementGate": 31463
+            },
+            "parallel": {
+                "ResetChannel": 36,
+                "PhasedXZGate": 72,
+                "CZ": 144,
+                "MeasurementGate": 36
+            }
+        },
+        "memory_d_rounds": {
+            "serial": {
+                "ResetChannel": 5185,
+                "PhasedXZGate": 4896,
+                "CZ": 18496,
+                "MeasurementGate": 5185
+            },
+            "parallel": {
+                "ResetChannel": 17,
+                "PhasedXZGate": 34,
+                "CZ": 68,
+                "MeasurementGate": 17
+            }
+        },
+        "memory_1_round": {
+            "serial": {
+                "ResetChannel": 577,
+                "PhasedXZGate": 288,
+                "CZ": 1088,
+                "MeasurementGate": 577
+            },
+            "parallel": {
+                "ResetChannel": 1,
+                "PhasedXZGate": 2,
+                "CZ": 4,
+                "MeasurementGate": 1
+            }
+        },
+        "cultivate": {
+            "gidney": {
+                "serial": {
+                    "ResetChannel": 5838,
+                    "PhasedXZGate": 5740,
+                    "CZ": 21079,
+                    "MeasurementGate": 5542
+                },
+                "parallel": {
+                    "ResetChannel": 23,
+                    "PhasedXZGate": 48,
+                    "CZ": 181,
+                    "MeasurementGate": 22
+                }
+            },
+            "yale": {
+                "serial": {
+                    "ResetChannel": 1475,
+                    "PhasedXZGate": 1343,
+                    "CZ": 4499,
+                    "MeasurementGate": 1219
+                },
+                "parallel": {
+                    "ResetChannel": 12,
+                    "PhasedXZGate": 23,
+                    "CZ": 47,
+                    "MeasurementGate": 10
+                }
+            }
+        }
+    },
+    "19": {
+        "cnot": {
+            "serial": {
+                "ResetChannel": 43639,
+                "PhasedXZGate": 43639,
+                "CZ": 165680,
+                "MeasurementGate": 43639
+            },
+            "parallel": {
+                "ResetChannel": 40,
+                "PhasedXZGate": 80,
+                "CZ": 160,
+                "MeasurementGate": 40
+            }
+        },
+        "memory_d_rounds": {
+            "serial": {
+                "ResetChannel": 7201,
+                "PhasedXZGate": 6840,
+                "CZ": 25992,
+                "MeasurementGate": 7201
+            },
+            "parallel": {
+                "ResetChannel": 19,
+                "PhasedXZGate": 38,
+                "CZ": 76,
+                "MeasurementGate": 19
+            }
+        },
+        "memory_1_round": {
+            "serial": {
+                "ResetChannel": 721,
+                "PhasedXZGate": 360,
+                "CZ": 1368,
+                "MeasurementGate": 721
+            },
+            "parallel": {
+                "ResetChannel": 1,
+                "PhasedXZGate": 2,
+                "CZ": 4,
+                "MeasurementGate": 1
+            }
+        },
+        "cultivate": {
+            "gidney": {
+                "serial": {
+                    "ResetChannel": 8004,
+                    "PhasedXZGate": 7873,
+                    "CZ": 29169,
+                    "MeasurementGate": 7636
+                },
+                "parallel": {
+                    "ResetChannel": 25,
+                    "PhasedXZGate": 52,
+                    "CZ": 197,
+                    "MeasurementGate": 24
+                }
+            },
+            "yale": {
+                "serial": {
+                    "ResetChannel": 1835,
+                    "PhasedXZGate": 1668,
+                    "CZ": 5619,
+                    "MeasurementGate": 1511
+                },
+                "parallel": {
+                    "ResetChannel": 12,
+                    "PhasedXZGate": 23,
+                    "CZ": 47,
+                    "MeasurementGate": 10
+                }
+            }
+        }
+    },
+    "21": {
+        "cnot": {
+            "serial": {
+                "ResetChannel": 58607,
+                "PhasedXZGate": 58607,
+                "CZ": 223608,
+                "MeasurementGate": 58607
+            },
+            "parallel": {
+                "ResetChannel": 44,
+                "PhasedXZGate": 88,
+                "CZ": 176,
+                "MeasurementGate": 44
+            }
+        },
+        "memory_d_rounds": {
+            "serial": {
+                "ResetChannel": 9681,
+                "PhasedXZGate": 9240,
+                "CZ": 35280,
+                "MeasurementGate": 9681
+            },
+            "parallel": {
+                "ResetChannel": 21,
+                "PhasedXZGate": 42,
+                "CZ": 84,
+                "MeasurementGate": 21
+            }
+        },
+        "memory_1_round": {
+            "serial": {
+                "ResetChannel": 881,
+                "PhasedXZGate": 440,
+                "CZ": 1680,
+                "MeasurementGate": 881
+            },
+            "parallel": {
+                "ResetChannel": 1,
+                "PhasedXZGate": 2,
+                "CZ": 4,
+                "MeasurementGate": 1
+            }
+        },
+        "cultivate": {
+            "gidney": {
+                "serial": {
+                    "ResetChannel": 10650,
+                    "PhasedXZGate": 10482,
+                    "CZ": 39115,
+                    "MeasurementGate": 10202
+                },
+                "parallel": {
+                    "ResetChannel": 27,
+                    "PhasedXZGate": 56,
+                    "CZ": 213,
+                    "MeasurementGate": 26
+                }
+            },
+            "yale": {
+                "serial": {
+                    "ResetChannel": 2235,
+                    "PhasedXZGate": 2029,
+                    "CZ": 6867,
+                    "MeasurementGate": 1835
+                },
+                "parallel": {
+                    "ResetChannel": 12,
+                    "PhasedXZGate": 23,
+                    "CZ": 47,
+                    "MeasurementGate": 10
+                }
+            }
+        }
+    },
+    "23": {
+        "cnot": {
+            "serial": {
+                "ResetChannel": 76655,
+                "PhasedXZGate": 76655,
+                "CZ": 293664,
+                "MeasurementGate": 76655
+            },
+            "parallel": {
+                "ResetChannel": 48,
+                "PhasedXZGate": 96,
+                "CZ": 192,
+                "MeasurementGate": 48
+            }
+        },
+        "memory_d_rounds": {
+            "serial": {
+                "ResetChannel": 12673,
+                "PhasedXZGate": 12144,
+                "CZ": 46552,
+                "MeasurementGate": 12673
+            },
+            "parallel": {
+                "ResetChannel": 23,
+                "PhasedXZGate": 46,
+                "CZ": 92,
+                "MeasurementGate": 23
+            }
+        },
+        "memory_1_round": {
+            "serial": {
+                "ResetChannel": 1057,
+                "PhasedXZGate": 528,
+                "CZ": 2024,
+                "MeasurementGate": 1057
+            },
+            "parallel": {
+                "ResetChannel": 1,
+                "PhasedXZGate": 2,
+                "CZ": 4,
+                "MeasurementGate": 1
+            }
+        },
+        "cultivate": {
+            "gidney": {
+                "serial": {
+                    "ResetChannel": 13824,
+                    "PhasedXZGate": 13615,
+                    "CZ": 51109,
+                    "MeasurementGate": 13288
+                },
+                "parallel": {
+                    "ResetChannel": 29,
+                    "PhasedXZGate": 60,
+                    "CZ": 229,
+                    "MeasurementGate": 28
+                }
+            },
+            "yale": {
+                "serial": {
+                    "ResetChannel": 2675,
+                    "PhasedXZGate": 2426,
+                    "CZ": 8243,
+                    "MeasurementGate": 2191
+                },
+                "parallel": {
+                    "ResetChannel": 12,
+                    "PhasedXZGate": 23,
+                    "CZ": 47,
+                    "MeasurementGate": 10
+                }
+            }
+        }
+    },
+    "25": {
+        "cnot": {
+            "serial": {
+                "ResetChannel": 98071,
+                "PhasedXZGate": 98071,
+                "CZ": 377000,
+                "MeasurementGate": 98071
+            },
+            "parallel": {
+                "ResetChannel": 52,
+                "PhasedXZGate": 104,
+                "CZ": 208,
+                "MeasurementGate": 52
+            }
+        },
+        "memory_d_rounds": {
+            "serial": {
+                "ResetChannel": 16225,
+                "PhasedXZGate": 15600,
+                "CZ": 60000,
+                "MeasurementGate": 16225
+            },
+            "parallel": {
+                "ResetChannel": 25,
+                "PhasedXZGate": 50,
+                "CZ": 100,
+                "MeasurementGate": 25
+            }
+        },
+        "memory_1_round": {
+            "serial": {
+                "ResetChannel": 1249,
+                "PhasedXZGate": 624,
+                "CZ": 2400,
+                "MeasurementGate": 1249
+            },
+            "parallel": {
+                "ResetChannel": 1,
+                "PhasedXZGate": 2,
+                "CZ": 4,
+                "MeasurementGate": 1
+            }
+        },
+        "cultivate": {
+            "gidney": {
+                "serial": {
+                    "ResetChannel": 17574,
+                    "PhasedXZGate": 17320,
+                    "CZ": 65343,
+                    "MeasurementGate": 16942
+                },
+                "parallel": {
+                    "ResetChannel": 31,
+                    "PhasedXZGate": 64,
+                    "CZ": 245,
+                    "MeasurementGate": 30
+                }
+            },
+            "yale": {
+                "serial": {
+                    "ResetChannel": 3155,
+                    "PhasedXZGate": 2859,
+                    "CZ": 9747,
+                    "MeasurementGate": 2579
+                },
+                "parallel": {
+                    "ResetChannel": 12,
+                    "PhasedXZGate": 23,
+                    "CZ": 47,
+                    "MeasurementGate": 10
+                }
+            }
+        }
+    }
+}

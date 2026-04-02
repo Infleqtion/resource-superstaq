@@ -12,12 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import annotations
+
 import sys
 
 import checks_superstaq as checks
 
 if __name__ == "__main__":
-    # exclude scripts
-    args = sys.argv[1:]
-    args += ["--exclude", "scripts/*"]
-    sys.exit(checks.coverage_.run(*args))
+    sys.exit(checks.licenses.run(*sys.argv[1:]))
