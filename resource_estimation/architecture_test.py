@@ -403,18 +403,11 @@ def test_against_cultiv(d):
     )
     circuit_cost = Counter(Estimator.serial_circuit_cost(low_level_circuit))
     assert circuit_cost[cirq.CZ] == official_cnot_resources[cirq.CZ]
-    # TODO: Get this last gate to agree
-    # TODO: Maybe also get Rz to agree
-    # assert circuit_cost[cirq.MeasurementGate] == official_cnot_resources[cirq.MeasurementGate]
 
 
 def test_movement_moment_costs(movement_architecture):
     # Test that all primitives have moment costs
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
-
-    # This test is useless, so it has been commented out
-    # op = lsp.Cultivate(pi / 4).on(cirq.GridQubit(0, 0))
-    # cost = movement_architecture.moment_cost(op)
 
     # Check Move
     op1, op2 = lsp.Move(zone="interact").on_each(qubit_a, qubit_b)

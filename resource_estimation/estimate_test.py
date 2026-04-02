@@ -77,8 +77,6 @@ def test_all_primitives(estimator):
     circuit += [cirq.X.on(q) for q in dummy_qubits]
     circuit += [cirq.H.on(q) for q in dummy_qubits]
     circuit += [cirq.MeasurementGate(9, key="terminal").on(*dummy_qubits)]
-    # Not sure why reset gates hate me...
-    # circuit += [cirq.ResetChannel(1).on(q) for q in dummy_qubits]
     circuit += [lsp.SyndromeExtract(1, 1).on(q) for q in dummy_qubits]
     circuit += [lsp.ErrorCorrect(1).on(q) for q in dummy_qubits]
     arc = estimator.arc

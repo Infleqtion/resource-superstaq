@@ -65,7 +65,6 @@ def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.G
     )  # Keeps partial total for different operations that can be done in parallel
     for instr in stim_circuit:
         if instr.name in ops_to_ignore:
-            # These are things I'm not really sure what to do with from a resource estimation perspective
             continue
         elif instr.name == "TICK":
             total_parallel += tick_total
@@ -150,10 +149,10 @@ def cultivate(
         stim_circuit = cultiv.make_end2end_cultivation_circuit(
             dcolor=3,  # It might be possible to make this 5 now
             dsurface=dsurface,
-            basis="Y",  # I don't know what this is for
+            basis="Y",
             r_growing=1,
             r_end=dsurface,  # This parameter controls the number of times we a block of Reset -> 8 CX Moments -> Measure (Repeat)
-            inject_style="unitary",  # I don't know what this is for
+            inject_style="unitary",
         )
     circuit_resources = count_stim_resources(stim_circuit=stim_circuit)
     return circuit_resources
