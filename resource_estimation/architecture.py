@@ -40,7 +40,7 @@ HILBERT_GATES = {
     cirq.QubitPermutationGate: 500,  # Copying from Harvard since it's needed
 }
 SUPERCOND_GATES = {
-    # Admittedly, I am baking the nuance of the classical control dominating the cycle times, but I have to have some notion of time here
+    
     # Times are in microseconds
     cirq.PhasedXZGate: 0.020,  # 20ns Used to represent all single qubit gates
     cirq.CZ: 0.040,  # 40ns  These both come from https://web.physics.ucsb.edu/~martinisgroup/papers/Barends2014.pdf (page 5)
