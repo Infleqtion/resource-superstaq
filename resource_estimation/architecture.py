@@ -25,22 +25,14 @@ from resource_estimation.stim_functions import cultivate
 import abc
 
 
-HARVARD_GATES = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
+NEUTRAL_GATES = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.CZ: 0.27,
     cirq.PhasedXZGate: 5.0,  # Based on single qubit gate times
     cirq.ResetChannel: 400,  # A few hundred us
     cirq.MeasurementGate: 1000,  # Best guess from 500us for atom movement during readout
     cirq.QubitPermutationGate: 500,
 }
-HILBERT_GATES = {
-    cirq.CZ: 0.40,
-    cirq.PhasedXZGate: 8,
-    cirq.ResetChannel: 50000,  # Reset time from Dan: 50-100ms
-    cirq.MeasurementGate: 10000.0,  # Measurement time from Dan: 10ms
-    cirq.QubitPermutationGate: 500,  # Copying from Harvard since it's needed
-}
 SUPERCOND_GATES = {
-    # Admittedly, I am baking the nuance of the classical control dominating the cycle times, but I have to have some notion of time here
     # Times are in microseconds
     cirq.PhasedXZGate: 0.020,  # 20ns Used to represent all single qubit gates
     cirq.CZ: 0.040,  # 40ns  These both come from https://web.physics.ucsb.edu/~martinisgroup/papers/Barends2014.pdf (page 5)
@@ -498,7 +490,7 @@ class DefaultLattice(Architecture):
                 cirq.ResetChannel,
             ]
         )
-        self._phys_gate_times = HARVARD_GATES.copy()
+        self._phys_gate_times = NEUTRAL_GATES.copy()
         del self._phys_gate_times[cirq.QubitPermutationGate]  # Remove PermutationGate
         self.__post_init__()
 
@@ -609,7 +601,7 @@ class DefaultMovement(Architecture):
                 cirq.ResetChannel,
             ]
         )
-        self._phys_gate_times = HARVARD_GATES.copy()
+        self._phys_gate_times = NEUTRAL_GATES.copy()
         self.__post_init__()
 
     zone_ops = cirq.Gateset(cirq.CNOT, cirq.MeasurementGate)
@@ -897,21 +889,6 @@ class MeasureZonesOnly(DefaultMovement):
     @property
     def __name__(self) -> str:
         return "ReadoutZonesOnly"
-
-
-class Hilbert(DefaultMovement):  # pragma: no cover
-    # No need to cover currently because this is just a home for the commented out gate times that used to live in the top level architecture class.
-    """
-    Class inspired by the Hilbert architecture detailed in https://arxiv.org/pdf/2408.08288
-    It exists primarily to highlight the impact how gate times bottleneck performance
-    """
-
-    @property
-    def phys_gate_times(self):
-        return HILBERT_GATES
-
-    def __name__(self) -> str:
-        return "Hilbert"
 
 
 class Superconductor(DefaultLattice):
