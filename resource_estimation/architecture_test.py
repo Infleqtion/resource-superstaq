@@ -83,7 +83,7 @@ def test_movement_gate_costs(d):
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
 
     # Check Cultivate
-    # TODO: When you finally understand cultivation, maybe make this an actual test
+    
     op = lsp.Cultivate(pi / 4).on(qubit_a)
     cost = arc.gate_cost(op)
     if d < 7:
@@ -109,7 +109,7 @@ def test_movement_gate_costs(d):
     op = cirq.CNOT.on(qubit_a, qubit_b)
     cost = arc.gate_cost(op)
     assert cost == {
-        cirq.CZ: arc.patch.num_data_qubits,  # **Criss-crossed hand gestures**
+        cirq.CZ: arc.patch.num_data_qubits,
         cirq.PhasedXZGate: arc.patch.num_data_qubits
         * 2,  # Two physical Hadamards on the data qubits
     }, cost
@@ -187,7 +187,7 @@ def test_movement_gate_costs(d):
 @pytest.mark.parametrize("d", (3, 5, 7))
 def test_lattice_gate_costs(d):
     # Test that gate costs are exact for lattice architectures
-    # TODO: Figure out how to get the Rz gate cost exact :(
+    
     arc = arch.DefaultLattice(d=d)
     qubit_a, qubit_b, qubit_c = (
         cirq.GridQubit(0, 0),
@@ -265,7 +265,7 @@ def test_lattice_gate_costs(d):
     assert cost == expected_cost
 
     # Check Cultivate
-    # TODO: When you finally understand cultivation, maybe make this an actual test
+    
     op = lsp.Cultivate(pi / 4).on(qubit_a)
     cost = arc.gate_cost(op)
     if d < 7:
