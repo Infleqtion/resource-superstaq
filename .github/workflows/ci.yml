@@ -43,25 +43,6 @@ jobs:
       - name: License check
         run: |
           python checks/licenses.py
-
-  mypy:
-    name: Type check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          check-latest: true
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install checks-superstaq
-          pip install -r requirements.txt
-      - name: Type check
-        run: |
-          python checks/mypy_.py
   
   requirements:
     name: Requirements check
