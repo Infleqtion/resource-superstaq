@@ -33,7 +33,7 @@ physical_qubits = estimator.physical_qubits(primitive_circuit)
 ```
 
 ## Getting Started
-Check out the [example notebook](https://github.com/Infleqtion/resource-superstaq/notebooks/hello_estimate.ipynb)
+Check out the [example notebook](https://github.com/Infleqtion/resource-superstaq/blob/main/notebooks/hello_estimate.ipynb)
 
 ## Architectures
 This table describes general gate implementation
