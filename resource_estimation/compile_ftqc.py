@@ -38,7 +38,7 @@ from warnings import warn
 # This function is only visual and is extremely finicky, so it is not tested
 def knock_off_tqdm(moment_idx: int, total: int, tstart: float, message: str):  # pragma: no cover
     """
-    We have tqdm at home
+    Implements tqdm-like behavior for the compiler
     """
     if not sys.stdout.isatty():
         # This is to ensure that testing can progress as normal
@@ -61,10 +61,6 @@ def knock_off_tqdm(moment_idx: int, total: int, tstart: float, message: str):  #
         f"{int(guessed_time // 3600)}:{int(guessed_time // 60)}:{int(guessed_time % 10)}.{int(10 * guessed_time) % 10}{int(100 * guessed_time) % 10}, "
         f"{round(moment_idx / time_passed, 2)}it/s]"
     )
-    # if len(full_bar) > WIDTH:
-    #     raise ValueError(f"Message too long for width: {WIDTH}\n{full_bar}\n{len(full_bar)}")
-    # if len(full_bar) > WIDTH:
-    #     full_bar = full_bar[:WIDTH]
     print(
         full_bar,
         end="\r" if moment_idx < total else "\n",
