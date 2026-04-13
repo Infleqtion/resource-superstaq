@@ -1,3 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "resource-superstaq"
+dynamic = ["version", "dependencies"]
+description = "Infleqtion's resource estimation project for fault tolerant quantum computing"
+readme = "README.md"
+requires-python = ">=3.9"
+
+[tool.setuptools.packages.find]
+include = ["resource_estimation"]
+
+[tool.setuptools.dynamic]
+version = { attr = "resource_estimation._version.__version__" }
+dependencies = { file = ["requirements.txt"] }
+
 # Check script configuration:
 
 [tool.pytest.ini_options]
