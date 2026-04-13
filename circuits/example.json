@@ -1,0 +1,5655 @@
+{
+  "cirq_type": "Circuit",
+  "moments": [
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "HPowGate",
+            "exponent": 1.0,
+            "global_shift": 0.0
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            }
+          ]
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "HPowGate",
+            "exponent": 1.0,
+            "global_shift": 0.0
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            }
+          ]
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "HPowGate",
+            "exponent": 1.0,
+            "global_shift": 0.0
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            }
+          ]
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "HPowGate",
+            "exponent": 1.0,
+            "global_shift": 0.0
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            }
+          ]
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "HPowGate",
+            "exponent": 1.0,
+            "global_shift": 0.0
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ]
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "HPowGate",
+            "exponent": 1.0,
+            "global_shift": 0.0
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ]
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "HPowGate",
+            "exponent": 1.0,
+            "global_shift": 0.0
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ]
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "HPowGate",
+            "exponent": 1.0,
+            "global_shift": 0.0
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.038597761561538727,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.8263593114959686,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.8140608217577632,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.8360095546939732,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.8335028344874269,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.7751371498636235,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            }
+          ],
+          "exponent_neg": 0.8183695962001644,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.042133382371632895,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.8097705808964926,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            }
+          ],
+          "exponent_neg": 0.8121989512772392,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            }
+          ],
+          "exponent_neg": 0.8356851947822033,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.040128169867485776,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.8178116953538725,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ],
+          "exponent_neg": 0.8234827384244139,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ],
+          "exponent_neg": 0.8081314892251347,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.0364952373196574,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.836177018490428,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            }
+          ],
+          "exponent_neg": 0.8450441445402643,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            }
+          ],
+          "exponent_neg": 0.7429970485810975,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.03922861998357009,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.8232815426540729,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            }
+          ],
+          "exponent_neg": 0.8290536321054516,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            }
+          ],
+          "exponent_neg": 0.7878995040290013,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.04530592660573813,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.7921693562351608,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.7975671212788193,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.8816175446640561,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.03766391097372357,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.8316077333745904,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.03638559279658065,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.8376835786428951,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.03254096473854495,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.8577436021121221,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.03511016446405083,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.844405438992494,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.04214869044552031,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.8100726374389597,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ],
+          "exponent_neg": 0.04167813927496664,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ],
+          "exponent_neg": 0.8131773511744602,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            }
+          ],
+          "exponent_neg": 0.03683079080454344,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            }
+          ],
+          "exponent_neg": 0.8369154400117993,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            }
+          ],
+          "exponent_neg": 0.039192329567447705,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            }
+          ],
+          "exponent_neg": 0.8255618438033827,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.046252415197833005,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.7910471461693325,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ],
+          "exponent_neg": 0.03345524883591134,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ],
+          "exponent_neg": 0.8485401309180793,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.038756403843782504,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ],
+          "exponent_neg": 0.03769461598675527,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ],
+          "exponent_neg": 0.830657466293133,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.04312541428127272,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.8040334970145802,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            }
+          ],
+          "exponent_neg": 0.0328518694651864,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            }
+          ],
+          "exponent_neg": 0.8553004592976245,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.037714528640034974,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.03873166376327863,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.825934543739193,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 4
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.04281868789492449,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.03443742065412026,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.8075900450675437,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "Rx",
+            "rads": 3.5425178507243915
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.03668556239757607,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.04339893087436494,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.041774896892869263,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.03777045720393296,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.03929065696912924,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.04645354128954681,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.035580549309540285,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.03870772869221103,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.044232350711372395,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.03492761575466533,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.037245122573017674,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.04056162073504167,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 7
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ],
+          "exponent_neg": 0.04382819301616147,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.032751850307131396,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.03504431084974034,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "Rx",
+            "rads": 3.5425178507243915
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.042880587545400126,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.031933670657562224,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.03461300203648454,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.04037442412081149,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.029779601341308415,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.03676280965659723,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 6
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ],
+          "exponent_neg": 0.04031183938573225,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ],
+          "exponent_neg": 0.036917754426624635,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ],
+          "exponent_neg": 0.03970491008685853,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "Rx",
+            "rads": 3.5425178507243915
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 6
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.045451745038588794,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            }
+          ],
+          "exponent_neg": 0.03402750533874844,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.04073612137460615,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 0
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.043128362852079036,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ],
+          "exponent_neg": 0.03268113669542599,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "Rx",
+            "rads": 3.5425178507243915
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.03684142862424252,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 1
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.04189105967651829,
+          "exponent_pos": 0
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "PauliStringPhasor",
+          "pauli_string": {
+            "cirq_type": "PauliString",
+            "qubit_pauli_map": [
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 3
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 5
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ],
+              [
+                {
+                  "cirq_type": "LineQubit",
+                  "x": 2
+                },
+                {
+                  "cirq_type": "_PauliZ",
+                  "exponent": 1.0,
+                  "global_shift": 0.0
+                }
+              ]
+            ],
+            "coefficient": {
+              "cirq_type": "complex",
+              "real": 1.0,
+              "imag": 0.0
+            }
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            },
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ],
+          "exponent_neg": 0.03638173157442706,
+          "exponent_pos": 0
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "Rx",
+            "rads": 3.5425178507243915
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cirq_type": "Moment",
+      "operations": [
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "Rx",
+            "rads": 3.5425178507243915
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 3
+            }
+          ]
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "Rx",
+            "rads": 3.5425178507243915
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 5
+            }
+          ]
+        },
+        {
+          "cirq_type": "GateOperation",
+          "gate": {
+            "cirq_type": "Rx",
+            "rads": 3.5425178507243915
+          },
+          "qubits": [
+            {
+              "cirq_type": "LineQubit",
+              "x": 2
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
