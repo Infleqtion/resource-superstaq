@@ -284,4 +284,7 @@ def main(args=None) -> int:
 
 
 if __name__ == "__main__":
+    import warnings
+
+    warnings.filterwarnings("ignore", category=FutureWarning)
     sys.exit(main())

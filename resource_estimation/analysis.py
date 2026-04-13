@@ -32,16 +32,6 @@ import numpy as np
 import warnings
 
 
-"""
-This file should contain the important functions and classes for doing full-stack resource analysis.
-Some things that should be here include
-- the function that determines code distance and cultivation repetition
-- the function that gets the approximation epsilon
-- the class that aggregates and stores the information generated during resource estimation
-- Maybe others?
-"""
-
-
 STR2ARCH = {
     "ssm": partial(DefaultMovement, idling=False, post_op_correction=True),
     "dsnm": partial(DefaultLattice, idling=False, post_op_correction=True),
