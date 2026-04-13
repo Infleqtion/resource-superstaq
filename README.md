@@ -1,6 +1,29 @@
 # resource-superstaq
 Infleqtion's resource estimation project for fault tolerant quantum computing
 
+
+## Installation
+
+### Installation for users
+
+To install `resource-superstaq`, run:
+
+```bash
+python3 -m pip install git+ssh://git@github.com/Infleqtion/resource-superstaq.git
+```
+
+### Installation for development
+
+If you'd like to contribute to `resource-superstaq`, below are the instructions for installation:
+
+```bash
+git clone git@github.com:Infleqtion/resource-superstaq.git
+python3 -m venv .venv
+source .venv/bin/activate
+cd resource-superstaq
+python3 -m pip install -e .
+```
+
 ## Example Usage
 ```python
 import cirq
@@ -34,6 +57,7 @@ physical_qubits = estimator.physical_qubits(primitive_circuit)
 
 ## Getting Started
 Check out the [example notebook](https://github.com/Infleqtion/resource-superstaq/blob/main/notebooks/hello_estimate.ipynb)
+
 
 ## Architectures
 This table describes general gate implementation
