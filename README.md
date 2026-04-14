@@ -25,6 +25,7 @@ python3 -m pip install -e .
 ```
 
 ## Example Usage
+### Python Example
 ```python
 import cirq
 import resource_estimation as res
@@ -53,6 +54,11 @@ estimator = res.estimate.ResourceEstimator(arc=arch)
 gate_cost = estimator.parallel_circuit_cost(primitive_circuit, pretty=True)
 circuit_time = estimator.parallel_circuit_time(primitive_circuit)
 physical_qubits = estimator.physical_qubits(primitive_circuit)
+```
+
+### Command Line Example
+```bash
+python scripts/analyze.py circuits/example.json
 ```
 
 ## Getting Started
