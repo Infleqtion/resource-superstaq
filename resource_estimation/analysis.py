@@ -322,7 +322,7 @@ class Report:
             ".json", ""
         )  # Removes directories and .json
         stripped_fidelity = str(self.program_fidelity)[2:]  # Removes the . in .99
-        base = f"re_{stripped_filename}-{stripped_fidelity}-{self.arch_name}-{self.num_factories}-{int(self.fold_cultiv)}"
+        base = f"re_{stripped_filename}-{stripped_fidelity}-{self.arch_name}-{self.num_factories}-{int(bool(self.fold_cultiv))}"
         ext = "json"
         iteration = 0
         filepath = savedir / f"{base}_{iteration}.{ext}"
