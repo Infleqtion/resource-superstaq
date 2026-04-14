@@ -396,29 +396,3 @@ class Report:
                 report_string += self.line_dict(name=name, info_dict=value) + "\n"
         return report_string
 
-
-class ReportToffoli(Report):  # pragma: no cover
-    def __init__(self, filename, program_fidelity, num_factories, arch_name):
-        super().__init__(filename, program_fidelity, num_factories, arch_name)
-        del self.rz_width
-        del self.rz_depth
-        del self.rz_gates
-        del self.non_rz_gates
-        del self.rz_time
-
-        self.toffoli_width = None
-        self.toffoli_depth = None
-        self.toffoli_gates = None
-        self.non_toffoli_gates = None
-        self.toffoli_time = None
-
-    def __post_init__(self):
-        super().__post_init__()
-        del self.info_dict["Clifford + RZ"]
-        self.info_dict["Clifford + Toffoli"] = {
-            "Clifford + Toffoli Width": self.toffoli_width,
-            "Clifford + Toffoli Depth": self.toffoli_depth,
-            "Total Toffoli Gates": self.toffoli_gates,
-            "Total non-Toffoli Gates": self.non_toffoli_gates,
-            "Time": self.toffoli_time,
-        }
