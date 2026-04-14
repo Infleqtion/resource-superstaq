@@ -56,7 +56,7 @@ def parse_args():
     parser.add_argument(
         "--cultivation-repetition",
         "-cr",
-        type=float,
+        type=int,
         default=0,
         help="Cultivation repetition override. Must also override `code-distance` and `error-per-rz`",
     )
@@ -64,14 +64,14 @@ def parse_args():
         "--error-per-rz",
         "-erz",
         type=float,
-        default=0,
+        default=0.0,
         help="Synthesis error override. Must also override `code-distance` and `cultivation-repetition`",
     )
     parser.add_argument(
         "--error-per-cult",
         "-epc",
         type=float,
-        default=0,
+        default=0.0,
         help="Approximate error per cultivation derived elsewhere. Must also override other parameters",
     )
     return parser.parse_args()
@@ -279,6 +279,7 @@ def main(args=None) -> int:
 
 
 if __name__ == "__main__":
+    import sys
     import warnings
 
     warnings.filterwarnings("ignore", category=FutureWarning)
