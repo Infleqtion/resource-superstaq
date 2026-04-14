@@ -325,9 +325,7 @@ class Report:
         )
 
     def save(self, savedir=Path("")) -> Path:
-        stripped_filename = self.filename.split("/")[-1].replace(
-            ".json", ""
-        )  # Removes directories and .json
+        stripped_filename = Path(self.filename).stem  # Removes directories and extension
         stripped_fidelity = str(self.program_fidelity)[2:]  # Removes the . in .99
         base = f"re_{stripped_filename}-{stripped_fidelity}-{self.arch_name}-{self.num_factories}-{int(bool(self.fold_cultiv))}"
         ext = "json"
