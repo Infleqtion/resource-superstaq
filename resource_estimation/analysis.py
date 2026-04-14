@@ -218,7 +218,6 @@ def error_estimate(
 class Report:
     """
     Class for containing information about a resource estimate to be saved and reviewed later.
-    This object
     """
 
     ## Inputs
