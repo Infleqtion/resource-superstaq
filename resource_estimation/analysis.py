@@ -167,8 +167,12 @@ def break_up_ops(cliff_rz_circuit: cirq.Circuit) -> tuple[int, int]:
     """
     Counts operations in Clifford + Rz circuit according to Rz Gates (continuous angle rotations) and Cliffords
     """
-    total_ops = len(list(cliff_rz_circuit.all_operations()))
-    num_rz_gates = len([op for op in cliff_rz_circuit.all_operations() if type(op.gate) is cirq.Rz])
+    total_ops = 0
+    num_rz_gates = 0
+    for op in cliff_rz_circuit.all_operations():
+        total_ops += 1
+        if type(op.gate) is cirq.Rz:
+            num_rz_gates += 1
     num_clifford = total_ops - num_rz_gates
     return num_rz_gates, num_clifford
 
@@ -191,7 +195,7 @@ def error_estimate(
 
     # The fidelity just from approximating each Rz gate up to the given error
     synthesis_fidelity = (1 - error_per_rz) ** (num_rz_gates)
-    # The number of T gates based on the Solivay-Kitaev algorithm performance
+    # The number of T gates based on the Solovay-Kitaev algorithm performance
     num_t_gates = abs(t_fit_param * np.log(error_per_rz)) * num_rz_gates
     num_c_gates = abs(c_fit_param * np.log(error_per_rz)) * num_rz_gates
     # The number of extra operations from Teleportation
