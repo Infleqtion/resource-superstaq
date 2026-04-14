@@ -86,7 +86,7 @@ def get_t_path(circuit: cirq.Circuit, verbose=True):
         big_path = qubit_paths[big_qubit]
         big_time = qubit_times[big_qubit]
         big_path.append(op)
-        if op in cirq.GateFamily(cirq.T):
+        if op.gate in cirq.GateFamily(cirq.T):
             big_time += 2
         else:
             big_time += 1
@@ -130,15 +130,15 @@ def get_important_information(
     strong_t_fidelity = t_gates * np.log(1 - 2 * 10**-9)
     if weak_t_fidelity > log_pfid:
         t_fidelity = weak_t_fidelity
-        cultivation_repetition = 1 / (1 - 0.8)  # 80% discard rate
+        cultivation_repetition = 5  # 80% discard rate
         over_budget = False
     elif strong_t_fidelity > log_pfid:
         t_fidelity = strong_t_fidelity
-        cultivation_repetition = 1 / (1 - 0.99)  # 99% discard rate
+        cultivation_repetition = 100  # 99% discard rate
         over_budget = False
     else:
         t_fidelity = strong_t_fidelity
-        cultivation_repetition = 1 / (1 - 0.99)
+        cultivation_repetition = 100  # 99% discard rate
         warnings.warn(
             f"Cultivation Error Options of 1e-6 and 1e-9 are not sufficient for desired program fidelity of {pfid}.\nUsing 1e-9 numbers."
         )

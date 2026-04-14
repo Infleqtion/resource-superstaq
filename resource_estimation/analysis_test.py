@@ -186,7 +186,7 @@ def test_get_important_information_t_paths():
         circuit,
         pfid=f_strong,
     )
-    assert cultivation_repetition == 99
+    assert cultivation_repetition == 100
     assert gates[cirq.T] == 1
     assert gates[cirq.X] == 1
     assert gates[cirq.H] == 1
@@ -203,7 +203,7 @@ def test_get_important_information_warnings():
             circuit,
             pfid=1.0,
         )
-    assert cultivation_repetition == 99
+    assert cultivation_repetition == 100
 
     circuit = cirq.Circuit([cirq.H.on(q)])
     with pytest.warns(UserWarning, match="Max code distance"):
