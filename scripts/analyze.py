@@ -56,7 +56,7 @@ def parse_args():
     parser.add_argument(
         "--cultivation-repetition",
         "-cr",
-        type=float,
+        type=int,
         default=0,
         help="Cultivation repetition override. Must also override `code-distance` and `error-per-rz`",
     )
