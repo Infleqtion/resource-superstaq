@@ -49,8 +49,12 @@ def get_eps(
     cliff_rz_circuit: cirq.Circuit, approximation_fidelity: float
 ) -> tuple[float, int, int]:
     """
-    Gets the per angle rotation approximation parameter epsilon such that the total product of all Rz gate fidelities is under the input approximation fidelity.
-    Returns maximum allowable approximation error for T gate synthesis
+    Gets the per-angle rotation approximation parameter epsilon such that the
+    product of all Rz gate fidelities is equal to the requested
+    `approximation_fidelity` (i.e., the total approximation fidelity is no less
+    than the requested target).
+
+    Returns maximum allowable approximation error for T gate synthesis.
     """
     total_ops = 0
     rz_gates = 0
@@ -261,7 +265,7 @@ class Report:
     total_time: float = None
 
     def __post_init__(self):
-        # This dictionary will be usefull for generating organized reports about the data
+        # This dictionary will be useful for generating organized reports about the data
         self.info_dict = {
             "Inputs": {
                 "Filename": self.filename,

@@ -153,7 +153,7 @@ def test_surface_code_fidelity():
     assert analysis.surface_code_fidelity(100, p=0) == 1
 
 
-def test_break_up_opss():
+def test_break_up_ops():
     q = cirq.LineQubit(0)
     circuit = cirq.Circuit(
         cirq.Rz(rads=0.1).on(q), cirq.X.on(q), cirq.H.on(q), cirq.Rz(rads=0.2).on(q)
