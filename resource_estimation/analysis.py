@@ -393,4 +393,3 @@ class Report:
             else:
                 report_string += self.line_dict(name=name, info_dict=value) + "\n"
         return report_string
-
