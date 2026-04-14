@@ -13,17 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import cirq
 import cirq_superstaq as css
 from time import time
-from pathlib import Path
 import textwrap
 
 import argparse
-
-parent_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(parent_dir))
 import resource_estimation as res
 from resource_estimation.visualizations import C, make_pretty
 from resource_estimation.analysis import STR2ARCH
