@@ -13,7 +13,7 @@
 # limitations under the License.
 import json
 import shutil
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from functools import partial
 from tqdm import tqdm
@@ -222,47 +222,46 @@ class Report:
     program_fidelity: float
     num_factories: int
     arch_name: str
-    fold_cultiv: bool = None
-    load_time: float = None
+    fold_cultiv: bool = False
+    load_time: float = np.inf
 
     ## Outputs
     # Clifford + RZ
-    rz_width: int = None
-    rz_depth: int = None
-    rz_gates: int = None
-    non_rz_gates: int = None
-    rz_time: float = None
+    rz_width: int = -1
+    rz_depth: int = -1
+    rz_gates: int = -1
+    non_rz_gates: int = -1
+    rz_time: float = np.inf
 
     # Clifford + T
-    eps: float = None
-    t_gates: int = None
-    non_t_gates: int = None
-    cliff_t_width: int = None
-    cliff_t_depth: int = None
-    cliff_t_time: float = None
+    eps: float = np.inf
+    t_gates: int = -1
+    non_t_gates: int = -1
+    cliff_t_width: int = -1
+    cliff_t_depth: int = -1
+    cliff_t_time: float = np.inf
 
     # QEC Params
-    cultivation_repetition: int | float = None
-    distance: int = None
-    expected_fidelity: float = None
-    qec_time: float = None
+    cultivation_repetition: int = -1
+    distance: int = -1
+    expected_fidelity: float = np.inf
+    qec_time: float = np.inf
 
     # FT Compiled Circuit
-    primitive_width: int = None
-    primitive_depth: int = None
-    # primitive_gates: dict = None  # This might end up being expensive
-    compile_time: float = None
+    primitive_width: int = -1
+    primitive_depth: int = -1
+    compile_time: float = np.inf
 
     # Final Resource Estimates
-    time_serial: float = None
-    time_parallel: float = None
-    gates_serial: dict = None
-    gates_parallel: dict = None
-    physical_qubits: int = None
-    volume: float = None
-    resource_time: float = None
+    time_serial: float = np.inf
+    time_parallel: float = np.inf
+    gates_serial: dict = field(default_factory=dict)
+    gates_parallel: dict = field(default_factory=dict)
+    physical_qubits: int = -1
+    volume: float = np.inf
+    resource_time: float = np.inf
 
-    total_time: float = None
+    total_time: float = np.inf
 
     def __post_init__(self):
         # This dictionary will be useful for generating organized reports about the data
