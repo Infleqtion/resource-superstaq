@@ -157,7 +157,10 @@ def main(args=None) -> int:
         rz_circuit, eps=eps, verbose=verbose
     )
     clifford_t_circuit = clifford_t_circuit.transform_qubits(
-        {qubit: cirq.LineQubit(i) for i, qubit in enumerate(sorted(clifford_t_circuit.all_qubits()))}
+        {
+            qubit: cirq.LineQubit(i)
+            for i, qubit in enumerate(sorted(clifford_t_circuit.all_qubits()))
+        }
     )
     t2 = time()
     if args.t_path:
