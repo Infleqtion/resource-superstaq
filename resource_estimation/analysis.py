@@ -26,7 +26,6 @@ from resource_estimation.architecture import (
 )
 from resource_estimation.visualizations import C, boxed_header
 import cirq
-from cirq_superstaq import Barrier
 from collections import Counter
 import numpy as np
 import warnings
@@ -100,14 +99,20 @@ def get_important_information(
     pfid=0.99,
 ) -> tuple[int, int, Counter, float]:
     """
-    Gets important information for setting sertain assumptions for error correction.
-    Given a Clifford + T circuit and a desired program fidelity, which levels of T gate will be needed to stay under budget.
-    If neither of the two fidelities is sufficient, warn the user and use the more stringent option.
-    With the T fidelity set, the program then calculates the minimal surface code distance needed to stay under the error budget.
-    If the error budget is already maxed out, it chooses the distance that contributes less than half of the total error.
-    The distances can be overridden with `manual_distance` and `manual_cult_rep`.
-    This are admittedly shaky assumptions to get the numbers, but they are at least done in good faith, and I can explain why they were chosen.
-    # TODO: Explain why they were chosen
+    Get information used to set certain error-correction assumptions.
+
+    Given a Clifford + T circuit and a target program fidelity, determine which
+    T-gate fidelity level is needed to stay within the error budget. If neither
+    of the two fidelity options is sufficient, warn the user and use the more
+    stringent option.
+
+    After setting the T-gate fidelity, calculate the minimal surface-code
+    distance needed to remain within the error budget. If the error budget is
+    already exhausted, choose the distance that contributes less than half of
+    the total error.
+
+    These assumptions are approximate, but they are intended to provide a
+    reasonable-faith estimate.
     """
     gates = Counter(op.gate for op in clifford_t_circuit.all_operations())
     t_gates = gates.get(cirq.T, 0)

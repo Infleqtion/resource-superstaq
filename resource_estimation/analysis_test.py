@@ -14,7 +14,6 @@
 import cirq
 import math
 import pytest
-from cirq_superstaq import Barrier
 import numpy as np
 
 import resource_estimation.analysis as analysis
@@ -208,7 +207,7 @@ def test_get_important_information_warnings():
 
     circuit = cirq.Circuit([cirq.H.on(q)])
     with pytest.warns(UserWarning, match="Max code distance"):
-        cultivation_repeptition, _, _, _ = analysis.get_important_information(circuit, pfid=1.0)
+        _, _, _, _ = analysis.get_important_information(circuit, pfid=1.0)
 
 
 def test_error_estimate():
