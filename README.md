@@ -1,5 +1,8 @@
 # resource-superstaq
-Infleqtion's resource estimation project for fault tolerant quantum computing
+Infleqtion's resource estimation project for fault tolerant quantum computing.
+
+Further details of this work can be found in our preprint 
+[Resource Estimation via Efficient Compilation of Key Quantum Primitives](https://doi.org/10.48550/arXiv.2604.01376) on the arXiv.
 
 
 ## Installation
@@ -85,3 +88,14 @@ Cultivation Style | Logical Error Rate | Repetition Factor |
 | Gidney (nearest neighbor) | 10<sup>-9</sup> | 100 |
 | Yale (nonlocal) | 10<sup>-6</sup> | 1 |
 | Yale (nonlocal) | 10<sup>-9</sup> | 10 |
+
+## Citation
+If you use this code and find it helpful, please cite our paper introducing this project:
+```
+@article{campbell2026resource,
+  title={Resource Estimation via Efficient Compilation of Key Quantum Primitives},
+  author={Campbell, Colin and Rines, Rich and Omole, Victory and Oberoi, Tina and Goiporia, Palash and Roy, Rayat and Cline, R Peyton and Jones, Eric B and Tomesh, Teague},
+  journal={arXiv preprint arXiv:2604.01376},
+  year={2026}
+}
+```
