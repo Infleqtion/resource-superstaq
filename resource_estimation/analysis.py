@@ -52,8 +52,12 @@ def get_eps(
     Gets the per angle rotation approximation parameter epsilon such that the total product of all Rz gate fidelities is under the input approximation fidelity.
     Returns maximum allowable approximation error for T gate synthesis
     """
-    total_ops = len(list(cliff_rz_circuit.all_operations()))
-    rz_gates = len([op for op in cliff_rz_circuit.all_operations() if isinstance(op.gate, cirq.Rz)])
+    total_ops = 0
+    rz_gates = 0
+    for op in cliff_rz_circuit.all_operations():
+        total_ops += 1
+        if isinstance(op.gate, cirq.Rz):
+            rz_gates += 1
     other_gates = total_ops - rz_gates
     if rz_gates == 0:
         return 0.0, rz_gates, other_gates

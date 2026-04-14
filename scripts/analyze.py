@@ -173,7 +173,7 @@ def main(args=None) -> int:
 
     report.eps = eps
     report.t_gates = len(
-        [op for op in clifford_t_circuit.all_operations() if op in cirq.GateFamily(cirq.T)]
+        [op for op in clifford_t_circuit.all_operations() if op.gate in cirq.GateFamily(cirq.T)]
     )
     report.non_t_gates = len(list(clifford_t_circuit.all_operations())) - report.t_gates
     report.cliff_t_width = cirq.num_qubits(clifford_t_circuit)
