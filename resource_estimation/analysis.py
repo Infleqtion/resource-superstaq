@@ -42,7 +42,7 @@ STR2ARCH = {
 try:
     WIDTH, _ = shutil.get_terminal_size()
 except OSError:  # pragma: no cover
-    WIDTH = 80
+    WIDTH = 100
 
 
 def get_eps(
@@ -171,7 +171,7 @@ def break_up_ops(cliff_rz_circuit: cirq.Circuit) -> tuple[int, int]:
     num_rz_gates = 0
     for op in cliff_rz_circuit.all_operations():
         total_ops += 1
-        if type(op.gate) is cirq.Rz:
+        if isinstance(op.gate, cirq.Rz):
             num_rz_gates += 1
     num_clifford = total_ops - num_rz_gates
     return num_rz_gates, num_clifford
@@ -341,10 +341,6 @@ class Report:
             json.dump(asdict(self), f, indent=4)
         print(f"{C.OKGREEN}Saved Report to {C.END}{C.OKCYAN}{str(filepath)}{C.END}")
         return filepath
-
-    @classmethod
-    def from_dict(cls, kwargs):
-        return cls(**kwargs)
 
     @classmethod
     def load(cls, filename):
