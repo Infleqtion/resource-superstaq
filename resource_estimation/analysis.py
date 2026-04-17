@@ -266,9 +266,10 @@ class Report:
 
     total_time: float = np.inf
 
-    def __post_init__(self):
+    @property
+    def info_dict(self):
         # This dictionary will be useful for generating organized reports about the data
-        self.info_dict = {
+        return {
             "Inputs": {
                 "Filename": self.filename,
                 "Program Fidelity": self.program_fidelity,
@@ -346,7 +347,7 @@ class Report:
     def load(cls, filename):
         with open(filename, "r") as f:
             configs = json.load(f)
-        return cls.from_dict(configs)
+        return cls(**configs)
 
     def header_line(self, title: str) -> str:
         return f"\n{C.BOLD}{C.OKCYAN}{boxed_header(title=title, width=WIDTH)}{C.END}"
@@ -374,14 +375,12 @@ class Report:
         return sub_str
 
     def report(self) -> str:
-        self.__post_init__()
         report_string = """"""
         for header in self.info_dict:
             report_string += self.sub_report(header=header)
         return report_string
 
     def sub_report(self, header: str) -> str:
-        self.__post_init__()
         info = self.info_dict[header].copy()
         report_string = """"""
         report_string += self.header_line(title=header) + "\n"
