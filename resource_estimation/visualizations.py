@@ -17,8 +17,8 @@ import cirq
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import networkx as nx
-import resource_estimation.lattice_surgery_primitives as lsp
-from resource_estimation.layout import Layout
+from . import lattice_surgery_primitives as lsp
+from .layout import Layout
 
 
 def visualize_layout_moment(
@@ -315,3 +315,36 @@ def draw_2d_array_ascii(arr):  # pragma: no cover
 
     # Final bottom border
     print("+" + ("-" * box_width + "+") * cols)
+
+
+class C:
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    BOLD = "\033[1m"
+    END = "\033[0m"
+    YELLOW = "\033[93m"
+    MAGENTA = "\033[95m"
+
+
+def boxed_header(title, width=40):
+    pad = width - len(title) - 2
+    left = pad // 2
+    right = pad - left
+    return f"{'=' * left} {title} {'=' * right}"
+
+
+def hr(width=40):  # pragma: no cover
+    return "=" * width
+
+
+def make_pretty(obj) -> str:  # pragma: no cover
+    """
+    Pulling out the pretty functionality from the ResourceEstimator class to avoid doubling resource calls
+    """
+    if hasattr(obj, "__name__"):
+        return obj.__name__
+    return str(obj)

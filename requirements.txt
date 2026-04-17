@@ -5,3 +5,4 @@ openfermion>=1.7.1
 pygridsynth>=1.2.0
 qiskit-superstaq~=0.5.64
 sorger_shor @ git+https://github.com/vtomole/sorger_shor.git
+tqdm~=4.67
