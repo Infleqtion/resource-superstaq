@@ -30,46 +30,6 @@ parent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(parent_dir))
 
 
-def give_crz(theta, controls):
-    controlled_rz = cirq.ControlledGate(
-        sub_gate=cirq.Rz(theta), num_controls=len(controls), control_values=controls
-    )
-    return controlled_rz
-
-
-def give_crx(theta, controls):
-    controlled_rx = cirq.ControlledGate(
-        sub_gate=cirq.Rz(theta),
-        num_controlls=len(controls),
-        control_values=controls,
-    )
-    return controlled_rx
-
-
-def random_pauli_phasor_circuit(num_qubits: int, moments: int):
-    paulis = ["I", "X", "Y", "Z"]
-    pauli_map = {"I": cirq.I, "X": cirq.X, "Y": cirq.Y, "Z": cirq.Z}
-    qubits = [cirq.LineQubit(i) for i in range(num_qubits)]
-    circuit = cirq.Circuit()
-    for moment in range(moments):
-        random_string = "".join(choice(paulis, size=num_qubits, replace=True))
-        random_qubits = choice(qubits, size=num_qubits, replace=False)
-        operations = [pauli_map[s](q) for s, q in zip(random_string, random_qubits)]
-        print(operations)
-        print(random_string)
-        print("*" * 100)
-        s = cirq.PauliString(operations)
-        print(s)
-
-        print("*" * 100)
-        phasor = cirq.PauliStringPhasor(s, exponent_neg=7 / pi)
-        print(phasor)
-        circuit += phasor
-    return circuit
-
-
-def minial_rz_circuit():
-    return
 
 
 def fermi_hubbard(n, verbose=0):
