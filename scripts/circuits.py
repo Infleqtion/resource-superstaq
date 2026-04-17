@@ -12,64 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import cirq
-from numpy.random import choice
-from math import pi
 import openfermion
 import numpy as np
 from openfermion.circuits import simulate_trotter
 from openfermion.ops import FermionOperator
-from collections import Counter
-from time import time
-from pathlib import Path
-import sys
-from sorger_shor.shor import factoring_circuit
-
-import supermarq as sm
-
-parent_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(parent_dir))
-
-
-def give_crz(theta, controls):
-    controlled_rz = cirq.ControlledGate(
-        sub_gate=cirq.Rz(theta), num_controls=len(controls), control_values=controls
-    )
-    return controlled_rz
-
-
-def give_crx(theta, controls):
-    controlled_rx = cirq.ControlledGate(
-        sub_gate=cirq.Rz(theta),
-        num_controlls=len(controls),
-        control_values=controls,
-    )
-    return controlled_rx
-
-
-def random_pauli_phasor_circuit(num_qubits: int, moments: int):
-    paulis = ["I", "X", "Y", "Z"]
-    pauli_map = {"I": cirq.I, "X": cirq.X, "Y": cirq.Y, "Z": cirq.Z}
-    qubits = [cirq.LineQubit(i) for i in range(num_qubits)]
-    circuit = cirq.Circuit()
-    for moment in range(moments):
-        random_string = "".join(choice(paulis, size=num_qubits, replace=True))
-        random_qubits = choice(qubits, size=num_qubits, replace=False)
-        operations = [pauli_map[s](q) for s, q in zip(random_string, random_qubits)]
-        print(operations)
-        print(random_string)
-        print("*" * 100)
-        s = cirq.PauliString(operations)
-        print(s)
-
-        print("*" * 100)
-        phasor = cirq.PauliStringPhasor(s, exponent_neg=7 / pi)
-        print(phasor)
-        circuit += phasor
-    return circuit
-
-
-def minial_rz_circuit():
-    return
 
 
 def fermi_hubbard(n, verbose=0):
@@ -261,42 +207,3 @@ def kanamori(n_bath, verbose=0):
         print("Kanamori Circuit Qubits:", cirq.num_qubits(circuit))
         print("Kanamori Circuit Moments:", len(circuit))
     return circuit
-
-
-def shor(n, verbose=0):
-    while True:
-        try:
-            qc = factoring_circuit(n)
-            break
-        except:
-            continue
-    cirq_circuit = sm.converters.qiskit_to_cirq(qc)
-    cirq_circuit = cirq.drop_negligible_operations(cirq_circuit)
-    if verbose:
-        print(
-            f"Factoring: {n}\nQubits: {cirq.num_qubits(cirq_circuit)}\nMoments: {len(cirq_circuit)}"
-        )
-    return cirq_circuit
-
-
-def show_all():
-    print(fermi_hubbard(3, 1))
-    print(kanamori(9, 1))
-
-
-if __name__ == "__main__":
-    from resource_estimation.estimate import ResourceEstimator
-    from resource_estimation.layout import MovementLayout, ColumnLayout
-    from resource_estimation.architecture import DefaultMovement, DefaultLattice
-    from resource_estimation.compile_ftqc import ft_compile
-    from resource_estimation.cliff_rz import GenericDevice
-    from resource_estimation.clifford_t import compile_cirq_to_clifford_t
-    import warnings
-    import pickle
-    from time import time
-
-    warnings.filterwarnings("ignore", category=RuntimeWarning)
-    tstart = time()
-    shor_circuit = shor(3, 1)
-    tfin = time()
-    print(tfin - tstart)
