@@ -105,4 +105,4 @@ If you use this code and find it helpful, please cite our paper introducing this
   year={2026}
 }
 ```
-You can find the code to reproduce the figures in the paper on [Zenodo](https://zenodo.org/records/19635114)
+You can find the code to reproduce the figures in the paper on [Zenodo](https://zenodo.org/records/19635114).
