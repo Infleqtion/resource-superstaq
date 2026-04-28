@@ -233,7 +233,7 @@ class Cultivate(cirq.Gate):
     def _json_namespace_(cls) -> str:
         return "lsp"
 
-    def _value_equality_values_(self) -> int:
+    def _value_equality_values_(self) -> float:
         return self._theta
 
 

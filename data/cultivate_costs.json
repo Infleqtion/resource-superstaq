@@ -44,31 +44,67 @@
         },
         "cultivate": {
             "gidney": {
-                "serial": {
-                    "ResetChannel": 528,
-                    "PhasedXZGate": 535,
-                    "CZ": 1749,
-                    "MeasurementGate": 472
+                "3": {
+                    "serial": {
+                        "ResetChannel": 528,
+                        "PhasedXZGate": 535,
+                        "CZ": 1749,
+                        "MeasurementGate": 472
+                    },
+                    "parallel": {
+                        "ResetChannel": 13,
+                        "PhasedXZGate": 28,
+                        "CZ": 101,
+                        "MeasurementGate": 12
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 13,
-                    "PhasedXZGate": 28,
-                    "CZ": 101,
-                    "MeasurementGate": 12
+                "5": {
+                    "serial": {
+                        "ResetChannel": 528,
+                        "PhasedXZGate": 535,
+                        "CZ": 1749,
+                        "MeasurementGate": 472
+                    },
+                    "parallel": {
+                        "ResetChannel": 13,
+                        "PhasedXZGate": 28,
+                        "CZ": 101,
+                        "MeasurementGate": 12
+                    }
                 }
             },
             "yale": {
-                "serial": {
-                    "ResetChannel": 275,
-                    "PhasedXZGate": 258,
-                    "CZ": 819,
-                    "MeasurementGate": 239
+                "3": {
+                    "serial": {
+                        "ResetChannel": 215,
+                        "MeasurementGate": 283,
+                        "CCZ": 6,
+                        "PhasedXZGate": 289,
+                        "CZ": 848
+                    },
+                    "parallel": {
+                        "ResetChannel": 10,
+                        "MeasurementGate": 9,
+                        "CCZ": 2,
+                        "PhasedXZGate": 24,
+                        "CZ": 44
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 12,
-                    "PhasedXZGate": 23,
-                    "CZ": 47,
-                    "MeasurementGate": 10
+                "5": {
+                    "serial": {
+                        "ResetChannel": 321,
+                        "MeasurementGate": 403,
+                        "CCZ": 21,
+                        "PhasedXZGate": 387,
+                        "CZ": 1055
+                    },
+                    "parallel": {
+                        "ResetChannel": 14,
+                        "MeasurementGate": 15,
+                        "CCZ": 7,
+                        "PhasedXZGate": 30,
+                        "CZ": 77
+                    }
                 }
             }
         }
@@ -118,31 +154,67 @@
         },
         "cultivate": {
             "gidney": {
-                "serial": {
-                    "ResetChannel": 528,
-                    "PhasedXZGate": 535,
-                    "CZ": 1749,
-                    "MeasurementGate": 472
+                "3": {
+                    "serial": {
+                        "ResetChannel": 528,
+                        "PhasedXZGate": 535,
+                        "CZ": 1749,
+                        "MeasurementGate": 472
+                    },
+                    "parallel": {
+                        "ResetChannel": 13,
+                        "PhasedXZGate": 28,
+                        "CZ": 101,
+                        "MeasurementGate": 12
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 13,
-                    "PhasedXZGate": 28,
-                    "CZ": 101,
-                    "MeasurementGate": 12
+                "5": {
+                    "serial": {
+                        "ResetChannel": 528,
+                        "PhasedXZGate": 535,
+                        "CZ": 1749,
+                        "MeasurementGate": 472
+                    },
+                    "parallel": {
+                        "ResetChannel": 13,
+                        "PhasedXZGate": 28,
+                        "CZ": 101,
+                        "MeasurementGate": 12
+                    }
                 }
             },
             "yale": {
-                "serial": {
-                    "ResetChannel": 275,
-                    "PhasedXZGate": 258,
-                    "CZ": 819,
-                    "MeasurementGate": 239
+                "3": {
+                    "serial": {
+                        "ResetChannel": 215,
+                        "MeasurementGate": 283,
+                        "CCZ": 6,
+                        "PhasedXZGate": 289,
+                        "CZ": 848
+                    },
+                    "parallel": {
+                        "ResetChannel": 10,
+                        "MeasurementGate": 9,
+                        "CCZ": 2,
+                        "PhasedXZGate": 24,
+                        "CZ": 44
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 12,
-                    "PhasedXZGate": 23,
-                    "CZ": 47,
-                    "MeasurementGate": 10
+                "5": {
+                    "serial": {
+                        "ResetChannel": 321,
+                        "MeasurementGate": 403,
+                        "CCZ": 21,
+                        "PhasedXZGate": 387,
+                        "CZ": 1055
+                    },
+                    "parallel": {
+                        "ResetChannel": 14,
+                        "MeasurementGate": 15,
+                        "CCZ": 7,
+                        "PhasedXZGate": 30,
+                        "CZ": 77
+                    }
                 }
             }
         }
@@ -192,31 +264,67 @@
         },
         "cultivate": {
             "gidney": {
-                "serial": {
-                    "ResetChannel": 528,
-                    "PhasedXZGate": 535,
-                    "CZ": 1749,
-                    "MeasurementGate": 472
+                "3": {
+                    "serial": {
+                        "ResetChannel": 528,
+                        "PhasedXZGate": 535,
+                        "CZ": 1749,
+                        "MeasurementGate": 472
+                    },
+                    "parallel": {
+                        "ResetChannel": 13,
+                        "PhasedXZGate": 28,
+                        "CZ": 101,
+                        "MeasurementGate": 12
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 13,
-                    "PhasedXZGate": 28,
-                    "CZ": 101,
-                    "MeasurementGate": 12
+                "5": {
+                    "serial": {
+                        "ResetChannel": 528,
+                        "PhasedXZGate": 535,
+                        "CZ": 1749,
+                        "MeasurementGate": 472
+                    },
+                    "parallel": {
+                        "ResetChannel": 13,
+                        "PhasedXZGate": 28,
+                        "CZ": 101,
+                        "MeasurementGate": 12
+                    }
                 }
             },
             "yale": {
-                "serial": {
-                    "ResetChannel": 275,
-                    "PhasedXZGate": 258,
-                    "CZ": 819,
-                    "MeasurementGate": 239
+                "3": {
+                    "serial": {
+                        "ResetChannel": 215,
+                        "MeasurementGate": 283,
+                        "CCZ": 6,
+                        "PhasedXZGate": 289,
+                        "CZ": 848
+                    },
+                    "parallel": {
+                        "ResetChannel": 10,
+                        "MeasurementGate": 9,
+                        "CCZ": 2,
+                        "PhasedXZGate": 24,
+                        "CZ": 44
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 12,
-                    "PhasedXZGate": 23,
-                    "CZ": 47,
-                    "MeasurementGate": 10
+                "5": {
+                    "serial": {
+                        "ResetChannel": 321,
+                        "MeasurementGate": 403,
+                        "CCZ": 21,
+                        "PhasedXZGate": 387,
+                        "CZ": 1055
+                    },
+                    "parallel": {
+                        "ResetChannel": 14,
+                        "MeasurementGate": 15,
+                        "CCZ": 7,
+                        "PhasedXZGate": 30,
+                        "CZ": 77
+                    }
                 }
             }
         }
@@ -266,31 +374,67 @@
         },
         "cultivate": {
             "gidney": {
-                "serial": {
-                    "ResetChannel": 1014,
-                    "PhasedXZGate": 1008,
-                    "CZ": 3439,
-                    "MeasurementGate": 926
+                "3": {
+                    "serial": {
+                        "ResetChannel": 1014,
+                        "PhasedXZGate": 1008,
+                        "CZ": 3439,
+                        "MeasurementGate": 926
+                    },
+                    "parallel": {
+                        "ResetChannel": 15,
+                        "PhasedXZGate": 32,
+                        "CZ": 117,
+                        "MeasurementGate": 14
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 15,
-                    "PhasedXZGate": 32,
-                    "CZ": 117,
-                    "MeasurementGate": 14
+                "5": {
+                    "serial": {
+                        "ResetChannel": 1014,
+                        "PhasedXZGate": 1008,
+                        "CZ": 3439,
+                        "MeasurementGate": 926
+                    },
+                    "parallel": {
+                        "ResetChannel": 15,
+                        "PhasedXZGate": 32,
+                        "CZ": 117,
+                        "MeasurementGate": 14
+                    }
                 }
             },
             "yale": {
-                "serial": {
-                    "ResetChannel": 435,
-                    "PhasedXZGate": 403,
-                    "CZ": 1299,
-                    "MeasurementGate": 371
+                "3": {
+                    "serial": {
+                        "ResetChannel": 343,
+                        "MeasurementGate": 443,
+                        "CCZ": 6,
+                        "PhasedXZGate": 464,
+                        "CZ": 1328
+                    },
+                    "parallel": {
+                        "ResetChannel": 10,
+                        "MeasurementGate": 9,
+                        "CCZ": 2,
+                        "PhasedXZGate": 24,
+                        "CZ": 44
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 12,
-                    "PhasedXZGate": 23,
-                    "CZ": 47,
-                    "MeasurementGate": 10
+                "5": {
+                    "serial": {
+                        "ResetChannel": 513,
+                        "MeasurementGate": 627,
+                        "CCZ": 21,
+                        "PhasedXZGate": 626,
+                        "CZ": 1535
+                    },
+                    "parallel": {
+                        "ResetChannel": 14,
+                        "MeasurementGate": 15,
+                        "CCZ": 7,
+                        "PhasedXZGate": 30,
+                        "CZ": 77
+                    }
                 }
             }
         }
@@ -340,31 +484,67 @@
         },
         "cultivate": {
             "gidney": {
-                "serial": {
-                    "ResetChannel": 1740,
-                    "PhasedXZGate": 1717,
-                    "CZ": 6025,
-                    "MeasurementGate": 1612
+                "3": {
+                    "serial": {
+                        "ResetChannel": 1740,
+                        "PhasedXZGate": 1717,
+                        "CZ": 6025,
+                        "MeasurementGate": 1612
+                    },
+                    "parallel": {
+                        "ResetChannel": 17,
+                        "PhasedXZGate": 36,
+                        "CZ": 133,
+                        "MeasurementGate": 16
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 17,
-                    "PhasedXZGate": 36,
-                    "CZ": 133,
-                    "MeasurementGate": 16
+                "5": {
+                    "serial": {
+                        "ResetChannel": 1740,
+                        "PhasedXZGate": 1717,
+                        "CZ": 6025,
+                        "MeasurementGate": 1612
+                    },
+                    "parallel": {
+                        "ResetChannel": 17,
+                        "PhasedXZGate": 36,
+                        "CZ": 133,
+                        "MeasurementGate": 16
+                    }
                 }
             },
             "yale": {
-                "serial": {
-                    "ResetChannel": 635,
-                    "PhasedXZGate": 584,
-                    "CZ": 1907,
-                    "MeasurementGate": 535
+                "3": {
+                    "serial": {
+                        "ResetChannel": 503,
+                        "MeasurementGate": 643,
+                        "CCZ": 6,
+                        "PhasedXZGate": 683,
+                        "CZ": 1936
+                    },
+                    "parallel": {
+                        "ResetChannel": 10,
+                        "MeasurementGate": 9,
+                        "CCZ": 2,
+                        "PhasedXZGate": 24,
+                        "CZ": 44
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 12,
-                    "PhasedXZGate": 23,
-                    "CZ": 47,
-                    "MeasurementGate": 10
+                "5": {
+                    "serial": {
+                        "ResetChannel": 753,
+                        "MeasurementGate": 907,
+                        "CCZ": 21,
+                        "PhasedXZGate": 925,
+                        "CZ": 2143
+                    },
+                    "parallel": {
+                        "ResetChannel": 14,
+                        "MeasurementGate": 15,
+                        "CCZ": 7,
+                        "PhasedXZGate": 30,
+                        "CZ": 77
+                    }
                 }
             }
         }
@@ -414,31 +594,67 @@
         },
         "cultivate": {
             "gidney": {
-                "serial": {
-                    "ResetChannel": 2754,
-                    "PhasedXZGate": 2710,
-                    "CZ": 9699,
-                    "MeasurementGate": 2578
+                "3": {
+                    "serial": {
+                        "ResetChannel": 2754,
+                        "PhasedXZGate": 2710,
+                        "CZ": 9699,
+                        "MeasurementGate": 2578
+                    },
+                    "parallel": {
+                        "ResetChannel": 19,
+                        "PhasedXZGate": 40,
+                        "CZ": 149,
+                        "MeasurementGate": 18
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 19,
-                    "PhasedXZGate": 40,
-                    "CZ": 149,
-                    "MeasurementGate": 18
+                "5": {
+                    "serial": {
+                        "ResetChannel": 2754,
+                        "PhasedXZGate": 2710,
+                        "CZ": 9699,
+                        "MeasurementGate": 2578
+                    },
+                    "parallel": {
+                        "ResetChannel": 19,
+                        "PhasedXZGate": 40,
+                        "CZ": 149,
+                        "MeasurementGate": 18
+                    }
                 }
             },
             "yale": {
-                "serial": {
-                    "ResetChannel": 875,
-                    "PhasedXZGate": 801,
-                    "CZ": 2643,
-                    "MeasurementGate": 731
+                "3": {
+                    "serial": {
+                        "ResetChannel": 695,
+                        "MeasurementGate": 883,
+                        "CCZ": 6,
+                        "PhasedXZGate": 946,
+                        "CZ": 2672
+                    },
+                    "parallel": {
+                        "ResetChannel": 10,
+                        "MeasurementGate": 9,
+                        "CCZ": 2,
+                        "PhasedXZGate": 24,
+                        "CZ": 44
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 12,
-                    "PhasedXZGate": 23,
-                    "CZ": 47,
-                    "MeasurementGate": 10
+                "5": {
+                    "serial": {
+                        "ResetChannel": 1041,
+                        "MeasurementGate": 1243,
+                        "CCZ": 21,
+                        "PhasedXZGate": 1284,
+                        "CZ": 2879
+                    },
+                    "parallel": {
+                        "ResetChannel": 14,
+                        "MeasurementGate": 15,
+                        "CCZ": 7,
+                        "PhasedXZGate": 30,
+                        "CZ": 77
+                    }
                 }
             }
         }
@@ -488,31 +704,67 @@
         },
         "cultivate": {
             "gidney": {
-                "serial": {
-                    "ResetChannel": 4104,
-                    "PhasedXZGate": 4035,
-                    "CZ": 14653,
-                    "MeasurementGate": 3872
+                "3": {
+                    "serial": {
+                        "ResetChannel": 4104,
+                        "PhasedXZGate": 4035,
+                        "CZ": 14653,
+                        "MeasurementGate": 3872
+                    },
+                    "parallel": {
+                        "ResetChannel": 21,
+                        "PhasedXZGate": 44,
+                        "CZ": 165,
+                        "MeasurementGate": 20
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 21,
-                    "PhasedXZGate": 44,
-                    "CZ": 165,
-                    "MeasurementGate": 20
+                "5": {
+                    "serial": {
+                        "ResetChannel": 4104,
+                        "PhasedXZGate": 4035,
+                        "CZ": 14653,
+                        "MeasurementGate": 3872
+                    },
+                    "parallel": {
+                        "ResetChannel": 21,
+                        "PhasedXZGate": 44,
+                        "CZ": 165,
+                        "MeasurementGate": 20
+                    }
                 }
             },
             "yale": {
-                "serial": {
-                    "ResetChannel": 1155,
-                    "PhasedXZGate": 1054,
-                    "CZ": 3507,
-                    "MeasurementGate": 959
+                "3": {
+                    "serial": {
+                        "ResetChannel": 919,
+                        "MeasurementGate": 1163,
+                        "CCZ": 6,
+                        "PhasedXZGate": 1253,
+                        "CZ": 3536
+                    },
+                    "parallel": {
+                        "ResetChannel": 10,
+                        "MeasurementGate": 9,
+                        "CCZ": 2,
+                        "PhasedXZGate": 24,
+                        "CZ": 44
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 12,
-                    "PhasedXZGate": 23,
-                    "CZ": 47,
-                    "MeasurementGate": 10
+                "5": {
+                    "serial": {
+                        "ResetChannel": 1377,
+                        "MeasurementGate": 1635,
+                        "CCZ": 21,
+                        "PhasedXZGate": 1703,
+                        "CZ": 3743
+                    },
+                    "parallel": {
+                        "ResetChannel": 14,
+                        "MeasurementGate": 15,
+                        "CCZ": 7,
+                        "PhasedXZGate": 30,
+                        "CZ": 77
+                    }
                 }
             }
         }
@@ -562,31 +814,67 @@
         },
         "cultivate": {
             "gidney": {
-                "serial": {
-                    "ResetChannel": 5838,
-                    "PhasedXZGate": 5740,
-                    "CZ": 21079,
-                    "MeasurementGate": 5542
+                "3": {
+                    "serial": {
+                        "ResetChannel": 5838,
+                        "PhasedXZGate": 5740,
+                        "CZ": 21079,
+                        "MeasurementGate": 5542
+                    },
+                    "parallel": {
+                        "ResetChannel": 23,
+                        "PhasedXZGate": 48,
+                        "CZ": 181,
+                        "MeasurementGate": 22
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 23,
-                    "PhasedXZGate": 48,
-                    "CZ": 181,
-                    "MeasurementGate": 22
+                "5": {
+                    "serial": {
+                        "ResetChannel": 5838,
+                        "PhasedXZGate": 5740,
+                        "CZ": 21079,
+                        "MeasurementGate": 5542
+                    },
+                    "parallel": {
+                        "ResetChannel": 23,
+                        "PhasedXZGate": 48,
+                        "CZ": 181,
+                        "MeasurementGate": 22
+                    }
                 }
             },
             "yale": {
-                "serial": {
-                    "ResetChannel": 1475,
-                    "PhasedXZGate": 1343,
-                    "CZ": 4499,
-                    "MeasurementGate": 1219
+                "3": {
+                    "serial": {
+                        "ResetChannel": 1175,
+                        "MeasurementGate": 1483,
+                        "CCZ": 6,
+                        "PhasedXZGate": 1604,
+                        "CZ": 4528
+                    },
+                    "parallel": {
+                        "ResetChannel": 10,
+                        "MeasurementGate": 9,
+                        "CCZ": 2,
+                        "PhasedXZGate": 24,
+                        "CZ": 44
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 12,
-                    "PhasedXZGate": 23,
-                    "CZ": 47,
-                    "MeasurementGate": 10
+                "5": {
+                    "serial": {
+                        "ResetChannel": 1761,
+                        "MeasurementGate": 2083,
+                        "CCZ": 21,
+                        "PhasedXZGate": 2182,
+                        "CZ": 4735
+                    },
+                    "parallel": {
+                        "ResetChannel": 14,
+                        "MeasurementGate": 15,
+                        "CCZ": 7,
+                        "PhasedXZGate": 30,
+                        "CZ": 77
+                    }
                 }
             }
         }
@@ -636,31 +924,67 @@
         },
         "cultivate": {
             "gidney": {
-                "serial": {
-                    "ResetChannel": 8004,
-                    "PhasedXZGate": 7873,
-                    "CZ": 29169,
-                    "MeasurementGate": 7636
+                "3": {
+                    "serial": {
+                        "ResetChannel": 8004,
+                        "PhasedXZGate": 7873,
+                        "CZ": 29169,
+                        "MeasurementGate": 7636
+                    },
+                    "parallel": {
+                        "ResetChannel": 25,
+                        "PhasedXZGate": 52,
+                        "CZ": 197,
+                        "MeasurementGate": 24
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 25,
-                    "PhasedXZGate": 52,
-                    "CZ": 197,
-                    "MeasurementGate": 24
+                "5": {
+                    "serial": {
+                        "ResetChannel": 8004,
+                        "PhasedXZGate": 7873,
+                        "CZ": 29169,
+                        "MeasurementGate": 7636
+                    },
+                    "parallel": {
+                        "ResetChannel": 25,
+                        "PhasedXZGate": 52,
+                        "CZ": 197,
+                        "MeasurementGate": 24
+                    }
                 }
             },
             "yale": {
-                "serial": {
-                    "ResetChannel": 1835,
-                    "PhasedXZGate": 1668,
-                    "CZ": 5619,
-                    "MeasurementGate": 1511
+                "3": {
+                    "serial": {
+                        "ResetChannel": 1463,
+                        "MeasurementGate": 1843,
+                        "CCZ": 6,
+                        "PhasedXZGate": 1999,
+                        "CZ": 5648
+                    },
+                    "parallel": {
+                        "ResetChannel": 10,
+                        "MeasurementGate": 9,
+                        "CCZ": 2,
+                        "PhasedXZGate": 24,
+                        "CZ": 44
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 12,
-                    "PhasedXZGate": 23,
-                    "CZ": 47,
-                    "MeasurementGate": 10
+                "5": {
+                    "serial": {
+                        "ResetChannel": 2193,
+                        "MeasurementGate": 2587,
+                        "CCZ": 21,
+                        "PhasedXZGate": 2721,
+                        "CZ": 5855
+                    },
+                    "parallel": {
+                        "ResetChannel": 14,
+                        "MeasurementGate": 15,
+                        "CCZ": 7,
+                        "PhasedXZGate": 30,
+                        "CZ": 77
+                    }
                 }
             }
         }
@@ -710,31 +1034,67 @@
         },
         "cultivate": {
             "gidney": {
-                "serial": {
-                    "ResetChannel": 10650,
-                    "PhasedXZGate": 10482,
-                    "CZ": 39115,
-                    "MeasurementGate": 10202
+                "3": {
+                    "serial": {
+                        "ResetChannel": 10650,
+                        "PhasedXZGate": 10482,
+                        "CZ": 39115,
+                        "MeasurementGate": 10202
+                    },
+                    "parallel": {
+                        "ResetChannel": 27,
+                        "PhasedXZGate": 56,
+                        "CZ": 213,
+                        "MeasurementGate": 26
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 27,
-                    "PhasedXZGate": 56,
-                    "CZ": 213,
-                    "MeasurementGate": 26
+                "5": {
+                    "serial": {
+                        "ResetChannel": 10650,
+                        "PhasedXZGate": 10482,
+                        "CZ": 39115,
+                        "MeasurementGate": 10202
+                    },
+                    "parallel": {
+                        "ResetChannel": 27,
+                        "PhasedXZGate": 56,
+                        "CZ": 213,
+                        "MeasurementGate": 26
+                    }
                 }
             },
             "yale": {
-                "serial": {
-                    "ResetChannel": 2235,
-                    "PhasedXZGate": 2029,
-                    "CZ": 6867,
-                    "MeasurementGate": 1835
+                "3": {
+                    "serial": {
+                        "ResetChannel": 1783,
+                        "MeasurementGate": 2243,
+                        "CCZ": 6,
+                        "PhasedXZGate": 2438,
+                        "CZ": 6896
+                    },
+                    "parallel": {
+                        "ResetChannel": 10,
+                        "MeasurementGate": 9,
+                        "CCZ": 2,
+                        "PhasedXZGate": 24,
+                        "CZ": 44
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 12,
-                    "PhasedXZGate": 23,
-                    "CZ": 47,
-                    "MeasurementGate": 10
+                "5": {
+                    "serial": {
+                        "ResetChannel": 2673,
+                        "MeasurementGate": 3147,
+                        "CCZ": 21,
+                        "PhasedXZGate": 3320,
+                        "CZ": 7103
+                    },
+                    "parallel": {
+                        "ResetChannel": 14,
+                        "MeasurementGate": 15,
+                        "CCZ": 7,
+                        "PhasedXZGate": 30,
+                        "CZ": 77
+                    }
                 }
             }
         }
@@ -784,31 +1144,67 @@
         },
         "cultivate": {
             "gidney": {
-                "serial": {
-                    "ResetChannel": 13824,
-                    "PhasedXZGate": 13615,
-                    "CZ": 51109,
-                    "MeasurementGate": 13288
+                "3": {
+                    "serial": {
+                        "ResetChannel": 13824,
+                        "PhasedXZGate": 13615,
+                        "CZ": 51109,
+                        "MeasurementGate": 13288
+                    },
+                    "parallel": {
+                        "ResetChannel": 29,
+                        "PhasedXZGate": 60,
+                        "CZ": 229,
+                        "MeasurementGate": 28
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 29,
-                    "PhasedXZGate": 60,
-                    "CZ": 229,
-                    "MeasurementGate": 28
+                "5": {
+                    "serial": {
+                        "ResetChannel": 13824,
+                        "PhasedXZGate": 13615,
+                        "CZ": 51109,
+                        "MeasurementGate": 13288
+                    },
+                    "parallel": {
+                        "ResetChannel": 29,
+                        "PhasedXZGate": 60,
+                        "CZ": 229,
+                        "MeasurementGate": 28
+                    }
                 }
             },
             "yale": {
-                "serial": {
-                    "ResetChannel": 2675,
-                    "PhasedXZGate": 2426,
-                    "CZ": 8243,
-                    "MeasurementGate": 2191
+                "3": {
+                    "serial": {
+                        "ResetChannel": 2135,
+                        "MeasurementGate": 2683,
+                        "CCZ": 6,
+                        "PhasedXZGate": 2921,
+                        "CZ": 8272
+                    },
+                    "parallel": {
+                        "ResetChannel": 10,
+                        "MeasurementGate": 9,
+                        "CCZ": 2,
+                        "PhasedXZGate": 24,
+                        "CZ": 44
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 12,
-                    "PhasedXZGate": 23,
-                    "CZ": 47,
-                    "MeasurementGate": 10
+                "5": {
+                    "serial": {
+                        "ResetChannel": 3201,
+                        "MeasurementGate": 3763,
+                        "CCZ": 21,
+                        "PhasedXZGate": 3979,
+                        "CZ": 8479
+                    },
+                    "parallel": {
+                        "ResetChannel": 14,
+                        "MeasurementGate": 15,
+                        "CCZ": 7,
+                        "PhasedXZGate": 30,
+                        "CZ": 77
+                    }
                 }
             }
         }
@@ -858,31 +1254,67 @@
         },
         "cultivate": {
             "gidney": {
-                "serial": {
-                    "ResetChannel": 17574,
-                    "PhasedXZGate": 17320,
-                    "CZ": 65343,
-                    "MeasurementGate": 16942
+                "3": {
+                    "serial": {
+                        "ResetChannel": 17574,
+                        "PhasedXZGate": 17320,
+                        "CZ": 65343,
+                        "MeasurementGate": 16942
+                    },
+                    "parallel": {
+                        "ResetChannel": 31,
+                        "PhasedXZGate": 64,
+                        "CZ": 245,
+                        "MeasurementGate": 30
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 31,
-                    "PhasedXZGate": 64,
-                    "CZ": 245,
-                    "MeasurementGate": 30
+                "5": {
+                    "serial": {
+                        "ResetChannel": 17574,
+                        "PhasedXZGate": 17320,
+                        "CZ": 65343,
+                        "MeasurementGate": 16942
+                    },
+                    "parallel": {
+                        "ResetChannel": 31,
+                        "PhasedXZGate": 64,
+                        "CZ": 245,
+                        "MeasurementGate": 30
+                    }
                 }
             },
             "yale": {
-                "serial": {
-                    "ResetChannel": 3155,
-                    "PhasedXZGate": 2859,
-                    "CZ": 9747,
-                    "MeasurementGate": 2579
+                "3": {
+                    "serial": {
+                        "ResetChannel": 2519,
+                        "MeasurementGate": 3163,
+                        "CCZ": 6,
+                        "PhasedXZGate": 3448,
+                        "CZ": 9776
+                    },
+                    "parallel": {
+                        "ResetChannel": 10,
+                        "MeasurementGate": 9,
+                        "CCZ": 2,
+                        "PhasedXZGate": 24,
+                        "CZ": 44
+                    }
                 },
-                "parallel": {
-                    "ResetChannel": 12,
-                    "PhasedXZGate": 23,
-                    "CZ": 47,
-                    "MeasurementGate": 10
+                "5": {
+                    "serial": {
+                        "ResetChannel": 3777,
+                        "MeasurementGate": 4435,
+                        "CCZ": 21,
+                        "PhasedXZGate": 4698,
+                        "CZ": 9983
+                    },
+                    "parallel": {
+                        "ResetChannel": 14,
+                        "MeasurementGate": 15,
+                        "CCZ": 7,
+                        "PhasedXZGate": 30,
+                        "CZ": 77
+                    }
                 }
             }
         }

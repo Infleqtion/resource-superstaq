@@ -88,9 +88,9 @@ def test_movement_gate_costs(d):
     cost = arc.gate_cost(op)
     if d < 7:
         with pytest.warns(UserWarning, match="Returning result for d=7"):
-            base_cost = cultivate(dsurface=d)
+            base_cost = cultivate(dsurface=d, fault_distance=3)
     else:
-        base_cost = cultivate(dsurface=d)
+        base_cost = cultivate(dsurface=d, fault_distance=3)
     expected_cost = base_cost["serial"]
     # To account for movement we add the QubitPermutationGates to the base cost
     expected_cost[cirq.QubitPermutationGate] = 2 * (
@@ -271,10 +271,10 @@ def test_lattice_gate_costs(d):
     if d < 7:
         with pytest.warns(UserWarning, match="Returning result for d=7"):
             cost = arc.gate_cost(op)
-            expected_cost = cultivate(dsurface=d)["serial"]
+            expected_cost = cultivate(dsurface=d, fault_distance=3)["serial"]
     else:
         cost = arc.gate_cost(op)
-        expected_cost = cultivate(dsurface=d)["serial"]
+        expected_cost = cultivate(dsurface=d, fault_distance=3)["serial"]
     assert expected_cost == cost
 
     # Check Syndrome Extract on one qubit
@@ -578,6 +578,7 @@ def test_classmethods():
         "post_op_correction": True,
         "d": 7,
         "cultivation_repetition": 1,
+        "cultivation_fault_distance": 3,
         "syndrome_rounds": 1,
     }
     mv_arc = arch.Architecture.from_dict(movement_input_dict)
@@ -589,6 +590,7 @@ def test_classmethods():
         "post_op_correction": True,
         "d": 7,
         "cultivation_repetition": 1,
+        "cultivation_fault_distance": 3,
         "syndrome_rounds": 1,
     }
     ls_arch = arch.Architecture.from_dict(lattice_input_dict)
@@ -600,6 +602,7 @@ def test_classmethods():
         "post_op_correction": True,
         "d": 7,
         "cultivation_repetition": 1,
+        "cultivation_fault_distance": 3,
         "syndrome_rounds": 1,
         "gate_times": {cirq.QubitPermutationGate: 100},
     }
@@ -612,6 +615,7 @@ def test_classmethods():
         "post_op_correction": True,
         "d": 7,
         "cultivation_repetition": 1,
+        "cultivation_fault_distance": 3,
         "syndrome_rounds": 1,
         "gate_times": {"QubitPermutationGate": 99},
     }
@@ -624,6 +628,7 @@ def test_classmethods():
         "post_op_correction": True,
         "d": 7,
         "cultivation_repetition": 1,
+        "cultivation_fault_distance": 3,
         "syndrome_rounds": 1,
         "gate_times": {cirq.CZ: 100},
     }
@@ -636,6 +641,7 @@ def test_classmethods():
         "post_op_correction": True,
         "d": 7,
         "cultivation_repetition": 1,
+        "cultivation_fault_distance": 3,
         "syndrome_rounds": 1,
         "gate_times": {"CZ": 99},
     }
@@ -773,33 +779,33 @@ def test_string_representations():
     ssm = arch.DefaultMovement(
         idling=True, post_op_correction=True, d=9, cultivation_repetition=10, syndrome_rounds=1
     )
-    assert str(ssm) == "SingleSpeciesMovement(d=9, cr=10, sr=1, fold=False)"
+    assert str(ssm) == "SingleSpeciesMovement(d=9, cr=10, fd=3, sr=1, fold=False)"
 
     dsnm = arch.DefaultLattice(
         idling=True, post_op_correction=True, d=9, cultivation_repetition=10, syndrome_rounds=9
     )
-    assert str(dsnm) == "DualSpeciesNoMovement(d=9, cr=10, sr=9)"
+    assert str(dsnm) == "DualSpeciesNoMovement(d=9, cr=10, fd=3, sr=9)"
 
     dsm = arch.DualSpeciesMovement(
         idling=True, post_op_correction=True, d=11, cultivation_repetition=17, syndrome_rounds=1
     )
-    assert str(dsm) == "DualSpeciesMovement(d=11, cr=17, sr=1, fold=False)"
+    assert str(dsm) == "DualSpeciesMovement(d=11, cr=17, fd=3, sr=1, fold=False)"
 
     mzo = arch.MeasureZonesOnly(
         idling=True, post_op_correction=True, d=19, cultivation_repetition=7, syndrome_rounds=5
     )
-    assert str(mzo) == "ReadoutZonesOnly(d=19, cr=7, sr=5, fold=False)"
+    assert str(mzo) == "ReadoutZonesOnly(d=19, cr=7, fd=3, sr=5, fold=False)"
 
     sc = arch.Superconductor(
         idling=True, post_op_correction=True, d=13, cultivation_repetition=99, syndrome_rounds=14
     )
-    assert str(sc) == "Superconductor(d=13, cr=99, sr=14)"
+    assert str(sc) == "Superconductor(d=13, cr=99, fd=3, sr=14)"
 
     ssm_fold = arch.DefaultMovement(fold_cultiv=True)
-    assert str(ssm_fold) == "SingleSpeciesMovement(d=7, cr=1, sr=1, fold=True)"
+    assert str(ssm_fold) == "SingleSpeciesMovement(d=7, cr=1, fd=3, sr=1, fold=True)"
 
     dsnm = arch.DefaultLattice()
-    assert str(dsnm) == "DualSpeciesNoMovement(d=7, cr=1)"
+    assert str(dsnm) == "DualSpeciesNoMovement(d=7, cr=1, fd=3)"
 
 
 def test_folded_architecture():

@@ -31,6 +31,7 @@ NEUTRAL_GATES = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.ResetChannel: 400,  # A few hundred us
     cirq.MeasurementGate: 1000,  # Best guess from 500us for atom movement during readout
     cirq.QubitPermutationGate: 500,
+    cirq.CCZ: 0.27,
 }
 
 SUPERCOND_GATES = {
@@ -186,6 +187,7 @@ class Architecture(abc.ABC):
         movement: bool,
         d: int = 7,
         cultivation_repetition: int = 1,
+        cultivation_fault_distance: int = 3,
         syndrome_rounds: int | None = None,
         fold_cultiv: bool = False,
     ) -> None:
@@ -195,6 +197,7 @@ class Architecture(abc.ABC):
         self.d = d
         self.patch = lsp.RotatedCodePatch(self.d)
         self.cultivation_repetition = cultivation_repetition
+        self.cultivation_fault_distance = cultivation_fault_distance
         self.syndrome_rounds = syndrome_rounds
         self.fold_cultiv = fold_cultiv
 
@@ -213,6 +216,7 @@ class Architecture(abc.ABC):
                 post_op_correction=d["post_op_correction"],
                 d=d["d"],
                 cultivation_repetition=d["cultivation_repetition"],
+                cultivation_fault_distance=d["cultivation_fault_distance"],
                 syndrome_rounds=d["syndrome_rounds"],
                 fold_cultiv=d.get("fold_cultiv", False),
             )
@@ -222,6 +226,7 @@ class Architecture(abc.ABC):
                 post_op_correction=d["post_op_correction"],
                 d=d["d"],
                 cultivation_repetition=d["cultivation_repetition"],
+                cultivation_fault_distance=d["cultivation_repetition"],
                 syndrome_rounds=d["syndrome_rounds"],
             )
         # TODO: Check once the flag
@@ -449,8 +454,9 @@ class Architecture(abc.ABC):
         distance = self.d
         cultivation_repetition = self.cultivation_repetition
         round_str = f", sr={self.syndrome_rounds}" if self.syndrome_rounds is not None else ""
+        fault_str = f", fd={self.cultivation_fault_distance}"
         fold_str = f", fold={self.fold_cultiv}" if self.movement else ""
-        return f"{name}(d={distance}, cr={cultivation_repetition}{round_str}{fold_str})"
+        return f"{name}(d={distance}, cr={cultivation_repetition}{fault_str}{round_str}{fold_str})"
 
 
 class DefaultLattice(Architecture):
@@ -465,6 +471,7 @@ class DefaultLattice(Architecture):
         post_op_correction: bool = True,
         d=7,
         cultivation_repetition=1,
+        cultivation_fault_distance: int = 3,
         syndrome_rounds=None,
     ) -> None:
         super().__init__(
@@ -473,6 +480,7 @@ class DefaultLattice(Architecture):
             movement=False,
             d=d,
             cultivation_repetition=cultivation_repetition,
+            cultivation_fault_distance=cultivation_fault_distance,
             syndrome_rounds=syndrome_rounds,
             fold_cultiv=False,
         )
@@ -537,7 +545,9 @@ class DefaultLattice(Architecture):
     @cached_property
     def _cultivate_t_cost(self):
         # fold should always be false here
-        base_cultivation_cost = cultivate(dsurface=self.d, fold=self.fold_cultiv).copy()
+        base_cultivation_cost = cultivate(
+            dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
+        ).copy()
 
         # No penalties to any base gates
         moment_cost = base_cultivation_cost["parallel"]
@@ -575,6 +585,7 @@ class DefaultMovement(Architecture):
         d: int = 7,
         fold_cultiv=False,
         cultivation_repetition=1,
+        cultivation_fault_distance: int = 3,
         syndrome_rounds=1,
     ) -> None:
         super().__init__(
@@ -706,7 +717,9 @@ class DefaultMovement(Architecture):
 
     @cached_property
     def _cultivate_t_cost(self):
-        base_cultivation_cost = cultivate(dsurface=self.d, fold=self.fold_cultiv).copy()
+        base_cultivation_cost = cultivate(
+            dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
+        ).copy()
         # Penalize all Measure and CZ moments with QubitPermutationGates
         # Each penalized moment gets penalized with two Moves
         moment_cost = base_cultivation_cost["parallel"]
@@ -783,7 +796,9 @@ class DualSpeciesMovement(DefaultMovement):
         Cached property for the cultivation circuit having the relevant parameters: code distance (d) and movement
         Values are multiplied by the repeat factor for the architecture instance
         """
-        base_cultivation_cost = cultivate(dsurface=self.d, fold=self.fold_cultiv).copy()
+        base_cultivation_cost = cultivate(
+            dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
+        ).copy()
         gate_cost = base_cultivation_cost["serial"]
         moment_cost = base_cultivation_cost["parallel"]
         if self.fold_cultiv:
@@ -851,7 +866,9 @@ class MeasureZonesOnly(DefaultMovement):
 
     @cached_property
     def _cultivate_t_cost(self):
-        base_cultivation_cost = cultivate(dsurface=self.d, fold=self.fold_cultiv).copy()
+        base_cultivation_cost = cultivate(
+            dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
+        ).copy()
         gate_cost = base_cultivation_cost["serial"]
         moment_cost = base_cultivation_cost["parallel"]
         if self.fold_cultiv:
@@ -905,6 +922,7 @@ class Superconductor(DefaultLattice):
         post_op_correction: bool = True,
         d=7,
         cultivation_repetition=1,
+        cultivation_fault_distance: int = 3,
         syndrome_rounds=None,
     ) -> None:
         super().__init__(
