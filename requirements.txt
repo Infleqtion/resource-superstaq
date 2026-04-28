@@ -1,8 +1,8 @@
-checks-superstaq~=0.5.64
-cirq-superstaq~=0.5.64
+checks-superstaq~=0.5.65
+cirq-superstaq~=0.5.65
 magic-state-cultivation @ git+https://git@github.com/Infleqtion/magic-state-cultivation.git@toberoi/add_fold_traversal
 openfermion>=1.7.1
 pygridsynth>=1.2.0
-qiskit-superstaq~=0.5.64
-tqdm~=4.67
+qiskit-superstaq~=0.5.65
 stimcirq~=1.15
+tqdm~=4.67
