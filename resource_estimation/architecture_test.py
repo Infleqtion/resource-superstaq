@@ -661,6 +661,7 @@ def test_classmethods():
             "post_op_correction": True,
             "d": 7,
             "cultivation_repetition": 1,
+            "cultivation_fault_distance": 3,
             "syndrome_rounds": 1,
             "gate_times": {"CNOT": 99},
         }
