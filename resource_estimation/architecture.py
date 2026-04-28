@@ -226,7 +226,7 @@ class Architecture(abc.ABC):
                 post_op_correction=d["post_op_correction"],
                 d=d["d"],
                 cultivation_repetition=d["cultivation_repetition"],
-                cultivation_fault_distance=d["cultivation_repetition"],
+                cultivation_fault_distance=d["cultivation_fault_distance"],
                 syndrome_rounds=d["syndrome_rounds"],
             )
         # TODO: Check once the flag

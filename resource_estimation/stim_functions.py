@@ -129,7 +129,7 @@ def cultivate(
     fault_distance: int,
     fold=False,
     for_test=False,
-) -> Counter[cirq.Gate, int]:
+) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
     """
     Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
     If the final patch size is less than 25 it reads from saved resources instead of calling the functions directly
@@ -140,6 +140,10 @@ def cultivate(
         dsurface = 7
     style = "yale" if fold else "gidney"
     if dsurface <= 25 and not for_test:
+        if fault_distance not in (3, 5):
+            raise ValueError(
+                "Saved cultivation costs are only available for fault_distance values 3 and 5."
+            )
         return load_saved_cost(
             dsurface=dsurface, op_key="cultivate", style=style, fault_distance=fault_distance
         )
