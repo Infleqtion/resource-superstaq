@@ -51,25 +51,25 @@ if __name__ == "__main__":
         memory_1_round = cultiv.make_surface_code_memory_circuit(dsurface=d, rounds=1, basis="Z")
         gidney_cultiv3 = cultiv.make_end2end_cultivation_circuit(
             dcolor=3,
-            dsurface=7 if d <= 7 else d,
+            dsurface=max(7, d),
             basis="Y",
             r_growing=1,
-            r_end=7 if d <= 7 else d,
+            r_end=max(7, d),
             inject_style="unitary",
         )
         gidney_cultiv5 = cultiv.make_end2end_cultivation_circuit(
-            dcolor=3,
-            dsurface=7 if d <= 7 else d,
+            dcolor=5,
+            dsurface=max(11, d),
             basis="Y",
             r_growing=1,
-            r_end=7 if d <= 7 else d,
+            r_end=max(11, d),
             inject_style="unitary",
         )
         yale_cultiv3 = cultiv.make_cirq_circuits.make_cirq_circuit(
             code_distance=max(7, d), fault_distance=3
         )
         yale_cultiv5 = cultiv.make_cirq_circuits.make_cirq_circuit(
-            code_distance=max(7, d), fault_distance=5
+            code_distance=max(11, d), fault_distance=5
         )
 
         # Count up the resources and format the results

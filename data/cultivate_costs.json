@@ -60,16 +60,16 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 528,
-                        "PhasedXZGate": 535,
-                        "CZ": 1749,
-                        "MeasurementGate": 472
+                        "ResetChannel": 1886,
+                        "PhasedXZGate": 1924,
+                        "CZ": 6891,
+                        "MeasurementGate": 1755
                     },
                     "parallel": {
-                        "ResetChannel": 13,
-                        "PhasedXZGate": 28,
-                        "CZ": 101,
-                        "MeasurementGate": 12
+                        "ResetChannel": 22,
+                        "PhasedXZGate": 48,
+                        "CZ": 171,
+                        "MeasurementGate": 21
                     }
                 }
             },
@@ -92,11 +92,11 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 321,
-                        "MeasurementGate": 403,
+                        "ResetChannel": 753,
+                        "MeasurementGate": 907,
                         "CCZ": 21,
-                        "PhasedXZGate": 387,
-                        "CZ": 1055
+                        "PhasedXZGate": 925,
+                        "CZ": 2143
                     },
                     "parallel": {
                         "ResetChannel": 14,
@@ -170,16 +170,16 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 528,
-                        "PhasedXZGate": 535,
-                        "CZ": 1749,
-                        "MeasurementGate": 472
+                        "ResetChannel": 1886,
+                        "PhasedXZGate": 1924,
+                        "CZ": 6891,
+                        "MeasurementGate": 1755
                     },
                     "parallel": {
-                        "ResetChannel": 13,
-                        "PhasedXZGate": 28,
-                        "CZ": 101,
-                        "MeasurementGate": 12
+                        "ResetChannel": 22,
+                        "PhasedXZGate": 48,
+                        "CZ": 171,
+                        "MeasurementGate": 21
                     }
                 }
             },
@@ -202,11 +202,11 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 321,
-                        "MeasurementGate": 403,
+                        "ResetChannel": 753,
+                        "MeasurementGate": 907,
                         "CCZ": 21,
-                        "PhasedXZGate": 387,
-                        "CZ": 1055
+                        "PhasedXZGate": 925,
+                        "CZ": 2143
                     },
                     "parallel": {
                         "ResetChannel": 14,
@@ -280,16 +280,16 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 528,
-                        "PhasedXZGate": 535,
-                        "CZ": 1749,
-                        "MeasurementGate": 472
+                        "ResetChannel": 1886,
+                        "PhasedXZGate": 1924,
+                        "CZ": 6891,
+                        "MeasurementGate": 1755
                     },
                     "parallel": {
-                        "ResetChannel": 13,
-                        "PhasedXZGate": 28,
-                        "CZ": 101,
-                        "MeasurementGate": 12
+                        "ResetChannel": 22,
+                        "PhasedXZGate": 48,
+                        "CZ": 171,
+                        "MeasurementGate": 21
                     }
                 }
             },
@@ -312,11 +312,11 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 321,
-                        "MeasurementGate": 403,
+                        "ResetChannel": 753,
+                        "MeasurementGate": 907,
                         "CCZ": 21,
-                        "PhasedXZGate": 387,
-                        "CZ": 1055
+                        "PhasedXZGate": 925,
+                        "CZ": 2143
                     },
                     "parallel": {
                         "ResetChannel": 14,
@@ -390,16 +390,16 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 1014,
-                        "PhasedXZGate": 1008,
-                        "CZ": 3439,
-                        "MeasurementGate": 926
+                        "ResetChannel": 1886,
+                        "PhasedXZGate": 1924,
+                        "CZ": 6891,
+                        "MeasurementGate": 1755
                     },
                     "parallel": {
-                        "ResetChannel": 15,
-                        "PhasedXZGate": 32,
-                        "CZ": 117,
-                        "MeasurementGate": 14
+                        "ResetChannel": 22,
+                        "PhasedXZGate": 48,
+                        "CZ": 171,
+                        "MeasurementGate": 21
                     }
                 }
             },
@@ -422,11 +422,11 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 513,
-                        "MeasurementGate": 627,
+                        "ResetChannel": 753,
+                        "MeasurementGate": 907,
                         "CCZ": 21,
-                        "PhasedXZGate": 626,
-                        "CZ": 1535
+                        "PhasedXZGate": 925,
+                        "CZ": 2143
                     },
                     "parallel": {
                         "ResetChannel": 14,
@@ -500,16 +500,16 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 1740,
-                        "PhasedXZGate": 1717,
-                        "CZ": 6025,
-                        "MeasurementGate": 1612
+                        "ResetChannel": 1886,
+                        "PhasedXZGate": 1924,
+                        "CZ": 6891,
+                        "MeasurementGate": 1755
                     },
                     "parallel": {
-                        "ResetChannel": 17,
-                        "PhasedXZGate": 36,
-                        "CZ": 133,
-                        "MeasurementGate": 16
+                        "ResetChannel": 22,
+                        "PhasedXZGate": 48,
+                        "CZ": 171,
+                        "MeasurementGate": 21
                     }
                 }
             },
@@ -610,16 +610,16 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 2754,
-                        "PhasedXZGate": 2710,
-                        "CZ": 9699,
-                        "MeasurementGate": 2578
+                        "ResetChannel": 2910,
+                        "PhasedXZGate": 2929,
+                        "CZ": 10635,
+                        "MeasurementGate": 2731
                     },
                     "parallel": {
-                        "ResetChannel": 19,
-                        "PhasedXZGate": 40,
-                        "CZ": 149,
-                        "MeasurementGate": 18
+                        "ResetChannel": 24,
+                        "PhasedXZGate": 52,
+                        "CZ": 187,
+                        "MeasurementGate": 23
                     }
                 }
             },
@@ -720,16 +720,16 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 4104,
-                        "PhasedXZGate": 4035,
-                        "CZ": 14653,
-                        "MeasurementGate": 3872
+                        "ResetChannel": 4270,
+                        "PhasedXZGate": 4266,
+                        "CZ": 15659,
+                        "MeasurementGate": 4035
                     },
                     "parallel": {
-                        "ResetChannel": 21,
-                        "PhasedXZGate": 44,
-                        "CZ": 165,
-                        "MeasurementGate": 20
+                        "ResetChannel": 26,
+                        "PhasedXZGate": 56,
+                        "CZ": 203,
+                        "MeasurementGate": 25
                     }
                 }
             },
@@ -830,16 +830,16 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 5838,
-                        "PhasedXZGate": 5740,
-                        "CZ": 21079,
-                        "MeasurementGate": 5542
+                        "ResetChannel": 6014,
+                        "PhasedXZGate": 5983,
+                        "CZ": 22155,
+                        "MeasurementGate": 5715
                     },
                     "parallel": {
-                        "ResetChannel": 23,
-                        "PhasedXZGate": 48,
-                        "CZ": 181,
-                        "MeasurementGate": 22
+                        "ResetChannel": 28,
+                        "PhasedXZGate": 60,
+                        "CZ": 219,
+                        "MeasurementGate": 27
                     }
                 }
             },
@@ -940,16 +940,16 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 8004,
-                        "PhasedXZGate": 7873,
-                        "CZ": 29169,
-                        "MeasurementGate": 7636
+                        "ResetChannel": 8190,
+                        "PhasedXZGate": 8128,
+                        "CZ": 30315,
+                        "MeasurementGate": 7819
                     },
                     "parallel": {
-                        "ResetChannel": 25,
-                        "PhasedXZGate": 52,
-                        "CZ": 197,
-                        "MeasurementGate": 24
+                        "ResetChannel": 30,
+                        "PhasedXZGate": 64,
+                        "CZ": 235,
+                        "MeasurementGate": 29
                     }
                 }
             },
@@ -1050,16 +1050,16 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 10650,
-                        "PhasedXZGate": 10482,
-                        "CZ": 39115,
-                        "MeasurementGate": 10202
+                        "ResetChannel": 10846,
+                        "PhasedXZGate": 10749,
+                        "CZ": 40331,
+                        "MeasurementGate": 10395
                     },
                     "parallel": {
-                        "ResetChannel": 27,
-                        "PhasedXZGate": 56,
-                        "CZ": 213,
-                        "MeasurementGate": 26
+                        "ResetChannel": 32,
+                        "PhasedXZGate": 68,
+                        "CZ": 251,
+                        "MeasurementGate": 31
                     }
                 }
             },
@@ -1160,16 +1160,16 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 13824,
-                        "PhasedXZGate": 13615,
-                        "CZ": 51109,
-                        "MeasurementGate": 13288
+                        "ResetChannel": 14030,
+                        "PhasedXZGate": 13894,
+                        "CZ": 52395,
+                        "MeasurementGate": 13491
                     },
                     "parallel": {
-                        "ResetChannel": 29,
-                        "PhasedXZGate": 60,
-                        "CZ": 229,
-                        "MeasurementGate": 28
+                        "ResetChannel": 34,
+                        "PhasedXZGate": 72,
+                        "CZ": 267,
+                        "MeasurementGate": 33
                     }
                 }
             },
@@ -1270,16 +1270,16 @@
                 },
                 "5": {
                     "serial": {
-                        "ResetChannel": 17574,
-                        "PhasedXZGate": 17320,
-                        "CZ": 65343,
-                        "MeasurementGate": 16942
+                        "ResetChannel": 17790,
+                        "PhasedXZGate": 17611,
+                        "CZ": 66699,
+                        "MeasurementGate": 17155
                     },
                     "parallel": {
-                        "ResetChannel": 31,
-                        "PhasedXZGate": 64,
-                        "CZ": 245,
-                        "MeasurementGate": 30
+                        "ResetChannel": 36,
+                        "PhasedXZGate": 76,
+                        "CZ": 283,
+                        "MeasurementGate": 35
                     }
                 }
             },

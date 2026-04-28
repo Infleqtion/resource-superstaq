@@ -135,9 +135,16 @@ def cultivate(
     If the final patch size is less than 25 it reads from saved resources instead of calling the functions directly
     The `for_test` argument is to turn off the loading behvior for the purpose of testing
     """
-    if dsurface < 7:
-        warnings.warn("Cultivation code does not work with d<7. Returning result for d=7")
+    if dsurface < 7 and fault_distance == 3:
+        warnings.warn(
+            "Code distance must be at least twice the fault distance. Returning result for d=7"
+        )
         dsurface = 7
+    if dsurface < 11 and fault_distance == 5:
+        warnings.warn(
+            "Code distance must be at least twice the fault distance. Returning result for d=11"
+        )
+        dsurface = 11
     style = "yale" if fold else "gidney"
     if dsurface <= 25 and not for_test:
         if fault_distance not in (3, 5):

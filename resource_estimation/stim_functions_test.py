@@ -110,10 +110,17 @@ def test_error_handling():
 
 def test_cultivation_low_distance_warning():
     # Just trigger the impossible branch once
-    with pytest.warns(UserWarning, match="d<7"):
+    with pytest.warns(UserWarning, match="Returning result for d=7"):
         cultivate(
             dsurface=5,
             for_test=True,
             fold=False,
             fault_distance=3,
+        )
+    with pytest.warns(UserWarning, match="Returning result for d=11"):
+        cultivate(
+            dsurface=7,
+            for_test=True,
+            fold=False,
+            fault_distance=5,
         )
