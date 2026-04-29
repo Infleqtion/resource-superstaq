@@ -106,6 +106,8 @@ def test_error_handling():
         _ = load_saved_cost(dsurface=7, op_key="cultivate")
     with pytest.raises(ValueError, match="cannot be None"):
         _ = load_saved_cost(dsurface=7, op_key="cultivate", style="yale")
+    with pytest.raises(ValueError, match="fault_distance values 3 and 5"):
+        _ = cultivate(dsurface=15, fault_distance=7, fold=False, for_test=False)
 
 
 def test_cultivation_low_distance_warning():
