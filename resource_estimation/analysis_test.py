@@ -175,8 +175,6 @@ def test_get_important_information_t_paths(fold_cultiv):
     cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance = (
         analysis.get_important_information(circuit, pfid=f_weak, fold_cultiv=fold_cultiv)
     )
-    print(cultivation_repetition)
-    print("A" * 100)
     assert cultivation_repetition == (1 if fold_cultiv else 5)
     assert cultivation_fault_distance == 3
     assert gates[cirq.T] == 1
