@@ -27,6 +27,7 @@ STR2GATE = {
     "MeasurementGate": cirq.MeasurementGate,
     "CZ": cirq.CZ,
     "ResetChannel": cirq.ResetChannel,
+    "CCZ": cirq.CCZ,
 }
 
 
@@ -96,6 +97,7 @@ def load_saved_cost(
     dsurface: int,
     op_key: Literal["cultivate", "cnot", "memory_d_rounds", "memory_1_round"],
     style: Literal[None, "gidney", "yale"] = None,
+    fault_distance: Literal[None, 3, 5] = None,
 ) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
     """
     Gets saved serial and parallel costs from the `cultivate_costs.json` file
@@ -103,12 +105,14 @@ def load_saved_cost(
     """
     if op_key == "cultivate" and style is None:
         raise ValueError("Style cannot be None for cultivation")
+    if op_key == "cultivate" and fault_distance is None:
+        raise ValueError("Fault distance cannot be None for cultivation")
     with open(
         os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json", "r"
     ) as f:
         saved_costs = json.load(f)
     loaded_costs = (
-        saved_costs[str(dsurface)][op_key][style]
+        saved_costs[str(dsurface)][op_key][style][str(fault_distance)]
         if op_key == "cultivate"
         else saved_costs[str(dsurface)][op_key]
     )
@@ -122,37 +126,48 @@ def load_saved_cost(
 
 def cultivate(
     dsurface: int,
+    fault_distance: int,
     fold=False,
     for_test=False,
-) -> Counter[cirq.Gate, int]:
+) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
     """
     Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
     If the final patch size is less than 25 it reads from saved resources instead of calling the functions directly
     The `for_test` argument is to turn off the loading behvior for the purpose of testing
     """
-    if dsurface < 7:
-        warnings.warn("Cultivation code does not work with d<7. Returning result for d=7")
+    if dsurface < 7 and fault_distance == 3:
+        warnings.warn(
+            "Code distance must be at least twice the fault distance. Returning result for d=7"
+        )
         dsurface = 7
+    if dsurface < 11 and fault_distance == 5:
+        warnings.warn(
+            "Code distance must be at least twice the fault distance. Returning result for d=11"
+        )
+        dsurface = 11
     style = "yale" if fold else "gidney"
     if dsurface <= 25 and not for_test:
-        return load_saved_cost(dsurface=dsurface, op_key="cultivate", style=style)
+        if fault_distance not in (3, 5):
+            raise ValueError(
+                "Saved cultivation costs are only available for fault_distance values 3 and 5."
+            )
+        return load_saved_cost(
+            dsurface=dsurface, op_key="cultivate", style=style, fault_distance=fault_distance
+        )
     if fold:
-        stim_circuit = cultiv.make_folded_transversal_circuit(
-            noise_strength=0.0001,  # Required argument that adds noise moments
-            dfinal=dsurface,
-            ghz_size=3,  # Should this parameter be more configurable?
-            latter_rounds=3,
-            prep="hookinj",
-            ps_on_d3=1,
-        ).without_noise()
+        resources = cultiv.make_cirq_circuits.dirty_count(
+            cultiv.make_cirq_circuits.make_cirq_circuit(
+                code_distance=dsurface, fault_distance=fault_distance
+            )
+        )
     else:
         stim_circuit = cultiv.make_end2end_cultivation_circuit(
-            dcolor=3,  # It might be possible to make this 5 now
+            dcolor=fault_distance,
             dsurface=dsurface,
             basis="Y",
             r_growing=1,
             r_end=dsurface,  # This parameter controls the number of times we a block of Reset -> 8 CX Moments -> Measure (Repeat)
             inject_style="unitary",
         )
-    circuit_resources = count_stim_resources(stim_circuit=stim_circuit)
-    return circuit_resources
+        resources = count_stim_resources(stim_circuit=stim_circuit)
+    return resources

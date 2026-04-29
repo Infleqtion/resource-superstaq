@@ -162,7 +162,8 @@ def test_break_up_ops():
     assert analysis.break_up_ops(circuit) == (2, 2)
 
 
-def test_get_important_information_t_paths():
+@pytest.mark.parametrize("fold_cultiv", (True, False))
+def test_get_important_information_t_paths(fold_cultiv):
     q = cirq.LineQubit(0)
     circuit = cirq.Circuit(
         cirq.T.on(q),
@@ -171,22 +172,21 @@ def test_get_important_information_t_paths():
     )
     f_weak = 0.99999
     f_strong = 0.9999999
-    cultivation_repetition, distance, gates, expected_fidelity = analysis.get_important_information(
-        circuit,
-        pfid=f_weak,
+    cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance = (
+        analysis.get_important_information(circuit, pfid=f_weak, fold_cultiv=fold_cultiv)
     )
-
-    assert cultivation_repetition == 5
+    assert cultivation_repetition == (1 if fold_cultiv else 5)
+    assert cultivation_fault_distance == 3
     assert gates[cirq.T] == 1
     assert gates[cirq.X] == 1
     assert gates[cirq.H] == 1
     assert distance == 11
     assert f_weak < expected_fidelity <= 1
-    cultivation_repetition, distance, gates, expected_fidelity = analysis.get_important_information(
-        circuit,
-        pfid=f_strong,
+    cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance = (
+        analysis.get_important_information(circuit, pfid=f_strong, fold_cultiv=fold_cultiv)
     )
-    assert cultivation_repetition == 100
+    assert cultivation_repetition == (10 if fold_cultiv else 100)
+    assert cultivation_fault_distance == 5
     assert gates[cirq.T] == 1
     assert gates[cirq.X] == 1
     assert gates[cirq.H] == 1
@@ -199,15 +199,15 @@ def test_get_important_information_warnings():
     circuit = cirq.Circuit([cirq.T.on(q)] * 10)
 
     with pytest.warns(UserWarning, match="not sufficient"):
-        cultivation_repetition, _, _, _ = analysis.get_important_information(
-            circuit,
-            pfid=1.0,
+        cultivation_repetition, _, _, _, cultivation_fault_distance = (
+            analysis.get_important_information(circuit, pfid=1.0, fold_cultiv=False)
         )
     assert cultivation_repetition == 100
+    assert cultivation_fault_distance == 5
 
     circuit = cirq.Circuit([cirq.H.on(q)])
     with pytest.warns(UserWarning, match="Max code distance"):
-        _, _, _, _ = analysis.get_important_information(circuit, pfid=1.0)
+        _, _, _, _, _ = analysis.get_important_information(circuit, pfid=1.0, fold_cultiv=False)
 
 
 def test_error_estimate():

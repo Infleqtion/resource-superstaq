@@ -202,16 +202,15 @@ def main(args=None) -> int:
             num_clifford=other_gates,
         )
     else:
-        cultivation_repetition, distance, gates, expected_fidelity = (
+        cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance = (
             res.analysis.get_important_information(
-                clifford_t_circuit=clifford_t_circuit, pfid=1 - gate_error
+                clifford_t_circuit=clifford_t_circuit, pfid=1 - gate_error, fold_cultiv=fold_cultiv
             )
         )
-        if fold_cultiv:
-            cultivation_repetition = 10  # Based on WORST case in Figure 2a of [Fold-transversal surface code cultivation](https://arxiv.org/pdf/2509.05212)
     t2 = time()
 
     report.cultivation_repetition = cultivation_repetition
+    report.cultivation_fault_distance = cultivation_fault_distance
     report.distance = distance
     report.expected_fidelity = expected_fidelity
     report.qec_time = t2 - t1

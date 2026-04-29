@@ -104,6 +104,7 @@ def get_t_path(circuit: cirq.Circuit, verbose=True):
 
 def get_important_information(
     clifford_t_circuit: cirq.Circuit,
+    fold_cultiv: bool,
     pfid=0.99,
 ) -> tuple[int, int, Counter, float]:
     """
@@ -131,18 +132,23 @@ def get_important_information(
     # (t_gates)log(f_t) + (other_gates)log(f_op) > log(f)
     log_pfid = np.log(pfid)
     weak_t_fidelity = t_gates * np.log(1 - 3 * 10**-6)
+    weak_cultivation_repetition = 1 if fold_cultiv else 5
     strong_t_fidelity = t_gates * np.log(1 - 2 * 10**-9)
+    strong_cultivation_repetition = 10 if fold_cultiv else 100
     if weak_t_fidelity > log_pfid:
         t_fidelity = weak_t_fidelity
-        cultivation_repetition = 5  # 80% discard rate
+        cultivation_repetition = weak_cultivation_repetition
+        cultivation_fault_distance = 3
         over_budget = False
     elif strong_t_fidelity > log_pfid:
         t_fidelity = strong_t_fidelity
-        cultivation_repetition = 100  # 99% discard rate
+        cultivation_repetition = strong_cultivation_repetition
+        cultivation_fault_distance = 5
         over_budget = False
     else:
         t_fidelity = strong_t_fidelity
-        cultivation_repetition = 100  # 99% discard rate
+        cultivation_repetition = strong_cultivation_repetition
+        cultivation_fault_distance = 5
         warnings.warn(
             f"Cultivation Error Options of 1e-6 and 1e-9 are not sufficient for desired program fidelity of {pfid}.\nUsing 1e-9 numbers."
         )
@@ -160,7 +166,7 @@ def get_important_information(
         warnings.warn("Max code distance 31 reached")
 
     expected_fidelity = np.exp(t_fidelity + other_gates * np.log(surface_code_fidelity(distance)))
-    return int(cultivation_repetition), distance, gates, expected_fidelity
+    return cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance
 
 
 def break_up_ops(cliff_rz_circuit: cirq.Circuit) -> tuple[int, int]:
@@ -246,6 +252,7 @@ class Report:
 
     # QEC Params
     cultivation_repetition: int = -1
+    cultivation_fault_distance: int = -1
     distance: int = -1
     expected_fidelity: float = np.inf
     qec_time: float = np.inf
@@ -295,6 +302,7 @@ class Report:
             },
             "QEC Parameters": {
                 "Cultivation Repetition": self.cultivation_repetition,
+                "Cultivation Fault Distance": self.cultivation_fault_distance,
                 "Code Distance": self.distance,
                 "Expected Fidelity": self.expected_fidelity,  # TODO: Printing this with .2e formatting usually results in 100%
                 "Time": self.qec_time,
