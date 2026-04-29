@@ -162,7 +162,7 @@ def cultivate(
         )
     else:
         stim_circuit = cultiv.make_end2end_cultivation_circuit(
-            dcolor=3,  # It might be possible to make this 5 now
+            dcolor=fault_distance,
             dsurface=dsurface,
             basis="Y",
             r_growing=1,
