@@ -111,9 +111,7 @@ def compile_cirq_to_clifford_t(circ: cirq.Circuit, eps: float, verbose=True) -> 
                 newcirc += gate.on(*qubits)
             else:
                 if not isinstance(gate, cirq.Rz):
-                    print("Non clifford+Rz gate!")
-                    print(gate)
-                    raise ValueError
+                    raise ValueError(f"Non clifford+Rz gate!\n{gate}")
                 else:
                     theta = gate._rads
                     gates = approx_rz(theta, eps)
