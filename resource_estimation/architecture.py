@@ -594,6 +594,7 @@ class DefaultMovement(Architecture):
             movement=True,
             d=d,
             cultivation_repetition=cultivation_repetition,
+            cultivation_fault_distance=cultivation_fault_distance,
             syndrome_rounds=syndrome_rounds,
             fold_cultiv=fold_cultiv,
         )

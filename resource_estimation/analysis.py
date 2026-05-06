@@ -106,7 +106,7 @@ def get_important_information(
     clifford_t_circuit: cirq.Circuit,
     fold_cultiv: bool,
     pfid=0.99,
-) -> tuple[int, int, Counter, float]:
+) -> tuple[int, int, Counter, float, int]:
     """
     Get information used to set certain error-correction assumptions.
 

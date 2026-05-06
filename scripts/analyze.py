@@ -193,6 +193,8 @@ def main(args=None) -> int:
     t1 = time()
     if overwrite_error_params:
         cultivation_repetition = args.cultivation_repetition
+        # Fauly distance limited by 1e-6 at fault distance 3 for both
+        cultivation_fault_distance = 3 if error_per_cult >= 2e-7 else 5
         distance = args.code_distance
         expected_fidelity = 1 - res.analysis.error_estimate(
             code_distance=distance,
