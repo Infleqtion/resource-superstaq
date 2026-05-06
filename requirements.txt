@@ -1,6 +1,6 @@
 checks-superstaq~=0.5.65
 cirq-superstaq~=0.5.65
-magic-state-cultivation @ git+https://git@github.com/Infleqtion/magic-state-cultivation.git@449838d7eac3de4d952f34a025a0241b78f1fd67
+magic-state-cultivation @ git+https://git@github.com/Infleqtion/magic-state-cultivation.git@99954d8539c11e57c65a185699164fd2f4905cf0
 openfermion>=1.7.1
 pygridsynth>=1.2.0
 qiskit-superstaq~=0.5.65
