@@ -99,8 +99,7 @@ def test_saved_gidney(gidney3, gidney5, fault_distance):
 
 @pytest.mark.parametrize("fault_distance", (3, 5))
 def test_saved_yale(yale3, yale5, fault_distance):
-    # There is no stim circuit for this cultivaiton circuit, so there are only saved and generated costs
-    esample_yale = yale3 if fault_distance == 3 else yale5
+    # There is no stim circuit for this cultivation circuit, so there are only saved and generated costs
     saved_cost = load_saved_cost(
         dsurface=2 * fault_distance + 1,
         op_key="cultivate",
