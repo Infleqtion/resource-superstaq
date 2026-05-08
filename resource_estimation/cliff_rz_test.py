@@ -67,6 +67,35 @@ def test_already_in_gateset():
     )
 
 
+def test_classically_controlled_multi_qubit_operations():
+    control, q0, q1, q2 = cirq.LineQubit.range(4)
+    qubits = [control, q0, q1, q2]
+
+    for control_value in [False, True]:
+        operations = []
+        if control_value:
+            operations.append(cirq.X(control))
+
+        operations.extend(
+            [
+                cirq.H.on_each(q0, q1, q2),
+                cirq.measure(control, key="a"),
+                cirq.CZ(q0, q1).with_classical_controls("a"),
+                cirq.CCZ(q0, q1, q2).with_classical_controls("a"),
+            ]
+        )
+        circuit = cirq.Circuit(operations)
+
+        compiled_circuit = cliff.compile_cliff_rz(circuit)
+
+        simulator = cirq.Simulator(seed=1234)
+        cirq.testing.assert_allclose_up_to_global_phase(
+            simulator.simulate(circuit, qubit_order=qubits).final_state_vector,
+            simulator.simulate(compiled_circuit, qubit_order=qubits).final_state_vector,
+            atol=1e-6,
+        )
+
+
 def test_phx_to_zhzhz():
     q = cirq.GridQubit(0, 0)
     I_circuit = cirq.Circuit(cirq.PhasedXPowGate(exponent=0, phase_exponent=0.5).on(q))

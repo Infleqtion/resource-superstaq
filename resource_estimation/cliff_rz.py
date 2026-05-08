@@ -19,6 +19,21 @@ import warnings
 # warnings.filterwarnings(category=FutureWarning, action="ignore")
 
 
+def _with_classical_controls(
+    op_tree: cirq.OP_TREE, classical_controls: frozenset[cirq.Condition]
+) -> cirq.OP_TREE:
+    if not classical_controls:
+        return op_tree
+
+    if isinstance(op_tree, cirq.Operation):
+        return op_tree.with_classical_controls(*classical_controls)
+
+    if op_tree is None:
+        return None
+
+    return [_with_classical_controls(op, classical_controls) for op in op_tree]
+
+
 @cirq.transformer
 def eject_z(
     circuit: cirq.Circuit,
@@ -154,9 +169,23 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
             reorder_operations=False,  # Enabling makes a shorter circuit but probably way too slow
         )
 
+    def _validate_operation(self, op: cirq.Operation) -> bool:
+        if isinstance(op, cirq.ClassicallyControlledOperation):
+            return super()._validate_operation(op.without_classical_controls())
+
+        return super()._validate_operation(op)
+
     def _decompose_two_qubit_operation(
         self, op: cirq.Operation, moment_idx: int = -1
     ) -> cirq.OP_TREE:
+        if isinstance(op, cirq.ClassicallyControlledOperation):
+            return _with_classical_controls(
+                self._decompose_two_qubit_operation(
+                    op.without_classical_controls(), moment_idx=moment_idx
+                ),
+                op.classical_controls,
+            )
+
         if op in self:  # Had to re-add this line because CXPowGate made its way in here
             return op
 
