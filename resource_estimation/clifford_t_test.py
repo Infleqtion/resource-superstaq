@@ -97,6 +97,44 @@ def test_in_cliffs():
     cirq.testing.assert_same_circuits(actual=comp_circuit, expected=circuit)
 
 
+def test_classically_controlled_operations() -> None:
+    control, q = cirq.LineQubit.range(2)
+    qubits = [control, q]
+
+    for control_value in [False, True]:
+        operations = []
+        if control_value:
+            operations.append(cirq.X(control))
+
+        operations.extend(
+            [
+                cirq.H(q),
+                cirq.measure(control, key="a"),
+                cirq.X(q).with_classical_controls("a"),
+                (cirq.Y(q) ** 0.5).with_classical_controls("a"),
+                cirq.XPowGate(exponent=1.0, global_shift=-0.25)
+                .on(q)
+                .with_classical_controls("a"),
+                cirq.Rz(rads=pi / 4).on(q).with_classical_controls("a"),
+            ]
+        )
+        circuit = cirq.Circuit(operations)
+
+        compiled_circuit = compile_cirq_to_clifford_t(circuit, eps=1e-4, verbose=False)
+
+        assert any(
+            isinstance(op, cirq.ClassicallyControlledOperation)
+            for op in compiled_circuit.all_operations()
+        )
+
+        simulator = cirq.Simulator(seed=1234)
+        cirq.testing.assert_allclose_up_to_global_phase(
+            simulator.simulate(circuit, qubit_order=qubits).final_state_vector,
+            simulator.simulate(compiled_circuit, qubit_order=qubits).final_state_vector,
+            atol=1e-6,
+        )
+
+
 def test_t_synth():
     theta, eps = 1.2345678, 1e-8
     true_circuit = cirq.Circuit(cirq.Rz(rads=theta / pi).on(cirq.GridQubit(0, 0)))

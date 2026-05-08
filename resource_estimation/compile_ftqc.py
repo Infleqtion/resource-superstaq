@@ -288,6 +288,17 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
         raise ValueError(f"This compiler only handles Clifford + Rz circuits")
 
 
+def _drop_classical_controls(circuit: cirq.Circuit) -> cirq.Circuit:
+    return cirq.map_operations_and_unroll(
+        circuit,
+        lambda op, _: (
+            op.without_classical_controls()
+            if isinstance(op, cirq.ClassicallyControlledOperation)
+            else op
+        ),
+    )
+
+
 def _decompose_to_primitives(
     circuit: cirq.Circuit,
     layout: Layout,
@@ -367,6 +378,7 @@ def ft_compile(
     G = layout.layout_graph
 
     circuit = layout.mapped_circuit
+    circuit = _drop_classical_controls(circuit)
     if verbose > 1:
         print("Validating Circuit Operations")
     if skip_validation:  # pragma: no cover

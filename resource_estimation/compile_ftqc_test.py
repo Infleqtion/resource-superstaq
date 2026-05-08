@@ -93,6 +93,27 @@ def test_end2end(with_barriers):
             assert is_primitive
 
 
+def test_classically_controlled_operations() -> None:
+    control, q0, q1 = cirq.GridQubit.rect(1, 3)
+    circuit = cirq.Circuit(
+        [
+            cirq.measure(control, key="a"),
+            cirq.T(q0).with_classical_controls("a"),
+            cirq.CNOT(q0, q1).with_classical_controls("a"),
+        ]
+    )
+    arc = arch.DefaultMovement(idling=False, post_op_correction=True)
+    layout = MovementLayout(input_circuit=circuit, num_t_factories=1)
+
+    compiled = comp.ft_compile(layout, arc, verbose=0)
+
+    assert not any(
+        isinstance(op, cirq.ClassicallyControlledOperation) for op in compiled.all_operations()
+    )
+    for op in compiled.all_operations():
+        assert arc.primitives.validate(op)
+
+
 def test_direct_substitution():
     dummy_qubits = [cirq.GridQubit(i, j) for i in range(3) for j in range(3)]
     nothing_circuit = cirq.Circuit(cirq.I.on_each(dummy_qubits))

@@ -11,8 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import itertools
 import math
 from functools import cache
+
 import cirq
 import mpmath
 import numpy as np
@@ -95,6 +97,59 @@ def cin_cliffs(gate: cirq.Gate) -> bool:
     return gate in [cirq.H, cirq.S, cirq.Z, cirq.CNOT, cirq.I, cirq.X]
 
 
+def _known_clifford_operations(
+    gate: cirq.Gate, qubits: tuple[cirq.Qid, ...]
+) -> list[cirq.Operation] | None:
+    for known_gate, num_qubits in [
+        (cirq.H, 1),
+        (cirq.S, 1),
+        (cirq.Z, 1),
+        (cirq.CNOT, 2),
+        (cirq.I, 1),
+        (cirq.X, 1),
+    ]:
+        if len(qubits) == num_qubits and cirq.equal_up_to_global_phase(gate, known_gate):
+            return [known_gate.on(*qubits)]
+
+    return None
+
+
+def _decompose_single_qubit_clifford(
+    gate: cirq.Gate, qubit: cirq.Qid
+) -> list[cirq.Operation] | None:
+    if cirq.num_qubits(gate) != 1 or not cirq.has_unitary(gate):
+        return None
+
+    target = cirq.unitary(gate)
+    generator_gates = (cirq.H, cirq.S, cirq.X, cirq.Z)
+    for length in range(1, 7):
+        for candidate_gates in itertools.product(generator_gates, repeat=length):
+            candidate_circuit = cirq.Circuit(
+                candidate_gate.on(qubit) for candidate_gate in candidate_gates
+            )
+            if cirq.allclose_up_to_global_phase(
+                cirq.unitary(candidate_circuit), target, atol=1e-8
+            ):
+                return [candidate_gate.on(qubit) for candidate_gate in candidate_gates]
+
+    return None
+
+
+def _compile_classically_controlled_operation(
+    op: cirq.ClassicallyControlledOperation, eps: float
+) -> cirq.Circuit:
+    compiled_circuit = compile_cirq_to_clifford_t(
+        cirq.Circuit(op.without_classical_controls()), eps=eps, verbose=False
+    )
+    return cirq.Circuit(
+        cirq.Moment(
+            compiled_op.with_classical_controls(*op.classical_controls)
+            for compiled_op in moment
+        )
+        for moment in compiled_circuit
+    )
+
+
 def compile_cirq_to_clifford_t(circ: cirq.Circuit, eps: float, verbose=True) -> cirq.Circuit:
     """
     Synthesizes the Clifford + Rz circuit into a Clifford + T circuit
@@ -103,19 +158,29 @@ def compile_cirq_to_clifford_t(circ: cirq.Circuit, eps: float, verbose=True) -> 
     newcirc = cirq.Circuit()
     for moment in tqdm(circ.moments, colour="cyan", disable=not verbose):
         for op in moment:
+            if isinstance(op, cirq.ClassicallyControlledOperation):
+                newcirc += _compile_classically_controlled_operation(op, eps)
+                continue
+
             qubits = op.qubits
             gate = op.gate
-            if cin_cliffs(gate) and gate is not None:
+            known_clifford_ops = (
+                _known_clifford_operations(gate, qubits) if gate is not None else None
+            )
+            if isinstance(gate, cirq.Rz):
+                theta = gate._rads
+                gates = approx_rz(theta, eps)
+                process_cirq_str(newcirc, gates, qubits[0])
+            elif known_clifford_ops is not None:
+                newcirc += known_clifford_ops
+            elif gate is not None and gate in cirq.Gateset(cirq.MeasurementGate, cirq.ResetChannel):
                 newcirc += gate.on(*qubits)
-            elif gate in cirq.Gateset(cirq.MeasurementGate, cirq.ResetChannel):
-                newcirc += gate.on(*qubits)
+            elif len(qubits) == 1 and gate is not None and (
+                clifford_ops := _decompose_single_qubit_clifford(gate, qubits[0])
+            ) is not None:
+                newcirc += clifford_ops
             else:
-                if not isinstance(gate, cirq.Rz):
-                    raise ValueError(f"Non clifford+Rz gate!\n{gate}")
-                else:
-                    theta = gate._rads
-                    gates = approx_rz(theta, eps)
-                    process_cirq_str(newcirc, gates, qubits[0])
+                raise ValueError(f"Non clifford+Rz gate!\n{gate}")
     return newcirc
 
 
