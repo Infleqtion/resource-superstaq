@@ -137,12 +137,12 @@ def cultivate(
     """
     if dsurface < 7 and fault_distance == 3:
         warnings.warn(
-            "Code distance must be at least twice the fault distance. Returning result for d=7"
+            "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=7"
         )
         dsurface = 7
     if dsurface < 11 and fault_distance == 5:
         warnings.warn(
-            "Code distance must be at least twice the fault distance. Returning result for d=11"
+            "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=11"
         )
         dsurface = 11
     style = "yale" if fold else "gidney"
