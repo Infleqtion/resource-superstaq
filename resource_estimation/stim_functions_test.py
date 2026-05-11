@@ -79,24 +79,6 @@ def test_saved_gidney(gidney3, gidney5, fault_distance):
     assert cultivate_cost == counted_cost
 
 
-# def test_known_yale(example_yale):
-#    costs = count_stim_resources(example_yale)
-#    expected_parallel_costs = {
-#        cirq.ResetChannel: 12,
-#        cirq.CZ: 47,
-#        cirq.MeasurementGate: 10,
-#        cirq.PhasedXZGate: 23,
-#    }
-#    expected_serial_costs = {
-#        cirq.ResetChannel: 275,
-#        cirq.CZ: 819,
-#        cirq.MeasurementGate: 239,
-#        cirq.PhasedXZGate: 258,
-#    }
-#    assert costs["parallel"] == expected_parallel_costs
-#    assert costs["serial"] == expected_serial_costs
-
-
 @pytest.mark.parametrize("fault_distance", (3, 5))
 def test_saved_yale(yale3, yale5, fault_distance):
     # There is no stim circuit for this cultivation circuit, so there are only saved and generated costs
