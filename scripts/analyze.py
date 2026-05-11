@@ -220,10 +220,17 @@ def main(args=None) -> int:
 
     if fold_cultiv:
         arch = STR2ARCH[arch_name](
-            d=distance, cultivation_repetition=cultivation_repetition, fold_cultiv=fold_cultiv
+            d=distance,
+            cultivation_repetition=cultivation_repetition,
+            fold_cultiv=fold_cultiv,
+            cultivation_fault_distance=cultivation_fault_distance,
         )
     else:
-        arch = STR2ARCH[arch_name](d=distance, cultivation_repetition=cultivation_repetition)
+        arch = STR2ARCH[arch_name](
+            d=distance,
+            cultivation_repetition=cultivation_repetition,
+            cultivation_fault_distance=cultivation_fault_distance,
+        )
 
     t1 = time()
     if isinstance(arch, res.architecture.DefaultMovement):
