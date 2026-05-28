@@ -52,8 +52,7 @@ def parse_args():
         type=int,
         default=0,
         help=(
-            "Code distance override. Must also override "
-            "`cultivation-repetition` and `error-per-rz`"
+            "Code distance override. Must also override `cultivation-repetition` and `error-per-rz`"
         ),
     )
     parser.add_argument(
@@ -62,8 +61,7 @@ def parse_args():
         type=int,
         default=0,
         help=(
-            "Cultivation repetition override. Must also override "
-            "`code-distance` and `error-per-rz`"
+            "Cultivation repetition override. Must also override `code-distance` and `error-per-rz`"
         ),
     )
     parser.add_argument(

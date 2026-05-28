@@ -262,12 +262,9 @@ def test_repr():
     assert repr(cult) == "lsp.Cultivate(theta=7).on(cirq.LineQubit(0))"
 
     move = lsp.Move(zone="interact").on_each(qa, qb)
-    assert (
-        repr(move)
-        == (
-            "[lsp.Move(zone=interact).on(cirq.LineQubit(0)), "
-            "lsp.Move(zone=interact).on(cirq.LineQubit(1))]"
-        )
+    assert repr(move) == (
+        "[lsp.Move(zone=interact).on(cirq.LineQubit(0)), "
+        "lsp.Move(zone=interact).on(cirq.LineQubit(1))]"
     )
 
     move = lsp.Move(zone=None).on(qa, qb)
