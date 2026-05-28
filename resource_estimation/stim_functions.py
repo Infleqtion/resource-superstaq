@@ -11,15 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 import json
 import os
 import warnings
 from collections import Counter
+from typing import Literal, TYPE_CHECKING
 
 import cirq
 import cultiv
-import stim
-from typing import Literal
+
+if TYPE_CHECKING:
+    import stim
 
 STR2GATE = {
     "PhasedXZGate": cirq.PhasedXZGate,
@@ -32,9 +35,7 @@ STR2GATE = {
 
 
 def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.Gate, int]]:
-    """
-    Parses stim circuit to count relevant operations and returns both parallel and serial costs
-    """
+    """Parses stim circuit to count relevant operations and returns both parallel and serial costs."""
     # A map from Stim operations to replacement physical operations
     op_map = {
         "CX": ("CZ",),
@@ -59,19 +60,19 @@ def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.G
         "QUBIT_COORDS",
         "SHIFT_COORDS",
     ]
-    total_serial = Counter(dict())
-    total_parallel = Counter(dict())
+    total_serial = Counter({})
+    total_parallel = Counter({})
     tick_total = Counter(
-        dict()
+        {}
     )  # Keeps partial total for different operations that can be done in parallel
     for instr in stim_circuit:
         if instr.name in ops_to_ignore:
             continue
-        elif instr.name == "TICK":
+        if instr.name == "TICK":
             total_parallel += tick_total
             tick_total = Counter({})  # Reset moment counting
             continue
-        elif instr.name == "REPEAT":
+        if instr.name == "REPEAT":
             repeats = instr.repeat_count
             one_round = count_stim_resources(instr.body_copy())
             total_serial += {k: v * repeats for k, v in one_round["serial"].items()}
@@ -96,19 +97,18 @@ def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.G
 def load_saved_cost(
     dsurface: int,
     op_key: Literal["cultivate", "cnot", "memory_d_rounds", "memory_1_round"],
-    style: Literal[None, "gidney", "yale"] = None,
-    fault_distance: Literal[None, 3, 5] = None,
+    style: Literal["gidney", "yale"] | None = None,
+    fault_distance: Literal[3, 5] | None = None,
 ) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
-    """
-    Gets saved serial and parallel costs from the `cultivate_costs.json` file
-    Converts saved strings to proper cirq gate objects
+    """Gets saved serial and parallel costs from the `cultivate_costs.json` file
+    Converts saved strings to proper cirq gate objects.
     """
     if op_key == "cultivate" and style is None:
         raise ValueError("Style cannot be None for cultivation")
     if op_key == "cultivate" and fault_distance is None:
         raise ValueError("Fault distance cannot be None for cultivation")
     with open(
-        os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json", "r"
+        os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json"
     ) as f:
         saved_costs = json.load(f)
     loaded_costs = (
@@ -130,19 +130,18 @@ def cultivate(
     fold=False,
     for_test=False,
 ) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
-    """
-    Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
+    """Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
     If the final patch size is less than 25 it reads from saved resources instead of calling the functions directly
-    The `for_test` argument is to turn off the loading behvior for the purpose of testing
+    The `for_test` argument is to turn off the loading behvior for the purpose of testing.
     """
     if dsurface < 7 and fault_distance == 3:
         warnings.warn(
-            "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=7"
+            "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=7", stacklevel=2
         )
         dsurface = 7
     if dsurface < 11 and fault_distance == 5:
         warnings.warn(
-            "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=11"
+            "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=11", stacklevel=2
         )
         dsurface = 11
     style = "yale" if fold else "gidney"

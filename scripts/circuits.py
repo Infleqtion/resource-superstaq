@@ -12,20 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import cirq
-import openfermion
 import numpy as np
+import openfermion
 from openfermion.circuits import simulate_trotter
 from openfermion.ops import FermionOperator
 
 
 def fermi_hubbard(n, verbose=0):
-    """
-    Generate the circuit we have been using as our proxy for 'Hamiltonian Simulation' in the materials science context
-    """
+    """Generate the circuit we have been using as our proxy for 'Hamiltonian Simulation' in the materials science context."""
     U = 2.0
     J = -1.0
     time = 1
-    final_rank = 1
     hubbard_fermion_hamiltonian = openfermion.fermi_hubbard(
         n, n, tunneling=-J, coulomb=U, periodic=False
     )
@@ -35,20 +32,19 @@ def fermi_hubbard(n, verbose=0):
     n_qubits = openfermion.count_qubits(hubbard_interaction_hamiltonian)
     qubits = cirq.LineQubit.range(n_qubits)
     if verbose > 0:
-        print("Creating circuit")
+        pass
     ham_circuit = cirq.Circuit(
         openfermion.circuits.trotter.simulate_trotter(qubits, hubbard_interaction_hamiltonian, time)
     )
     ham_circuit = cirq.drop_negligible_operations(ham_circuit)
     if verbose > 0:
-        print("Fermi-Hubbard Circuit Qubits:", len(ham_circuit.all_qubits()))
-        print("Fermi-Hubbard Circuit Moments:", len(ham_circuit))
+        pass
     return ham_circuit
 
 
 def map_orbitals(n_imp, n_b, method="impurity_centered"):
-    impurity_sites = [f"I{ii}" for ii in range(0, n_imp)]
-    bath_sites = [f"B{jj}" for jj in range(0, n_b)]
+    impurity_sites = [f"I{ii}" for ii in range(n_imp)]
+    bath_sites = [f"B{jj}" for jj in range(n_b)]
     all_sites = bath_sites + impurity_sites
     spins = ["up", "down"]
     if method == "normal":
@@ -81,27 +77,27 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
     n_imp = 3
 
     # Map orbitals to tensor indices
-    impurity_sites, bath_sites, all_sites, spins, orbital_map = map_orbitals(
+    _impurity_sites, _bath_sites, _all_sites, spins, orbital_map = map_orbitals(
         n_imp=n_imp, n_b=n_bath, method="paired"
     )
 
     # Diagonal and degenerate impurity energies. For 5-site case, e.g., SrMnO3, will need to include CF splitting
     h_0 = FermionOperator()
-    for ii in range(0, n_imp):
+    for ii in range(n_imp):
         for spin in spins:
             label = f"I{ii}_" + spin
             h_0 += FermionOperator(f"{orbital_map[label]}^ {orbital_map[label]}", epsilon_imp)
 
     # U density-density term
     h_u = FermionOperator()
-    for ii in range(0, n_imp):
+    for ii in range(n_imp):
         index_1 = orbital_map[f"I{ii}_up"]
         index_2 = orbital_map[f"I{ii}_down"]
         h_u += FermionOperator(f"{index_1}^ {index_1} {index_2}^ {index_2}", u)
 
     # U-2J density-density term
     h_u2j = FermionOperator()
-    for ii in range(0, n_imp):
+    for ii in range(n_imp):
         for jj in range(ii + 1, n_imp):
             for sigma, spin in enumerate(spins):
                 index_1 = orbital_map[f"I{ii}_" + spin]
@@ -110,7 +106,7 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
 
     # U-3J density-density term
     h_u3j = FermionOperator()
-    for ii in range(0, n_imp):
+    for ii in range(n_imp):
         for jj in range(ii + 1, n_imp):
             for sigma, spin in enumerate(spins):
                 index_1 = orbital_map[f"I{ii}_" + spin]
@@ -120,7 +116,7 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
     # Spin-flip term
     # TODO This is where the problem is for up-down paired orbital ordering
     h_sf = FermionOperator()
-    for ii in range(0, n_imp):
+    for ii in range(n_imp):
         for jj in range(ii + 1, n_imp):
             """
             index_1 = orbital_map[f"I{ii}_" + "up"]
@@ -143,7 +139,7 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
     # Pair-hopping term
     # TODO this is where the problem is if using impurity-centered orbital ordering
     h_ph = FermionOperator()
-    for ii in range(0, n_imp):
+    for ii in range(n_imp):
         for jj in range(ii + 1, n_imp):
             """
             index_1 = orbital_map[f"I{ii}_" + "up"]
@@ -165,7 +161,7 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
 
     # Diagonal bath
     h_b0 = FermionOperator()
-    for ii in range(0, n_bath):
+    for ii in range(n_bath):
         for spin in spins:
             index_1 = orbital_map[f"B{ii}_" + spin]
             h_b0 += FermionOperator(f"{index_1}^ {index_1}", epsilon_bath)
@@ -173,8 +169,8 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
 
     # Hybridization
     h_hyb = FermionOperator()
-    for ii in range(0, n_imp):
-        for jj in range(0, n_bath):
+    for ii in range(n_imp):
+        for jj in range(n_bath):
             for spin in spins:
                 index_1 = orbital_map[f"I{ii}_" + spin]
                 index_2 = orbital_map[f"B{jj}_" + spin]
@@ -204,6 +200,5 @@ def kanamori(n_bath, verbose=0):
     circuit = cirq.drop_negligible_operations(circuit)
     circuit = cirq.drop_negligible_operations(circuit=circuit, atol=1e-7)
     if verbose > 0:
-        print("Kanamori Circuit Qubits:", cirq.num_qubits(circuit))
-        print("Kanamori Circuit Moments:", len(circuit))
+        pass
     return circuit

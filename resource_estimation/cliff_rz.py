@@ -11,10 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import annotations
 import cirq
 import cirq_superstaq as css
 import numpy as np
-import warnings
 
 # warnings.filterwarnings(category=FutureWarning, action="ignore")
 
@@ -25,7 +26,7 @@ def eject_z(
     context: cirq.TransformerContext | None = None,
     atol: float = 1e-8,
 ) -> cirq.Circuit:
-    """Pushes Z gates towards the end of the circuit"""
+    """Pushes Z gates towards the end of the circuit."""
     backlog = {q: 0.0 for q in circuit.all_qubits()}
 
     def _map_fn(op):
@@ -59,7 +60,7 @@ def phx_to_zhzhz(
     context: cirq.TransformerContext | None = None,
     atol: float = 1e-8,
 ) -> cirq.Circuit:
-    """Converts PhasedX gates to ZPOW gates and Hadamards with handling for special angles"""
+    """Converts PhasedX gates to ZPOW gates and Hadamards with handling for special angles."""
 
     # Adding this as its own thing
     def _map_fn(op: cirq.Operation, _: int) -> list[cirq.Operation]:
@@ -114,7 +115,7 @@ def phx_to_zhzhz(
 def zpow_to_rz(
     circuit: cirq.Circuit, context: cirq.TransformerContext | None = None
 ) -> cirq.Circuit:
-    """Converts ZPOW gates to Rz gates minding special angle cases and including the angle factor"""
+    """Converts ZPOW gates to Rz gates minding special angle cases and including the angle factor."""
 
     # Maybe this should be a transformer or something?
     def _map_fn(op: cirq.Operation, _: int):
@@ -138,9 +139,7 @@ def zpow_to_rz(
 
 
 class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
-    """
-    A Gateset for a Clifford + Rz
-    """
+    """A Gateset for a Clifford + Rz."""
 
     def __init__(self, atol: float = 1e-8) -> None:
         self._atol = atol
@@ -194,7 +193,7 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
 
 
 def compile_cliff_rz(circuit: cirq.Circuit, atol: float = 1e-8):
-    """Simple wrapper for compiler logic"""
+    """Simple wrapper for compiler logic."""
     gateset = CliffRzGateset(atol=atol)
     compiled_circuit = cirq.optimize_for_target_gateset(circuit, gateset=gateset)
     return compiled_circuit

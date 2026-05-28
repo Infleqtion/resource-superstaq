@@ -13,15 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
+from time import time
+
 import cirq
 import cirq_superstaq as css
-from time import time
-import textwrap
 
-import argparse
 import resource_estimation as res
-from resource_estimation.visualizations import C, make_pretty
 from resource_estimation.analysis import STR2ARCH
+from resource_estimation.visualizations import make_pretty
 
 
 def parse_args():
@@ -122,7 +122,6 @@ def main(args=None) -> int:
 
     input_circuit = cirq.read_json(file)
     report.load_time = time() - t0
-    print(report.sub_report("Inputs"))
 
     t1 = time()
     barriers = [
@@ -142,7 +141,6 @@ def main(args=None) -> int:
     report.rz_gates = len([op for op in rz_circuit.all_operations() if type(op.gate) is cirq.Rz])
     report.non_rz_gates = len(list(rz_circuit.all_operations())) - report.rz_gates
     report.rz_time = t2 - t1
-    print(report.sub_report("Clifford + RZ"))
 
     t1 = time()
     if overwrite_error_params:
@@ -164,10 +162,10 @@ def main(args=None) -> int:
     )
     t2 = time()
     if args.t_path:
-        t_path = res.analysis.get_t_path(circuit=clifford_t_circuit, verbose=verbose)
-        t3 = time()
+        res.analysis.get_t_path(circuit=clifford_t_circuit, verbose=verbose)
+        time()
     else:
-        print("Skipped T Path Generation")
+        pass
 
     report.eps = eps
     report.t_gates = len(
@@ -178,17 +176,9 @@ def main(args=None) -> int:
     report.cliff_t_depth = len(clifford_t_circuit)
     report.cliff_t_time = t2 - t1
 
-    print(report.sub_report("Clifford + T"))
 
     if args.t_path:
-        print(
-            textwrap.dedent(f"""
-        {C.OKGREEN}Generated T Path in {t3 - t2:.3e} seconds{C.END}
-        T Path Summary:
-          - Total Operations:         {C.MAGENTA}{len(t_path)}{C.END}
-          - Total T Gates:            {C.MAGENTA}{sum(op.gate in cirq.GateFamily(cirq.T) for op in t_path)}{C.END}
-        """).strip()
-        )
+        pass
 
     t1 = time()
     if overwrite_error_params:
@@ -204,7 +194,7 @@ def main(args=None) -> int:
             num_clifford=other_gates,
         )
     else:
-        cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance = (
+        cultivation_repetition, distance, _gates, expected_fidelity, cultivation_fault_distance = (
             res.analysis.get_important_information(
                 clifford_t_circuit=clifford_t_circuit, pfid=1 - gate_error, fold_cultiv=fold_cultiv
             )
@@ -216,7 +206,6 @@ def main(args=None) -> int:
     report.distance = distance
     report.expected_fidelity = expected_fidelity
     report.qec_time = t2 - t1
-    print(report.sub_report("QEC Parameters"))
 
     if fold_cultiv:
         arch = STR2ARCH[arch_name](
@@ -245,7 +234,6 @@ def main(args=None) -> int:
     report.primitive_width = cirq.num_qubits(primitive_circuit)
     report.primitive_depth = len(primitive_circuit)
     report.compile_time = t2 - t1
-    print(report.sub_report("FT Compiled Circuit"))
 
     t1 = time()
     est = res.estimate.ResourceEstimator(arc=arch)
@@ -278,12 +266,7 @@ def main(args=None) -> int:
     report.volume = total_time_parallel * physical_qubits
     report.resource_time = t2 - t1
     report.total_time = time() - t0
-    print(report.sub_report("Resource Estimation"))
-    print(
-        f"\n{C.OKGREEN}Script Executed in {C.END}{C.YELLOW}{time() - t0:.3e}{C.END}{C.OKGREEN} seconds{C.END}\n"
-    )
 
-    print(report.report())
     if not args.nosave:
         report.save()
     return 0

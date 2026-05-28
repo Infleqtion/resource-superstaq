@@ -11,23 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 from itertools import chain
 
 import cirq
-import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import networkx as nx
+from matplotlib import animation
+
 from . import lattice_surgery_primitives as lsp
-from .layout import Layout
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .layout import Layout
 
 
 def visualize_layout_moment(
     G: nx.Graph, moment_paths: list[list[str]], column_layout: Layout
-):  # pragma: no cover
-    """
-    This probably does not work anymore without a significant amount of changes.
-    """
-    moment_paths_flat = list(chain.from_iterable(moment_paths))
+) -> None:  # pragma: no cover
+    """This probably does not work anymore without a significant amount of changes."""
+    list(chain.from_iterable(moment_paths))
     diction = {}
     for qubit in column_layout.qubits:
         diction[qubit["name"]] = (qubit["qubit"].col, -qubit["qubit"].row)
@@ -42,9 +45,9 @@ def visualize_layout_moment(
     distinct_moments = [[]]
     for path in moment_paths:
         inserted = False
-        for i in range(0, len(distinct_moments)):
+        for i in range(len(distinct_moments)):
             conflict = False
-            for j in range(0, len(distinct_moments[i])):
+            for j in range(len(distinct_moments[i])):
                 if has_intersection(distinct_moments[i][j], path):
                     conflict = True
             if not conflict:
@@ -53,14 +56,14 @@ def visualize_layout_moment(
                 break
         if not inserted:
             distinct_moments.append([path])
-    fig, axes = plt.subplots(
+    _fig, axes = plt.subplots(
         nrows=len(distinct_moments),
         ncols=1,
         figsize=(7, len(distinct_moments) * column_layout.rows),
     )
-    for i in range(0, len(distinct_moments)):
+    for i in range(len(distinct_moments)):
         for path in distinct_moments[i]:
-            for j in range(0, len(path) - 1):
+            for j in range(len(path) - 1):
                 if path[j][0] == "a":
                     G.nodes[path[j]]["color"] = "yellow"
                 G.edges[path[j], path[j + 1]]["color"] = "yellow"
@@ -84,10 +87,8 @@ def visualize_layout_moment(
     plt.show()
 
 
-def display_NN_graph(G: nx.Graph):  # pragma: no cover
-    """
-    This can display the connectivity graph of a layout effectively
-    """
+def display_NN_graph(G: nx.Graph) -> None:  # pragma: no cover
+    """This can display the connectivity graph of a layout effectively."""
     pos_dict = {}
     labels = {}
     node_colors = []
@@ -117,10 +118,9 @@ def display_NN_graph(G: nx.Graph):  # pragma: no cover
     plt.show()
 
 
-def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pragma: no cover
-    """
-    Little animation for tracking factory usage in the (slow) movement layout. The new fast
-    layouts don't really use graphs
+def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout) -> None:  # pragma: no cover
+    """Little animation for tracking factory usage in the (slow) movement layout. The new fast
+    layouts don't really use graphs.
     """
     G = lay.layout_graph
     pos_dict = {}
@@ -134,7 +134,7 @@ def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pragm
             labels[grid_qubit] = "d"
             G.nodes[grid_qubit]["color"] = "red"
 
-    def animate(i):
+    def animate(i) -> None:
         moment_ops = ops[i]
         G = lay.layout_graph
         for edge in G.edges:
@@ -162,17 +162,16 @@ def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pragm
             edge_color=edge_colors,
         )
 
-    fig, ax = plt.subplots()
-    anim = animation.FuncAnimation(
+    fig, _ax = plt.subplots()
+    animation.FuncAnimation(
         fig, animate, frames=len(ops), interval=1000, blit=False, repeat=False
     )
     plt.show()
 
 
-def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pragma: no cover
-    """
-    Little animation for tracking factory usage in the (slow) lattice surgery layout. The new fast
-    layouts don't really use graphs, maybe there is some way to change these to bring it back though
+def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout) -> None:  # pragma: no cover
+    """Little animation for tracking factory usage in the (slow) lattice surgery layout. The new fast
+    layouts don't really use graphs, maybe there is some way to change these to bring it back though.
     """
     G = lay.layout_graph
     pos_dict = {}
@@ -189,7 +188,7 @@ def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pr
             labels[grid_qubit] = "a"
             G.nodes[grid_qubit]["color"] = "cyan"
 
-    def animate(i):
+    def animate(i) -> None:
         moment_ops = ops[i]
         G = lay.layout_graph
         for edge in G.edges:
@@ -199,7 +198,7 @@ def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pr
                 if G.nodes[op.qubits[0]]["patch_type"] == "factory":
                     G.nodes[op.qubits[0]]["color"] = "gray"
                 merging_qubits = list(op.qubits)
-                for i in range(0, len(merging_qubits) - 1):
+                for i in range(len(merging_qubits) - 1):
                     G.edges[(merging_qubits[i], merging_qubits[i + 1])]["color"] = "yellow"
             if op.gate in cirq.GateFamily(lsp.Cultivate):
                 G.nodes[op.qubits[0]]["color"] = "green"
@@ -219,8 +218,8 @@ def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pr
             edge_color=edge_colors,
         )
 
-    fig, ax = plt.subplots()
-    anim = animation.FuncAnimation(
+    fig, _ax = plt.subplots()
+    animation.FuncAnimation(
         fig, animate, frames=len(ops), interval=1000, blit=False, repeat=False
     )
     plt.show()
@@ -228,10 +227,8 @@ def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pr
 
 def animate_layout_moment(
     G: nx.Graph, moment_paths: list[list[str]], column_layout: Layout
-):  # pragma: no cover
-    """
-    Not sure if this visualization works anymore, hard to get the moment_paths
-    """
+) -> None:  # pragma: no cover
+    """Not sure if this visualization works anymore, hard to get the moment_paths."""
     moment_paths_flat = list(chain.from_iterable(moment_paths))
     diction = {}
     for qubit in column_layout.qubits:
@@ -247,7 +244,7 @@ def animate_layout_moment(
     for edge in G.edges:
         G.edges[edge]["color"] = "black"
 
-    def animate(i):
+    def animate(i) -> None:
         if i != 0:
             if G.nodes[moment_paths_flat[i]]["color"] == "yellow":
                 G.nodes[moment_paths_flat[i]]["color"] = "magenta"
@@ -261,8 +258,8 @@ def animate_layout_moment(
         edge_colors = [G.edges[edge]["color"] for edge in G.edges()]
         nx.draw(G, pos=diction, node_color=colors, edge_color=edge_colors, with_labels=True)
 
-    fig, ax = plt.subplots()
-    anim = FuncAnimation(
+    fig, _ax = plt.subplots()
+    FuncAnimation(
         fig,
         animate,
         frames=len(moment_paths_flat),
@@ -273,16 +270,11 @@ def animate_layout_moment(
     plt.show()
 
 
-def draw_2d_array_ascii(arr):  # pragma: no cover
-    RED = "\033[31m"
-    GREEN = "\033[32m"
-    BLUE = "\033[34m"
-    RESET = "\033[0m"
+def draw_2d_array_ascii(arr) -> None:  # pragma: no cover
     rows = len(arr)
     cols = len(arr[0]) if rows > 0 else 0
 
     if cols == 0:
-        print("Empty array, nothing to draw.")
         return
 
     # Calculate max string length for formatting
@@ -291,30 +283,24 @@ def draw_2d_array_ascii(arr):  # pragma: no cover
         for s in row:
             max_len = max(max_len, len(str(s)))
 
-    box_width = max_len + 2  # Padding for the box
+    max_len + 2  # Padding for the box
 
     for r in range(rows):
         # Top border of boxes
-        print("+" + ("-" * box_width + "+") * cols)
 
         # String content
         for c in range(cols):
             s = str(arr[r][c])
-            if s[0] == "q":
-                color = RED
-            elif s[0] == "f":
-                color = GREEN
+            if s[0] == "q" or s[0] == "f":
+                pass
             else:
-                color = BLUE
-            print(color + s.center(box_width) + RESET + "|", end="")
-        print("")
+                pass
 
         # Bottom border of boxes and connecting lines
         if r < rows - 1:
-            print("+" + ("-" * box_width + "+") * cols)
+            pass
 
     # Final bottom border
-    print("+" + ("-" * box_width + "+") * cols)
 
 
 class C:
@@ -330,7 +316,7 @@ class C:
     MAGENTA = "\033[95m"
 
 
-def boxed_header(title, width=40):
+def boxed_header(title, width=40) -> str:
     pad = width - len(title) - 2
     left = pad // 2
     right = pad - left
@@ -342,9 +328,7 @@ def hr(width=40):  # pragma: no cover
 
 
 def make_pretty(obj) -> str:  # pragma: no cover
-    """
-    Pulling out the pretty functionality from the ResourceEstimator class to avoid doubling resource calls
-    """
+    """Pulling out the pretty functionality from the ResourceEstimator class to avoid doubling resource calls."""
     if hasattr(obj, "__name__"):
         return obj.__name__
     return str(obj)

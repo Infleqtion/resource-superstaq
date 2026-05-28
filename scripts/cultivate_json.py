@@ -11,20 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Literal
-import cirq
+from typing import Literal, TYPE_CHECKING
+
 
 parent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(parent_dir))
 import os
 
 import cultiv
-from resource_estimation.stim_functions import count_stim_resources, STR2GATE
 from tqdm import tqdm
 
+from resource_estimation.stim_functions import STR2GATE, count_stim_resources
+
+if TYPE_CHECKING:
+    import cirq
 
 GATE2STR = {v: k for k, v in STR2GATE.items()}
 
@@ -32,9 +36,7 @@ GATE2STR = {v: k for k, v in STR2GATE.items()}
 def format_cost_dict(
     cost_dict: dict[Literal["serial", "parallel"], dict[cirq.Gate, int]],
 ) -> dict[Literal["serial", "parallel"], dict[str, int]]:
-    """
-    Converts cost dictionaries from `count_stim_resources` from cirq gate to string format
-    """
+    """Converts cost dictionaries from `count_stim_resources` from cirq gate to string format."""
     reformatted = {
         "serial": {GATE2STR[k]: v for k, v in cost_dict["serial"].items()},
         "parallel": {GATE2STR[k]: v for k, v in cost_dict["parallel"].items()},

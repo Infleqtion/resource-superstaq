@@ -11,25 +11,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import annotations
 import json
 import shutil
-from dataclasses import dataclass, asdict, field
-from pathlib import Path
+import warnings
+from collections import Counter
+from dataclasses import asdict, dataclass, field
 from functools import partial
+from pathlib import Path
+
+import cirq
+import numpy as np
 from tqdm import tqdm
+
 from resource_estimation.architecture import (
-    DefaultMovement,
     DefaultLattice,
+    DefaultMovement,
     DualSpeciesMovement,
     MeasureZonesOnly,
     Superconductor,
 )
 from resource_estimation.visualizations import C, boxed_header
-import cirq
-from collections import Counter
-import numpy as np
-import warnings
-
 
 STR2ARCH = {
     "ssm": partial(DefaultMovement, idling=False, post_op_correction=True),
@@ -48,8 +51,7 @@ except OSError:  # pragma: no cover
 def get_eps(
     cliff_rz_circuit: cirq.Circuit, approximation_fidelity: float
 ) -> tuple[float, int, int]:
-    """
-    Gets the per-angle rotation approximation parameter epsilon such that the
+    """Gets the per-angle rotation approximation parameter epsilon such that the
     product of all Rz gate fidelities is equal to the requested
     `approximation_fidelity` (i.e., the total approximation fidelity is no less
     than the requested target).
@@ -70,18 +72,13 @@ def get_eps(
     return max_error, rz_gates, other_gates
 
 
-def surface_code_fidelity(d, A=0.03, pth=0.0057, p=0.001) -> float:
-    """
-    Fidelity of surface code operations according to the Fowler paper (Eq 11 of https://web.physics.ucsb.edu/~martinisgroup/papers/Fowler2012.pdf)
-    """
+def surface_code_fidelity(d: int, A: float = 0.03, pth: float = 0.0057, p: float = 0.001) -> float:
+    """Fidelity of surface code operations according to the Fowler paper (Eq 11 of https://web.physics.ucsb.edu/~martinisgroup/papers/Fowler2012.pdf)."""
     return 1 - A * (p / pth) ** ((d + 1) // 2)
 
 
-def get_t_path(circuit: cirq.Circuit, verbose=True):
-    """
-    Get the T Path of a logical circuit
-    Good for comparing with cost model resource estimations
-    """
+def get_t_path(circuit: cirq.Circuit, verbose: bool = True) -> None:
+    """Get the T Path of a logical circuit."""
     qubit_paths = {qubit: [] for qubit in circuit.all_qubits()}
     qubit_times = {qubit: 0 for qubit in circuit.all_qubits()}
     for op in tqdm(list(circuit.all_operations()), disable=not verbose, colour="cyan"):
@@ -105,10 +102,9 @@ def get_t_path(circuit: cirq.Circuit, verbose=True):
 def get_important_information(
     clifford_t_circuit: cirq.Circuit,
     fold_cultiv: bool,
-    pfid=0.99,
+    pfid: float = 0.99,
 ) -> tuple[int, int, Counter, float, int]:
-    """
-    Get information used to set certain error-correction assumptions.
+    """Get information used to set certain error-correction assumptions.
 
     Given a Clifford + T circuit and a target program fidelity, determine which
     T-gate fidelity level is needed to stay within the error budget. If neither
@@ -127,9 +123,6 @@ def get_important_information(
     t_gates = gates.get(cirq.T, 0)
     other_gates = sum(gates.values()) - t_gates
 
-    # What do I want?
-    # (f_t)^(t_gates) * (f_op)^(other_gates) > f
-    # (t_gates)log(f_t) + (other_gates)log(f_op) > log(f)
     log_pfid = np.log(pfid)
     weak_t_fidelity = t_gates * np.log(1 - 3 * 10**-6)
     weak_cultivation_repetition = 1 if fold_cultiv else 5
@@ -150,7 +143,11 @@ def get_important_information(
         cultivation_repetition = strong_cultivation_repetition
         cultivation_fault_distance = 5
         warnings.warn(
-            f"Cultivation Error Options of 1e-6 and 1e-9 are not sufficient for desired program fidelity of {pfid}.\nUsing 1e-9 numbers."
+            (
+                "Cultivation Error Options of 1e-6 and 1e-9 are not sufficient "
+                f"for desired program fidelity of {pfid}.\nUsing 1e-9 numbers."
+            ),
+            stacklevel=2,
         )
         over_budget = True
     if over_budget:
@@ -163,16 +160,14 @@ def get_important_information(
         if other_gates * np.log(surface_code_fidelity(distance)) > new_log_pfid:
             break
     if distance == 31:
-        warnings.warn("Max code distance 31 reached")
+        warnings.warn("Max code distance 31 reached", stacklevel=2)
 
     expected_fidelity = np.exp(t_fidelity + other_gates * np.log(surface_code_fidelity(distance)))
     return cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance
 
 
 def break_up_ops(cliff_rz_circuit: cirq.Circuit) -> tuple[int, int]:
-    """
-    Counts operations in Clifford + Rz circuit according to Rz Gates (continuous angle rotations) and Cliffords
-    """
+    """Count Clifford+Rz circuit ops by Rz and Clifford gates."""
     total_ops = 0
     num_rz_gates = 0
     for op in cliff_rz_circuit.all_operations():
@@ -194,6 +189,7 @@ def error_estimate(
     c_fit_param: float = 7.8,  # fit parameter from synthesis plot for H, S
     hw_noise: float = 0.001,
 ) -> float:
+    """Estimate final error probability from synthesis, logical, and cultivation errors."""
     # Recast for vectorized operations
     code_distance = np.asarray(code_distance)
     error_per_rz = np.asarray(error_per_rz)
@@ -222,9 +218,7 @@ def error_estimate(
 
 @dataclass
 class Report:
-    """
-    Class for containing information about a resource estimate to be saved and reviewed later.
-    """
+    """Container for a resource estimate that can be serialized and reported."""
 
     ## Inputs
     filename: str
@@ -274,7 +268,7 @@ class Report:
     total_time: float = np.inf
 
     @property
-    def info_dict(self):
+    def info_dict(self) -> dict[str, dict[str, object]]:
         # This dictionary will be useful for generating organized reports about the data
         return {
             "Inputs": {
@@ -304,7 +298,8 @@ class Report:
                 "Cultivation Repetition": self.cultivation_repetition,
                 "Cultivation Fault Distance": self.cultivation_fault_distance,
                 "Code Distance": self.distance,
-                "Expected Fidelity": self.expected_fidelity,  # TODO: Printing this with .2e formatting usually results in 100%
+                # Printing with .2e formatting can round near-1 values to 100%.
+                "Expected Fidelity": self.expected_fidelity,
                 "Time": self.qec_time,
             },
             "FT Compiled Circuit": {
@@ -325,7 +320,7 @@ class Report:
         }
 
     @property
-    def arch(self):
+    def arch(self) -> object:
         if self.fold_cultiv:
             return STR2ARCH[self.arch_name](
                 d=self.distance,
@@ -336,10 +331,14 @@ class Report:
             d=self.distance, cultivation_repetition=self.cultivation_repetition
         )
 
-    def save(self, savedir=Path("")) -> Path:
+    def save(self, savedir: Path = Path("")) -> Path:
+        """Save the report to a unique JSON path and return that path."""
         stripped_filename = Path(self.filename).stem  # Removes directories and extension
         stripped_fidelity = str(self.program_fidelity)[2:]  # Removes the . in .99
-        base = f"re_{stripped_filename}-{stripped_fidelity}-{self.arch_name}-{self.num_factories}-{int(bool(self.fold_cultiv))}"
+        base = (
+            f"re_{stripped_filename}-{stripped_fidelity}-{self.arch_name}-"
+            f"{self.num_factories}-{int(bool(self.fold_cultiv))}"
+        )
         ext = "json"
         iteration = 0
         filepath = savedir / f"{base}_{iteration}.{ext}"
@@ -348,22 +347,28 @@ class Report:
             filepath = savedir / f"{base}_{iteration}.{ext}"
         with open(filepath, "w") as f:
             json.dump(asdict(self), f, indent=4)
-        print(f"{C.OKGREEN}Saved Report to {C.END}{C.OKCYAN}{str(filepath)}{C.END}")
         return filepath
 
     @classmethod
-    def load(cls, filename):
-        with open(filename, "r") as f:
+    def load(cls, filename: str | Path) -> Report:
+        """Load a report from a JSON file."""
+        with open(filename) as f:
             configs = json.load(f)
         return cls(**configs)
 
     def header_line(self, title: str) -> str:
+        """Build a colored section header line."""
         return f"\n{C.BOLD}{C.OKCYAN}{boxed_header(title=title, width=WIDTH)}{C.END}"
 
     def time_line(self, name: str, seconds: float) -> str:
-        return f"{C.OKGREEN}Generated {name} in {C.END}{C.YELLOW}{seconds:.3e}{C.END}{C.OKGREEN} seconds{C.END}"
+        """Build a colored timing summary line."""
+        return (
+            f"{C.OKGREEN}Generated {name} in {C.END}{C.YELLOW}{seconds:.3e}{C.END}"
+            f"{C.OKGREEN} seconds{C.END}"
+        )
 
-    def line(self, name: str, value: float | int | str | bool, sep=29) -> str:
+    def line(self, name: str, value: object, sep: int = 29) -> str:
+        """Format a scalar key/value pair for report output."""
         if isinstance(value, bool):
             c, v = "", str(value)
         elif isinstance(value, int):
@@ -374,7 +379,8 @@ class Report:
             c, v = "", str(value)
         return f"{name}:{' ' * (sep - len(name))}{c}{v}{C.END}"
 
-    def line_dict(self, name: str, info_dict: dict, sep=29) -> str:
+    def line_dict(self, name: str, info_dict: dict[str, tuple[float, float]], sep: int = 29) -> str:
+        """Format a nested dictionary section as aligned rows."""
         sub_str = f"""{name}{" " * (sep - len(name) + 1)}Count     Time (μs)\n"""
         for key, (count, time_us) in info_dict.items():
             count_str = f"{C.MAGENTA}{count:.2e}{C.END}"
@@ -383,12 +389,14 @@ class Report:
         return sub_str
 
     def report(self) -> str:
+        """Render the full report across all sections."""
         report_string = """"""
         for header in self.info_dict:
             report_string += self.sub_report(header=header)
         return report_string
 
     def sub_report(self, header: str) -> str:
+        """Render one report section by header name."""
         info = self.info_dict[header].copy()
         report_string = """"""
         report_string += self.header_line(title=header) + "\n"

@@ -11,8 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 import math
 from functools import cache
+
 import cirq
 import mpmath
 import numpy as np
@@ -65,9 +67,8 @@ def approx_rz(theta: float, epsilon: float) -> list[str]:
 def process_cirq_str(
     circ: cirq.Circuit, gates: list[str], q: cirq.GridQubit | cirq.LineQubit | cirq.NamedQubit
 ) -> cirq.Operation:
-    """
-    Maps list of strings representing an Rz angle decomposition to a cirq gate
-    The list is reversed because gridsynth returns gates in matrix order instead of circuit operation order
+    """Maps list of strings representing an Rz angle decomposition to a cirq gate
+    The list is reversed because gridsynth returns gates in matrix order instead of circuit operation order.
     """
     for g in gates[::-1]:
         if g == "H":
@@ -89,41 +90,34 @@ def process_cirq_str(
 
 
 def cin_cliffs(gate: cirq.Gate) -> bool:
-    """
-    Helper function for checking Cliffordness
-    """
+    """Helper function for checking Cliffordness."""
     return gate in [cirq.H, cirq.S, cirq.Z, cirq.CNOT, cirq.I, cirq.X]
 
 
 def compile_cirq_to_clifford_t(circ: cirq.Circuit, eps: float, verbose=True) -> cirq.Circuit:
-    """
-    Synthesizes the Clifford + Rz circuit into a Clifford + T circuit
-    The eps parameter defines the maximum allowable error in the angle of each synthesized Rz gate
+    """Synthesizes the Clifford + Rz circuit into a Clifford + T circuit
+    The eps parameter defines the maximum allowable error in the angle of each synthesized Rz gate.
     """
     newcirc = cirq.Circuit()
     for moment in tqdm(circ.moments, colour="cyan", disable=not verbose):
         for op in moment:
             qubits = op.qubits
             gate = op.gate
-            if cin_cliffs(gate) and gate is not None:
-                newcirc += gate.on(*qubits)
-            elif gate in cirq.Gateset(cirq.MeasurementGate, cirq.ResetChannel):
+            if (cin_cliffs(gate) and gate is not None) or gate in cirq.Gateset(cirq.MeasurementGate, cirq.ResetChannel):
                 newcirc += gate.on(*qubits)
             else:
                 if not isinstance(gate, cirq.Rz):
                     raise ValueError(f"Non clifford+Rz gate!\n{gate}")
-                else:
-                    theta = gate._rads
-                    gates = approx_rz(theta, eps)
-                    process_cirq_str(newcirc, gates, qubits[0])
+                theta = gate._rads
+                gates = approx_rz(theta, eps)
+                process_cirq_str(newcirc, gates, qubits[0])
     return newcirc
 
 
 def toffoli_decompose(circuit: cirq.Circuit) -> cirq.Circuit:
-    """
-    Decomposes TOFFOLI gates in circuit according to canned decomposition
+    """Decomposes TOFFOLI gates in circuit according to canned decomposition
     Does not optimize the circuit
-    Implements T dagger with ZST
+    Implements T dagger with ZST.
     """
 
     # TODO: Pretty sure there is a faster way to do this like the way we do ft compile now

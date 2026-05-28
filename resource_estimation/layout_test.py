@@ -13,11 +13,12 @@
 # limitations under the License.
 import cirq
 import pytest
+
 from resource_estimation.layout import (
     Column,
+    Embedded,
     FactorySandwich,
     MovementLayout,
-    Embedded,
 )
 
 
@@ -33,7 +34,7 @@ def circuit5():
     return circuit
 
 
-def test_column(circuit5: cirq.Circuit):
+def test_column(circuit5: cirq.Circuit) -> None:
     column = Column(circuit5)
     column.reload_factories(ftype="s")
     column.reload_factories(ftype="t")
@@ -114,7 +115,7 @@ def test_column(circuit5: cirq.Circuit):
     assert column.route_cnot(ctrl=ctrl, trgt=trgt) in [path_a, path_b]
 
 
-def test_sandwich(circuit5: cirq.Circuit):
+def test_sandwich(circuit5: cirq.Circuit) -> None:
     sandwich = FactorySandwich(circuit5, num_t_factories=3, num_s_factories=5)
     sandwich.reload_factories(ftype="s")
     sandwich.reload_factories(ftype="t")
@@ -161,7 +162,7 @@ def test_sandwich(circuit5: cirq.Circuit):
     )  # Hopefully this covers 116?
 
 
-def test_embedded(circuit5: cirq.Circuit):
+def test_embedded(circuit5: cirq.Circuit) -> None:
     embedded = Embedded(circuit5)
     embedded.reload_factories(ftype="s")
     embedded.reload_factories(ftype="t")
@@ -204,7 +205,7 @@ def test_embedded(circuit5: cirq.Circuit):
     assert embedded.route_cnot(ctrl=ctrl, trgt=trgt) == expected_path
 
 
-def test_movement(circuit5: cirq.Circuit):
+def test_movement(circuit5: cirq.Circuit) -> None:
     movement = MovementLayout(circuit5, num_t_factories=3)
     movement.reload_factories(ftype="s")
     movement.reload_factories(ftype="t")
@@ -239,7 +240,7 @@ def test_movement(circuit5: cirq.Circuit):
     )
 
 
-def test_general_exceptions(circuit5: cirq.Circuit):
+def test_general_exceptions(circuit5: cirq.Circuit) -> None:
     movement = MovementLayout(circuit5)
     with pytest.raises(ValueError, match="not a valid"):
         movement.reload_factories(ftype="q")
@@ -251,42 +252,34 @@ def test_general_exceptions(circuit5: cirq.Circuit):
         _ = movement.nearest_factory(cirq.GridQubit(0, 2), "t")
 
 
-def test_reset_and_reload(circuit5: cirq.Circuit):
+def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
     column = Column(circuit5)
     # Assert all start with the used status
     assert all(
-        [
-            column.layout_graph.nodes[node]["used"]
+        column.layout_graph.nodes[node]["used"]
             for node in column.layout_graph.nodes
             if column.layout_graph.nodes[node]["patch_type"] == "factory"
-        ]
     )
     # Reloading S should reload all S factories
     column.reload_factories("s")
     assert not any(
-        [
-            column.layout_graph.nodes[node]["used"]
+        column.layout_graph.nodes[node]["used"]
             for node in column.layout_graph.nodes
             if column.layout_graph.nodes[node]["patch_type"] == "factory"
             and column.layout_graph.nodes[node]["ftype"] == "s"
-        ]
     )
     # Reloading T should reload all T factories
     column.reload_factories("t")
     assert not any(
-        [
-            column.layout_graph.nodes[node]["used"]
+        column.layout_graph.nodes[node]["used"]
             for node in column.layout_graph.nodes
             if column.layout_graph.nodes[node]["patch_type"] == "factory"
             and column.layout_graph.nodes[node]["ftype"] == "t"
-        ]
     )
     # Resetting should unload all factories
     column.reset_graph()
     assert all(
-        [
-            column.layout_graph.nodes[node]["used"]
+        column.layout_graph.nodes[node]["used"]
             for node in column.layout_graph.nodes
             if column.layout_graph.nodes[node]["patch_type"] == "factory"
-        ]
     )

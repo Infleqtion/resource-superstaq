@@ -11,21 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import cirq
-import pytest
 from math import pi
+
+import cirq
 import numpy as np
+import pytest
+
 from resource_estimation.clifford_t import (
+    approx_rz,
     compile_cirq_to_clifford_t,
     process_cirq_str,
-    approx_rz,
     toffoli_decompose,
 )
 
 
-@pytest.mark.parametrize("theta", (1, pi / 3, pi + 1, 2 * pi - pi / 7, pi / 4))
-@pytest.mark.parametrize("eps", (1e-1, 1e-3, 1e-5, 1e-7))
-def test_compile_cirq_to_clifford_t(theta, eps):
+@pytest.mark.parametrize("theta", [1, pi / 3, pi + 1, 2 * pi - pi / 7, pi / 4])
+@pytest.mark.parametrize("eps", [1e-1, 1e-3, 1e-5, 1e-7])
+def test_compile_cirq_to_clifford_t(theta, eps) -> None:
     circuit = cirq.Circuit(cirq.Rz(rads=theta).on(cirq.GridQubit(0, 0)))
     comp_circuit = compile_cirq_to_clifford_t(circuit, eps=eps, verbose=False)
     u_expected = cirq.unitary(circuit)
@@ -37,7 +39,7 @@ def test_compile_cirq_to_clifford_t(theta, eps):
 
 @pytest.mark.parametrize(
     "theta",
-    (
+    [
         pi,
         -pi,
         pi / 2,
@@ -54,9 +56,9 @@ def test_compile_cirq_to_clifford_t(theta, eps):
         -pi / 4,
         0,
         2 * pi,
-    ),
+    ],
 )
-def test_special_cases(theta):
+def test_special_cases(theta) -> None:
     eps = 0.0001
     circuit = cirq.Circuit(cirq.Rz(rads=theta).on(cirq.GridQubit(0, 0)))
     comp_circuit = compile_cirq_to_clifford_t(circuit, eps=eps, verbose=False)
@@ -70,7 +72,7 @@ def test_special_cases(theta):
         assert err < eps
 
 
-def test_error_handling():
+def test_error_handling() -> None:
     bad_circuit = cirq.Circuit(cirq.Rx(rads=1).on(cirq.GridQubit(0, 0)))
     with pytest.raises(ValueError):
         _ = compile_cirq_to_clifford_t(bad_circuit, eps=0.01)
@@ -79,13 +81,13 @@ def test_error_handling():
         _ = process_cirq_str(bad_circuit, gates=["P"], q=cirq.GridQubit(0, 0))
 
 
-def test_measure():
+def test_measure() -> None:
     circuit = cirq.Circuit(cirq.MeasurementGate(1).on(cirq.GridQubit(0, 0)))
     comp_circuit = compile_cirq_to_clifford_t(circuit, eps=0.001)
     cirq.testing.assert_same_circuits(actual=comp_circuit, expected=circuit)
 
 
-def test_in_cliffs():
+def test_in_cliffs() -> None:
     q = cirq.GridQubit(0, 0)
     circuit = cirq.Circuit(
         cirq.X.on(q),
@@ -97,7 +99,7 @@ def test_in_cliffs():
     cirq.testing.assert_same_circuits(actual=comp_circuit, expected=circuit)
 
 
-def test_t_synth():
+def test_t_synth() -> None:
     theta, eps = 1.2345678, 1e-8
     true_circuit = cirq.Circuit(cirq.Rz(rads=theta / pi).on(cirq.GridQubit(0, 0)))
     decomp = approx_rz(theta, eps)
@@ -108,7 +110,7 @@ def test_t_synth():
     assert cirq.fidelity(rho_true, rho_approx) >= 1 - eps
 
 
-def test_special_angles():
+def test_special_angles() -> None:
     eps = 1e-5
     for theta, expected_str in [
         (pi / 4, "T"),
@@ -129,7 +131,7 @@ def test_special_angles():
         assert approx_rz(theta, eps) == expected_str
 
 
-def test_misc():
+def test_misc() -> None:
     illegal_circuit = cirq.Circuit(cirq.Rx(rads=2).on(cirq.LineQubit(0)))
     with pytest.raises(ValueError):
         _ = compile_cirq_to_clifford_t(circ=illegal_circuit, eps=1e-4)
@@ -141,7 +143,7 @@ def test_misc():
     assert synthesized_M == M_circuit
 
 
-def test_toffoli_decompose():
+def test_toffoli_decompose() -> None:
     qubits = cirq.LineQubit.range(3)
     circuit = cirq.Circuit(cirq.I.on(qubits[0]), cirq.TOFFOLI.on(*qubits))
     new_circuit = toffoli_decompose(circuit=circuit)
