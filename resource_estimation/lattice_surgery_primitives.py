@@ -238,6 +238,39 @@ class Cultivate(cirq.Gate):
 
 
 @cirq.value_equality
+class Distil(cirq.Gate):
+    """
+    Subclassed cirq gate to represent the distillation of a single magic state using 15 code patches.
+    The underlying implementation is assumed to be the one in https://arxiv.org/abs/quant-ph/0403025.
+
+    Distil|0^15> --> (|0> + e^(iπ/4)|1>)/√2 |0^14>
+    
+    """
+
+    def __init__(self,):
+        pass
+
+    def num_qubits(self):
+        return 15
+
+    def __str__(self):
+        return "DISTIL"
+
+    # def _json_dict_(self):
+    #     return {"theta": self._theta}
+
+    def __repr__(self) -> str:
+        return "lsp.Distil()"
+
+    @classmethod
+    def _json_namespace_(cls) -> str:
+        return "lsp"
+
+    # def _value_equality_values_(self) -> float:
+    #     return self._theta
+    
+
+@cirq.value_equality
 class Move(cirq.Gate):
     """
     Subclassed cirq gate to represent a iter-patch movement operation
