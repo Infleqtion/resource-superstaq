@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import subprocess
+import sys
 
 
 def test_clifford_t():
-    result = subprocess.run(["python", "scripts/clifford_t.py"])
+    result = subprocess.run([sys.executable, "scripts/clifford_t.py"])
     assert result
 
 
 def test_scaling():
-    result = subprocess.run(["python", "scripts/scaling.py", "10", "20"])
+    result = subprocess.run([sys.executable, "scripts/scaling.py", "10", "20"])
     assert result
 
 
 def test_rz_games():
-    result = subprocess.run(["python", "scripts/rz_games.py", ".122441", "12", "0"])
+    result = subprocess.run([sys.executable, "scripts/rz_games.py", ".122441", "12", "0"])
     assert result
