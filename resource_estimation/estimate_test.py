@@ -105,7 +105,7 @@ def test_all_primitives(estimator):
 
 
 def test_parallel_circuit_cost(lattice_estimator, movement_estimator):
-    # TODO: This test could (should?) be considerably more thorough than the coverage requirement would imply
+    # TODO: This test could (should?) be more thorough than coverage alone implies.
     qubit_a, qubit_b, qubit_c, qubit_d = (
         cirq.GridQubit(0, 0),
         cirq.GridQubit(0, 1),

@@ -51,28 +51,40 @@ def parse_args():
         "-d",
         type=int,
         default=0,
-        help="Code distance override. Must also override `cultivation-repetition` and `error-per-rz`",
+        help=(
+            "Code distance override. Must also override "
+            "`cultivation-repetition` and `error-per-rz`"
+        ),
     )
     parser.add_argument(
         "--cultivation-repetition",
         "-cr",
         type=int,
         default=0,
-        help="Cultivation repetition override. Must also override `code-distance` and `error-per-rz`",
+        help=(
+            "Cultivation repetition override. Must also override "
+            "`code-distance` and `error-per-rz`"
+        ),
     )
     parser.add_argument(
         "--error-per-rz",
         "-erz",
         type=float,
         default=0.0,
-        help="Synthesis error override. Must also override `code-distance` and `cultivation-repetition`",
+        help=(
+            "Synthesis error override. Must also override "
+            "`code-distance` and `cultivation-repetition`"
+        ),
     )
     parser.add_argument(
         "--error-per-cult",
         "-epc",
         type=float,
         default=0.0,
-        help="Approximate error per cultivation derived elsewhere. Must also override other parameters",
+        help=(
+            "Approximate error per cultivation derived elsewhere. "
+            "Must also override other parameters"
+        ),
     )
     return parser.parse_args()
 
@@ -181,13 +193,16 @@ def main(args=None) -> int:
     print(report.sub_report("Clifford + T"))
 
     if args.t_path:
+        total_t_gates = sum(op.gate in cirq.GateFamily(cirq.T) for op in t_path)
         print(
-            textwrap.dedent(f"""
+            textwrap.dedent(
+                f"""
         {C.OKGREEN}Generated T Path in {t3 - t2:.3e} seconds{C.END}
         T Path Summary:
           - Total Operations:         {C.MAGENTA}{len(t_path)}{C.END}
-          - Total T Gates:            {C.MAGENTA}{sum(op.gate in cirq.GateFamily(cirq.T) for op in t_path)}{C.END}
-        """).strip()
+          - Total T Gates:            {C.MAGENTA}{total_t_gates}{C.END}
+        """
+            ).strip()
         )
 
     t1 = time()
@@ -280,7 +295,8 @@ def main(args=None) -> int:
     report.total_time = time() - t0
     print(report.sub_report("Resource Estimation"))
     print(
-        f"\n{C.OKGREEN}Script Executed in {C.END}{C.YELLOW}{time() - t0:.3e}{C.END}{C.OKGREEN} seconds{C.END}\n"
+        f"\n{C.OKGREEN}Script Executed in {C.END}{C.YELLOW}{time() - t0:.3e}{C.END}"
+        f"{C.OKGREEN} seconds{C.END}\n"
     )
 
     print(report.report())

@@ -67,7 +67,8 @@ def process_cirq_str(
 ) -> cirq.Operation:
     """
     Maps list of strings representing an Rz angle decomposition to a cirq gate
-    The list is reversed because gridsynth returns gates in matrix order instead of circuit operation order
+    The list is reversed because gridsynth returns gates in matrix order
+    instead of circuit operation order
     """
     for g in gates[::-1]:
         if g == "H":

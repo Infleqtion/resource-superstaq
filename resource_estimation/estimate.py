@@ -34,16 +34,17 @@ class ResourceEstimator:
         self.arc = arc
 
     def validate_circuit_ops(self, circuit: cirq.Circuit) -> None:
-        """
-        Checks that the input circuit contains only valid operations and warns of operations still in progress
-        """
+        """Check that the input circuit contains only operations valid for this architecture."""
         unrecognized = [
             op
             for op in dict(Counter([op_.gate for op_ in circuit.all_operations()])).keys()
             if op not in self.arc.primitives
         ]
         if unrecognized:
-            error_message = f"""This circuit has gates that are incompatible with the input architecture parameters.\nThe following gates in this circuit are not recognized:"""
+            error_message = (
+                "This circuit has gates that are incompatible with the input architecture "
+                "parameters.\nThe following gates in this circuit are not recognized:"
+            )
             for op in unrecognized:
                 error_message += f"\n{str(op)}"
             raise ValueError(error_message)
@@ -81,9 +82,7 @@ class ResourceEstimator:
         )
 
     def parallel_circuit_time(self, circuit: cirq.Circuit, verbose: int = 0) -> float:
-        """
-        Estimation of the critical path in the input circuit according to the most expensive operation per moment
-        """
+        """Estimate critical-path time using the most expensive operation per moment."""
         qubit_times = {qubit: 0 for qubit in circuit.all_qubits()}
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
@@ -101,7 +100,9 @@ class ResourceEstimator:
         Is very slow and expensive
         """
         warnings.warn(
-            "This function can be very expensive.\nIf you just want the physical operations or circuit time, use `critical_path_ops` or `parallel_circuit_time` instead."
+            "This function can be very expensive.\n"
+            "If you just want the physical operations or circuit time, use "
+            "`critical_path_ops` or `parallel_circuit_time` instead."
         )
         qubit_paths = {qubit: [] for qubit in circuit.all_qubits()}
         qubit_times = {qubit: 0 for qubit in circuit.all_qubits()}
@@ -129,9 +130,7 @@ class ResourceEstimator:
     def parallel_circuit_cost(
         self, circuit: cirq.Circuit, verbose: int = 0, pretty: bool = False
     ) -> dict[cirq.Gate | str, int]:
-        """
-        Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment
-        """
+        """Estimate physical operations on the critical path."""
         qubit_paths = {qubit: Counter() for qubit in circuit.all_qubits()}
         qubit_times = {qubit: 0 for qubit in circuit.all_qubits()}
         total_ops = len(list(circuit.all_operations()))

@@ -20,7 +20,8 @@ from openfermion.ops import FermionOperator
 
 def fermi_hubbard(n, verbose=0):
     """
-    Generate the circuit we have been using as our proxy for 'Hamiltonian Simulation' in the materials science context
+    Generate the circuit we have been using as our proxy for
+    'Hamiltonian Simulation' in the materials science context.
     """
     U = 2.0
     J = -1.0
@@ -85,7 +86,8 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
         n_imp=n_imp, n_b=n_bath, method="paired"
     )
 
-    # Diagonal and degenerate impurity energies. For 5-site case, e.g., SrMnO3, will need to include CF splitting
+    # Diagonal and degenerate impurity energies.
+    # For 5-site case (e.g., SrMnO3), include crystal-field splitting.
     h_0 = FermionOperator()
     for ii in range(0, n_imp):
         for spin in spins:
@@ -128,7 +130,9 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
             index_3 = orbital_map[f"I{jj}_" + "up"]
             index_4 = orbital_map[f"I{jj}_" + "down"]
             h_sf += FermionOperator(f"{index_1}^ {index_2} {index_3} {index_4}^", j_ex)
-            h_sf += hermitian_conjugated(FermionOperator(f"{index_1}^ {index_2} {index_3} {index_4}^", j_ex))
+            h_sf += hermitian_conjugated(
+                FermionOperator(f"{index_1}^ {index_2} {index_3} {index_4}^", j_ex)
+            )
             """
             for sigma, spin in enumerate(spins):
                 index_1 = orbital_map[f"I{ii}_" + spin]
@@ -151,7 +155,9 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
             index_3 = orbital_map[f"I{jj}_" + "up"]
             index_4 = orbital_map[f"I{jj}_" + "down"]
             h_ph += FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", -j_ex)
-            h_ph += hermitian_conjugated(FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", -j_ex))
+            h_ph += hermitian_conjugated(
+                FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", -j_ex)
+            )
             """
             for sigma, spin in enumerate(spins):
                 index_1 = orbital_map[f"I{ii}_" + spin]

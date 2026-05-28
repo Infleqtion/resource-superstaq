@@ -57,7 +57,8 @@ def test_inplace_exact(lattice_architecture: arch.DefaultLattice):
     assert expected_moment_cost == actual_op_cost["moment_cost"]
 
     # Tests that the serial gates are counted correctly
-    # It does continue the assumption that we can just use a syndrome extraction cycle to approximate the total cost
+    # It continues the assumption that we can use a syndrome extraction cycle
+    # to approximate the total cost.
     se_gate_cost = Counter(
         arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"]
     )
@@ -308,8 +309,10 @@ def test_lattice_gate_costs(d):
     # GR Rz GR   Z     GR Rz GR
     # For the whole stabilizer, there are only 4 GR gates
     # The number of measurements is equal to the total number of stabilizers
-    # The number of CZ gates is equal to 4 times the number of full stabilizers plus 3 times the number of partial stabilizers
-    # The number of Rz gates is equal to (10 + 2) times the number of full stabilizers plus (6 + 2) times the number of partial stabilizers
+    # The number of CZ gates is 4 times the number of full stabilizers plus
+    # 3 times the number of partial stabilizers.
+    # The number of Rz gates is (10 + 2) times the number of full stabilizers
+    # plus (6 + 2) times the number of partial stabilizers.
     # If we assume `d` rounds of error correction, we simply multiply these numbers by `d`
     expected_cost = {
         cirq.CZ: czs_per_syndrome_extract * d,

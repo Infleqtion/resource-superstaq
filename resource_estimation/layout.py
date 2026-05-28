@@ -85,9 +85,11 @@ class Layout(abc.ABC):
 
     def _generate(self) -> None:
         """
-        Private method to generate the underlying networkx graph, qubit map, and qubit placement
-        This method is the core of what defines a Layout
-        At this level, the graph generated has no locality, but methods in subclasses should be local (especially lattice surgery layouts)
+        Private method to generate the underlying networkx graph, qubit map,
+        and qubit placement.
+        This method is the core of what defines a Layout.
+        At this level, the graph has no locality, but subclass methods should
+        preserve locality (especially lattice-surgery layouts).
         """
         total_qubits = (
             len(self.input_circuit.all_qubits()) + self.num_s_factories + self.num_t_factories
@@ -140,8 +142,10 @@ class Layout(abc.ABC):
 
     def nearest_factory(self, qubit: cirq.GridQubit, ftype: Literal["s", "t"]) -> cirq.GridQubit:
         """
-        Finds the closest factory of desired type according to the Manhattan distance using the GridQubit indices of the factory qubits that do not have the `used` status
-        Removes the returned factory from the available options and sets its status to `used`
+        Find the closest factory of the desired type using Manhattan distance
+        over available (unused) factory GridQubits.
+        Removes the returned factory from available options and marks it
+        `used`.
         """
         available_factories = (
             self.available_s_factories if ftype == "s" else self.available_t_factories
@@ -162,11 +166,14 @@ class Layout(abc.ABC):
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit) -> list[cirq.GridQubit]:
         """
-        Finds the patches required to perform a lattice surgery CNOT between two logical qubits
-        The path returned must include at least one ancilla
-        This method does not account for other CNOTs in the logical circuit, so choosing the shortest path might not correspond to the optimal path
+        Find the patches required for a lattice-surgery CNOT between two
+        logical qubits.
+        The path returned must include at least one ancilla.
+        This method does not account for other CNOTs in the logical circuit,
+        so shortest-path may not be globally optimal.
         """
-        # TODO: See if there is a way to maximize parallelism, or port over work that already does this maximization
+        # TODO: See if there is a way to maximize parallelism, or port over
+        # existing work that already does this maximization.
         G = self.layout_graph
 
         def custom_weight(u: cirq.GridQubit, v: cirq.GridQubit, attr: dict) -> int | None:
@@ -208,10 +215,14 @@ class Layout(abc.ABC):
 
 class MovementLayout(Layout):
     """
-    Layout class representing the connections available to Movement Architectures
-    It does not have S factories and the number of T factories is fully configurable
-    The current implementation assumes all-to-all connectivity in the logical qubit layout because the cost for nonlocal moves is handled deeper in the stack
-    A better implementation might do a smart placement of qubits on the grid to minimize overall distance travelled
+    Layout class representing the connections available to movement
+    architectures.
+    It does not have S factories, and the number of T factories is fully
+    configurable.
+    The current implementation assumes all-to-all connectivity in the logical
+    qubit layout because nonlocal move cost is handled deeper in the stack.
+    A better implementation might place qubits on the grid to minimize overall
+    distance traveled.
     """
 
     # TODO: build this implementation
@@ -247,7 +258,8 @@ class Column(Layout):
     def _generate(self) -> None:
         """
         Places and assigns logical qubits according to the column configuration
-        In the case where the number of logical qubits is odd fill the would-be logical qubit with an ancilla
+        In the case where the number of logical qubits is odd, fill the
+        would-be logical qubit with an ancilla.
         """
         qubit_map: dict[cirq.Qid, cirq.GridQubit] = {}
         all_qubits = list(self.input_circuit.all_qubits())
@@ -297,14 +309,16 @@ class Column(Layout):
 
 class FactorySandwich(Layout):
     """
-    Lattice surgery layout based on having a line of logical qubits sandwiched by factory qubits and ancilla
+    Lattice-surgery layout with a line of logical qubits sandwiched by
+    factory qubits and ancilla.
     S | S | ... | S
     a | a | ... | a
     q | q | ... | q
     a | a | ... | a
     T | T | ... | T
 
-    Because the numbers of S and T factories are configurable, the dimensions might not line up resulting in things like
+    Because the numbers of S and T factories are configurable, dimensions might
+    not line up, resulting in things like
     S | S | S
     a | a | a | a | a
     q | q | q | q | q
@@ -355,12 +369,16 @@ class FactorySandwich(Layout):
 
 class Embedded(Layout):
     """
-    Lattice surgery layout based on packing logical qubits into a rectangle with ancilla patches forming gaps between them
-    Without the ancilla patches, the logical qubits would be nearest neighbor
-    Factories surround the main array, alternating between S and T designation
-    This Layout currently cannot increase/decrease the number of factories of either type
-    The inspiration for this layout was a conversation with Ben, where he described the output of the MCM compiler being nearest-neighbor connectivity
-    So I wanted a Layout that could potentially be compatible with that kind of output
+    Lattice-surgery layout that packs logical qubits into a rectangle, with
+    ancilla patches forming gaps between them.
+    Without ancilla patches, logical qubits would be nearest neighbor.
+    Factories surround the main array, alternating between S and T
+    designation.
+    This layout currently cannot increase/decrease the number of factories of
+    either type.
+    The inspiration was a conversation about MCM-compiler output being
+    nearest-neighbor connectivity; this layout is intended to be potentially
+    compatible with that output.
     """
 
     # TODO: figure out a way o make the number of factories configurable
@@ -370,7 +388,8 @@ class Embedded(Layout):
 
     def _generate(self):
         """
-        Builds a large embedded logical qubit array by starting from a nearest neighbor array and adding rows/columns of other qubit types
+        Build a large embedded logical-qubit array by starting from a nearest-
+        neighbor array and adding rows/columns of other qubit types.
         """
         all_qubits = list(self.input_circuit.all_qubits())
         num_logicals = len(all_qubits)
@@ -404,7 +423,8 @@ class Embedded(Layout):
         stage5 = np.hstack((factory_col, stage4, factory_col))
         total_rows, total_cols = stage5.shape
 
-        # Now convert that array into logical qubits, factories, and ancilla in the qubit map and layout graph
+        # Convert the array into logical qubits, factories, and ancilla in the
+        # qubit map and layout graph.
         logical_qubit_positions = [
             (i, j) for i, j in product(range(total_rows), range(total_cols)) if stage5[i, j] == 1
         ]

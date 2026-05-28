@@ -132,17 +132,20 @@ def cultivate(
 ) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
     """
     Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
-    If the final patch size is less than 25 it reads from saved resources instead of calling the functions directly
+    If the final patch size is less than 25 it reads from saved resources
+    instead of calling the functions directly
     The `for_test` argument is to turn off the loading behvior for the purpose of testing
     """
     if dsurface < 7 and fault_distance == 3:
         warnings.warn(
-            "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=7"
+            "Code distance must be an odd value of at least 2 * fault_distance + 1. "
+            "Returning result for d=7"
         )
         dsurface = 7
     if dsurface < 11 and fault_distance == 5:
         warnings.warn(
-            "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=11"
+            "Code distance must be an odd value of at least 2 * fault_distance + 1. "
+            "Returning result for d=11"
         )
         dsurface = 11
     style = "yale" if fold else "gidney"
@@ -166,7 +169,8 @@ def cultivate(
             dsurface=dsurface,
             basis="Y",
             r_growing=1,
-            r_end=dsurface,  # This parameter controls the number of times we a block of Reset -> 8 CX Moments -> Measure (Repeat)
+            # Controls how often a Reset -> 8 CX moments -> Measure block repeats.
+            r_end=dsurface,
             inject_style="unitary",
         )
         resources = count_stim_resources(stim_circuit=stim_circuit)

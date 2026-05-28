@@ -150,7 +150,8 @@ def get_important_information(
         cultivation_repetition = strong_cultivation_repetition
         cultivation_fault_distance = 5
         warnings.warn(
-            f"Cultivation Error Options of 1e-6 and 1e-9 are not sufficient for desired program fidelity of {pfid}.\nUsing 1e-9 numbers."
+            "Cultivation Error Options of 1e-6 and 1e-9 are not sufficient "
+            f"for desired program fidelity of {pfid}.\nUsing 1e-9 numbers."
         )
         over_budget = True
     if over_budget:
@@ -170,9 +171,7 @@ def get_important_information(
 
 
 def break_up_ops(cliff_rz_circuit: cirq.Circuit) -> tuple[int, int]:
-    """
-    Counts operations in Clifford + Rz circuit according to Rz Gates (continuous angle rotations) and Cliffords
-    """
+    """Count operations in Clifford+Rz circuits by Rz gates and Cliffords."""
     total_ops = 0
     num_rz_gates = 0
     for op in cliff_rz_circuit.all_operations():
@@ -304,7 +303,8 @@ class Report:
                 "Cultivation Repetition": self.cultivation_repetition,
                 "Cultivation Fault Distance": self.cultivation_fault_distance,
                 "Code Distance": self.distance,
-                "Expected Fidelity": self.expected_fidelity,  # TODO: Printing this with .2e formatting usually results in 100%
+                # Printing this with .2e formatting usually rounds to 100%.
+                "Expected Fidelity": self.expected_fidelity,
                 "Time": self.qec_time,
             },
             "FT Compiled Circuit": {
@@ -339,7 +339,10 @@ class Report:
     def save(self, savedir=Path("")) -> Path:
         stripped_filename = Path(self.filename).stem  # Removes directories and extension
         stripped_fidelity = str(self.program_fidelity)[2:]  # Removes the . in .99
-        base = f"re_{stripped_filename}-{stripped_fidelity}-{self.arch_name}-{self.num_factories}-{int(bool(self.fold_cultiv))}"
+        base = (
+            f"re_{stripped_filename}-{stripped_fidelity}-{self.arch_name}-"
+            f"{self.num_factories}-{int(bool(self.fold_cultiv))}"
+        )
         ext = "json"
         iteration = 0
         filepath = savedir / f"{base}_{iteration}.{ext}"
@@ -361,7 +364,10 @@ class Report:
         return f"\n{C.BOLD}{C.OKCYAN}{boxed_header(title=title, width=WIDTH)}{C.END}"
 
     def time_line(self, name: str, seconds: float) -> str:
-        return f"{C.OKGREEN}Generated {name} in {C.END}{C.YELLOW}{seconds:.3e}{C.END}{C.OKGREEN} seconds{C.END}"
+        return (
+            f"{C.OKGREEN}Generated {name} in {C.END}{C.YELLOW}{seconds:.3e}{C.END}"
+            f"{C.OKGREEN} seconds{C.END}"
+        )
 
     def line(self, name: str, value: float | int | str | bool, sep=29) -> str:
         if isinstance(value, bool):

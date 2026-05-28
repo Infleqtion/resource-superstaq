@@ -41,16 +41,20 @@ class Merge(cirq.Gate):
     def __init__(self, num_qubits: int, smooth: bool = True):
         """
         Subclassed cirq gate to represent the Merge operation in lattice surgery.
-        The Merge operation combines the stabilizers of a set of distinct surface code patches along the boundary qubits.
+        The Merge operation combines the stabilizers of a set of distinct
+        surface code patches along the boundary qubits.
         Depending on these boundaries, the merge can be smooth or rough.
         See https://arxiv.org/pdf/1111.4022 for details.
 
         Currently this gate expects to merge patches representing well-defined qubits.
-        In reality, merging blobs of various sizes can frustrate the notion of 'num_qubits' for this operation.
-        However, for the purposes of resource estimation, it is expedient to sweep much of complexity under the rug.
+        In reality, merging blobs of various sizes can frustrate the notion of
+        'num_qubits' for this operation.
+        However, for the purposes of resource estimation, it is expedient to
+        sweep much of complexity under the rug.
 
         num_qubits: The number patches (corresponding to logical qubits) to merge
-        smooth: Boolean value representing whether the boundary being merged is X type (rough) or Z type (smooth)
+        smooth: Boolean value representing whether the boundary being merged is
+            X type (rough) or Z type (smooth)
         """
         self._num_qubits = num_qubits
         self._smooth = smooth
@@ -84,12 +88,15 @@ class Merge(cirq.Gate):
 class Split(cirq.Gate):
     """
     Subclassed cirq gate to represent the Split operation in lattice surgery.
-    The Split operation turns a surface code patch into several distinct surface code patches by measuring the boundary qubits.
+    The Split operation turns a surface code patch into several distinct
+    surface code patches by measuring the boundary qubits.
     See https://arxiv.org/pdf/1111.4022 for more information.
-    This version of split assumes that there are a number of underlying well-defined qubits, ensuring we always split along known boundaries.
+    This version of split assumes that there are a number of underlying
+    well-defined qubits, ensuring we always split along known boundaries.
 
     partions: list of indices upon which to split
-    smooth: Boolean value representing whether the boundary is getting an X type (rough) or Z type (smooth) measurement.
+    smooth: Boolean value representing whether the boundary is getting an X type
+        (rough) or Z type (smooth) measurement.
 
     Spilt([1, 3, 2]).on([X, Y, Z, P, Q , R]) --> [X], [Y, Z, P], [Q, R]
     """
@@ -130,8 +137,11 @@ class Split(cirq.Gate):
 @cirq.value_equality
 class SyndromeExtract(cirq.Gate):  # For now we are sort of ignoring the "buffer" physical qubits
     """
-    Subclassed cirq gate to represent the process of measuring the stabilizers of surface code patch.
-    This gate is treated as a single logical qubit operation, and ignores the buffer physical qubits that live between code patches to facilitate merge and split operations.
+    Subclassed cirq gate to represent the process of measuring the stabilizers
+    of surface code patch.
+    This gate is treated as a single logical qubit operation, and ignores the
+    buffer physical qubits that live between code patches to facilitate merge
+    and split operations.
 
     num_qubits: Number of logical qubits being stabilized
     """
@@ -169,7 +179,8 @@ class SyndromeExtract(cirq.Gate):  # For now we are sort of ignoring the "buffer
 class ErrorCorrect(cirq.Gate):
     """
     Subclassed cirq gate to represent the correction part of the error correction cycle.
-    In a proper implementation this gate might have both digital bookkeeping and physical correction components to it.
+    In a proper implementation this gate might have both digital bookkeeping
+    and physical correction components to it.
     For the purposes of resource estimation, we leave it as a pretty bare-bones gate.
     It should always follow a SyndromeExtract gate.
 
@@ -203,7 +214,8 @@ class ErrorCorrect(cirq.Gate):
 class Cultivate(cirq.Gate):
     """
     Subclassed cirq gate to represent the cultivation of a single magic state on single code patch.
-    The underlying implementation is assumed to be the one in https://arxiv.org/pdf/2409.17595, and is treated as single qubit gate.
+    The underlying implementation is assumed to be the one in
+    https://arxiv.org/pdf/2409.17595, and is treated as single qubit gate.
 
     theta: The angle for the magic state to be prepared.
 
@@ -401,7 +413,8 @@ class BufferCodePatch(RotatedCodePatch):
 class IntermediatePatch(RotatedCodePatch):
     """
     (d - 1) x  (d - 1) patch formed between distant patches during a merge operation
-    Has the X partial stabilizers of a full patch if smooth else the Z partial stabilizers from a full patch
+    Has the X partial stabilizers of a full patch if smooth else the Z partial
+    stabilizers from a full patch
     """
 
     def __init__(self, d: int, smooth=True):

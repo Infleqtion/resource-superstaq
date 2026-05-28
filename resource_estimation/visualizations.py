@@ -343,7 +343,8 @@ def hr(width=40):  # pragma: no cover
 
 def make_pretty(obj) -> str:  # pragma: no cover
     """
-    Pulling out the pretty functionality from the ResourceEstimator class to avoid doubling resource calls
+    Pulling out pretty formatting from ResourceEstimator to avoid doubling
+    resource calls
     """
     if hasattr(obj, "__name__"):
         return obj.__name__

@@ -47,18 +47,34 @@ def knock_off_tqdm(moment_idx: int, total: int, tstart: float, message: str):  #
     moment_idx += 1
     time_passed = time() - tstart
     guessed_time = time_passed * (total / moment_idx)
+    passed_stamp = (
+        f"{int(time_passed // 3600)}:{int(time_passed // 60)}:{int(time_passed % 60)}."
+        f"{int(10 * time_passed) % 10}{int(100 * time_passed) % 10}"
+    )
+    guessed_stamp = (
+        f"{int(guessed_time // 3600)}:{int(guessed_time // 60)}:{int(guessed_time % 60)}."
+        f"{int(10 * guessed_time) % 10}{int(100 * guessed_time) % 10}"
+    )
+    passed_stamp_short = (
+        f"{int(time_passed // 3600)}:{int(time_passed // 60)}:{int(time_passed % 10)}."
+        f"{int(10 * time_passed) % 10}{int(100 * time_passed) % 10}"
+    )
+    guessed_stamp_short = (
+        f"{int(guessed_time // 3600)}:{int(guessed_time // 60)}:{int(guessed_time % 10)}."
+        f"{int(10 * guessed_time) % 10}{int(100 * guessed_time) % 10}"
+    )
     offset = len(
         f"{message} || {moment_idx} / {total} ["
-        f"{int(time_passed // 3600)}:{int(time_passed // 60)}:{int(time_passed % 60)}.{int(10 * time_passed) % 10}{int(100 * time_passed) % 10}<"
-        f"{int(guessed_time // 3600)}:{int(guessed_time // 60)}:{int(guessed_time % 60)}.{int(10 * guessed_time) % 10}{int(100 * guessed_time) % 10}, "
+        f"{passed_stamp}<"
+        f"{guessed_stamp}, "
         f"{round(moment_idx / time_passed, 2)}it/s]"
     )
     bars = int((WIDTH - offset) * moment_idx / total)
     spaces = int(WIDTH - offset) - bars
     full_bar = (
         f"{message} |\033[36m{'█' * bars + ' ' * spaces}\033[0m| {moment_idx} / {total} ["
-        f"{int(time_passed // 3600)}:{int(time_passed // 60)}:{int(time_passed % 10)}.{int(10 * time_passed) % 10}{int(100 * time_passed) % 10}<"
-        f"{int(guessed_time // 3600)}:{int(guessed_time // 60)}:{int(guessed_time % 10)}.{int(10 * guessed_time) % 10}{int(100 * guessed_time) % 10}, "
+        f"{passed_stamp_short}<"
+        f"{guessed_stamp_short}, "
         f"{round(moment_idx / time_passed, 2)}it/s]"
     )
     print(
@@ -150,8 +166,10 @@ def handle_idling(
     circuit: cirq.Circuit, layout: Layout, with_barriers: bool, rounds: int, verbose=0
 ) -> cirq.Circuit:
     """
-    Helper function for the compiler that handles idling. This way we can experiment with different kinds of idling or even turn it off entirely.
-    This function is still a work in progress, but it is likely to take the form of various compiler passes.
+    Helper function for the compiler that handles idling. This way we can experiment with
+    different kinds of idling or even turn it off entirely.
+    This function is still a work in progress, but it is likely to take the form of various
+    compiler passes.
     """
 
     # TODO: This pass is a main bottleneck for larger experiments, so make it faster
@@ -173,8 +191,8 @@ def handle_idling(
     # This is a bit faster
     non_ancillas = {q for op in circuit.all_operations() for q in op.qubits if q in non_ancillas}
 
-    # Build circuit where Syndrome Extract is performed on Idling qubits that are not being acted upon
-    # Split moments are treated separately because they can always get absorbed into the previous moment
+    # Add syndrome extraction on idling qubits not acted on in each moment.
+    # Split moments are handled separately because they can be absorbed into the previous moment.
     total = len(circuit)
     tstart = time()
 
@@ -212,12 +230,11 @@ def post_op_syndrome_extraction(
     rounds: int,
     verbose: int = 0,
 ) -> cirq.Circuit:
-    """
-    For movement, it has been suggested that we just do syndrome extraction (for a single round) right after a logical operations.
-    """
+    """For movement, do one round of syndrome extraction after a logical operation."""
 
     # Allowing a little bit of flexibility on what we want to correct
-    # Might even want to add Lattice Primitives, but there aren't many (any?) that are not implicitly corrected
+    # Might even want to add Lattice Primitives, but there are few (if any) that are not
+    # implicitly corrected.
     ops_to_correct = [
         cirq.CNOT,
         cirq.S,
@@ -265,7 +282,7 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
     """
     Checks that the given circuit is in the Clifford+T gateset.
     """
-    # TODO: This function probably belongs in some utilities file, since it is not particularly integral to compiling.
+    # TODO: This probably belongs in a utilities module, since it is not integral to compiling.
     valid_gates = (
         cirq.T,
         cirq.X,
@@ -355,13 +372,18 @@ def ft_compile(
     skip_validation: bool = False,
 ):
     """
-    Basic read/replace compiler that converts a cirq Circuit over the Clifford + T gateset to a cirq circuit of primitives.
-    The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
-    The architecture input contains information about what primtives are accessible to the compiler and which extra passes should be added to the primitive circuit.
-    The passes available are post op correction and idling.
-    The architecture is also the source of information for how many rounds of syndrome extraction should be performed when syndrome extraction is called for.
+    Basic read/replace compiler that converts a cirq Circuit over the Clifford + T gateset
+    to a cirq circuit of primitives.
+    The layout input contains the input circuit and any routing information needed during
+    compilation.
+    The architecture input defines which primitives are accessible and which extra compiler
+    passes should be added to the primitive circuit.
+    The passes available are post-op correction and idling.
+    The architecture also specifies how many rounds of syndrome extraction should be used
+    when syndrome extraction is called.
     """
-    # TODO: Aligning left results in circuits that have are more expensive in terms of circuit time than not aligning left. This is probably the result of requesting a layer of parallel cultivations but realigning so the expensive cultivation operations become spread out over multiple moments. It is currently unclear if aligning left is correct or not in general, but the specific tests for ft_compile very much rely on it...
+    # TODO: Align-left can sometimes produce more expensive circuits than leaving moments
+    # unaligned. The exact reason is still unclear, but ft_compile tests currently rely on it.
     layout = copy.deepcopy(layout)
     layout.reset_graph()
     G = layout.layout_graph
