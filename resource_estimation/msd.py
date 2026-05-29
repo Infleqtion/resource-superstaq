@@ -18,7 +18,7 @@ import numpy as np
 import sympy
 
 
-def msd_5_to_1(qubits: Sequence[cirq.Qid]) -> cirq.Circuit:
+def msd_5_to_1() -> cirq.Circuit:
     """Function to perform a 5-to-1 magic state distillation protocol.
 
     Reference: https://arxiv.org/abs/2310.12106 Page 4 Figure 1.
@@ -38,6 +38,8 @@ def msd_5_to_1(qubits: Sequence[cirq.Qid]) -> cirq.Circuit:
 
     theta = np.pi / 4
 
+    qubits = cirq.LineQubit.range(5)
+    
     cir = cirq.Circuit()
 
     for q in qubits:
@@ -124,14 +126,14 @@ def msd_5_to_1(qubits: Sequence[cirq.Qid]) -> cirq.Circuit:
         ],
     )
 
-    cir.append(
-        [
-            cirq.measure(qubits[1], key="m1"),
-            cirq.measure(qubits[2], key="m2"),
-            cirq.measure(qubits[3], key="m3"),
-            cirq.measure(qubits[4], key="m4"),
-        ],
-    )
+    # cir.append(
+    #     [
+    #         cirq.measure(qubits[1], key="m1"),
+    #         cirq.measure(qubits[2], key="m2"),
+    #         cirq.measure(qubits[3], key="m3"),
+    #         cirq.measure(qubits[4], key="m4"),
+    #     ],
+    # )
 
     cir.append(
         [
@@ -140,21 +142,22 @@ def msd_5_to_1(qubits: Sequence[cirq.Qid]) -> cirq.Circuit:
         ],
     )
 
-    m1, m2, m3, m4 = sympy.symbols("m1 m2 m3 m4")
-    sympy_cond = cirq.SympyCondition(sympy.Eq(m1 + m2 + m3 + m4, 0))  # m1 = m2 = m3 = m4 = 0
+    # m1, m2, m3, m4 = sympy.symbols("m1 m2 m3 m4")
+    # sympy_cond = cirq.SympyCondition(sympy.Eq(m1 + m2 + m3 + m4, 0))  # m1 = m2 = m3 = m4 = 0
 
-    magic_state_cir = cirq.Circuit(
-        cirq.CircuitOperation(
-            circuit=cir.freeze(),
-            use_repetition_ids=False,
-            repeat_until=sympy_cond,
-        )
-    )
+    # magic_state_cir = cirq.Circuit(
+    #     cirq.CircuitOperation(
+    #         circuit=cir.freeze(),
+    #         use_repetition_ids=False,
+    #         repeat_until=sympy_cond,
+    #     )
+    # )
 
-    return magic_state_cir
+    # return magic_state_cir
+    return cir
 
 
-def msd_7_to_1(qubits: Sequence[cirq.Qid]) -> cirq.Circuit:
+def msd_7_to_1() -> cirq.Circuit:
     """Function to perform a 7-to-1 magic state distillation protocol.
         Reference: https://arxiv.org/abs/0803.0272 Page 12 Figure 19.
 
@@ -165,6 +168,8 @@ def msd_7_to_1(qubits: Sequence[cirq.Qid]) -> cirq.Circuit:
     Returns:
         The magic state distillation circuit.
     """
+    qubits = cirq.LineQubit.range(8)
+    
     cir = cirq.Circuit()
 
     for q in qubits:
@@ -234,43 +239,43 @@ def msd_7_to_1(qubits: Sequence[cirq.Qid]) -> cirq.Circuit:
             cirq.H(qubits[5]),
             cirq.H(qubits[6]),
             cirq.H(qubits[7]),
-            cirq.measure(qubits[1], key="m6"),
-            cirq.measure(qubits[2], key="m5"),
-            cirq.measure(qubits[3], key="m4"),
-            cirq.measure(qubits[4], key="m3"),
-            cirq.measure(qubits[5], key="m2"),
-            cirq.measure(qubits[6], key="m1"),
-            cirq.measure(qubits[7], key="m0"),
+            # cirq.measure(qubits[1], key="m6"),
+            # cirq.measure(qubits[2], key="m5"),
+            # cirq.measure(qubits[3], key="m4"),
+            # cirq.measure(qubits[4], key="m3"),
+            # cirq.measure(qubits[5], key="m2"),
+            # cirq.measure(qubits[6], key="m1"),
+            # cirq.measure(qubits[7], key="m0"),
         ],
     )
 
     # index 0=magic
-    m0, m1, m2, m3, m4, m5, m6 = sympy.symbols("m0 m1 m2 m3 m4 m5 m6")
+    # m0, m1, m2, m3, m4, m5, m6 = sympy.symbols("m0 m1 m2 m3 m4 m5 m6")
     # all those parities must be 0 for it to be even ( so output of xor is 0 for even )
     # so stop when true == ~0 & ~0 & ~0 == ~(0 | 0 | 0)
-    even_parity = sympy.Not(
-        sympy.Xor(m0, m1, m2, m3) | sympy.Xor(m0, m1, m4, m5) | sympy.Xor(m0, m2, m4, m6)
-    )
+    # even_parity = sympy.Not(
+    #     sympy.Xor(m0, m1, m2, m3) | sympy.Xor(m0, m1, m4, m5) | sympy.Xor(m0, m2, m4, m6)
+    # )
     # if special parity is even, do Z
-    special_parity = sympy.Xor(m4, m5, m6)
+    # special_parity = sympy.Xor(m4, m5, m6)
 
     # repeating until matched parities
-    magic_state_cir = cirq.Circuit(
-        cirq.CircuitOperation(
-            circuit=cir.freeze(),
-            use_repetition_ids=False,
-            repeat_until=cirq.SympyCondition(even_parity),
-        )
-    )
+    # magic_state_cir = cirq.Circuit(
+    #     cirq.CircuitOperation(
+    #         circuit=cir.freeze(),
+    #         use_repetition_ids=False,
+    #         repeat_until=cirq.SympyCondition(even_parity),
+    #     )
+    # )
 
     # magic state "correction"
     # is even, so do the Z
-    magic_state_cir.append([cirq.Z(qubits[0]).with_classical_controls(sympy.Not(special_parity))])
+    # magic_state_cir.append([cirq.Z(qubits[0]).with_classical_controls(sympy.Not(special_parity))])
 
-    return magic_state_cir
+    # return magic_state_cir
+    return cir
 
-
-def msd_15_to_1(qubits: Sequence[cirq.Qid]) -> cirq.Circuit:
+def msd_15_to_1() -> cirq.Circuit:
     """Function to perform a 15-to-1 magic state distillation protocol.
         Reference: https://arxiv.org/abs/1208.0928 Page 38 Figure 33.
 
@@ -281,6 +286,8 @@ def msd_15_to_1(qubits: Sequence[cirq.Qid]) -> cirq.Circuit:
     Returns:
         The magic state distillation circuit.
     """
+    qubits = cirq.LineQubit.range(16)
+    
     cir = cirq.Circuit()
 
     for q in qubits:
@@ -393,50 +400,51 @@ def msd_15_to_1(qubits: Sequence[cirq.Qid]) -> cirq.Circuit:
             cirq.H(qubits[12]),
             cirq.H(qubits[13]),
             cirq.H(qubits[14]),
-            cirq.measure(qubits[0], key="m1"),
-            cirq.measure(qubits[1], key="m2"),
-            cirq.measure(qubits[2], key="m3"),
-            cirq.measure(qubits[3], key="m4"),
-            cirq.measure(qubits[4], key="m5"),
-            cirq.measure(qubits[5], key="m6"),
-            cirq.measure(qubits[6], key="m7"),
-            cirq.measure(qubits[7], key="m8"),
-            cirq.measure(qubits[8], key="m9"),
-            cirq.measure(qubits[9], key="m10"),
-            cirq.measure(qubits[10], key="m11"),
-            cirq.measure(qubits[11], key="m12"),
-            cirq.measure(qubits[12], key="m13"),
-            cirq.measure(qubits[13], key="m14"),
-            cirq.measure(qubits[14], key="m15"),
+            # cirq.measure(qubits[0], key="m1"),
+            # cirq.measure(qubits[1], key="m2"),
+            # cirq.measure(qubits[2], key="m3"),
+            # cirq.measure(qubits[3], key="m4"),
+            # cirq.measure(qubits[4], key="m5"),
+            # cirq.measure(qubits[5], key="m6"),
+            # cirq.measure(qubits[6], key="m7"),
+            # cirq.measure(qubits[7], key="m8"),
+            # cirq.measure(qubits[8], key="m9"),
+            # cirq.measure(qubits[9], key="m10"),
+            # cirq.measure(qubits[10], key="m11"),
+            # cirq.measure(qubits[11], key="m12"),
+            # cirq.measure(qubits[12], key="m13"),
+            # cirq.measure(qubits[13], key="m14"),
+            # cirq.measure(qubits[14], key="m15"),
         ],
         # no need to measure index 15, that is our magic state
     )
 
-    m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15 = sympy.symbols(
-        "m1 m2 m3 m4 m5 m6 m7 m8 m9 m10 m11 m12 m13 m14 m15"
-    )
+    # m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15 = sympy.symbols(
+    #     "m1 m2 m3 m4 m5 m6 m7 m8 m9 m10 m11 m12 m13 m14 m15"
+    # )
 
     # all those parities must be 0 for it to be even ( output of xor is 0 for even )
     # so stop when true == ~0 & ~0 & ~0 & ~0 == ~(0 | 0 | 0 | 0)
-    even_parity = sympy.Not(
-        sympy.Xor(m4, m5, m6, m7, m8, m9, m10, m11)
-        | sympy.Xor(m1, m2, m3, m4, m5, m6, m7, m15)
-        | sympy.Xor(m2, m3, m4, m5, m10, m11, m12, m13)
-        | sympy.Xor(m1, m2, m5, m6, m9, m10, m13, m14)
-    )
-    # if special parity of all qubits is odd, do Z
-    special_parity = sympy.Xor(m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15)
+    # even_parity = sympy.Not(
+    #     sympy.Xor(m4, m5, m6, m7, m8, m9, m10, m11)
+    #     | sympy.Xor(m1, m2, m3, m4, m5, m6, m7, m15)
+    #     | sympy.Xor(m2, m3, m4, m5, m10, m11, m12, m13)
+    #     | sympy.Xor(m1, m2, m5, m6, m9, m10, m13, m14)
+    # )
+    # # if special parity of all qubits is odd, do Z
+    # special_parity = sympy.Xor(m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15)
 
     # repeating until matched parities are all even
-    magic_state_cir = cirq.Circuit(
-        cirq.CircuitOperation(
-            circuit=cir.freeze(),
-            use_repetition_ids=False,
-            repeat_until=cirq.SympyCondition(even_parity),
-        ),
-        # magic state "correction"
-        # is odd, so do the Z
-        cirq.Z(qubits[15]).with_classical_controls(special_parity),
-    )
+    # magic_state_cir = cirq.Circuit(
+    #     cirq.CircuitOperation(
+    #         circuit=cir.freeze(),
+    #         use_repetition_ids=False,
+    #         repeat_until=cirq.SympyCondition(even_parity),
+    #     ),
+    #     # magic state "correction"
+    #     # is odd, so do the Z
+    #     cirq.Z(qubits[15]).with_classical_controls(special_parity),
+    # )
 
-    return magic_state_cir
+    # return magic_state_cir
+    return cir

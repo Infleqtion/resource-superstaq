@@ -247,11 +247,11 @@ class Distil(cirq.Gate):
     
     """
 
-    def __init__(self,):
-        pass
+    def __init__(self, num_qubits):
+        self._num_qubits = num_qubits
 
     def num_qubits(self):
-        return 16
+        return self._num_qubits
 
     def __str__(self):
         return "DISTIL"
