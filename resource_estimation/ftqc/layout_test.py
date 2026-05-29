@@ -13,7 +13,7 @@
 # limitations under the License.
 import cirq
 import pytest
-from resource_estimation.layout import (
+from resource_estimation.ftqc import (
     Column,
     FactorySandwich,
     MovementLayout,

@@ -14,12 +14,10 @@
 import warnings
 from collections import Counter
 import cirq
-from resource_estimation.cliff_rz import compile_cliff_rz
-from resource_estimation.architecture import Architecture
+from resource_estimation.ftqc.architecture import Architecture
 from tqdm import tqdm
 from functools import cached_property
 from random import choice
-from resource_estimation.clifford_t import approx_rz
 import warnings
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)

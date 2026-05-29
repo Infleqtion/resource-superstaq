@@ -17,7 +17,7 @@ import pytest
 import numpy as np
 
 import resource_estimation.analysis as analysis
-import resource_estimation.architecture as arc
+import resource_estimation.ftqc.architecture as arc
 
 
 @pytest.fixture

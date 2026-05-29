@@ -12,18 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import os
 from collections import Counter
 from math import ceil, pi
+from pathlib import Path
 import numpy as np
 
 import cirq
 import pytest
-import resource_estimation.architecture as arch
+import resource_estimation.ftqc.architecture as arch
 import resource_estimation.estimate as est
-import resource_estimation.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from cirq_superstaq import ParallelRGate
-from resource_estimation.stim_functions import cultivate, load_saved_cost
+from resource_estimation.ftqc.stim_functions import cultivate, load_saved_cost
+
+DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 
 @pytest.fixture
@@ -352,9 +354,7 @@ def test_self_returns(movement_architecture, lattice_architecture):
 def test_against_cultiv(d):
     # Test Syndrome Extract
     # Set up memory circuit
-    with open(
-        os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json", "r"
-    ) as f:
+    with open(DATA_DIR / "cultivate_costs.json") as f:
         saved_resources = json.load(f)
 
     d_count = load_saved_cost(dsurface=d, op_key="memory_d_rounds")["serial"]

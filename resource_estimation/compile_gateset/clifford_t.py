@@ -22,7 +22,7 @@ from tqdm import tqdm
 
 # pygridsynth comes from https://www.mathstat.dal.ca/~selinger/newsynth/
 @cache
-def approx_rz(theta: float, epsilon: float) -> list[str]:
+def approx_rz(theta: float, epsilon: float) -> str:
     if math.isclose(theta, np.pi, abs_tol=epsilon, rel_tol=0.0) or math.isclose(
         theta, -np.pi, abs_tol=epsilon, rel_tol=0.0
     ):

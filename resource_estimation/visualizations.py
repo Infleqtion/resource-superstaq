@@ -17,8 +17,8 @@ import cirq
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import networkx as nx
-from . import lattice_surgery_primitives as lsp
-from .layout import Layout
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+from .ftqc.layout import Layout
 
 
 def visualize_layout_moment(

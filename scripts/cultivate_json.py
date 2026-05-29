@@ -22,7 +22,7 @@ sys.path.insert(0, str(parent_dir))
 import os
 
 import cultiv
-from resource_estimation.stim_functions import count_stim_resources, STR2GATE
+from resource_estimation.ftqc.stim_functions import count_stim_resources, STR2GATE
 from tqdm import tqdm
 
 

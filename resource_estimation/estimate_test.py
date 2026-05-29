@@ -14,9 +14,9 @@
 from math import pi
 import cirq
 import pytest
-import resource_estimation.architecture as arch
+import resource_estimation.ftqc.architecture as arch
 import resource_estimation.estimate as est
-import resource_estimation.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from numpy import isclose
 
 
