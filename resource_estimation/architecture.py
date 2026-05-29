@@ -435,11 +435,19 @@ class Architecture(abc.ABC):
     def h_cost(self, op: cirq.Operation) -> dict:
         return self._h_cost
 
+    def distil_cost(self, op: cirq.Operation) -> dict:
+        return self._distil_cost
+
+    @cached_property
+    def _distil_cost(self, ):
+        return msd.distil(self,)
+
     ### Extra Methods ###
     def __post_init__(self):
         # Initialize with all shared Primitives then add special ones later
         self.op_cost = {
             lsp.Cultivate: self.cultivate_cost,
+            lsp.Distil: self.distil_cost,
             lsp.SyndromeExtract: self.syndrome_extract_cost,
             lsp.ErrorCorrect: self.error_correct_cost,
             type(cirq.X): self.x_cost,
@@ -490,6 +498,7 @@ class DefaultLattice(Architecture):
                 lsp.Merge,
                 lsp.Split,
                 lsp.Cultivate,
+                lsp.Distil,
                 lsp.ErrorCorrect,
                 lsp.SyndromeExtract,
                 cirq.I,
