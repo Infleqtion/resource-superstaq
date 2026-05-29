@@ -237,7 +237,6 @@ class Cultivate(cirq.Gate):
         return self._theta
 
 
-@cirq.value_equality
 class Distil(cirq.Gate):
     """
     Subclassed cirq gate to represent the distillation of a single magic state using 15 code patches.

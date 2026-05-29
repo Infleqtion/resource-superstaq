@@ -18,7 +18,6 @@ from collections import Counter
 
 import cirq
 import cultiv
-import msd
 import stim
 from typing import Literal
 
@@ -173,32 +172,3 @@ def cultivate(
         resources = count_stim_resources(stim_circuit=stim_circuit)
     return resources
 
-
-def distil(
-        state_type: str='H',
-) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
-    """
-    Generates the logical qubit resources required for 15-to-1 magic
-    state distilation.
-    """
-    if state_type == 'H':
-        resources = cultiv.make_cirq_circuits.dirty_count(
-            msd.msd_15_to_1()
-        )
-    elif state_type == 'Y':
-        resources = cultiv.make_cirq_circuits.dirty_count(
-            msd.msd_7_to_1()
-        )
-    elif state_type == 'T':
-        resources = cultiv.make_cirq_circuits.dirty_count(
-            msd.msd_5_to_1()
-        )
-    else:
-        raise ValueError("state type must be either H, T, or Y type.")
-    return resources
-
-
-if __name__ == '__main__':
-    # x = msd.msd_15_to_1()
-    x = distil(state_type='Y')
-    print(x)
