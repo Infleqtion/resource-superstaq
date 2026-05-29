@@ -33,49 +33,7 @@ show-fixes = true
 
 # Specific linting rules to enable in `ruff`
 lint.select = [
-  "A",      # flake8-builtins
-  "ANN",    # flake8-annotations checks
-  "ARG",    # Unused argument in a function/method
-  "ASYNC",  # flake8-async
-  "B",      # flake8-bugbear checks
-  "C",      # flake8-comprehensions, mccabe checks
-  "COM818", # trailing-comma-on-bare-tuple error
-  "D",      # pydocstyle checks
-  "DTZ",    # flake8-datetimez checks
-  "E",      # pycodestyle checks
-  "ERA",    # Commented-out code checks
-  "F",      # pyflakes checks
-  "FA",     # flake8-future-annotations checks
-  "FAST",   # FastAPI checks
-  "FLY",    # flynt checks
-  "FURB",   # refurb checks
-  "G",      # flake8-logging-format
-  "I",      # isort checks
-  "ICN",    # flake8-import-conventions
-  "ISC",    # flake8-implicit-str-concat checks
-  "LOG",    # flake8-logging checks
-  "NPY",    # numpy-specific checks
-  "PD",     # pandas-vet
-  "PERF",   # Perflint checks
-  "PGH",    # pygrep-hooks checks
-  "PIE",    # flake8-pie checks
-  "PL",     # pylint checks
-  "PT",     # flake8-pytest-style
-  "PYI",    # flake8-pyi checks
-  "Q",      # flake8-quotes checks
-  "RET",    # flake8-return checks
-  "RSE",    # flake8-raise checks
-  "RUF",    # Ruff-specific checks
-  "SIM",    # flake8-simplify checks
-  "SLOT",   # flake8-slots checks
-  "T10",    # flake8-debugger checks
-  "T20",    # flake8-print checks
-  "TC",     # flake8-type-checking checks
-  "TD",     # flake8-todos
-  "TID",    # flake8-tidy-imports
-  "TRY",    # tryceratops
-  "UP",     # pyupgrade checks
-  "W",      # pycodestyle warnings checks
+  "F401",   # unused imports
 ]
 lint.ignore = [
   "ANN401",

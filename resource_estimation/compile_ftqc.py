@@ -17,7 +17,6 @@ from functools import partial
 from collections.abc import Iterator
 import cirq
 import cirq_superstaq as css
-import numpy as np
 from . import architecture as arch
 from . import lattice_surgery_primitives as lsp
 from cirq_superstaq import Barrier, barrier

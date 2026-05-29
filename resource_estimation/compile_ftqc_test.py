@@ -11,11 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from collections import Counter, deque
+from collections import Counter
 from math import pi
 import textwrap
 import cirq
-from numpy import isclose
 import pytest
 import resource_estimation.architecture as arch
 import resource_estimation.compile_ftqc as comp
