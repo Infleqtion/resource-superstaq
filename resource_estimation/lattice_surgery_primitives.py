@@ -243,7 +243,7 @@ class Distil(cirq.Gate):
     Subclassed cirq gate to represent the distillation of a single magic state using 15 code patches.
     The underlying implementation is assumed to be the one in https://arxiv.org/abs/quant-ph/0403025.
 
-    Distil|0^15> --> (|0> + e^(iπ/4)|1>)/√2 |0^14>
+    Distil|0^16> --> (|0> + e^(iπ/4)|1>)/√2 |0^15>
     
     """
 
@@ -251,7 +251,7 @@ class Distil(cirq.Gate):
         pass
 
     def num_qubits(self):
-        return 15
+        return 16
 
     def __str__(self):
         return "DISTIL"

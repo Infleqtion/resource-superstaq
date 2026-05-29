@@ -171,3 +171,14 @@ def cultivate(
         )
         resources = count_stim_resources(stim_circuit=stim_circuit)
     return resources
+
+
+def distil():
+    """
+    """
+    resources = cultiv.make_cirq_circuits.dirty_count(
+        cultiv.make_cirq_circuits.make_cirq_circuit(
+            code_distance=dsurface, fault_distance=fault_distance
+        )
+    )
+    return resources
