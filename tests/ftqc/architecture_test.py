@@ -87,11 +87,12 @@ def test_movement_gate_costs(d):
     # Check Cultivate
 
     op = lsp.Cultivate(pi / 4).on(qubit_a)
-    cost = arc.gate_cost(op)
     if d < 7:
         with pytest.warns(UserWarning, match="Returning result for d=7"):
+            cost = arc.gate_cost(op)
             base_cost = cultivate(dsurface=d, fault_distance=3)
     else:
+        cost = arc.gate_cost(op)
         base_cost = cultivate(dsurface=d, fault_distance=3)
     expected_cost = base_cost["serial"]
     # To account for movement we add the QubitPermutationGates to the base cost
@@ -269,7 +270,6 @@ def test_lattice_gate_costs(d):
     # Check Cultivate
 
     op = lsp.Cultivate(pi / 4).on(qubit_a)
-    cost = arc.gate_cost(op)
     if d < 7:
         with pytest.warns(UserWarning, match="Returning result for d=7"):
             cost = arc.gate_cost(op)

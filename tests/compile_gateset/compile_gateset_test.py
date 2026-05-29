@@ -37,9 +37,7 @@ def test_compile_clifford_t_gateset() -> None:
     q = cirq.LineQubit(0)
     circuit = cirq.Circuit(cirq.Rz(rads=pi / 7).on(q))
 
-    compiled = compile_gateset(
-        circuit, gateset=clifford_t_gateset(atol=1e-3), verbose=False
-    )
+    compiled = compile_gateset(circuit, gateset=clifford_t_gateset(atol=1e-3), verbose=False)
     allowed = cirq.Gateset(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.T)
 
     assert all(op.gate in allowed for op in compiled.all_operations())
