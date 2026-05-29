@@ -22,6 +22,7 @@ import cirq
 from . import lattice_surgery_primitives as lsp
 from cirq_superstaq.ops.qubit_gates import ParallelRGate
 from resource_estimation.stim_functions import cultivate
+from resource_estimation.distil import distil
 import abc
 
 
@@ -541,6 +542,11 @@ class DefaultLattice(Architecture):
         )
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
+
+    @cached_property
+    def _distil_t_cost(self,):
+        cost = distil()
+        return cost
 
     @cached_property
     def _cultivate_t_cost(self):

@@ -236,10 +236,10 @@ class Cultivate(cirq.Gate):
     def _value_equality_values_(self) -> float:
         return self._theta
 
-
+    
 class Distil(cirq.Gate):
     """
-    Subclassed cirq gate to represent the distillation of a single magic state using 15 code patches.
+    Subclassed cirq gate to represent the distillation of a single magic state using 16 code patches.
     The underlying implementation is assumed to be the one in https://arxiv.org/abs/quant-ph/0403025.
 
     Distil|0^16> --> (|0> + e^(iπ/4)|1>)/√2 |0^15>

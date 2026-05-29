@@ -30,10 +30,7 @@ def distil(
         parallel_gate_cost = estimator.parallel_circuit_cost(primitive_circuit, pretty=True)
         serial_gate_cost = estimator.serial_circuit_cost(primitive_circuit, pretty=True)
         circuit_time = estimator.parallel_circuit_time(primitive_circuit)
-        # physical_qubits = estimator.physical_qubits(primitive_circuit)
-        # print(circuit_time)
-        resources = {'op_time': circuit_time, 'parallel': Counter(parallel_gate_cost), 'serial': Counter(serial_gate_cost)}
-        # resources = {'parallel': gate_cost, 'serial':
+        resources = {'op_time': circuit_time, 'moment_cost': Counter(parallel_gate_cost), 'gate_cost': Counter(serial_gate_cost)}
     # elif state_type == 'Y':
     #     resources = cultiv.make_cirq_circuits.dirty_count(
     #         msd.msd_7_to_1()
