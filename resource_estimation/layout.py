@@ -284,12 +284,24 @@ class Layout(abc.ABC):
         created_fig = ax is None
         if created_fig:
             cell_size = 0.35
-            fig, ax = plt.subplots(figsize=(0.5 * (width * cell_size), height * cell_size), dpi=200)
+            fig, ax = plt.subplots(figsize=(width * cell_size, height * cell_size), dpi=100)
 
-        ax.imshow(grid, cmap=_LAYOUT_CMAP, norm=_LAYOUT_NORM, interpolation="nearest")
-        ax.set_xticks(np.arange(-0.5, width, 1), minor=True)
-        ax.set_yticks(np.arange(-0.5, height, 1), minor=True)
-        ax.grid(which="minor", color="lightgray", linewidth=0.5)
+        x_edges = np.arange(width + 1) - 0.5
+        y_edges = np.arange(height + 1) - 0.5
+        ax.pcolormesh(
+            x_edges,
+            y_edges,
+            grid,
+            cmap=_LAYOUT_CMAP,
+            norm=_LAYOUT_NORM,
+            shading="flat",
+            edgecolors="lightgray",
+            linewidth=0.5,
+            antialiased=False,
+        )
+        ax.set_xlim(-0.5, width - 0.5)
+        ax.set_ylim(height - 0.5, -0.5)
+        ax.set_aspect("equal")
         ax.tick_params(which="both", bottom=False, left=False, labelbottom=False, labelleft=False)
         for spine in ax.spines.values():
             spine.set_linewidth(3)
