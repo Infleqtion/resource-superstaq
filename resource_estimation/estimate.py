@@ -16,8 +16,6 @@ from collections import Counter
 import cirq
 from resource_estimation.ftqc.architecture import Architecture
 from tqdm import tqdm
-from functools import cached_property
-from random import choice
 import warnings
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
