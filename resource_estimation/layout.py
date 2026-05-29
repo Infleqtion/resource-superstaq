@@ -284,9 +284,7 @@ class Layout(abc.ABC):
         created_fig = ax is None
         if created_fig:
             cell_size = 0.35
-            fig, ax = plt.subplots(
-                figsize=(0.5*(width * cell_size), height * cell_size), dpi=200
-            )
+            fig, ax = plt.subplots(figsize=(0.5 * (width * cell_size), height * cell_size), dpi=200)
 
         ax.imshow(grid, cmap=_LAYOUT_CMAP, norm=_LAYOUT_NORM, interpolation="nearest")
         ax.set_xticks(np.arange(-0.5, width, 1), minor=True)
