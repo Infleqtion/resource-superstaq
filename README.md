@@ -42,15 +42,21 @@ circuit = cirq.Circuit(
 )
 
 # Two Stage Compile to Clifford + T
-cliff_rz_circuit = res.cliff_rz.compile_cliff_rz(circuit)
-cliff_t_circuit = res.clifford_t.compile_cirq_to_clifford_t(cliff_rz_circuit, eps=.001)
+cliff_rz_circuit = res.compile_gateset.compile_gateset(
+    circuit,
+    gateset=res.compile_gateset.clifford_rz_gateset(),
+)
+cliff_t_circuit = res.compile_gateset.compile_gateset(
+    cliff_rz_circuit,
+    gateset=res.compile_gateset.clifford_t_gateset(atol=.001),
+)
 
 # Prepare Architecture and Layout
-arch = res.architecture.DefaultMovement(d=11)
-layout = res.layout.MovementLayout(input_circuit=cliff_t_circuit, num_t_factories=5)
+arch = res.ftqc.DefaultMovement(d=11)
+layout = res.ftqc.MovementLayout(input_circuit=cliff_t_circuit, num_t_factories=5)
 
 # FT Compile
-primitive_circuit = res.compile_ftqc.ft_compile(layout=layout, arc=arch, verbose=True)
+primitive_circuit = res.ftqc.ft_compile(layout=layout, arc=arch, verbose=True)
 
 # Estimate Resources
 estimator = res.estimate.ResourceEstimator(arc=arch)
