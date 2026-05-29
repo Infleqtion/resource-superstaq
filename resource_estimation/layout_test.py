@@ -12,12 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import cirq
+import networkx as nx
+import numpy as np
 import pytest
 from resource_estimation.layout import (
     Column,
     FactorySandwich,
     MovementLayout,
     Embedded,
+    _ANCILLA,
+    _DATA,
+    _S_FACTORY,
+    _T_FACTORY,
 )
 
 
@@ -290,3 +296,25 @@ def test_reset_and_reload(circuit5: cirq.Circuit):
             if column.layout_graph.nodes[node]["patch_type"] == "factory"
         ]
     )
+
+
+def test_visualize_layout_grid(circuit5: cirq.Circuit):
+    column = Column(circuit5)
+    assert column._patch_code({"patch_type": "data"}) == _DATA
+    assert column._patch_code({"patch_type": "ancilla"}) == _ANCILLA
+    assert column._patch_code({"patch_type": "factory", "ftype": "s"}) == _S_FACTORY
+    assert column._patch_code({"patch_type": "factory", "ftype": "t"}) == _T_FACTORY
+
+    padded_grid = column._layout_grid()
+    assert padded_grid.shape == (10, 11)
+    assert padded_grid[2, 4] == _DATA
+    assert padded_grid[2, 3] == _ANCILLA
+    assert padded_grid[2, 2] == _S_FACTORY
+    assert padded_grid[3, 2] == _T_FACTORY
+
+    fixed_grid = column._layout_grid(grid_size=20)
+    assert fixed_grid.shape == (20, 20)
+    assert np.count_nonzero(fixed_grid) == len(column.layout_graph.nodes)
+
+    column.layout_graph = nx.Graph()
+    assert column._layout_grid().shape == (1, 1)

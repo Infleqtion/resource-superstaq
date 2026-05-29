@@ -13,13 +13,32 @@
 # limitations under the License.
 import abc
 import cirq
+import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 from collections import deque
 from dataclasses import dataclass
+from matplotlib.colors import BoundaryNorm, ListedColormap
 from typing import Literal
 from math import ceil, sqrt
 from itertools import combinations, product
+
+_EMPTY = 0
+_DATA = 1
+_ANCILLA = 2
+_S_FACTORY = 3
+_T_FACTORY = 4
+
+_LAYOUT_CMAP = ListedColormap(
+    [
+        "white",  # empty
+        "#A8E6A1",  # data qubit — light green
+        "#F5BFC8",  # ancilla patch — light pink
+        "#FFD4A3",  # S factory — light orange
+        "#6EC6E6",  # T factory — cyan
+    ]
+)
+_LAYOUT_NORM = BoundaryNorm([-0.5, 0.5, 1.5, 2.5, 3.5, 4.5], _LAYOUT_CMAP.N)
 
 
 @dataclass
@@ -204,6 +223,95 @@ class Layout(abc.ABC):
             node_color.append(color_dict[key])
         pos = {node: (node.row, node.col) for node in G.nodes}
         nx.draw(G, with_labels=True, node_color=node_color, pos=pos)
+
+    def _patch_code(self, node_dict: dict) -> int:
+        if node_dict["patch_type"] == "data":
+            return _DATA
+        if node_dict["patch_type"] == "ancilla":
+            return _ANCILLA
+        if node_dict["ftype"] == "s":
+            return _S_FACTORY
+        return _T_FACTORY
+
+    def _layout_grid(self, grid_size: int | None = None, padding: int = 2) -> np.ndarray:
+        G = self.layout_graph
+        if not G.nodes:
+            return np.zeros((1, 1), dtype=int)
+
+        rows = [node.row for node in G.nodes]
+        cols = [node.col for node in G.nodes]
+        min_row, max_row = min(rows), max(rows)
+        min_col, max_col = min(cols), max(cols)
+
+        if grid_size is not None:
+            height = width = grid_size
+            pad_top = (grid_size - (max_row - min_row + 1)) // 2
+            pad_left = (grid_size - (max_col - min_col + 1)) // 2
+            row_offset = pad_top - min_row
+            col_offset = pad_left - min_col
+        else:
+            min_row -= padding
+            min_col -= padding
+            max_row += padding
+            max_col += padding
+            height = max_row - min_row + 1
+            width = max_col - min_col + 1
+            row_offset = -min_row
+            col_offset = -min_col
+
+        grid = np.zeros((height, width), dtype=int)
+        for node in G.nodes:
+            grid[node.row + row_offset, node.col + col_offset] = self._patch_code(G.nodes[node])
+        return grid
+
+    def visualize_layout(
+        self,
+        title: str | None = None,
+        grid_size: int | None = None,
+        padding: int = 2,
+        ax: plt.Axes | None = None,
+        show: bool = True,
+    ) -> plt.Axes | None:  # pragma: no cover
+        """
+        Render the layout as a colored grid.
+
+        Colors: white (empty), light green (data qubits), light pink (ancilla),
+        light orange (S factories), cyan (T factories).
+        """
+        grid = self._layout_grid(grid_size=grid_size, padding=padding)
+        height, width = grid.shape
+
+        created_fig = ax is None
+        if created_fig:
+            cell_size = 0.35
+            fig, ax = plt.subplots(figsize=(width * cell_size, height * cell_size), dpi=100)
+
+        x_edges = np.arange(width + 1) - 0.5
+        y_edges = np.arange(height + 1) - 0.5
+        ax.pcolormesh(
+            x_edges,
+            y_edges,
+            grid,
+            cmap=_LAYOUT_CMAP,
+            norm=_LAYOUT_NORM,
+            shading="flat",
+            edgecolors="lightgray",
+            linewidth=0.5,
+            antialiased=False,
+        )
+        ax.set_xlim(-0.5, width - 0.5)
+        ax.set_ylim(height - 0.5, -0.5)
+        ax.set_aspect("equal")
+        ax.tick_params(which="both", bottom=False, left=False, labelbottom=False, labelleft=False)
+        for spine in ax.spines.values():
+            spine.set_linewidth(3)
+            spine.set_color("black")
+        if title is not None:
+            ax.set_title(title)
+        if show and created_fig:
+            plt.show()
+            return None
+        return ax
 
 
 class MovementLayout(Layout):
