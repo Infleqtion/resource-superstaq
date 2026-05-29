@@ -149,7 +149,6 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "@overload"]
 
 [tool.coverage.run]
 include = ["./*"]
-omit = ["tests/conftest.py"]
 concurrency = ["thread"]
 parallel = true
 patch = ["subprocess"]
