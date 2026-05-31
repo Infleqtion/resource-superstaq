@@ -16,11 +16,15 @@ import resource_estimation.compile_gateset as cliff
 from scripts.circuits import kanamori, fermi_hubbard
 
 
+def _compile_cliff_rz(circuit: cirq.Circuit) -> cirq.Circuit:
+    return cliff.compile_gateset(circuit, gateset=cliff.clifford_rz_gateset())
+
+
 def test_fermi():
     # Test that Fermi-Hubbard circuit is compiled to Clifford + Rz correctly
     # For some reason, I can't do better that 1e-6
     ham_circuit = fermi_hubbard(3, verbose=0)
-    compiled_circuit = cliff.compile_cliff_rz(circuit=ham_circuit)
+    compiled_circuit = _compile_cliff_rz(circuit=ham_circuit)
     cirq.testing.assert_allclose_up_to_global_phase(
         cirq.final_state_vector(ham_circuit),
         cirq.final_state_vector(compiled_circuit),
@@ -40,7 +44,7 @@ def test_kanamori():
     # Test that Kanamori circuit is compiled to Clifford + Rz correctly
     # For some reason, I can't do better that 1e-6
     kan_circuit = kanamori(5, verbose=0)
-    compiled_circuit = cliff.compile_cliff_rz(circuit=kan_circuit)
+    compiled_circuit = _compile_cliff_rz(circuit=kan_circuit)
     cirq.testing.assert_allclose_up_to_global_phase(
         cirq.final_state_vector(kan_circuit),
         cirq.final_state_vector(compiled_circuit),
@@ -100,7 +104,7 @@ def test_phx_to_zhzhz():
 
 def test_small_circuit():
     random_circuit = cirq.testing.random_circuit(8, 10, 1, random_state=17)
-    compiled_circuit = cliff.compile_cliff_rz(random_circuit)
+    compiled_circuit = _compile_cliff_rz(random_circuit)
     cirq.testing.assert_allclose_up_to_global_phase(
         cirq.final_state_vector(random_circuit),
         cirq.final_state_vector(compiled_circuit),

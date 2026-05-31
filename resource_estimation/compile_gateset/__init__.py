@@ -13,7 +13,6 @@
 # limitations under the License.
 from resource_estimation.compile_gateset.cliff_rz import (
     CliffRzGateset,
-    compile_cliff_rz,
     eject_z,
     phx_to_zhzhz,
     zpow_to_rz,
@@ -38,7 +37,6 @@ __all__ = [
     "clifford_rz_gateset",
     "clifford_t_gateset",
     "compile_cirq_to_clifford_t",
-    "compile_cliff_rz",
     "compile_gateset",
     "eject_z",
     "phx_to_zhzhz",
