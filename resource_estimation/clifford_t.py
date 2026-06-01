@@ -122,7 +122,7 @@ def compile_cirq_to_clifford_t(circ: cirq.Circuit, eps: float, verbose=True) -> 
                 newcirc += gate.on(*qubits)
             else:
                 if isinstance(gate, cirq.Rz):
-                    theta = gate._rads
+                    theta = gate.rads
                     gates = approx_rz(theta, eps)
                     process_cirq_str(newcirc, gates, qubits[0])
                 elif isinstance(gate, cirq.PhasedXZGate):
