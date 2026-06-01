@@ -108,7 +108,7 @@ def cin_cliffs(gate: cirq.Gate) -> bool:
 
 def compile_cirq_to_clifford_t(circ: cirq.Circuit, eps: float, verbose=True) -> cirq.Circuit:
     """
-    Synthesizes the Clifford + Rz circuit into a Clifford + T circuit
+    Synthesizes the Clifford + Rz/PhasedXZ circuit into a Clifford + T circuit
     The eps parameter defines the maximum allowable error in the angle of each synthesized Rz gate
     """
     newcirc = cirq.Circuit()

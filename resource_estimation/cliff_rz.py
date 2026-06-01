@@ -139,6 +139,8 @@ def zpow_to_rz(
 
 
 class CliffordGateset(cirq.TwoQubitCompilationTargetGateset, abc.ABC):
+    """Base class for Gatesets with large overlap"""
+
     def __init__(self, atol: float = 1e-8) -> None:
         self._atol = atol
         super().__init__(
@@ -216,7 +218,7 @@ class CliffPhXZGateset(CliffordGateset):
 
 
 def compile_cliff_rz(circuit: cirq.Circuit, atol: float = 1e-8):
-    """Simple wrapper for compiler logic"""
+    """Wrapper for compiling to Clifford + Rz"""
     gateset = CliffRzGateset(atol=atol)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning)
@@ -225,7 +227,7 @@ def compile_cliff_rz(circuit: cirq.Circuit, atol: float = 1e-8):
 
 
 def compile_cliff_phxz(circuit: cirq.Circuit, atol: float = 1e-8):
-    """Simple wrapper for compiler logic"""
+    """Wrapper for compiling to Clifford + PhasedXZ"""
     gateset = CliffPhXZGateset(atol=atol)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning)

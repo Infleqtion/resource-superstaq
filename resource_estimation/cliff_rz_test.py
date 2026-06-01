@@ -51,15 +51,8 @@ def test_fermi(func, gateset):
         cirq.final_state_vector(compiled_circuit),
         atol=1e-6,
     )
-
-    # assert only legal gates in compiled circuit
-    # allowed_ops = [cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz]
-    # allowed_ops = [cirq.GateFamily(op) for op in allowed_ops]
     for op in compiled_circuit.all_operations():
         assert op in gateset
-        # gate = op.gate
-        # truth = any([gate in allowed_op for allowed_op in allowed_ops])
-        # assert truth, f"{gate}"
 
 
 @pytest.mark.parametrize(
@@ -96,17 +89,8 @@ def test_kanamori(func, gateset):
         cirq.final_state_vector(compiled_circuit),
         atol=1e-6,
     )
-
     for op in compiled_circuit.all_operations():
         assert op in gateset
-
-    # # assert only legal gates in compiled circuit
-    # allowed_ops = [cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz]
-    # allowed_ops = [cirq.GateFamily(op) for op in allowed_ops]
-    # for op in compiled_circuit.all_operations():
-    #     gate = op.gate
-    #     truth = any([gate in allowed_op for allowed_op in allowed_ops])
-    #     assert truth, f"{gate}"
 
 
 def test_already_in_gateset():
