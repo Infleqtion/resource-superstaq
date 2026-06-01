@@ -14,13 +14,21 @@
 import cirq
 import resource_estimation.cliff_rz as cliff
 from scripts.circuits import kanamori, fermi_hubbard
+import pytest
 
 
-def test_fermi():
+@pytest.mark.parametrize(
+        'func, gateset',
+        [
+            (cliff.compile_cliff_rz, cirq.Gateset(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz)),
+            (cliff.compile_cliff_phxz, cirq.Gateset(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.PhasedXZGate))
+        ]
+)
+def test_fermi(func, gateset):
     # Test that Fermi-Hubbard circuit is compiled to Clifford + Rz correctly
     # For some reason, I can't do better that 1e-6
     ham_circuit = fermi_hubbard(3, verbose=0)
-    compiled_circuit = cliff.compile_cliff_rz(circuit=ham_circuit)
+    compiled_circuit = func(circuit=ham_circuit)
     cirq.testing.assert_allclose_up_to_global_phase(
         cirq.final_state_vector(ham_circuit),
         cirq.final_state_vector(compiled_circuit),
@@ -28,32 +36,43 @@ def test_fermi():
     )
 
     # assert only legal gates in compiled circuit
-    allowed_ops = [cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz]
-    allowed_ops = [cirq.GateFamily(op) for op in allowed_ops]
+    # allowed_ops = [cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz]
+    # allowed_ops = [cirq.GateFamily(op) for op in allowed_ops]
     for op in compiled_circuit.all_operations():
-        gate = op.gate
-        truth = any([gate in allowed_op for allowed_op in allowed_ops])
-        assert truth, f"{gate}"
+        assert op in gateset
+        # gate = op.gate
+        # truth = any([gate in allowed_op for allowed_op in allowed_ops])
+        # assert truth, f"{gate}"
 
 
-def test_kanamori():
+@pytest.mark.parametrize(
+        'func, gateset',
+        [
+            (cliff.compile_cliff_rz, cirq.Gateset(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz)),
+            (cliff.compile_cliff_phxz, cirq.Gateset(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.PhasedXZGate))
+        ]
+)
+def test_kanamori(func, gateset):
     # Test that Kanamori circuit is compiled to Clifford + Rz correctly
     # For some reason, I can't do better that 1e-6
     kan_circuit = kanamori(5, verbose=0)
-    compiled_circuit = cliff.compile_cliff_rz(circuit=kan_circuit)
+    compiled_circuit = func(circuit=kan_circuit)
     cirq.testing.assert_allclose_up_to_global_phase(
         cirq.final_state_vector(kan_circuit),
         cirq.final_state_vector(compiled_circuit),
         atol=1e-6,
     )
 
-    # assert only legal gates in compiled circuit
-    allowed_ops = [cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz]
-    allowed_ops = [cirq.GateFamily(op) for op in allowed_ops]
     for op in compiled_circuit.all_operations():
-        gate = op.gate
-        truth = any([gate in allowed_op for allowed_op in allowed_ops])
-        assert truth, f"{gate}"
+        assert op in gateset
+
+    # # assert only legal gates in compiled circuit
+    # allowed_ops = [cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz]
+    # allowed_ops = [cirq.GateFamily(op) for op in allowed_ops]
+    # for op in compiled_circuit.all_operations():
+    #     gate = op.gate
+    #     truth = any([gate in allowed_op for allowed_op in allowed_ops])
+    #     assert truth, f"{gate}"
 
 
 def test_already_in_gateset():
@@ -97,10 +116,10 @@ def test_phx_to_zhzhz():
         desired=expected,
     )
 
-
-def test_small_circuit():
+@pytest.mark.parametrize('func', (cliff.compile_cliff_rz, cliff.compile_cliff_phxz))
+def test_small_circuit(func):
     random_circuit = cirq.testing.random_circuit(8, 10, 1, random_state=17)
-    compiled_circuit = cliff.compile_cliff_rz(random_circuit)
+    compiled_circuit = func(random_circuit)
     cirq.testing.assert_allclose_up_to_global_phase(
         cirq.final_state_vector(random_circuit),
         cirq.final_state_vector(compiled_circuit),

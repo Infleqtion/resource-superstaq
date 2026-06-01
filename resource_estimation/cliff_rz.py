@@ -14,6 +14,8 @@
 import cirq
 import cirq_superstaq as css
 import numpy as np
+import warnings
+import abc
 
 # warnings.filterwarnings(category=FutureWarning, action="ignore")
 
@@ -135,12 +137,7 @@ def zpow_to_rz(
         deep=context.deep if context else False,
     )
 
-
-class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
-    """
-    A Gateset for a Clifford + Rz
-    """
-
+class CliffordGateset(cirq.TwoQubitCompilationTargetGateset, abc.ABC):
     def __init__(self, atol: float = 1e-8) -> None:
         self._atol = atol
         super().__init__(
@@ -172,6 +169,10 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
         """List of transformers which should be run before decomposing individual operations."""
         return [cirq.drop_negligible_operations, *super().preprocess_transformers]
 
+class CliffRzGateset(CliffordGateset):
+    """
+    A Gateset for a Clifford + Rz
+    """
     @property
     def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
         """List of transformers which should be run after decomposing individual operations."""
@@ -189,11 +190,38 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
             cirq.drop_empty_moments,
         ]
 
-    # TODO: add a special decomposition for toffoli
+class CliffPhXZGateset(CliffordGateset):
+    """
+    A Gateset for a Clifford + PhXZ
+    """
+    @property
+    def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
+        """List of transformers which should be run after decomposing individual operations."""
+        return [
+            cirq.merge_single_qubit_gates_to_phxz,
+            cirq.create_transformer_with_kwargs(eject_z, atol=self._atol),
+            cirq.create_transformer_with_kwargs(cirq.drop_negligible_operations, atol=self._atol),
+            cirq.drop_empty_moments,
+            cirq.create_transformer_with_kwargs(eject_z, atol=self._atol),
+            cirq.create_transformer_with_kwargs(cirq.drop_negligible_operations, atol=self._atol),
+            cirq.align_left,
+            cirq.synchronize_terminal_measurements,
+            cirq.drop_empty_moments,
+        ]
 
 
 def compile_cliff_rz(circuit: cirq.Circuit, atol: float = 1e-8):
     """Simple wrapper for compiler logic"""
     gateset = CliffRzGateset(atol=atol)
-    compiled_circuit = cirq.optimize_for_target_gateset(circuit, gateset=gateset)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=FutureWarning)
+        compiled_circuit = cirq.optimize_for_target_gateset(circuit, gateset=gateset)
+    return compiled_circuit
+
+def compile_cliff_phxz(circuit: cirq.Circuit, atol: float = 1e-8):
+    """Simple wrapper for compiler logic"""
+    gateset = CliffPhXZGateset(atol=atol)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=FutureWarning)
+        compiled_circuit = cirq.optimize_for_target_gateset(circuit=circuit, gateset=gateset)
     return compiled_circuit

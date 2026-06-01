@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
-from functools import cache
+from functools import cache, partial
 import cirq
 import mpmath
 import numpy as np
 import pygridsynth
+from pygridsynth.multi_qubit_unitary_approximation import approximate_one_qubit_unitary
 from tqdm import tqdm
 
 
 # pygridsynth comes from https://www.mathstat.dal.ca/~selinger/newsynth/
 @cache
-def approx_rz(theta: float, epsilon: float) -> list[str]:
+def approx_rz(theta: float, epsilon: float) -> str:
     if math.isclose(theta, np.pi, abs_tol=epsilon, rel_tol=0.0) or math.isclose(
         theta, -np.pi, abs_tol=epsilon, rel_tol=0.0
     ):
@@ -59,6 +60,15 @@ def approx_rz(theta: float, epsilon: float) -> list[str]:
     mpmath.mp.pretty = True
     stdout = pygridsynth.gridsynth_gates(mpmath.mpmathify(theta), mpmath.mpmathify(epsilon))
     hst_str = str(stdout)
+    return hst_str
+
+def approx_phxz(gate: cirq.Operation, epsilon: float) -> str:
+    # TODO: Include handling for special gates
+    assert cirq.num_qubits(gate) == 1
+    unitary = cirq.unitary(gate)
+    mpmath.mp.dps = 128
+    decomp, _ = approximate_one_qubit_unitary(unitary=unitary, epsilon=mpmath.mpmathify(epsilon))
+    hst_str = ''.join(g.to_simple_str() for g in decomp)
     return hst_str
 
 
@@ -110,12 +120,15 @@ def compile_cirq_to_clifford_t(circ: cirq.Circuit, eps: float, verbose=True) -> 
             elif gate in cirq.Gateset(cirq.MeasurementGate, cirq.ResetChannel):
                 newcirc += gate.on(*qubits)
             else:
-                if not isinstance(gate, cirq.Rz):
-                    raise ValueError(f"Non clifford+Rz gate!\n{gate}")
-                else:
+                if isinstance(gate, cirq.Rz):
                     theta = gate._rads
                     gates = approx_rz(theta, eps)
                     process_cirq_str(newcirc, gates, qubits[0])
+                elif isinstance(gate, cirq.PhasedXZGate):
+                    gates = approx_phxz(gate=gate, epsilon=eps)
+                    process_cirq_str(newcirc, gates, qubits[0])
+                else:
+                    raise ValueError(f"Gate not recognized:\n{gate}")
     return newcirc
 
 
