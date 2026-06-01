@@ -141,7 +141,7 @@ def zpow_to_rz(
 class CliffordGateset(cirq.TwoQubitCompilationTargetGateset, abc.ABC):
     """Base class for Gatesets with large overlap"""
 
-    def __init__(self, atol: float = 1e-8) -> None:
+    def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
         self._atol = atol
         super().__init__(
             cirq.GateFamily(cirq.CX, ignore_global_phase=False),
