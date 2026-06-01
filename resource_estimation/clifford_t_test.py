@@ -95,8 +95,7 @@ def test_error_handling():
         _ = compile_cirq_to_clifford_t(bad_circuit, eps=0.01)
 
     with pytest.raises(ValueError):
-        _ = process_cirq_str(bad_circuit, gates=["P"], q=cirq.GridQubit(0, 0))
-
+        _ = process_cirq_str(bad_circuit, gates="P", q=cirq.GridQubit(0, 0))
     with pytest.raises(ValueError):
         _ = approx_phxz(cirq.CNOT, 1e-5)
 
