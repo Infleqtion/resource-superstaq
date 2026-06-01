@@ -439,8 +439,8 @@ class Architecture(abc.ABC):
         return self._distil_cost
 
     @cached_property
-    def _distil_cost(self, ):
-        return msd.distil(self,)
+    def _distil_cost(self,):
+        return distil(self,)
 
     ### Extra Methods ###
     def __post_init__(self):
