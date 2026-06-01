@@ -35,12 +35,17 @@ def test_compile_cirq_to_clifford_t(theta, eps):
     err = 1 - fid
     assert err < eps
 
+
 @pytest.mark.parametrize("a", (pi / 3, pi / 4))
 @pytest.mark.parametrize("b", (pi + 1, 2 * pi - pi / 7, pi / 4))
 @pytest.mark.parametrize("c", (pi / 3, pi + 1, 2 * pi - pi / 7))
 @pytest.mark.parametrize("eps", (1e-1, 1e-3, 1e-5, 1e-7))
 def test_compile_cirq_to_clifford_t_phxz(a, b, c, eps):
-    circuit = cirq.Circuit(cirq.PhasedXZGate(x_exponent=a, z_exponent=b, axis_phase_exponent=c).on(cirq.GridQubit(0, 0)))
+    circuit = cirq.Circuit(
+        cirq.PhasedXZGate(x_exponent=a, z_exponent=b, axis_phase_exponent=c).on(
+            cirq.GridQubit(0, 0)
+        )
+    )
     comp_circuit = compile_cirq_to_clifford_t(circuit, eps=eps, verbose=False)
     u_expected = cirq.unitary(circuit)
     u_realized = cirq.unitary(comp_circuit)
@@ -121,6 +126,7 @@ def test_rz_synth():
     rho_approx = cirq.density_matrix(cirq.final_density_matrix(approx_circuit))
     assert cirq.fidelity(rho_true, rho_approx) >= 1 - eps
 
+
 def test_phxz_synth():
     a, b, c = 1.2345678, 2.345678, 3.45678
     eps = 1e-8
@@ -132,7 +138,6 @@ def test_phxz_synth():
     rho_true = cirq.density_matrix(cirq.final_density_matrix(true_circuit))
     rho_approx = cirq.density_matrix(cirq.final_density_matrix(approx_circuit))
     assert cirq.fidelity(rho_true, rho_approx) >= 1 - eps
-
 
 
 def test_special_angles():

@@ -137,6 +137,7 @@ def zpow_to_rz(
         deep=context.deep if context else False,
     )
 
+
 class CliffordGateset(cirq.TwoQubitCompilationTargetGateset, abc.ABC):
     def __init__(self, atol: float = 1e-8) -> None:
         self._atol = atol
@@ -169,10 +170,12 @@ class CliffordGateset(cirq.TwoQubitCompilationTargetGateset, abc.ABC):
         """List of transformers which should be run before decomposing individual operations."""
         return [cirq.drop_negligible_operations, *super().preprocess_transformers]
 
+
 class CliffRzGateset(CliffordGateset):
     """
     A Gateset for a Clifford + Rz
     """
+
     @property
     def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
         """List of transformers which should be run after decomposing individual operations."""
@@ -190,10 +193,12 @@ class CliffRzGateset(CliffordGateset):
             cirq.drop_empty_moments,
         ]
 
+
 class CliffPhXZGateset(CliffordGateset):
     """
     A Gateset for a Clifford + PhXZ
     """
+
     @property
     def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
         """List of transformers which should be run after decomposing individual operations."""
@@ -214,14 +219,15 @@ def compile_cliff_rz(circuit: cirq.Circuit, atol: float = 1e-8):
     """Simple wrapper for compiler logic"""
     gateset = CliffRzGateset(atol=atol)
     with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=FutureWarning)
+        warnings.filterwarnings("ignore", category=FutureWarning)
         compiled_circuit = cirq.optimize_for_target_gateset(circuit, gateset=gateset)
     return compiled_circuit
+
 
 def compile_cliff_phxz(circuit: cirq.Circuit, atol: float = 1e-8):
     """Simple wrapper for compiler logic"""
     gateset = CliffPhXZGateset(atol=atol)
     with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=FutureWarning)
+        warnings.filterwarnings("ignore", category=FutureWarning)
         compiled_circuit = cirq.optimize_for_target_gateset(circuit=circuit, gateset=gateset)
     return compiled_circuit

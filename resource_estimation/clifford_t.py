@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
-from functools import cache, partial
+from functools import cache
 import cirq
 import mpmath
 import numpy as np
@@ -62,13 +62,14 @@ def approx_rz(theta: float, epsilon: float) -> str:
     hst_str = str(stdout)
     return hst_str
 
+
 def approx_phxz(gate: cirq.Operation, epsilon: float) -> str:
     # TODO: Include handling for special gates
     assert cirq.num_qubits(gate) == 1
     unitary = cirq.unitary(gate)
     mpmath.mp.dps = 128
     decomp, _ = approximate_one_qubit_unitary(unitary=unitary, epsilon=mpmath.mpmathify(epsilon))
-    hst_str = ''.join(g.to_simple_str() for g in decomp)
+    hst_str = "".join(g.to_simple_str() for g in decomp)
     return hst_str
 
 
