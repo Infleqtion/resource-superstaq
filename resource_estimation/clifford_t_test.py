@@ -97,6 +97,9 @@ def test_error_handling():
     with pytest.raises(ValueError):
         _ = process_cirq_str(bad_circuit, gates=["P"], q=cirq.GridQubit(0, 0))
 
+    with pytest.raises(ValueError):
+        _ = approx_phxz(cirq.CNOT, 1e-5)
+
 
 def test_measure():
     circuit = cirq.Circuit(cirq.MeasurementGate(1).on(cirq.GridQubit(0, 0)))

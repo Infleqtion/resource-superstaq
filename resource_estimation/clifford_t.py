@@ -63,11 +63,11 @@ def approx_rz(theta: float, epsilon: float) -> str:
     return hst_str
 
 
-def approx_phxz(gate: cirq.Operation, epsilon: float) -> str:
+def approx_phxz(gate: cirq.Gate, epsilon: float) -> str:
     # TODO: Include handling for special gates
-    assert cirq.num_qubits(gate) == 1
+    if cirq.num_qubits(gate) != 1:
+        raise ValueError(f"Expected 1-qubit gate, got {cirq.num_qubits(gate)} qubits")
     unitary = cirq.unitary(gate)
-    mpmath.mp.dps = 128
     decomp, _ = approximate_one_qubit_unitary(unitary=unitary, epsilon=mpmath.mpmathify(epsilon))
     hst_str = "".join(g.to_simple_str() for g in decomp)
     return hst_str
