@@ -74,7 +74,7 @@ def approx_phxz(gate: cirq.Gate, epsilon: float) -> str:
 
 
 def process_cirq_str(
-    circ: cirq.Circuit, gates: list[str], q: cirq.GridQubit | cirq.LineQubit | cirq.NamedQubit
+    circ: cirq.Circuit, gates: str, q: cirq.GridQubit | cirq.LineQubit | cirq.NamedQubit
 ) -> cirq.Operation:
     """
     Maps list of strings representing an Rz angle decomposition to a cirq gate
