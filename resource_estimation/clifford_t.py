@@ -75,7 +75,7 @@ def approx_phxz(gate: cirq.Gate, epsilon: float) -> str:
 
 def process_cirq_str(
     circ: cirq.Circuit, gates: str, q: cirq.GridQubit | cirq.LineQubit | cirq.NamedQubit
-) -> cirq.Operation:
+) -> None:
     """
     Maps list of strings representing an Rz angle decomposition to a cirq gate
     The list is reversed because gridsynth returns gates in matrix order instead of circuit operation order
