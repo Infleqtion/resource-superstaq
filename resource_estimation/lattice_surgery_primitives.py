@@ -236,37 +236,42 @@ class Cultivate(cirq.Gate):
     def _value_equality_values_(self) -> float:
         return self._theta
 
-    
+@cirq.value_equality    
 class Distil(cirq.Gate):
     """
     Subclassed cirq gate to represent the distillation of a single magic state using 16 code patches.
     The underlying implementation is assumed to be the one in https://arxiv.org/abs/quant-ph/0403025.
 
-    Distil|0^16> --> (|0> + e^(iπ/4)|1>)/√2 |0^15>
+    Distil|0^16> --> (|0> + e^(iθ)|1>)/√2 |0^15>
     
     """
 
-    def __init__(self, num_qubits):
-        self._num_qubits = num_qubits
+    def __init__(self, state_type):
+        self._state_type = state_type
 
-    def num_qubits(self):
-        return self._num_qubits
+    def num_qubits(self,):
+        if self._state_type == 'H': # for T states
+            return 16
+        elif self._state_type == 'Y': # for S states
+            return 8
+        elif self._state_type == 'T':
+            return 5
 
-    def __str__(self):
-        return "DISTIL"
+    def __str__(self) -> str:
+        return "DISTIL(" + self._state_type + ")"
 
-    # def _json_dict_(self):
-    #     return {"theta": self._theta}
+    def _json_dict_(self) -> dict:
+        return {"state": self._state_type}
 
     def __repr__(self) -> str:
-        return "lsp.Distil()"
+        return "lsp.Distil(state_type=" + self._state_type + ")"
 
     @classmethod
     def _json_namespace_(cls) -> str:
         return "lsp"
 
-    # def _value_equality_values_(self) -> float:
-    #     return self._theta
+    def _value_equality_values_(self) -> str:
+        return self._state_type
     
 
 @cirq.value_equality

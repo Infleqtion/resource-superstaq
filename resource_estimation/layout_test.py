@@ -301,11 +301,9 @@ def test_distillery(circuit5: cirq.Circuit):
     assert distillery.nearest_factory(qubit=cirq.GridQubit(16, 1), ftype="t") == cirq.GridQubit(18, 1)
     assert distillery.nearest_factory(qubit=cirq.GridQubit(16, 3), ftype="t") == cirq.GridQubit(18, 3)
     assert distillery.nearest_factory(qubit=cirq.GridQubit(16, 1), ftype="s") == cirq.GridQubit(14, 1)
-    # Check that there are no unexpected nodes in the layout graph
+
     G = distillery.layout_graph
-    # assert len(G.nodes) == 23
     assert sum(1 for node in G.nodes if G.nodes[node]["patch_type"] == "data") == 5
-    # assert sum(1 for node in G.nodes if G.nodes[node]["patch_type"] == "ancilla") == 10
     assert (
         sum(
             1
@@ -332,12 +330,4 @@ def test_distillery(circuit5: cirq.Circuit):
         trgt,
     ]
     assert distillery.route_cnot(ctrl=ctrl, trgt=trgt) == expected_path
-
-    # distillery.route_cnot(
-    #     ctrl=cirq.GridQubit(2, 1), trgt=cirq.GridQubit(2, 2)
-    # )  # Hopefully this covers 116?
-    
-# if __name__ == '__main__':
-#     x = Distillery(circuit5(), num_t_factories=5, num_s_factories=2)
-#     x.draw()
-    
+        

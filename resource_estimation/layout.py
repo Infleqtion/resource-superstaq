@@ -463,19 +463,32 @@ class Distillery(Layout):
     """
     Lattice layout used for distillation-based methods.
     
-    Lattice surgery layout based on having a line of logical qubits sandwiched by factory qubits and ancilla
-    S | S | ... | S
-    a | a | ... | a
-    q | q | ... | q
-    a | a | ... | a
-    T | T | ... | T
+     . | . | . | ... | .
+     a | D | a | ... | D
+     a | a | a | ... | a
+       | S | D | ... | S
+       | a | a | ... | a
+       | q | q | ... | q
+       | a | a | ... | a
+       | T | D | ... | T
+     a | a | a | ... | a
+     a | D | a | ... | D
+     . | . | . | ... | .
+    
+    Because the numbers of S and T factories are configurable, the dimensions might not line up resulting in things like:
+    
+     . | . | . | .
+     a | D | a | D
+     a | a | a | a
+       | S | D | S
+       | a | a | a
+       | q | q | q
+       | a | a | a | a | a
+       | T | D | T | D | T
+     a | a | a | a | a | a
+     a | D | a | D | a | D
+     . | . | . | . | . | .   
 
-    Because the numbers of S and T factories are configurable, the dimensions might not line up resulting in things like
-    S | S | S
-    a | a | a | a | a
-    q | q | q | q | q
-    a | a | a | a | a
-    T | T | T | T
     """
 
     def _generate(self):

@@ -436,11 +436,18 @@ class Architecture(abc.ABC):
         return self._h_cost
 
     def distil_cost(self, op: cirq.Operation) -> dict:
-        return self._distil_cost
+        if op.gate.state_type == 'H':
+            return self._distil_cost('H')
+        elif op.gate.state_type == 'Y':
+            return self._distil_cost('Y')
+        elif op.gate.state_type == 'T':
+            return self._distil_cost('T')
+        else:
+            raise ValueError("state type must be H, T, or Y")
 
     @cached_property
-    def _distil_cost(self,):
-        return distil(self,)
+    def _distil_cost(self, state_type):
+        return distil(self, state_type)
 
     ### Extra Methods ###
     def __post_init__(self):
