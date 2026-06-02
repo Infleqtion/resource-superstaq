@@ -1,4 +1,3 @@
-import magic_state_distillation as msd
 from collections import Counter
 from typing import Literal
 import cirq
@@ -8,6 +7,7 @@ import cirq
 # from estimate import ResourceEstimator
 import resource_estimation as res
 from resource_estimation import architecture
+from . import magic_state_distillation as msd
 
 def distil(
         arch,

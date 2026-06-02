@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from typing import Literal
 from math import ceil, sqrt
 from itertools import combinations, product
+import matplotlib.pyplot as plt
 
 
 @dataclass
@@ -116,7 +117,7 @@ class Layout(abc.ABC):
                 )
                 for idx in range(self.num_t_factories)
             ],
-        )
+ )
         G.add_nodes_from(
             [
                 (
@@ -189,12 +190,14 @@ class Layout(abc.ABC):
         Red and yellow nodes correspond to T and S factories, respectively
         Green nodes correspond to data (logical) qubits
         Blue nodes correspond to ancilla qubits
+        Orange nodes correspond to qubits used in factories.
         """
         color_dict = {
             "t": "red",
             "s": "yellow",
             "data": "green",
             "ancilla": "blue",
+            "dontgo": "orange",
         }
         G = self.layout_graph
         node_color = []
@@ -204,6 +207,7 @@ class Layout(abc.ABC):
             node_color.append(color_dict[key])
         pos = {node: (node.row, node.col) for node in G.nodes}
         nx.draw(G, with_labels=True, node_color=node_color, pos=pos)
+        plt.show()
 
 
 class MovementLayout(Layout):
@@ -480,7 +484,7 @@ class Distillery(Layout):
         """
         qubit_map: dict[cirq.Qid, cirq.GridQubit] = {}
         all_qubits = list(self.input_circuit.all_qubits())
-        length = max(len(all_qubits)+2, self.num_t_factories, self.num_s_factories)
+        # length = max(len(all_qubits)+2, 2*self.num_t_factories, 2*self.num_s_factories)
         s_factories = []
         t_factories = []
         ancillas = []
@@ -488,15 +492,18 @@ class Distillery(Layout):
         for idx, qid in enumerate(sorted(all_qubits), start=1):
             qubit_map[qid] = cirq.GridQubit(16, idx)
         self.set_map_circuit(qubit_map=qubit_map)
-        ancillas = [cirq.GridQubit(row, idx) for idx in range(length) for row in range(1, 49, 2)]
-        ancillas += [cirq.GridQubit(row, idx) for idx in range(0, length, 2) for row in range(0, 13, 2)]
-        ancillas += [cirq.GridQubit(row, idx) for idx in range(0, length, 2) for row in range(20, 49, 2)]
-        ancillas += [cirq.GridQubit(16, idx) for idx in (0, length-1)]
+        ancillas = [cirq.GridQubit(row, idx) for idx in range(2*self.num_s_factories) for row in range(1, 14, 2)]
+        ancillas += [cirq.GridQubit(15, idx) for idx in range(1, max(2*self.num_s_factories, len(all_qubits)+1))]
+        ancillas += [cirq.GridQubit(row, idx) for idx in range(2*self.num_t_factories) for row in range(19, 49, 2)]
+        ancillas += [cirq.GridQubit(17, idx) for idx in range(1, max(2*self.num_t_factories, len(all_qubits)+1))]
+        ancillas += [cirq.GridQubit(row, idx) for idx in range(0, 2*self.num_s_factories, 2) for row in range(0, 13, 2)]
+        ancillas += [cirq.GridQubit(row, idx) for idx in range(0, 2*self.num_t_factories, 2) for row in range(20, 49, 2)]
         s_factories = [cirq.GridQubit(14, idx) for idx in range(1, 2*self.num_s_factories, 2)]
         t_factories = [cirq.GridQubit(18, idx) for idx in range(1, 2*self.num_t_factories, 2)]
-        dontgo = [cirq.GridQubit(row, col) for col in range(1, length, 2) for row in range(0, 13, 2)]
-        dontgo += [cirq.GridQubit(row, col) for col in range(1, length, 2) for row in range(20, 49, 2)]
-        dontgo += [cirq.GridQubit(row, col) for col in range(0, , 2) for row in range(20, 49, 2)]
+        dontgo = [cirq.GridQubit(row, col) for col in range(1, 2*self.num_s_factories, 2) for row in range(0, 13, 2)]
+        dontgo += [cirq.GridQubit(row, col) for col in range(1, 2*self.num_t_factories, 2) for row in range(20, 49, 2)]
+        dontgo += [cirq.GridQubit(14, col) for col in range(2, 2*self.num_s_factories, 2)]
+        dontgo += [cirq.GridQubit(18, col) for col in range(2, 2*self.num_t_factories, 2)]
         G = nx.Graph()
         G.add_nodes_from(
             [(q, dict(patch_type="data")) for q in qubit_map.values()],
@@ -509,6 +516,9 @@ class Distillery(Layout):
         )
         G.add_nodes_from(
             [(q, dict(patch_type="ancilla")) for q in ancillas],
+        )
+        G.add_nodes_from(
+            [(q, dict(patch_type="dontgo")) for q in dontgo],
         )
         G.add_edges_from(
             [

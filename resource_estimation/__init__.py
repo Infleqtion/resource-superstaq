@@ -21,6 +21,8 @@ from . import (
     stim_functions,
     visualizations,
     clifford_t,
+    distil,
+    magic_state_distillation,
 )
 
 __all__ = [
@@ -33,4 +35,6 @@ __all__ = [
     "visualizations",
     "cliff_rz",
     "clifford_t",
+    "distil",
+    "magic_state_distillation",
 ]
