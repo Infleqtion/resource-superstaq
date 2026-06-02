@@ -239,7 +239,8 @@ def main(args=None) -> int:
         layt = res.layout.FactorySandwich(
             input_circuit=clifford_t_circuit, num_t_factories=facts, num_s_factories=facts
         )
-    primitive_circuit = res.compile_ftqc.ft_compile(arc=arch, layout=layt, verbose=verbose)
+    compile_result = res.compile_ftqc.ft_compile(arc=arch, layout=layt, verbose=verbose)
+    primitive_circuit = compile_result.circuit
     t2 = time()
 
     report.primitive_width = cirq.num_qubits(primitive_circuit)

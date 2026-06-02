@@ -11,27 +11,38 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from math import pi
 import copy
-from functools import partial
-from collections.abc import Iterator
-import cirq
-import cirq_superstaq as css
-from . import architecture as arch
-from . import lattice_surgery_primitives as lsp
-from cirq_superstaq import Barrier, barrier
-from .layout import Layout
-from tqdm import tqdm
-from time import time
 import os
 import sys
+from collections.abc import Iterator
+from collections.abc import Callable
+from dataclasses import dataclass
+from functools import partial
+from math import pi
+from time import time
 from warnings import warn
+
+import cirq
+import cirq_superstaq as css
+from cirq_superstaq import Barrier, barrier
+from tqdm import tqdm
+
+from . import architecture as arch
+from . import lattice_surgery_primitives as lsp
+from .layout import Layout
+
 # IMPORTANT NOTES
 # Classical control has not been implemented yet
 #   If you requested S, I assume you measure 1 and have to do Z
 #   If you requested T, I assume you measure 1 and have to do S
 # ABC -- Always be Cultivating
 # Only Applicable to Clifford + T currently
+
+
+@dataclass
+class FTCompileResult:
+    circuit: cirq.Circuit
+    metrics: dict[str, object]
 
 
 # This function is only visual and is extremely finicky, so it is not tested
@@ -97,7 +108,7 @@ def replace_cirq_op(
     else:
         raise ValueError(
             f"Invalid Op for "
-            f"{'transversal' if transversal_cnot else 'non-transversal'} CNOT: {op.gate}"
+            f"{'transversal' if transversal_cnot else 'non-transversal'} gate: {op.gate}"
         )
 
 
@@ -352,6 +363,8 @@ def ft_compile(
     with_barriers=False,
     num_threads: int = 1,
     skip_validation: bool = False,
+    metric_calculators: dict[str, Callable[[cirq.Circuit, Layout, arch.Architecture], object]]
+    | None = None,
 ):
     """
     Basic read/replace compiler that converts a cirq Circuit over the Clifford + T gateset to a cirq circuit of primitives.
@@ -359,6 +372,7 @@ def ft_compile(
     The architecture input contains information about what primtives are accessible to the compiler and which extra passes should be added to the primitive circuit.
     The passes available are post op correction and idling.
     The architecture is also the source of information for how many rounds of syndrome extraction should be performed when syndrome extraction is called for.
+    Metric calculators receive the final compiled primitive circuit, the copied layout used during compilation, and the architecture.
     """
     # TODO: Aligning left results in circuits that have are more expensive in terms of circuit time than not aligning left. This is probably the result of requesting a layer of parallel cultivations but realigning so the expensive cultivation operations become spread out over multiple moments. It is currently unclear if aligning left is correct or not in general, but the specific tests for ft_compile very much rely on it...
     layout = copy.deepcopy(layout)
@@ -421,7 +435,15 @@ def ft_compile(
             circuit=circuit, verbose=verbose, zone_ops=zone_ops, alley_ops=alley_ops
         )
 
-    if verbose > 1:
-        return (verbose_list, circuit)
+    metrics = {}
+    if metric_calculators is not None:
+        metrics = {
+            metric_name: calculator(circuit, layout, arc)
+            for metric_name, calculator in metric_calculators.items()
+        }
+    result = FTCompileResult(circuit=circuit, metrics=metrics)
 
-    return circuit
+    if verbose > 1:
+        return (verbose_list, result)
+
+    return result
