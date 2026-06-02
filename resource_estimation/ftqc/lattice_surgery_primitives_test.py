@@ -15,7 +15,7 @@ from math import pi
 
 import cirq
 import pytest
-import resource_estimation.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from numpy.testing import assert_array_equal
 
 

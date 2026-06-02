@@ -14,7 +14,7 @@
 import warnings
 from collections import Counter
 import cirq
-from resource_estimation.architecture import Architecture
+from resource_estimation.ftqc.architecture import Architecture
 from tqdm import tqdm
 import warnings
 
