@@ -323,17 +323,15 @@ def test_distillery(circuit5: cirq.Circuit):
         == 3
     )
     # Check that a CNOT has a reasonable path
-    # ctrl, trgt = cirq.GridQubit(2, 0), cirq.GridQubit(0, 4)
-    # expected_path = [
-    #     ctrl,
-    #     cirq.GridQubit(1, 0),
-    #     cirq.GridQubit(1, 1),
-    #     cirq.GridQubit(1, 2),
-    #     cirq.GridQubit(1, 3),
-    #     cirq.GridQubit(1, 4),
-    #     trgt,
-    # ]
-    # assert distillery.route_cnot(ctrl=ctrl, trgt=trgt) == expected_path
+    ctrl, trgt = cirq.GridQubit(16, 1), cirq.GridQubit(14, 3)
+    expected_path = [
+        ctrl,
+        cirq.GridQubit(15, 1),
+        cirq.GridQubit(15, 2),
+        cirq.GridQubit(15, 3),
+        trgt,
+    ]
+    assert distillery.route_cnot(ctrl=ctrl, trgt=trgt) == expected_path
 
     # distillery.route_cnot(
     #     ctrl=cirq.GridQubit(2, 1), trgt=cirq.GridQubit(2, 2)
