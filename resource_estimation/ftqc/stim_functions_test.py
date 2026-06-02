@@ -14,7 +14,7 @@
 import cirq
 import pytest
 from cultiv import make_end2end_cultivation_circuit, make_cirq_circuits
-from resource_estimation.stim_functions import (
+from resource_estimation.ftqc.stim_functions import (
     count_stim_resources,
     cultivate,
     load_saved_cost,

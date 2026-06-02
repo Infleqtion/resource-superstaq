@@ -16,11 +16,11 @@ from math import pi
 import textwrap
 import cirq
 import pytest
-import resource_estimation.architecture as arch
-import resource_estimation.compile_ftqc as comp
-import resource_estimation.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.architecture as arch
+import resource_estimation.ftqc.compile_ftqc as comp
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from cirq_superstaq import Barrier
-from resource_estimation.layout import MovementLayout, Column, Embedded
+from resource_estimation.ftqc import MovementLayout, Column, Embedded
 
 
 @pytest.fixture

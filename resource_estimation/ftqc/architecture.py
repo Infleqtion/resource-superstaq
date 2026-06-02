@@ -21,7 +21,7 @@ from pathlib import Path
 import cirq
 from . import lattice_surgery_primitives as lsp
 from cirq_superstaq.ops.qubit_gates import ParallelRGate
-from resource_estimation.stim_functions import cultivate
+from resource_estimation.ftqc.stim_functions import cultivate
 import abc
 
 

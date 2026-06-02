@@ -190,10 +190,3 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
         ]
 
     # TODO: add a special decomposition for toffoli
-
-
-def compile_cliff_rz(circuit: cirq.Circuit, atol: float = 1e-8):
-    """Simple wrapper for compiler logic"""
-    gateset = CliffRzGateset(atol=atol)
-    compiled_circuit = cirq.optimize_for_target_gateset(circuit, gateset=gateset)
-    return compiled_circuit
