@@ -8,6 +8,7 @@ import cirq
 import resource_estimation as res
 from resource_estimation import architecture
 from . import magic_state_distillation as msd
+# import magic_state_distillation as msd
 
 def distil(
         arch,
@@ -28,9 +29,9 @@ def distil(
         # )
         movement = arch.movement
         if movement:
-            layout = res.layout.MovementLayout(input_circuit=circuit, num_t_factories=5)
+            layout = res.layout.MovementLayout(input_circuit=circuit, num_t_factories=15)
         else:
-            layout = res.layout.FactorySandwich(input_circuit=circuit, num_t_factories=5, num_s_factories=5)
+            layout = res.layout.FactorySandwich(input_circuit=circuit, num_t_factories=15, num_s_factories=1)
         primitive_circuit = res.compile_ftqc.ft_compile(layout=layout, arc=arch, verbose=False)
         estimator = res.estimate.ResourceEstimator(arc=arch)
         parallel_gate_cost = estimator.parallel_circuit_cost(primitive_circuit, pretty=True)
@@ -41,30 +42,30 @@ def distil(
         circuit = msd.msd_7_to_1()
         movement = arch.movement
         if movement:
-            layout = res.layout.MovementLayout(input_circuit=circuit, num_t_factories=5)
+            layout = res.layout.MovementLayout(input_circuit=circuit, num_t_factories=1)
         else:
-            layout = res.layout.FactorySandwich(input_circuit=circuit, num_t_factories=5, num_s_factories=5)
+            layout = res.layout.FactorySandwich(input_circuit=circuit, num_t_factories=1, num_s_factories=7)
         primitive_circuit = res.compile_ftqc.ft_compile(layout=layout, arc=arch, verbose=False)
         estimator = res.estimate.ResourceEstimator(arc=arch)
         parallel_gate_cost = estimator.parallel_circuit_cost(primitive_circuit, pretty=True)
         serial_gate_cost = estimator.serial_circuit_cost(primitive_circuit, pretty=True)
         circuit_time = estimator.parallel_circuit_time(primitive_circuit)
         resources = {'op_time': circuit_time, 'moment_cost': Counter(parallel_gate_cost), 'gate_cost': Counter(serial_gate_cost)}
-    elif state_type == 'T':
-        circuit = msd.msd_5_to_1()
-        movement = arch.movement
-        if movement:
-            layout = res.layout.MovementLayout(input_circuit=circuit, num_t_factories=5)
-        else:
-            layout = res.layout.FactorySandwich(input_circuit=circuit, num_t_factories=5, num_s_factories=5)
-        primitive_circuit = res.compile_ftqc.ft_compile(layout=layout, arc=arch, verbose=False)
-        estimator = res.estimate.ResourceEstimator(arc=arch)
-        parallel_gate_cost = estimator.parallel_circuit_cost(primitive_circuit, pretty=True)
-        serial_gate_cost = estimator.serial_circuit_cost(primitive_circuit, pretty=True)
-        circuit_time = estimator.parallel_circuit_time(primitive_circuit)
-        resources = {'op_time': circuit_time, 'moment_cost': Counter(parallel_gate_cost), 'gate_cost': Counter(serial_gate_cost)}
+    # elif state_type == 'T':
+    #     circuit = msd.msd_5_to_1()
+    #     movement = arch.movement
+    #     if movement:
+    #         layout = res.layout.MovementLayout(input_circuit=circuit, num_t_factories=5)
+    #     else:
+    #         layout = res.layout.FactorySandwich(input_circuit=circuit, num_t_factories=5, num_s_factories=5)
+    #     primitive_circuit = res.compile_ftqc.ft_compile(layout=layout, arc=arch, verbose=False)
+    #     estimator = res.estimate.ResourceEstimator(arc=arch)
+    #     parallel_gate_cost = estimator.parallel_circuit_cost(primitive_circuit, pretty=True)
+    #     serial_gate_cost = estimator.serial_circuit_cost(primitive_circuit, pretty=True)
+    #     circuit_time = estimator.parallel_circuit_time(primitive_circuit)
+    #     resources = {'op_time': circuit_time, 'moment_cost': Counter(parallel_gate_cost), 'gate_cost': Counter(serial_gate_cost)}
     else:
-        raise ValueError("state type must be either H, T, or Y type.")
+        raise ValueError("state type must be either H or Y type.")
     return resources
 
 
@@ -78,6 +79,6 @@ if __name__ == '__main__':
     #     cultivation_repetition=5,  # Expected repetitions of the cultivation circuit to get a successful T state
     # )
     ssm = res.architecture.DefaultLattice()
-    x = distil(ssm, state_type='H')
+    x = distil(ssm, state_type='Y')
     print(x)
 
