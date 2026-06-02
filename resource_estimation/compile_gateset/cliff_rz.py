@@ -16,8 +16,6 @@ import cirq_superstaq as css
 import numpy as np
 import abc
 
-# warnings.filterwarnings(category=FutureWarning, action="ignore")
-
 
 @cirq.transformer
 def eject_z(
@@ -236,24 +234,3 @@ class CliffPhXZGateset(CliffordGateset):
             cirq.synchronize_terminal_measurements,
             cirq.drop_empty_moments,
         ]
-
-
-# def compile_cliff_rz(circuit: cirq.Circuit, atol: float = 1e-8):
-#     """Wrapper for compiling to Clifford + Rz"""
-#     gateset = CliffRzGateset(atol=atol)
-#     with warnings.catch_warnings():
-#         warnings.filterwarnings("ignore", category=FutureWarning)
-#         compiled_circuit = cirq.optimize_for_target_gateset(circuit, gateset=gateset)
-#     return compiled_circuit
-
-
-# def compile_cliff_phxz(circuit: cirq.Circuit, atol: float = 1e-8):
-#     """Wrapper for compiling to Clifford + PhasedXZ"""
-#     gateset = CliffPhXZGateset(atol=atol)
-#     with warnings.catch_warnings():
-#         warnings.filterwarnings("ignore", category=FutureWarning)
-#         compiled_circuit = cirq.optimize_for_target_gateset(circuit=circuit, gateset=gateset)
-#     return compiled_circuit
-# =======
-# TODO: add a special decomposition for toffoli
-# >>>>>>> origin:resource_estimation/compile_gateset/cliff_rz.py
