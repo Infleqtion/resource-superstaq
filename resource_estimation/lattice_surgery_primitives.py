@@ -251,11 +251,11 @@ class Distil(cirq.Gate):
 
     def num_qubits(self,):
         if self._state_type == 'H': # for T states
-            return 16
+            return 1
         elif self._state_type == 'Y': # for S states
-            return 8
-        elif self._state_type == 'T':
-            return 5
+            return 1
+        # elif self._state_type == 'T':
+        #     return 1
 
     def __str__(self) -> str:
         return "DISTIL(" + self._state_type + ")"

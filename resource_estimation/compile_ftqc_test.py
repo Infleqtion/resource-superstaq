@@ -21,7 +21,7 @@ import resource_estimation.architecture as arch
 import resource_estimation.compile_ftqc as comp
 import resource_estimation.lattice_surgery_primitives as lsp
 from cirq_superstaq import Barrier
-from resource_estimation.layout import MovementLayout, Column, Embedded
+from resource_estimation.layout import Distillery, MovementLayout, Column, Embedded
 
 
 @pytest.fixture
@@ -915,3 +915,24 @@ def test_hm_moves():
         output_circuit,
         str(expected_output_circuit),
     )
+
+
+def test_replace_cirq_op_distil(bell_circuit):
+    distillery_layout = Distillery(bell_circuit, num_t_factories=2)
+
+    op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
+    returned_ops = comp.replace_cirq_op(
+        op=op_to_replace, layout=distillery_layout, transversal_cnot=True
+    )
+    expected_types = [
+        lsp.Distil,
+        lsp.Distil,
+        cirq.CNOT,
+        cirq.MeasurementGate,
+        cirq.S,
+        cirq.ResetChannel,
+    ]
+    assert len(expected_types) == len(returned_ops)
+    for op, expected_type in zip(returned_ops, expected_types):
+        assert op in cirq.GateFamily(expected_type)
+    
