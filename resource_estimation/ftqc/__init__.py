@@ -21,6 +21,7 @@ from resource_estimation.ftqc.architecture import (
     convert_globals_to_phasedxz,
 )
 from resource_estimation.ftqc.compile_ftqc import (
+    FTCompileResult,
     add_moves,
     ft_compile,
     handle_idling,
@@ -70,6 +71,7 @@ __all__ = [
     "EndpointPatch",
     "ErrorCorrect",
     "FactorySandwich",
+    "FTCompileResult",
     "IntermediatePatch",
     "Layout",
     "Merge",
