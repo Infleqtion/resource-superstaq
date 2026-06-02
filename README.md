@@ -59,7 +59,7 @@ layout = res.ftqc.MovementLayout(input_circuit=cliff_t_circuit, num_t_factories=
 primitive_circuit = res.ftqc.ft_compile(layout=layout, arc=arch, verbose=True)
 
 # Estimate Resources
-estimator = res.estimate.ResourceEstimator(arc=arch)
+estimator = res.ftqc.ResourceEstimator(arc=arch)
 gate_cost = estimator.parallel_circuit_cost(primitive_circuit, pretty=True)
 circuit_time = estimator.parallel_circuit_time(primitive_circuit)
 physical_qubits = estimator.physical_qubits(primitive_circuit)

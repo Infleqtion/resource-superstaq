@@ -15,14 +15,15 @@ import json
 from collections import Counter
 from math import ceil, pi
 from pathlib import Path
-import numpy as np
 
 import cirq
+import numpy as np
 import pytest
-import resource_estimation.ftqc.architecture as arch
-import resource_estimation.estimate as est
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from cirq_superstaq import ParallelRGate
+
+import resource_estimation.ftqc.architecture as arch
+import resource_estimation.ftqc.estimate as est
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.stim_functions import cultivate, load_saved_cost
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"

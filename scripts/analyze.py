@@ -253,7 +253,7 @@ def main(args=None) -> int:
     print(report.sub_report("FT Compiled Circuit"))
 
     t1 = time()
-    est = res.estimate.ResourceEstimator(arc=arch)
+    est = res.ftqc.ResourceEstimator(arc=arch)
     serial_gate_counts = est.serial_circuit_cost(primitive_circuit, pretty=False, verbose=verbose)
     serial_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in serial_gate_counts.items()

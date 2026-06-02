@@ -13,14 +13,12 @@
 # limitations under the License.
 from . import (
     compile_gateset,
-    estimate,
     ftqc,
     visualizations,
 )
 
 __all__ = [
     "compile_gateset",
-    "estimate",
     "ftqc",
     "visualizations",
 ]

@@ -30,6 +30,7 @@ from resource_estimation.ftqc.compile_ftqc import (
     teleport_T,
     validate_ops,
 )
+from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.layout import (
     Column,
     Embedded,
@@ -75,6 +76,7 @@ __all__ = [
     "MeasureZonesOnly",
     "MovementLayout",
     "Move",
+    "ResourceEstimator",
     "RotatedCodePatch",
     "Split",
     "Superconductor",
