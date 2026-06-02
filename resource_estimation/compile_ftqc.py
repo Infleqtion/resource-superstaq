@@ -103,6 +103,10 @@ def replace_cirq_op(
 
 
 def teleport_T(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
+    if hasattr(layout, "distil"):
+        distil = True
+    else:
+        distil = False
     available_t_factories = layout.available_t_factories
     all_t_factories = [
         factory
@@ -110,9 +114,14 @@ def teleport_T(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
         if layout.layout_graph.nodes[factory]["ftype"] == "t"
     ]
     operations = []
-    if not available_t_factories:
-        operations += [lsp.Cultivate(pi / 4).on(factory) for factory in all_t_factories]
-        layout.reload_factories("t")
+    if distil:
+        if not available_t_factories:
+            operations += [lsp.Distil('H').on(factory) for factory in all_t_factories]
+            layout.reload_factories("t")
+    else:
+        if not available_t_factories:
+            operations += [lsp.Cultivate(pi / 4).on(factory) for factory in all_t_factories]
+            layout.reload_factories("t")
     data_qubit = op.qubits[0]
     factory_qubit = layout.nearest_factory(data_qubit, ftype="t")
     operations += [
@@ -125,6 +134,10 @@ def teleport_T(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
 
 
 def teleport_S(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
+    if hasattr(layout, "distil"):
+        distil = True
+    else:
+        distil = False
     available_s_factories = layout.available_s_factories
     all_s_factories = [
         factory
@@ -132,9 +145,14 @@ def teleport_S(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
         if layout.layout_graph.nodes[factory]["ftype"] == "s"
     ]
     operations = []
-    if not available_s_factories:
-        operations += [lsp.Cultivate(pi / 2).on(factory) for factory in all_s_factories]
-        layout.reload_factories("s")
+    if distil:
+        if not available_s_factories:
+            operations += [lsp.Distil('Y').on(factory) for factory in all_s_factories]
+            layout.reload_factories("s")
+    else:
+        if not available_s_factories:
+            operations += [lsp.Cultivate(pi / 2).on(factory) for factory in all_s_factories]
+            layout.reload_factories("s")
     data_qubit = op.qubits[0]
     factory_qubit = layout.nearest_factory(data_qubit, ftype="s")
     operations += [

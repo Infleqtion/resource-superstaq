@@ -490,6 +490,8 @@ class Distillery(Layout):
      . | . | . | . | . | .   
 
     """
+    def __init__(self,):
+        self.distil = True
 
     def _generate(self):
         """
