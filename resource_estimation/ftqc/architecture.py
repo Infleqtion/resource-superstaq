@@ -473,8 +473,8 @@ class DefaultLattice(Architecture):
         self,
         idling: bool = True,
         post_op_correction: bool = True,
-        d: int=7,
-        cultivation_repetition: int=1,
+        d: int = 7,
+        cultivation_repetition: int = 1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds=None,
     ) -> None:
@@ -925,8 +925,8 @@ class Superconductor(DefaultLattice):
         self,
         idling: bool = True,
         post_op_correction: bool = True,
-        d: int=7,
-        cultivation_repetition: int=1,
+        d: int = 7,
+        cultivation_repetition: int = 1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds=None,
     ) -> None:

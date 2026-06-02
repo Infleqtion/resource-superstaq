@@ -127,8 +127,8 @@ def load_saved_cost(
 def cultivate(
     dsurface: int,
     fault_distance: int,
-    fold: bool=False,
-    for_test: bool=False,
+    fold: bool = False,
+    for_test: bool = False,
 ) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
     """
     Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)

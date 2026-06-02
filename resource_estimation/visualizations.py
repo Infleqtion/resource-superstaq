@@ -169,7 +169,9 @@ def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout) -> None: 
     plt.show()
 
 
-def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout) -> None:  # pragma: no cover
+def display_lattice_moments(
+    ops: list[list[cirq.Operation]], lay: Layout
+) -> None:  # pragma: no cover
     """
     Little animation for tracking factory usage in the (slow) lattice surgery layout. The new fast
     layouts don't really use graphs, maybe there is some way to change these to bring it back though
@@ -330,14 +332,14 @@ class C:
     MAGENTA = "\033[95m"
 
 
-def boxed_header(title, width: int=40) -> str:
+def boxed_header(title, width: int = 40) -> str:
     pad = width - len(title) - 2
     left = pad // 2
     right = pad - left
     return f"{'=' * left} {title} {'=' * right}"
 
 
-def hr(width: int=40) -> LiteralString:  # pragma: no cover
+def hr(width: int = 40) -> LiteralString:  # pragma: no cover
     return "=" * width
 
 

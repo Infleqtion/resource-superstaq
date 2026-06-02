@@ -94,7 +94,7 @@ class Split(cirq.Gate):
     Spilt([1, 3, 2]).on([X, Y, Z, P, Q , R]) --> [X], [Y, Z, P], [Q, R]
     """
 
-    def __init__(self, partitions: list[int], smooth: bool=True) -> None:
+    def __init__(self, partitions: list[int], smooth: bool = True) -> None:
         self._num_qubits = sum(partitions)
         self._partitions = partitions
         self._smooth = smooth
@@ -254,7 +254,7 @@ class Move(cirq.Gate):
         return self._num_qubits
 
     @property
-    def zone(self) -> Literal['interact', 'measure'] | None:
+    def zone(self) -> Literal["interact", "measure"] | None:
         return self._zone
 
     def __str__(self) -> str:
@@ -263,7 +263,7 @@ class Move(cirq.Gate):
         else:
             return "MOVE_MZ" if self.zone == "measure" else "MOVE_IZ"
 
-    def _json_dict_(self) -> dict[str, Literal['interact', 'measure'] | None]:
+    def _json_dict_(self) -> dict[str, Literal["interact", "measure"] | None]:
         return {"zone": self._zone}
 
     def __repr__(self) -> str:
@@ -328,7 +328,7 @@ class RotatedCodePatch:
         """
         return self.d**2 - 1
 
-    def num_z_stabs(self, full: bool=True) -> int:  # Still assuming square lattice
+    def num_z_stabs(self, full: bool = True) -> int:  # Still assuming square lattice
         """
         The number of Z-type stabilizers in the patch.
         The full flag determines whether to count the complete plaquettes or the incomplete ones.
@@ -339,7 +339,7 @@ class RotatedCodePatch:
         else:
             return self.d - 1
 
-    def num_x_stabs(self, full: bool=True) -> int:  # Still assuming square lattice here
+    def num_x_stabs(self, full: bool = True) -> int:  # Still assuming square lattice here
         """
         The number of X-type stabilizers in the patch (should be same as Z)
         """
@@ -377,7 +377,7 @@ class BufferCodePatch(RotatedCodePatch):
         super().__init__(d=d)
         self.smooth = smooth
 
-    def num_x_stabs(self, full: bool=True) -> int:
+    def num_x_stabs(self, full: bool = True) -> int:
         if full:
             return self.d - 1
         if self.smooth:
@@ -385,7 +385,7 @@ class BufferCodePatch(RotatedCodePatch):
         else:
             return 0
 
-    def num_z_stabs(self, full: bool=True) -> int:
+    def num_z_stabs(self, full: bool = True) -> int:
         if full:
             return self.d - 1
         if self.smooth:
@@ -404,18 +404,18 @@ class IntermediatePatch(RotatedCodePatch):
     Has the X partial stabilizers of a full patch if smooth else the Z partial stabilizers from a full patch
     """
 
-    def __init__(self, d: int, smooth: bool=True) -> None:
+    def __init__(self, d: int, smooth: bool = True) -> None:
         super().__init__(d=d)
         self.smooth = smooth
 
-    def num_x_stabs(self, full: bool=True) -> int:
+    def num_x_stabs(self, full: bool = True) -> int:
         if full:
             return super().num_x_stabs(full=True)
         if self.smooth:
             return super().num_x_stabs(full=False)
         return 0
 
-    def num_z_stabs(self, full: bool=True) -> int:
+    def num_z_stabs(self, full: bool = True) -> int:
         if full:
             return super().num_z_stabs(full=True)
         if self.smooth:
@@ -439,18 +439,18 @@ class EndpointPatch(RotatedCodePatch):
     If the merge is smooth, the flaps are X stabilizers else Z
     """
 
-    def __init__(self, d: int, smooth: bool=True) -> None:
+    def __init__(self, d: int, smooth: bool = True) -> None:
         super().__init__(d=d)
         self.smooth = smooth
 
-    def num_x_stabs(self, full: bool=True) -> int:
+    def num_x_stabs(self, full: bool = True) -> int:
         if full:
             return super().num_x_stabs(full=True)
         if self.smooth:
             return super().num_x_stabs(full=False)
         return super().num_x_stabs(full=False) // 2  # 1 set of 'flaps' instead of 2
 
-    def num_z_stabs(self, full: bool=True) -> int:
+    def num_z_stabs(self, full: bool = True) -> int:
         if full:
             return super().num_z_stabs(full=True)
         if self.smooth:

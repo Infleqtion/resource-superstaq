@@ -118,7 +118,13 @@ def zpow_to_rz(
     """Converts ZPOW gates to Rz gates minding special angle cases and including the angle factor"""
 
     # Maybe this should be a transformer or something?
-    def _map_fn(op: cirq.Operation, _: int) -> Operation | SingleQubitPauliStringGateOperation | list[Operation | SingleQubitPauliStringGateOperation]:
+    def _map_fn(
+        op: cirq.Operation, _: int
+    ) -> (
+        Operation
+        | SingleQubitPauliStringGateOperation
+        | list[Operation | SingleQubitPauliStringGateOperation]
+    ):
         if not isinstance(op.gate, cirq.ZPowGate):
             return op
         if css.approx_eq_mod(op.gate.exponent, 1.0, 2, atol=1e-9):

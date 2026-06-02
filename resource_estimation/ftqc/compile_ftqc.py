@@ -36,7 +36,9 @@ from warnings import warn
 
 
 # This function is only visual and is extremely finicky, so it is not tested
-def knock_off_tqdm(moment_idx: int, total: int, tstart: float, message: str) -> None:  # pragma: no cover
+def knock_off_tqdm(
+    moment_idx: int, total: int, tstart: float, message: str
+) -> None:  # pragma: no cover
     """
     Implements tqdm-like behavior for the compiler
     """
@@ -147,7 +149,7 @@ def teleport_S(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
 
 
 def handle_idling(
-    circuit: cirq.Circuit, layout: Layout, with_barriers: bool, rounds: int, verbose: int=0
+    circuit: cirq.Circuit, layout: Layout, with_barriers: bool, rounds: int, verbose: int = 0
 ) -> cirq.Circuit:
     """
     Helper function for the compiler that handles idling. This way we can experiment with different kinds of idling or even turn it off entirely.
@@ -350,7 +352,7 @@ def ft_compile(
     layout: Layout,
     arc: arch.Architecture,
     verbose: int = 1,
-    with_barriers: bool=False,
+    with_barriers: bool = False,
     num_threads: int = 1,
     skip_validation: bool = False,
 ):

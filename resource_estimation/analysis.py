@@ -78,7 +78,7 @@ def surface_code_fidelity(d: int, A=0.03, pth=0.0057, p=0.001) -> float:
     return 1 - A * (p / pth) ** ((d + 1) // 2)
 
 
-def get_t_path(circuit: cirq.Circuit, verbose: bool=True):
+def get_t_path(circuit: cirq.Circuit, verbose: bool = True):
     """
     Get the T Path of a logical circuit
     Good for comparing with cost model resource estimations
@@ -106,7 +106,7 @@ def get_t_path(circuit: cirq.Circuit, verbose: bool=True):
 def get_important_information(
     clifford_t_circuit: cirq.Circuit,
     fold_cultiv: bool,
-    pfid: float=0.99,
+    pfid: float = 0.99,
 ) -> tuple[int, int, Counter, float, int]:
     """
     Get information used to set certain error-correction assumptions.
@@ -337,7 +337,7 @@ class Report:
             d=self.distance, cultivation_repetition=self.cultivation_repetition
         )
 
-    def save(self, savedir: Path=Path("")) -> Path:
+    def save(self, savedir: Path = Path("")) -> Path:
         stripped_filename = Path(self.filename).stem  # Removes directories and extension
         stripped_fidelity = str(self.program_fidelity)[2:]  # Removes the . in .99
         base = f"re_{stripped_filename}-{stripped_fidelity}-{self.arch_name}-{self.num_factories}-{int(bool(self.fold_cultiv))}"
@@ -364,7 +364,7 @@ class Report:
     def time_line(self, name: str, seconds: float) -> str:
         return f"{C.OKGREEN}Generated {name} in {C.END}{C.YELLOW}{seconds:.3e}{C.END}{C.OKGREEN} seconds{C.END}"
 
-    def line(self, name: str, value: float | int | str | bool, sep: int=29) -> str:
+    def line(self, name: str, value: float | int | str | bool, sep: int = 29) -> str:
         if isinstance(value, bool):
             c, v = "", str(value)
         elif isinstance(value, int):
@@ -375,7 +375,7 @@ class Report:
             c, v = "", str(value)
         return f"{name}:{' ' * (sep - len(name))}{c}{v}{C.END}"
 
-    def line_dict(self, name: str, info_dict: dict, sep: int=29) -> str:
+    def line_dict(self, name: str, info_dict: dict, sep: int = 29) -> str:
         sub_str = f"""{name}{" " * (sep - len(name) + 1)}Count     Time (μs)\n"""
         for key, (count, time_us) in info_dict.items():
             count_str = f"{C.MAGENTA}{count:.2e}{C.END}"
