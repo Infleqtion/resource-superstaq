@@ -19,14 +19,15 @@ import pytest
 
 def _compile_cliff_rz(circuit: cirq.Circuit) -> cirq.Circuit:
     return cliff.compile_gateset(circuit, gateset=cliff.clifford_rz_gateset())
-def _compile_cliff_phxz(circuit:cirq.Circuit) -> cirq.Circuit:
+
+
+def _compile_cliff_phxz(circuit: cirq.Circuit) -> cirq.Circuit:
     return cliff.compile_gateset(circuit, gateset=cliff.clifford_phxz_gateset())
 
+
 @pytest.mark.parametrize(
-    "func, gateset", [
-        (_compile_cliff_rz, cliff.CliffRzGateset()),
-        (_compile_cliff_phxz, cliff.CliffPhXZGateset())
-    ]
+    "func, gateset",
+    [(_compile_cliff_rz, cliff.CliffRzGateset()), (_compile_cliff_phxz, cliff.CliffPhXZGateset())],
 )
 def test_fermi(func, gateset):
     # Test that Fermi-Hubbard circuit is compiled to Clifford + Rz correctly
@@ -43,10 +44,8 @@ def test_fermi(func, gateset):
 
 
 @pytest.mark.parametrize(
-    "func, gateset", [
-        (_compile_cliff_rz, cliff.CliffRzGateset()),
-        (_compile_cliff_phxz, cliff.CliffPhXZGateset())
-    ]
+    "func, gateset",
+    [(_compile_cliff_rz, cliff.CliffRzGateset()), (_compile_cliff_phxz, cliff.CliffPhXZGateset())],
 )
 def test_kanamori(func, gateset):
     # Test that Kanamori circuit is compiled to Clifford + Rz correctly

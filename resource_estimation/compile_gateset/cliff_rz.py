@@ -158,6 +158,7 @@ class CliffordGateset(cirq.TwoQubitCompilationTargetGateset, abc.ABC):
             preserve_moment_structure=False,
             reorder_operations=False,
         )
+
     def _decompose_two_qubit_operation(
         self, op: cirq.Operation, moment_idx: int = -1
     ) -> cirq.OP_TREE:
@@ -189,6 +190,7 @@ class CliffRzGateset(CliffordGateset):
             cirq.PhasedXZGate,
             cirq.GateFamily(cirq.ZPowGate),
         )
+
     @property
     def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
         """List of transformers which should be run after decomposing individual operations."""
@@ -206,7 +208,9 @@ class CliffRzGateset(CliffordGateset):
             cirq.drop_empty_moments,
         ]
 
+
 # <<<<<<< HEAD:resource_estimation/cliff_rz.py
+
 
 class CliffPhXZGateset(CliffordGateset):
     """
@@ -252,5 +256,5 @@ class CliffPhXZGateset(CliffordGateset):
 #         compiled_circuit = cirq.optimize_for_target_gateset(circuit=circuit, gateset=gateset)
 #     return compiled_circuit
 # =======
-    # TODO: add a special decomposition for toffoli
+# TODO: add a special decomposition for toffoli
 # >>>>>>> origin:resource_estimation/compile_gateset/cliff_rz.py

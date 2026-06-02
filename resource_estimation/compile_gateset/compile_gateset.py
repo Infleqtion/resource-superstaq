@@ -39,6 +39,7 @@ def clifford_rz_gateset(atol: float = 1e-8) -> cirq.Gateset:
     """
     return CliffRzGateset(atol=atol)
 
+
 def clifford_phxz_gateset(atol: float = 1e-8) -> cirq.Gateset:
     """Returns the default Clifford + PhasedXZ gateset
     Args:
