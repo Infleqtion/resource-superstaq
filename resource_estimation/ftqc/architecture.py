@@ -587,10 +587,10 @@ class DefaultMovement(Architecture):
         idling: bool = False,
         post_op_correction: bool = True,
         d: int = 7,
-        fold_cultiv=False,
-        cultivation_repetition=1,
+        fold_cultiv: bool = False,
+        cultivation_repetition: int = 1,
         cultivation_fault_distance: int = 3,
-        syndrome_rounds=1,
+        syndrome_rounds: int = 1,
     ) -> None:
         super().__init__(
             idling=idling,
