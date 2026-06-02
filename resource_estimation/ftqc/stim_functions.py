@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import os
 import warnings
 from collections import Counter
+from pathlib import Path
+from typing import Literal
 
 import cirq
 import cultiv
 import stim
-from typing import Literal
+
+DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 STR2GATE = {
     "PhasedXZGate": cirq.PhasedXZGate,
@@ -107,9 +109,7 @@ def load_saved_cost(
         raise ValueError("Style cannot be None for cultivation")
     if op_key == "cultivate" and fault_distance is None:
         raise ValueError("Fault distance cannot be None for cultivation")
-    with open(
-        os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json", "r"
-    ) as f:
+    with open(DATA_DIR / "cultivate_costs.json") as f:
         saved_costs = json.load(f)
     loaded_costs = (
         saved_costs[str(dsurface)][op_key][style][str(fault_distance)]

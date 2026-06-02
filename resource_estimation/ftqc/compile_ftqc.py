@@ -419,7 +419,7 @@ def ft_compile(
             )
         else:  # pragma: no cover
             warn("Parallelization is untested. Use at your own peril")
-            from resource_estimation.compile_ftqc_parallel import handle_idling_parallel
+            from resource_estimation.ftqc.compile_ftqc_parallel import handle_idling_parallel
 
             circuit = handle_idling_parallel(
                 circuit=circuit,

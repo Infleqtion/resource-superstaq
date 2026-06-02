@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 
 [tool.setuptools.packages.find]
-include = ["resource_estimation"]
+include = ["resource_estimation*"]
 
 [tool.setuptools.dynamic]
 version = { attr = "resource_estimation._version.__version__" }
