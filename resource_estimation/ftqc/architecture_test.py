@@ -11,8 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from resource_estimation.ftqc.architecture import DefaultMovement
-from resource_estimation.ftqc.architecture import DefaultLattice
 import json
 from collections import Counter
 from math import ceil, pi
@@ -26,6 +24,7 @@ from cirq_superstaq import ParallelRGate
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+from resource_estimation.ftqc.architecture import DefaultLattice, DefaultMovement
 from resource_estimation.ftqc.stim_functions import cultivate, load_saved_cost
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"

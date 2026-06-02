@@ -11,23 +11,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from cirq.ops.raw_types import Operation
-from cirq.ops.raw_types import Gate
-from cirq.ops.permutation_gate import QubitPermutationGate
-from cirq.ops.measurement_gate import MeasurementGate
+from __future__ import annotations
+
+import abc
 import json
-import numpy as np
 from collections import Counter
 from functools import cached_property, lru_cache
 from math import ceil
 from pathlib import Path
 
 import cirq
-from . import lattice_surgery_primitives as lsp
+import numpy as np
+from cirq.ops.measurement_gate import MeasurementGate
+from cirq.ops.permutation_gate import QubitPermutationGate
+from cirq.ops.raw_types import Gate, Operation
 from cirq_superstaq.ops.qubit_gates import ParallelRGate
-from resource_estimation.ftqc.stim_functions import cultivate
-import abc
 
+from resource_estimation.ftqc.stim_functions import cultivate
+
+from . import lattice_surgery_primitives as lsp
 
 NEUTRAL_GATES = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.CZ: 0.27,
