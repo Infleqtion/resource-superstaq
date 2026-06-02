@@ -453,3 +453,70 @@ class Embedded(Layout):
         self.layout_graph = G
         self.num_s_factories = len(s_factories)
         self.num_t_factories = len(t_factories)
+
+
+class Distillery(Layout):
+    """
+    Lattice layout used for distillation-based methods.
+    
+    Lattice surgery layout based on having a line of logical qubits sandwiched by factory qubits and ancilla
+    S | S | ... | S
+    a | a | ... | a
+    q | q | ... | q
+    a | a | ... | a
+    T | T | ... | T
+
+    Because the numbers of S and T factories are configurable, the dimensions might not line up resulting in things like
+    S | S | S
+    a | a | a | a | a
+    q | q | q | q | q
+    a | a | a | a | a
+    T | T | T | T
+    """
+
+    def _generate(self):
+        """
+        Places and assigns logical qubits according to the Sandwich configuration
+        """
+        qubit_map: dict[cirq.Qid, cirq.GridQubit] = {}
+        all_qubits = list(self.input_circuit.all_qubits())
+        length = max(len(all_qubits)+2, self.num_t_factories, self.num_s_factories)
+        s_factories = []
+        t_factories = []
+        ancillas = []
+        dontgo = []
+        for idx, qid in enumerate(sorted(all_qubits), start=1):
+            qubit_map[qid] = cirq.GridQubit(16, idx)
+        self.set_map_circuit(qubit_map=qubit_map)
+        ancillas = [cirq.GridQubit(row, idx) for idx in range(length) for row in range(1, 49, 2)]
+        ancillas += [cirq.GridQubit(row, idx) for idx in range(0, length, 2) for row in range(0, 13, 2)]
+        ancillas += [cirq.GridQubit(row, idx) for idx in range(0, length, 2) for row in range(20, 49, 2)]
+        ancillas += [cirq.GridQubit(16, idx) for idx in (0, length-1)]
+        s_factories = [cirq.GridQubit(14, idx) for idx in range(1, 2*self.num_s_factories, 2)]
+        t_factories = [cirq.GridQubit(18, idx) for idx in range(1, 2*self.num_t_factories, 2)]
+        dontgo = [cirq.GridQubit(row, col) for col in range(1, length, 2) for row in range(0, 13, 2)]
+        dontgo += [cirq.GridQubit(row, col) for col in range(1, length, 2) for row in range(20, 49, 2)]
+        dontgo += [cirq.GridQubit(row, col) for col in range(0, , 2) for row in range(20, 49, 2)]
+        G = nx.Graph()
+        G.add_nodes_from(
+            [(q, dict(patch_type="data")) for q in qubit_map.values()],
+        )
+        G.add_nodes_from(
+            [(q, dict(patch_type="factory", ftype="t", used=True)) for q in t_factories],
+        )
+        G.add_nodes_from(
+            [(q, dict(patch_type="factory", ftype="s", used=True)) for q in s_factories],
+        )
+        G.add_nodes_from(
+            [(q, dict(patch_type="ancilla")) for q in ancillas],
+        )
+        G.add_edges_from(
+            [
+                (n1, n2)
+                for n1, n2 in combinations(G.nodes, 2)
+                if abs(n1.row - n2.row) + abs(n1.col - n2.col) == 1
+            ]
+        )
+        self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
+        self.layout_graph = G
+    
