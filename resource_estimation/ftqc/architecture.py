@@ -11,6 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from cirq.ops.raw_types import Operation
+from cirq.ops.raw_types import Gate
+from cirq.ops.permutation_gate import QubitPermutationGate
+from cirq.ops.measurement_gate import MeasurementGate
 import json
 import numpy as np
 from collections import Counter
@@ -208,7 +212,7 @@ class Architecture(abc.ABC):
     ### Class Methods ###
     # TODO: Deprecate these
     @classmethod
-    def from_dict(cls, d: dict):
+    def from_dict(cls, d: dict) -> DefaultLattice | DefaultMovement:
         movement = d["movement"]
         if movement:
             base_arc = DefaultMovement(
@@ -250,7 +254,7 @@ class Architecture(abc.ABC):
         return base_arc
 
     @classmethod
-    def from_json(cls, fp: str | Path):
+    def from_json(cls, fp: str | Path) -> DefaultLattice | DefaultMovement:
         with open(fp) as f:
             input_dict = json.load(f)
         return cls.from_dict(input_dict)
@@ -365,7 +369,7 @@ class Architecture(abc.ABC):
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     @property
-    def rounds(self):
+    def rounds(self) -> int:
         if self.syndrome_rounds is None:
             return self.d
         else:
@@ -435,7 +439,7 @@ class Architecture(abc.ABC):
         return self._h_cost
 
     ### Extra Methods ###
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Initialize with all shared Primitives then add special ones later
         self.op_cost = {
             lsp.Cultivate: self.cultivate_cost,
@@ -469,8 +473,8 @@ class DefaultLattice(Architecture):
         self,
         idling: bool = True,
         post_op_correction: bool = True,
-        d=7,
-        cultivation_repetition=1,
+        d: int=7,
+        cultivation_repetition: int=1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds=None,
     ) -> None:
@@ -543,7 +547,7 @@ class DefaultLattice(Architecture):
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     @cached_property
-    def _cultivate_t_cost(self):
+    def _cultivate_t_cost(self) -> dict[str, dict[Gate, int] | float]:
         # fold should always be false here
         base_cultivation_cost = cultivate(
             dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
@@ -622,7 +626,7 @@ class DefaultMovement(Architecture):
     def cnot_cost(self, op: cirq.Operation) -> dict:
         return self._cnot_cost
 
-    def syndrome_extract_cost(self, op):
+    def syndrome_extract_cost(self, op: Operation):
         # Build from the base cost of Syndrome Extraction by adding movement penalties CZ and Measurement moments
         base_cost = super().syndrome_extract_cost(op).copy()
         moment_cost = base_cost["moment_cost"]
@@ -690,7 +694,7 @@ class DefaultMovement(Architecture):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
-    def move_cost(self, op):
+    def move_cost(self, op) -> dict[str, dict[type[QubitPermutationGate], int] | float]:
         """
         Method to handle both types of movement
         The maximum move time should be 500us, which corresponds to travelling to a zone
@@ -717,7 +721,7 @@ class DefaultMovement(Architecture):
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     @cached_property
-    def _cultivate_t_cost(self):
+    def _cultivate_t_cost(self) -> dict[str, dict[Gate, int] | float]:
         base_cultivation_cost = cultivate(
             dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
         ).copy()
@@ -792,7 +796,7 @@ class DualSpeciesMovement(DefaultMovement):
 
     # Cultivate from Lattice Surgery
     @cached_property
-    def _cultivate_t_cost(self):
+    def _cultivate_t_cost(self) -> dict[str, dict[Gate, int] | float]:
         """
         Cached property for the cultivation circuit having the relevant parameters: code distance (d) and movement
         Values are multiplied by the repeat factor for the architecture instance
@@ -820,14 +824,14 @@ class DualSpeciesMovement(DefaultMovement):
 
     # Measurement from Lattice Surgery
     @cached_property
-    def _measure_cost(self):
+    def _measure_cost(self) -> dict[str, dict[type[MeasurementGate], int] | float]:
         gate_cost = {cirq.MeasurementGate: self.patch.num_data_qubits}
         moment_cost = {cirq.MeasurementGate: 1}
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     @property
-    def __name__(self):
+    def __name__(self) -> str:
         return "DualSpeciesMovement"
 
 
@@ -866,7 +870,7 @@ class MeasureZonesOnly(DefaultMovement):
         return {"moment_cost": moment_cost, "gate_cost": gate_cost, "op_time": op_time}
 
     @cached_property
-    def _cultivate_t_cost(self):
+    def _cultivate_t_cost(self) -> dict[str, dict[Gate, int] | float]:
         base_cultivation_cost = cultivate(
             dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
         ).copy()
@@ -921,8 +925,8 @@ class Superconductor(DefaultLattice):
         self,
         idling: bool = True,
         post_op_correction: bool = True,
-        d=7,
-        cultivation_repetition=1,
+        d: int=7,
+        cultivation_repetition: int=1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds=None,
     ) -> None:
