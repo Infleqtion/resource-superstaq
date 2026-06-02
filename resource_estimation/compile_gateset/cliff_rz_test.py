@@ -12,34 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import cirq
-import resource_estimation.cliff_rz as cliff
+import resource_estimation.compile_gateset as cliff
 from scripts.circuits import kanamori, fermi_hubbard
 import pytest
 
 
+def _compile_cliff_rz(circuit: cirq.Circuit) -> cirq.Circuit:
+    return cliff.compile_gateset(circuit, gateset=cliff.clifford_rz_gateset())
+def _compile_cliff_phxz(circuit:cirq.Circuit) -> cirq.Circuit:
+    return cliff.compile_gateset(circuit, gateset=cliff.clifford_phxz_gateset())
+
 @pytest.mark.parametrize(
-    "func, gateset",
-    [
-        (
-            cliff.compile_cliff_rz,
-            cirq.Gateset(
-                cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz
-            ),
-        ),
-        (
-            cliff.compile_cliff_phxz,
-            cirq.Gateset(
-                cirq.H,
-                cirq.S,
-                cirq.Z,
-                cirq.X,
-                cirq.CNOT,
-                cirq.MeasurementGate,
-                cirq.T,
-                cirq.PhasedXZGate,
-            ),
-        ),
-    ],
+    "func, gateset", [
+        (_compile_cliff_rz, cliff.CliffRzGateset()),
+        (_compile_cliff_phxz, cliff.CliffPhXZGateset())
+    ]
 )
 def test_fermi(func, gateset):
     # Test that Fermi-Hubbard circuit is compiled to Clifford + Rz correctly
@@ -56,28 +43,10 @@ def test_fermi(func, gateset):
 
 
 @pytest.mark.parametrize(
-    "func, gateset",
-    [
-        (
-            cliff.compile_cliff_rz,
-            cirq.Gateset(
-                cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz
-            ),
-        ),
-        (
-            cliff.compile_cliff_phxz,
-            cirq.Gateset(
-                cirq.H,
-                cirq.S,
-                cirq.Z,
-                cirq.X,
-                cirq.CNOT,
-                cirq.MeasurementGate,
-                cirq.T,
-                cirq.PhasedXZGate,
-            ),
-        ),
-    ],
+    "func, gateset", [
+        (_compile_cliff_rz, cliff.CliffRzGateset()),
+        (_compile_cliff_phxz, cliff.CliffPhXZGateset())
+    ]
 )
 def test_kanamori(func, gateset):
     # Test that Kanamori circuit is compiled to Clifford + Rz correctly
@@ -135,7 +104,7 @@ def test_phx_to_zhzhz():
     )
 
 
-@pytest.mark.parametrize("func", (cliff.compile_cliff_rz, cliff.compile_cliff_phxz))
+@pytest.mark.parametrize("func", (_compile_cliff_rz, _compile_cliff_phxz))
 def test_small_circuit(func):
     random_circuit = cirq.testing.random_circuit(8, 10, 1, random_state=17)
     compiled_circuit = func(random_circuit)

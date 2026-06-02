@@ -17,7 +17,7 @@ from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from functools import partial
 from tqdm import tqdm
-from resource_estimation.architecture import (
+from resource_estimation.ftqc.architecture import (
     DefaultMovement,
     DefaultLattice,
     DualSpeciesMovement,

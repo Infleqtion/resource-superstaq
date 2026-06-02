@@ -15,7 +15,7 @@ import cirq
 import pytest
 from math import pi
 import numpy as np
-from resource_estimation.clifford_t import (
+from resource_estimation.compile_gateset import (
     compile_cirq_to_clifford_t,
     process_cirq_str,
     approx_rz,

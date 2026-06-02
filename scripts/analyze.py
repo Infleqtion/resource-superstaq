@@ -132,7 +132,10 @@ def main(args=None) -> int:
         if isinstance(op.gate, css.Barrier)
     ]
     input_circuit.batch_remove(barriers)
-    rz_circuit = res.cliff_rz.compile_cliff_rz(circuit=input_circuit, atol=1e-8)
+    rz_circuit = res.compile_gateset.compile_gateset(
+        circuit=input_circuit,
+        gateset=res.compile_gateset.clifford_rz_gateset(atol=1e-8),
+    )
     rz_circuit_width = cirq.num_qubits(rz_circuit)
     rz_circuit_depth = len(rz_circuit)
     t2 = time()
@@ -153,8 +156,10 @@ def main(args=None) -> int:
             rz_circuit, approximation_fidelity=1 - synthesis_error
         )
 
-    clifford_t_circuit = res.clifford_t.compile_cirq_to_clifford_t(
-        rz_circuit, eps=eps, verbose=verbose
+    clifford_t_circuit = res.compile_gateset.compile_gateset(
+        rz_circuit,
+        gateset=res.compile_gateset.clifford_t_gateset(atol=eps),
+        verbose=verbose,
     )
     clifford_t_circuit = clifford_t_circuit.transform_qubits(
         {
@@ -233,13 +238,13 @@ def main(args=None) -> int:
         )
 
     t1 = time()
-    if isinstance(arch, res.architecture.DefaultMovement):
-        layt = res.layout.MovementLayout(num_t_factories=facts, input_circuit=clifford_t_circuit)
+    if isinstance(arch, res.ftqc.DefaultMovement):
+        layt = res.ftqc.MovementLayout(num_t_factories=facts, input_circuit=clifford_t_circuit)
     else:
-        layt = res.layout.FactorySandwich(
+        layt = res.ftqc.FactorySandwich(
             input_circuit=clifford_t_circuit, num_t_factories=facts, num_s_factories=facts
         )
-    primitive_circuit = res.compile_ftqc.ft_compile(arc=arch, layout=layt, verbose=verbose)
+    primitive_circuit = res.ftqc.ft_compile(arc=arch, layout=layt, verbose=verbose)
     t2 = time()
 
     report.primitive_width = cirq.num_qubits(primitive_circuit)
@@ -248,7 +253,7 @@ def main(args=None) -> int:
     print(report.sub_report("FT Compiled Circuit"))
 
     t1 = time()
-    est = res.estimate.ResourceEstimator(arc=arch)
+    est = res.ftqc.ResourceEstimator(arc=arch)
     serial_gate_counts = est.serial_circuit_cost(primitive_circuit, pretty=False, verbose=verbose)
     serial_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in serial_gate_counts.items()

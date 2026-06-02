@@ -139,20 +139,25 @@ def zpow_to_rz(
 
 
 class CliffordGateset(cirq.TwoQubitCompilationTargetGateset, abc.ABC):
-    """Base class for Gatesets with large overlap"""
+    """Base class for Gatesets with large overlap."""
 
-    def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
+    def __init__(self, *gates, _qubits=None, atol: float = 1e-8) -> None:
         self._atol = atol
+        self._qubits = _qubits
+
         super().__init__(
             cirq.GateFamily(cirq.CX, ignore_global_phase=False),
+            cirq.GateFamily(cirq.S, ignore_global_phase=True),
+            cirq.GateFamily(cirq.H, ignore_global_phase=True),
+            cirq.GateFamily(cirq.X, ignore_global_phase=True),
+            cirq.GateFamily(cirq.Z, ignore_global_phase=True),
             cirq.MeasurementGate,
-            cirq.PhasedXZGate,
             cirq.GlobalPhaseGate,
             css.Barrier,
+            *gates,
             preserve_moment_structure=False,
-            reorder_operations=False,  # Enabling makes a shorter circuit but probably way too slow
+            reorder_operations=False,
         )
-
     def _decompose_two_qubit_operation(
         self, op: cirq.Operation, moment_idx: int = -1
     ) -> cirq.OP_TREE:
@@ -178,6 +183,12 @@ class CliffRzGateset(CliffordGateset):
     A Gateset for a Clifford + Rz
     """
 
+    def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
+        self._atol = atol
+        super().__init__(
+            cirq.PhasedXZGate,
+            cirq.GateFamily(cirq.ZPowGate),
+        )
     @property
     def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
         """List of transformers which should be run after decomposing individual operations."""
@@ -195,11 +206,18 @@ class CliffRzGateset(CliffordGateset):
             cirq.drop_empty_moments,
         ]
 
+# <<<<<<< HEAD:resource_estimation/cliff_rz.py
 
 class CliffPhXZGateset(CliffordGateset):
     """
     A Gateset for a Clifford + PhXZ
     """
+
+    def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
+        self._atol = atol
+        super().__init__(
+            cirq.PhasedXZGate,
+        )
 
     @property
     def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
@@ -217,19 +235,22 @@ class CliffPhXZGateset(CliffordGateset):
         ]
 
 
-def compile_cliff_rz(circuit: cirq.Circuit, atol: float = 1e-8):
-    """Wrapper for compiling to Clifford + Rz"""
-    gateset = CliffRzGateset(atol=atol)
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning)
-        compiled_circuit = cirq.optimize_for_target_gateset(circuit, gateset=gateset)
-    return compiled_circuit
+# def compile_cliff_rz(circuit: cirq.Circuit, atol: float = 1e-8):
+#     """Wrapper for compiling to Clifford + Rz"""
+#     gateset = CliffRzGateset(atol=atol)
+#     with warnings.catch_warnings():
+#         warnings.filterwarnings("ignore", category=FutureWarning)
+#         compiled_circuit = cirq.optimize_for_target_gateset(circuit, gateset=gateset)
+#     return compiled_circuit
 
 
-def compile_cliff_phxz(circuit: cirq.Circuit, atol: float = 1e-8):
-    """Wrapper for compiling to Clifford + PhasedXZ"""
-    gateset = CliffPhXZGateset(atol=atol)
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning)
-        compiled_circuit = cirq.optimize_for_target_gateset(circuit=circuit, gateset=gateset)
-    return compiled_circuit
+# def compile_cliff_phxz(circuit: cirq.Circuit, atol: float = 1e-8):
+#     """Wrapper for compiling to Clifford + PhasedXZ"""
+#     gateset = CliffPhXZGateset(atol=atol)
+#     with warnings.catch_warnings():
+#         warnings.filterwarnings("ignore", category=FutureWarning)
+#         compiled_circuit = cirq.optimize_for_target_gateset(circuit=circuit, gateset=gateset)
+#     return compiled_circuit
+# =======
+    # TODO: add a special decomposition for toffoli
+# >>>>>>> origin:resource_estimation/compile_gateset/cliff_rz.py

@@ -12,18 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import os
 from collections import Counter
 from math import ceil, pi
-import numpy as np
+from pathlib import Path
 
 import cirq
+import numpy as np
 import pytest
-import resource_estimation.architecture as arch
-import resource_estimation.estimate as est
-import resource_estimation.lattice_surgery_primitives as lsp
 from cirq_superstaq import ParallelRGate
-from resource_estimation.stim_functions import cultivate, load_saved_cost
+
+import resource_estimation.ftqc.architecture as arch
+import resource_estimation.ftqc.estimate as est
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+from resource_estimation.ftqc.stim_functions import cultivate, load_saved_cost
+
+DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 
 @pytest.fixture
@@ -85,11 +88,12 @@ def test_movement_gate_costs(d):
     # Check Cultivate
 
     op = lsp.Cultivate(pi / 4).on(qubit_a)
-    cost = arc.gate_cost(op)
     if d < 7:
         with pytest.warns(UserWarning, match="Returning result for d=7"):
+            cost = arc.gate_cost(op)
             base_cost = cultivate(dsurface=d, fault_distance=3)
     else:
+        cost = arc.gate_cost(op)
         base_cost = cultivate(dsurface=d, fault_distance=3)
     expected_cost = base_cost["serial"]
     # To account for movement we add the QubitPermutationGates to the base cost
@@ -267,7 +271,6 @@ def test_lattice_gate_costs(d):
     # Check Cultivate
 
     op = lsp.Cultivate(pi / 4).on(qubit_a)
-    cost = arc.gate_cost(op)
     if d < 7:
         with pytest.warns(UserWarning, match="Returning result for d=7"):
             cost = arc.gate_cost(op)
@@ -352,9 +355,7 @@ def test_self_returns(movement_architecture, lattice_architecture):
 def test_against_cultiv(d):
     # Test Syndrome Extract
     # Set up memory circuit
-    with open(
-        os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json", "r"
-    ) as f:
+    with open(DATA_DIR / "cultivate_costs.json") as f:
         saved_resources = json.load(f)
 
     d_count = load_saved_cost(dsurface=d, op_key="memory_d_rounds")["serial"]
