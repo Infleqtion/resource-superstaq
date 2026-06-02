@@ -14,7 +14,6 @@
 import cirq
 import cirq_superstaq as css
 import numpy as np
-import warnings
 import abc
 
 # warnings.filterwarnings(category=FutureWarning, action="ignore")
