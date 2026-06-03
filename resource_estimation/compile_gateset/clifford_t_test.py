@@ -120,7 +120,7 @@ def test_in_cliffs():
 
 def test_rz_synth():
     theta, eps = 1.2345678, 1e-8
-    true_circuit = cirq.Circuit(cirq.Rz(rads=theta).on(cirq.GridQubit(0, 0)))
+    true_circuit = cirq.Circuit(cirq.Rz(rads=theta / pi).on(cirq.GridQubit(0, 0)))
     decomp = approx_rz(theta, eps)
     approx_circuit = cirq.Circuit()
     process_cirq_str(circ=approx_circuit, gates=decomp, q=cirq.GridQubit(0, 0))
