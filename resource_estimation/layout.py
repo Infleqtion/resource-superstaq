@@ -504,7 +504,7 @@ class Distillery(Layout):
 
     def _generate(self):
         """
-        Places and assigns logical qubits according to the Sandwich configuration
+        Places and assigns logical qubits according to the Distillery configuration
         """
         qubit_map: dict[cirq.Qid, cirq.GridQubit] = {}
         all_qubits = list(self.input_circuit.all_qubits())
@@ -553,4 +553,4 @@ class Distillery(Layout):
         )
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
-    
+        

@@ -188,6 +188,7 @@ class Architecture(abc.ABC):
         movement: bool,
         d: int = 7,
         cultivation_repetition: int = 1,
+        distillation_repetition: int = 1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds: int | None = None,
         fold_cultiv: bool = False,
@@ -198,6 +199,7 @@ class Architecture(abc.ABC):
         self.d = d
         self.patch = lsp.RotatedCodePatch(self.d)
         self.cultivation_repetition = cultivation_repetition
+        self.distillation_repetition = distillation_repetition
         self.cultivation_fault_distance = cultivation_fault_distance
         self.syndrome_rounds = syndrome_rounds
         self.fold_cultiv = fold_cultiv
@@ -447,7 +449,21 @@ class Architecture(abc.ABC):
 
     @cached_property
     def _distil_cost(self, state_type):
-        return distil(self, state_type)
+        # No penalties to any base gates
+        base_distillation_cost = distil(self, state_type)
+        moment_cost = base_distillation_cost["parallel"]
+        gate_cost = base_distillation_cost["serial"]
+
+        # Apply distillation repetition penalty
+        gate_cost = {gate: cost * 15**(self.distillation_repetition-1) for gate, cost in gate_cost.items()}
+        moment_cost = {
+            moment: cost * 15**(self.distillation_repetition-1) for moment, cost in moment_cost.items()
+        }
+
+        op_time = self.total_time(moment_cost_dict=moment_cost)
+        return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
+        # cost = distil(self, state_type)
+        # cost['gate_cost'] = {gate: (15**(self.distillation_repetition-1) * cost for gate, cost in cost['gate_cost'].items()}
 
     ### Extra Methods ###
     def __post_init__(self):
