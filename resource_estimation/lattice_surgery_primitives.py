@@ -252,19 +252,19 @@ class Distil(cirq.Gate):
     def num_qubits(self,):
         if self._state_type == 'H': # for T states
             return 1
-        elif self._state_type == 'Y': # for S states
-            return 1
+        # elif self._state_type == 'Y': # for S states
+        #     return 1
         # elif self._state_type == 'T':
         #     return 1
 
     def __str__(self) -> str:
-        return "DISTIL(" + self._state_type + ")"
+        return "DISTIL('" + self._state_type + "')"
 
     def _json_dict_(self) -> dict:
         return {"state": self._state_type}
 
     def __repr__(self) -> str:
-        return "lsp.Distil(state_type=" + self._state_type + ")"
+        return "lsp.Distil(state_type='" + self._state_type + "')"
 
     @classmethod
     def _json_namespace_(cls) -> str:

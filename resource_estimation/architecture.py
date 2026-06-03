@@ -438,19 +438,12 @@ class Architecture(abc.ABC):
         return self._h_cost
 
     def distil_cost(self, op: cirq.Operation) -> dict:
-        if op.gate.state_type == 'H':
-            return self._distil_cost('H')
-        elif op.gate.state_type == 'Y':
-            return self._distil_cost('Y')
-        elif op.gate.state_type == 'T':
-            return self._distil_cost('T')
-        else:
-            raise ValueError("state type must be H, T, or Y")
+            return self._distil_cost
 
     @cached_property
-    def _distil_cost(self, state_type):
+    def _distil_cost(self,):
         # No penalties to any base gates
-        base_distillation_cost = distil(self, state_type)
+        base_distillation_cost = distil(self, state_type='H')
 
         # Apply distillation repetition penalty
         gate_cost = {gate: cost * 15**(self.distillation_repetition-1) for gate, cost in base_distillation_cost['gate_cost'].items()
@@ -502,6 +495,7 @@ class DefaultLattice(Architecture):
         post_op_correction: bool = True,
         d=7,
         cultivation_repetition=1,
+        distillation_repetition=1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds=None,
     ) -> None:
@@ -511,6 +505,7 @@ class DefaultLattice(Architecture):
             movement=False,
             d=d,
             cultivation_repetition=cultivation_repetition,
+            distillation_repetition=distillation_repetition,
             cultivation_fault_distance=cultivation_fault_distance,
             syndrome_rounds=syndrome_rounds,
             fold_cultiv=False,
@@ -622,6 +617,7 @@ class DefaultMovement(Architecture):
         d: int = 7,
         fold_cultiv=False,
         cultivation_repetition=1,
+        distillation_repetition=1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds=1,
     ) -> None:
@@ -631,6 +627,7 @@ class DefaultMovement(Architecture):
             movement=True,
             d=d,
             cultivation_repetition=cultivation_repetition,
+            distillation_repetition=distillation_repetition,
             cultivation_fault_distance=cultivation_fault_distance,
             syndrome_rounds=syndrome_rounds,
             fold_cultiv=fold_cultiv,
@@ -638,6 +635,7 @@ class DefaultMovement(Architecture):
         self._primitives = cirq.Gateset(
             *[
                 lsp.Cultivate,
+                lsp.Distil,
                 lsp.SyndromeExtract,
                 lsp.ErrorCorrect,
                 lsp.Move,

@@ -28,6 +28,7 @@ def lattice_estimator():
             idling=True,
             post_op_correction=1,
             cultivation_repetition=1,
+            distillation_repetition=1,
             syndrome_rounds=None,
         )
     )
@@ -41,6 +42,7 @@ def movement_estimator():
             idling=True,
             post_op_correction=1,
             cultivation_repetition=1,
+            distillation_repetition=1,
             syndrome_rounds=None,
         )
     )
@@ -55,6 +57,7 @@ def movement_estimator():
                 idling=True,
                 post_op_correction=1,
                 cultivation_repetition=1,
+                distillation_repetition=1,
                 syndrome_rounds=None,
             )
         ),
@@ -64,6 +67,7 @@ def movement_estimator():
                 idling=True,
                 post_op_correction=1,
                 cultivation_repetition=1,
+                distillation_repetition=1,
                 syndrome_rounds=None,
             )
         ),
@@ -91,6 +95,7 @@ def test_all_primitives(estimator):
             lsp.Split([1, 1], smooth=False).on(*dummy_qubits[1:3]),
         ]
     circuit += [lsp.Cultivate(pi / 4).on(q) for q in dummy_qubits]
+    circuit += [lsp.Distil('H').on(q) for q in dummy_qubits]
 
     # At least verify that there is no randomness in these estimates
     # Still TODO: Make this test better
@@ -185,6 +190,11 @@ def test_error_handling(lattice_estimator, movement_estimator):
     )
     with pytest.raises(ValueError, match="incompatible"):
         _ = movement_estimator.serial_circuit_cost(bad_circuit)
+
+    bad_circuit = cirq.Circuit([lsp.Distil('H').on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b)])
+    with pytest.raises(ValueError, match="incompatible"):
+        _ = lattice_estimator.serial_circuit_cost(bad_circuit)
+
 
 
 # TODO: Might be worth having one or two more example tests for the critical path algorithm

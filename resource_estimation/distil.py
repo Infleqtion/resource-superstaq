@@ -34,8 +34,8 @@ def distil(
             layout = res.layout.FactorySandwich(input_circuit=circuit, num_t_factories=15, num_s_factories=1)
         primitive_circuit = res.compile_ftqc.ft_compile(layout=layout, arc=arch, verbose=False)
         estimator = res.estimate.ResourceEstimator(arc=arch)
-        parallel_gate_cost = estimator.parallel_circuit_cost(primitive_circuit, pretty=True)
-        serial_gate_cost = estimator.serial_circuit_cost(primitive_circuit, pretty=True)
+        parallel_gate_cost = estimator.parallel_circuit_cost(primitive_circuit, pretty=False)
+        serial_gate_cost = estimator.serial_circuit_cost(primitive_circuit, pretty=False)
         circuit_time = estimator.parallel_circuit_time(primitive_circuit)
         resources = {'op_time': circuit_time, 'moment_cost': Counter(parallel_gate_cost), 'gate_cost': Counter(serial_gate_cost)}
     elif state_type == 'Y':
@@ -47,8 +47,8 @@ def distil(
             layout = res.layout.FactorySandwich(input_circuit=circuit, num_t_factories=1, num_s_factories=7)
         primitive_circuit = res.compile_ftqc.ft_compile(layout=layout, arc=arch, verbose=False)
         estimator = res.estimate.ResourceEstimator(arc=arch)
-        parallel_gate_cost = estimator.parallel_circuit_cost(primitive_circuit, pretty=True)
-        serial_gate_cost = estimator.serial_circuit_cost(primitive_circuit, pretty=True)
+        parallel_gate_cost = estimator.parallel_circuit_cost(primitive_circuit, pretty=False)
+        serial_gate_cost = estimator.serial_circuit_cost(primitive_circuit, pretty=False)
         circuit_time = estimator.parallel_circuit_time(primitive_circuit)
         resources = {'op_time': circuit_time, 'moment_cost': Counter(parallel_gate_cost), 'gate_cost': Counter(serial_gate_cost)}
     # elif state_type == 'T':
