@@ -116,7 +116,7 @@ def teleport_T(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
     operations = []
     if distil:
         if not available_t_factories:
-            operations += [lsp.Distil('H').on(factory) for factory in all_t_factories]
+            operations += [lsp.Distil().on(factory) for factory in all_t_factories]
             layout.reload_factories("t")
     else:
         if not available_t_factories:

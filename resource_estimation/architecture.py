@@ -367,6 +367,21 @@ class Architecture(abc.ABC):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
+    @cached_property
+    def _distil_cost(self,):
+        # No penalties to any base gates
+        base_distillation_cost = distil(self)
+
+        # Apply distillation repetition penalty
+        gate_cost = {gate: cost * 15**(self.distillation_repetition-1) for gate, cost in base_distillation_cost['gate_cost'].items()
+                     }
+        moment_cost = {
+            moment: cost * 15**(self.distillation_repetition-1) for moment, cost in base_distillation_cost['moment_cost'].items()
+        }
+
+        op_time = self.total_time(moment_cost_dict=moment_cost)
+        return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}    
+
     @property
     def rounds(self):
         if self.syndrome_rounds is None:
@@ -439,23 +454,6 @@ class Architecture(abc.ABC):
 
     def distil_cost(self, op: cirq.Operation) -> dict:
             return self._distil_cost
-
-    @cached_property
-    def _distil_cost(self,):
-        # No penalties to any base gates
-        base_distillation_cost = distil(self, state_type='H')
-
-        # Apply distillation repetition penalty
-        gate_cost = {gate: cost * 15**(self.distillation_repetition-1) for gate, cost in base_distillation_cost['gate_cost'].items()
-                     }
-        moment_cost = {
-            moment: cost * 15**(self.distillation_repetition-1) for moment, cost in base_distillation_cost['moment_cost'].items()
-        }
-
-        op_time = self.total_time(moment_cost_dict=moment_cost)
-        return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
-        # cost = distil(self, state_type)
-        # cost['gate_cost'] = {gate: (15**(self.distillation_repetition-1) * cost for gate, cost in cost['gate_cost'].items()}
 
     ### Extra Methods ###
     def __post_init__(self):

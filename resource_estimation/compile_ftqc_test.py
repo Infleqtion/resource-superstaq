@@ -108,6 +108,7 @@ def test_direct_substitution():
             cirq.MeasurementGate(1).on(dummy_qubits[0]),
             cirq.ResetChannel().on(dummy_qubits[0]),
             lsp.Cultivate(pi / 4).on(dummy_qubits[0]),
+            lsp.Distil().on(dummy_qubits[0]),
             lsp.SyndromeExtract(1, 1).on(dummy_qubits[0]),
             lsp.ErrorCorrect(1).on(dummy_qubits[0]),
         ]:
@@ -849,6 +850,33 @@ def test_ssm_moves():
         str(expected_output_circuit),
     )
 
+    input_circuit = cirq.Circuit(
+        lsp.SyndromeExtract(1, 1).on_each(a, b),
+        lsp.Distil().on(c),
+        cirq.CNOT.on(c, b),
+        cirq.CNOT.on(a, b),
+        cirq.MeasurementGate(1, key="").on(c),
+    )
+    expected_output_circuit = cirq.Circuit(
+        lsp.SyndromeExtract(1, 1).on_each(a, b),
+        lsp.Distil().on(c),
+        lsp.Move(zone="interact").on_each(c, b),
+        cirq.CNOT.on(c, b),
+        lsp.Move(zone="interact").on_each(b, c),
+        lsp.Move(zone="interact").on_each(a, b),
+        cirq.CNOT.on(a, b),
+        lsp.Move(zone="interact").on_each(b, a),
+        lsp.Move(zone="measure").on(c),
+        cirq.MeasurementGate(1, key="").on(c),
+        lsp.Move(zone="measure").on(c),
+    )
+    # Aligning left avoids ambiguity
+    output_circuit = cirq.align_left(comp.add_moves(input_circuit, **arch_info))
+    cirq.testing.assert_has_diagram(
+        output_circuit,
+        str(expected_output_circuit),
+    )
+    
 
 def test_mzo_moves():
     arch_type = arch.MeasureZonesOnly
@@ -867,6 +895,32 @@ def test_mzo_moves():
     expected_output_circuit = cirq.Circuit(
         lsp.SyndromeExtract(1, 1).on_each(a, b),
         lsp.Cultivate(pi / 4).on(c),
+        lsp.Move(zone=None).on(c, b),
+        cirq.CNOT.on(c, b),
+        lsp.Move(zone=None).on(b, c),
+        lsp.Move(zone=None).on(a, b),
+        cirq.CNOT.on(a, b),
+        lsp.Move(zone=None).on(b, a),
+        lsp.Move(zone="measure").on(c),
+        cirq.MeasurementGate(1, key="").on(c),
+        lsp.Move(zone="measure").on(c),
+    )
+    output_circuit = comp.add_moves(input_circuit, **arch_info)
+    cirq.testing.assert_has_diagram(
+        output_circuit,
+        str(expected_output_circuit),
+    )
+
+    input_circuit = cirq.Circuit(
+        lsp.SyndromeExtract(1, 1).on_each(a, b),
+        lsp.Distil().on(c),
+        cirq.CNOT.on(c, b),
+        cirq.CNOT.on(a, b),
+        cirq.MeasurementGate(1, key="").on(c),
+    )
+    expected_output_circuit = cirq.Circuit(
+        lsp.SyndromeExtract(1, 1).on_each(a, b),
+        lsp.Distil().on(c),
         lsp.Move(zone=None).on(c, b),
         cirq.CNOT.on(c, b),
         lsp.Move(zone=None).on(b, c),
@@ -916,6 +970,30 @@ def test_hm_moves():
         str(expected_output_circuit),
     )
 
+    input_circuit = cirq.Circuit(
+        lsp.SyndromeExtract(1, 1).on_each(a, b),
+        lsp.Distil().on(c),
+        cirq.CNOT.on(c, b),
+        cirq.CNOT.on(a, b),
+        cirq.MeasurementGate(1, key="").on(c),
+    )
+    expected_output_circuit = cirq.Circuit(
+        lsp.SyndromeExtract(1, 1).on_each(a, b),
+        lsp.Distil().on(c),
+        lsp.Move(zone=None).on(c, b),
+        cirq.CNOT.on(c, b),
+        lsp.Move(zone=None).on(b, c),
+        lsp.Move(zone=None).on(a, b),
+        cirq.CNOT.on(a, b),
+        lsp.Move(zone=None).on(b, a),
+        cirq.MeasurementGate(1, key="").on(c),
+    )
+    output_circuit = comp.add_moves(input_circuit, **arch_info)
+    cirq.testing.assert_has_diagram(
+        output_circuit,
+        str(expected_output_circuit),
+    )
+    
 
 def test_replace_cirq_op_distil(bell_circuit):
     distillery_layout = Distillery(bell_circuit, num_t_factories=2)
@@ -952,27 +1030,3 @@ def test_different_rounds_distil():
         for op in compiled_circuit.all_operations():
             if op in cirq.GateFamily(lsp.SyndromeExtract):
                 op.gate.rounds == k
-
-
-# def test_bell_distil_FF(bell_circuit):
-#     movement_layout = Distillery(bell_circuit)
-#     movement_architecture = arch.MeasureZonesOnly(
-#         d=7,
-#         cultivation_repetition=1,
-#         syndrome_rounds=1,
-#         idling=False,
-#         post_op_correction=False,
-#     )
-#     compiled_bell_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
-#     # no idling, no post-op correction
-#     cirq.testing.assert_has_diagram(
-#         compiled_bell_circuit,
-#         textwrap.dedent(
-#             """
-#                 (0, 0): ───SE(1)───H───MOVE───@───#2─────
-#                                        │      │   │
-#                 (0, 1): ───SE(1)───────#2─────X───MOVE───
-#             """
-#         ),
-#     )
-                

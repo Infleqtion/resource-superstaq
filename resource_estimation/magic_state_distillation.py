@@ -142,18 +142,6 @@ def msd_5_to_1() -> cirq.Circuit:
         ],
     )
 
-    # m1, m2, m3, m4 = sympy.symbols("m1 m2 m3 m4")
-    # sympy_cond = cirq.SympyCondition(sympy.Eq(m1 + m2 + m3 + m4, 0))  # m1 = m2 = m3 = m4 = 0
-
-    # magic_state_cir = cirq.Circuit(
-    #     cirq.CircuitOperation(
-    #         circuit=cir.freeze(),
-    #         use_repetition_ids=False,
-    #         repeat_until=sympy_cond,
-    #     )
-    # )
-
-    # return magic_state_cir
     return cir
 
 
@@ -249,30 +237,6 @@ def msd_7_to_1() -> cirq.Circuit:
         ],
     )
 
-    # index 0=magic
-    # m0, m1, m2, m3, m4, m5, m6 = sympy.symbols("m0 m1 m2 m3 m4 m5 m6")
-    # all those parities must be 0 for it to be even ( so output of xor is 0 for even )
-    # so stop when true == ~0 & ~0 & ~0 == ~(0 | 0 | 0)
-    # even_parity = sympy.Not(
-    #     sympy.Xor(m0, m1, m2, m3) | sympy.Xor(m0, m1, m4, m5) | sympy.Xor(m0, m2, m4, m6)
-    # )
-    # if special parity is even, do Z
-    # special_parity = sympy.Xor(m4, m5, m6)
-
-    # repeating until matched parities
-    # magic_state_cir = cirq.Circuit(
-    #     cirq.CircuitOperation(
-    #         circuit=cir.freeze(),
-    #         use_repetition_ids=False,
-    #         repeat_until=cirq.SympyCondition(even_parity),
-    #     )
-    # )
-
-    # magic state "correction"
-    # is even, so do the Z
-    # magic_state_cir.append([cirq.Z(qubits[0]).with_classical_controls(sympy.Not(special_parity))])
-
-    # return magic_state_cir
     return cir
 
 def msd_15_to_1() -> cirq.Circuit:
@@ -419,32 +383,4 @@ def msd_15_to_1() -> cirq.Circuit:
         # no need to measure index 15, that is our magic state
     )
 
-    # m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15 = sympy.symbols(
-    #     "m1 m2 m3 m4 m5 m6 m7 m8 m9 m10 m11 m12 m13 m14 m15"
-    # )
-
-    # all those parities must be 0 for it to be even ( output of xor is 0 for even )
-    # so stop when true == ~0 & ~0 & ~0 & ~0 == ~(0 | 0 | 0 | 0)
-    # even_parity = sympy.Not(
-    #     sympy.Xor(m4, m5, m6, m7, m8, m9, m10, m11)
-    #     | sympy.Xor(m1, m2, m3, m4, m5, m6, m7, m15)
-    #     | sympy.Xor(m2, m3, m4, m5, m10, m11, m12, m13)
-    #     | sympy.Xor(m1, m2, m5, m6, m9, m10, m13, m14)
-    # )
-    # # if special parity of all qubits is odd, do Z
-    # special_parity = sympy.Xor(m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15)
-
-    # repeating until matched parities are all even
-    # magic_state_cir = cirq.Circuit(
-    #     cirq.CircuitOperation(
-    #         circuit=cir.freeze(),
-    #         use_repetition_ids=False,
-    #         repeat_until=cirq.SympyCondition(even_parity),
-    #     ),
-    #     # magic state "correction"
-    #     # is odd, so do the Z
-    #     cirq.Z(qubits[15]).with_classical_controls(special_parity),
-    # )
-
-    # return magic_state_cir
     return cir

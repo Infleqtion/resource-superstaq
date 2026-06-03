@@ -237,6 +237,30 @@ def test_serialization():
         circuit, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
     )
 
+    circuit = cirq.Circuit(
+        [
+            lsp.Merge(2, True).on(qubit_a, qubit_b),
+            lsp.Split([1, 1], True).on(qubit_a, qubit_b),
+            lsp.SyndromeExtract(1, 1).on(qubit_a),
+            lsp.ErrorCorrect(1).on(qubit_b),
+            lsp.Distil().on(qubit_a),
+            lsp.Move(zone="interact").on_each(qubit_a, qubit_b),
+            lsp.Move(zone=None).on(qubit_a, qubit_b),
+            lsp.Move(zone="measure").on(qubit_a),
+        ]
+    )
+    print(circuit)
+    json_str = cirq.to_json(circuit)
+    # print(json_str)
+    new_circuit = cirq.read_json(
+        json_text=json_str, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
+    )
+    print(new_circuit)
+    print(new_circuit == circuit)
+    cirq.testing.assert_json_roundtrip_works(
+        circuit, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
+    )
+    
 
 def test_repr():
     qa, qb = cirq.LineQubit.range(2)
@@ -260,6 +284,9 @@ def test_repr():
 
     cult = lsp.Cultivate(7).on(qa)
     assert repr(cult) == "lsp.Cultivate(theta=7).on(cirq.LineQubit(0))"
+
+    dist = lsp.Distil().on(qa)
+    assert repr(dist) == "lsp.Distil()(cirq.LineQubit(0))"
 
     move = lsp.Move(zone="interact").on_each(qa, qb)
     assert (

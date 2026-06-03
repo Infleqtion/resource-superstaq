@@ -95,7 +95,7 @@ def test_all_primitives(estimator):
             lsp.Split([1, 1], smooth=False).on(*dummy_qubits[1:3]),
         ]
     circuit += [lsp.Cultivate(pi / 4).on(q) for q in dummy_qubits]
-    circuit += [lsp.Distil('H').on(q) for q in dummy_qubits]
+    circuit += [lsp.Distil().on(q) for q in dummy_qubits]
 
     # At least verify that there is no randomness in these estimates
     # Still TODO: Make this test better
@@ -191,7 +191,7 @@ def test_error_handling(lattice_estimator, movement_estimator):
     with pytest.raises(ValueError, match="incompatible"):
         _ = movement_estimator.serial_circuit_cost(bad_circuit)
 
-    bad_circuit = cirq.Circuit([lsp.Distil('H').on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b)])
+    bad_circuit = cirq.Circuit([lsp.Distil().on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b)])
     with pytest.raises(ValueError, match="incompatible"):
         _ = lattice_estimator.serial_circuit_cost(bad_circuit)
 
