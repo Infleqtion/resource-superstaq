@@ -502,32 +502,74 @@ class Distillery(Layout):
                          )
         self.distil = True
 
+    # def _generate(self):
+    #     """
+    #     Places and assigns logical qubits according to the Distillery configuration
+    #     """
+    #     qubit_map: dict[cirq.Qid, cirq.GridQubit] = {}
+    #     all_qubits = list(self.input_circuit.all_qubits())
+    #     # length = max(len(all_qubits)+2, 2*self.num_t_factories, 2*self.num_s_factories)
+    #     s_factories = []
+    #     t_factories = []
+    #     ancillas = []
+    #     dontgo = []
+    #     for idx, qid in enumerate(sorted(all_qubits), start=1):
+    #         qubit_map[qid] = cirq.GridQubit(16, idx)
+    #     self.set_map_circuit(qubit_map=qubit_map)
+    #     ancillas = [cirq.GridQubit(row, idx) for idx in range(2*self.num_s_factories) for row in range(1, 14, 2)]
+    #     ancillas += [cirq.GridQubit(15, idx) for idx in range(1, max(2*self.num_s_factories, len(all_qubits)+1))]
+    #     ancillas += [cirq.GridQubit(row, idx) for idx in range(2*self.num_t_factories) for row in range(19, 49, 2)]
+    #     ancillas += [cirq.GridQubit(17, idx) for idx in range(1, max(2*self.num_t_factories, len(all_qubits)+1))]
+    #     ancillas += [cirq.GridQubit(row, idx) for idx in range(0, 2*self.num_s_factories, 2) for row in range(0, 13, 2)]
+    #     ancillas += [cirq.GridQubit(row, idx) for idx in range(0, 2*self.num_t_factories, 2) for row in range(20, 49, 2)]
+    #     s_factories = [cirq.GridQubit(14, idx) for idx in range(1, 2*self.num_s_factories, 2)]
+    #     t_factories = [cirq.GridQubit(18, idx) for idx in range(1, 2*self.num_t_factories, 2)]
+    #     dontgo = [cirq.GridQubit(row, col) for col in range(1, 2*self.num_s_factories, 2) for row in range(0, 13, 2)]
+    #     dontgo += [cirq.GridQubit(row, col) for col in range(1, 2*self.num_t_factories, 2) for row in range(20, 49, 2)]
+    #     dontgo += [cirq.GridQubit(14, col) for col in range(2, 2*self.num_s_factories, 2)]
+    #     dontgo += [cirq.GridQubit(18, col) for col in range(2, 2*self.num_t_factories, 2)]
+    #     G = nx.Graph()
+    #     G.add_nodes_from(
+    #         [(q, dict(patch_type="data")) for q in qubit_map.values()],
+    #     )
+    #     G.add_nodes_from(
+    #         [(q, dict(patch_type="factory", ftype="t", used=True)) for q in t_factories],
+    #     )
+    #     G.add_nodes_from(
+    #         [(q, dict(patch_type="factory", ftype="s", used=True)) for q in s_factories],
+    #     )
+    #     G.add_nodes_from(
+    #         [(q, dict(patch_type="ancilla")) for q in ancillas],
+    #     )
+    #     G.add_nodes_from(
+    #         [(q, dict(patch_type="dontgo")) for q in dontgo],
+    #     )
+    #     G.add_edges_from(
+    #         [
+    #             (n1, n2)
+    #             for n1, n2 in combinations(G.nodes, 2)
+    #             if abs(n1.row - n2.row) + abs(n1.col - n2.col) == 1
+    #         ]
+    #     )
+    #     self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
+    #     self.layout_graph = G
+
     def _generate(self):
         """
         Places and assigns logical qubits according to the Distillery configuration
         """
         qubit_map: dict[cirq.Qid, cirq.GridQubit] = {}
         all_qubits = list(self.input_circuit.all_qubits())
-        # length = max(len(all_qubits)+2, 2*self.num_t_factories, 2*self.num_s_factories)
+        length = max(len(all_qubits), self.num_t_factories, self.num_s_factories)
         s_factories = []
         t_factories = []
         ancillas = []
-        dontgo = []
-        for idx, qid in enumerate(sorted(all_qubits), start=1):
-            qubit_map[qid] = cirq.GridQubit(16, idx)
+        for idx, qid in enumerate(sorted(all_qubits)):
+            qubit_map[qid] = cirq.GridQubit(2, idx)
         self.set_map_circuit(qubit_map=qubit_map)
-        ancillas = [cirq.GridQubit(row, idx) for idx in range(2*self.num_s_factories) for row in range(1, 14, 2)]
-        ancillas += [cirq.GridQubit(15, idx) for idx in range(1, max(2*self.num_s_factories, len(all_qubits)+1))]
-        ancillas += [cirq.GridQubit(row, idx) for idx in range(2*self.num_t_factories) for row in range(19, 49, 2)]
-        ancillas += [cirq.GridQubit(17, idx) for idx in range(1, max(2*self.num_t_factories, len(all_qubits)+1))]
-        ancillas += [cirq.GridQubit(row, idx) for idx in range(0, 2*self.num_s_factories, 2) for row in range(0, 13, 2)]
-        ancillas += [cirq.GridQubit(row, idx) for idx in range(0, 2*self.num_t_factories, 2) for row in range(20, 49, 2)]
-        s_factories = [cirq.GridQubit(14, idx) for idx in range(1, 2*self.num_s_factories, 2)]
-        t_factories = [cirq.GridQubit(18, idx) for idx in range(1, 2*self.num_t_factories, 2)]
-        dontgo = [cirq.GridQubit(row, col) for col in range(1, 2*self.num_s_factories, 2) for row in range(0, 13, 2)]
-        dontgo += [cirq.GridQubit(row, col) for col in range(1, 2*self.num_t_factories, 2) for row in range(20, 49, 2)]
-        dontgo += [cirq.GridQubit(14, col) for col in range(2, 2*self.num_s_factories, 2)]
-        dontgo += [cirq.GridQubit(18, col) for col in range(2, 2*self.num_t_factories, 2)]
+        ancillas = [cirq.GridQubit(row, idx) for idx in range(length) for row in [1,3] + list(range(5,20))]
+        s_factories = [cirq.GridQubit(0, idx) for idx in range(self.num_s_factories)]
+        t_factories = [cirq.GridQubit(4, idx) for idx in range(self.num_t_factories)]
         G = nx.Graph()
         G.add_nodes_from(
             [(q, dict(patch_type="data")) for q in qubit_map.values()],
@@ -540,9 +582,6 @@ class Distillery(Layout):
         )
         G.add_nodes_from(
             [(q, dict(patch_type="ancilla")) for q in ancillas],
-        )
-        G.add_nodes_from(
-            [(q, dict(patch_type="dontgo")) for q in dontgo],
         )
         G.add_edges_from(
             [
