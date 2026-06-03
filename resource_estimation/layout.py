@@ -117,7 +117,7 @@ class Layout(abc.ABC):
                 )
                 for idx in range(self.num_t_factories)
             ],
- )
+        )
         G.add_nodes_from(
             [
                 (
@@ -190,14 +190,12 @@ class Layout(abc.ABC):
         Red and yellow nodes correspond to T and S factories, respectively
         Green nodes correspond to data (logical) qubits
         Blue nodes correspond to ancilla qubits
-        Orange nodes correspond to qubits used in factories.
         """
         color_dict = {
             "t": "red",
             "s": "yellow",
             "data": "green",
             "ancilla": "blue",
-            "dontgo": "orange",
         }
         G = self.layout_graph
         node_color = []
