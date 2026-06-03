@@ -21,11 +21,23 @@ from .layout import Layout
 
 @dataclass
 class FTCompileResult:
+    """Container returned by `ft_compile`.
+
+    `metrics` maps each collector name passed to `ft_compile` to that collector's
+    finalized metric value.
+    """
+
     circuit: cirq.Circuit
     metrics: dict[str, object]
 
 
 class FTCompileMetricCollector:
+    """Base class for compile-time metric collectors.
+
+    Subclasses override whichever hooks are relevant to their metric and use
+    `finalize` to return the metric value stored in `FTCompileResult.metrics`.
+    """
+
     def on_replacement(
         self,
         input_op: cirq.Operation,
@@ -33,6 +45,7 @@ class FTCompileMetricCollector:
         layout: Layout,
         arc: arch.Architecture,
     ) -> None:
+        """Observe compiler replacement of one input operation with primitive operations."""
         pass
 
     def on_state_prep(
@@ -41,6 +54,7 @@ class FTCompileMetricCollector:
         layout: Layout,
         arc: arch.Architecture,
     ) -> None:
+        """Observe initial state-preparation operations added before compiled operations."""
         pass
 
     def on_post_op_correction(
@@ -50,6 +64,7 @@ class FTCompileMetricCollector:
         layout: Layout,
         arc: arch.Architecture,
     ) -> None:
+        """Observe post-operation correction operations added after an input operation."""
         pass
 
     def on_idling(
@@ -59,6 +74,7 @@ class FTCompileMetricCollector:
         layout: Layout,
         arc: arch.Architecture,
     ) -> None:
+        """Observe idling operations added to a compiled circuit moment."""
         pass
 
     def on_moves(
@@ -68,6 +84,7 @@ class FTCompileMetricCollector:
         layout: Layout,
         arc: arch.Architecture,
     ) -> None:
+        """Observe movement operations added around an input operation."""
         pass
 
     def finalize(
@@ -76,4 +93,5 @@ class FTCompileMetricCollector:
         layout: Layout,
         arc: arch.Architecture,
     ) -> object:
+        """Return the final metric value for this collector."""
         return None
