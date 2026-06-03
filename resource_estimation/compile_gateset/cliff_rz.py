@@ -181,6 +181,7 @@ class CliffRzGateset(CliffordGateset):
     A Gateset for a Clifford + Rz
     """
 
+
 def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
     super().__init__(
         cirq.PhasedXZGate,
@@ -207,12 +208,11 @@ def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
         ]
 
 
-
-
 class CliffPhXZGateset(CliffordGateset):
     """
     A Gateset for a Clifford + PhXZ
     """
+
 
 def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
     super().__init__(
