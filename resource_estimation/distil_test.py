@@ -18,16 +18,4 @@ import resource_estimation.estimate as est
 import resource_estimation.lattice_surgery_primitives as lsp
 from numpy import isclose
 
-
-# x = msd.msd_15_to_1()
-# ssm = res.architecture.DefaultMovement(
-#     d=11,  # Rotated Surface Code code distance
-#     idling=False,  # Include Syndrome Extraction on idling qubits in compiled circuit
-#     post_op_correction=True,  # Turn on or off Syndrome Extraction after transversal operations
-#     syndrome_rounds=1,  # Rounds of Syndrome Extraction after transversal operations
-#     cultivation_repetition=5,  # Expected repetitions of the cultivation circuit to get a successful T state
-# )
-ssm = res.architecture.DefaultLattice()
-# x = distil(ssm, state_type='H')
-# x = _distil_cost(ssm, 'H')
-print(x)
+# Need to add tests here.

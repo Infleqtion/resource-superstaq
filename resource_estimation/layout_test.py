@@ -291,45 +291,6 @@ def test_reset_and_reload(circuit5: cirq.Circuit):
             if column.layout_graph.nodes[node]["patch_type"] == "factory"
         ]
     )
-
-# Need to finish this test
-# def test_distillery(circuit5: cirq.Circuit):
-#     distillery = Distillery(circuit5, num_t_factories=3, num_s_factories=5)
-#     distillery.reload_factories(ftype="s")
-#     distillery.reload_factories(ftype="t")
-#     # Check that nearest T factory is as expected and changes when used
-#     assert distillery.nearest_factory(qubit=cirq.GridQubit(16, 1), ftype="t") == cirq.GridQubit(18, 1)
-#     assert distillery.nearest_factory(qubit=cirq.GridQubit(16, 3), ftype="t") == cirq.GridQubit(18, 3)
-#     assert distillery.nearest_factory(qubit=cirq.GridQubit(16, 1), ftype="s") == cirq.GridQubit(14, 1)
-
-#     G = distillery.layout_graph
-#     assert sum(1 for node in G.nodes if G.nodes[node]["patch_type"] == "data") == 5
-#     assert (
-#         sum(
-#             1
-#             for node in G.nodes
-#             if G.nodes[node]["patch_type"] == "factory" and G.nodes[node]["ftype"] == "s"
-#         )
-#         == 5
-#     )
-#     assert (
-#         sum(
-#             1
-#             for node in G.nodes
-#             if G.nodes[node]["patch_type"] == "factory" and G.nodes[node]["ftype"] == "t"
-#         )
-#         == 3
-#     )
-#     # Check that a CNOT has a reasonable path
-#     ctrl, trgt = cirq.GridQubit(16, 1), cirq.GridQubit(14, 3)
-#     expected_path = [
-#         ctrl,
-#         cirq.GridQubit(15, 1),
-#         cirq.GridQubit(15, 2),
-#         cirq.GridQubit(15, 3),
-#         trgt,
-#     ]
-#     assert distillery.route_cnot(ctrl=ctrl, trgt=trgt) == expected_path
         
 def test_distillery(circuit5: cirq.Circuit):
     distillery = Distillery(circuit5, num_t_factories=3, num_s_factories=5)
@@ -341,9 +302,7 @@ def test_distillery(circuit5: cirq.Circuit):
     assert distillery.nearest_factory(qubit=cirq.GridQubit(2, 4), ftype="s") == cirq.GridQubit(0, 4)
     # Check that there are no unexpected nodes in the layout graph
     G = distillery.layout_graph
-    # assert len(G.nodes) == 23
     assert sum(1 for node in G.nodes if G.nodes[node]["patch_type"] == "data") == 5
-    # assert sum(1 for node in G.nodes if G.nodes[node]["patch_type"] == "ancilla") == 10
     assert (
         sum(
             1
@@ -376,7 +335,3 @@ def test_distillery(circuit5: cirq.Circuit):
     distillery.route_cnot(
         ctrl=cirq.GridQubit(2, 1), trgt=cirq.GridQubit(2, 2)
     )  # Hopefully this covers 116?
-
-# if __name__ == '__main__':
-#     x = Distillery(circuit5(), num_t_factories=7, num_s_factories=2)
-#     x.draw()

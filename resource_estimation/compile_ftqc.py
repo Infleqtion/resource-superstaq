@@ -114,14 +114,12 @@ def teleport_T(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
         if layout.layout_graph.nodes[factory]["ftype"] == "t"
     ]
     operations = []
-    if distil:
-        if not available_t_factories:
+    if not available_t_factories:
+        if distil:
             operations += [lsp.Distil().on(factory) for factory in all_t_factories]
-            layout.reload_factories("t")
-    else:
-        if not available_t_factories:
+        else:
             operations += [lsp.Cultivate(pi / 4).on(factory) for factory in all_t_factories]
-            layout.reload_factories("t")
+        layout.reload_factories("t")
     data_qubit = op.qubits[0]
     factory_qubit = layout.nearest_factory(data_qubit, ftype="t")
     operations += [

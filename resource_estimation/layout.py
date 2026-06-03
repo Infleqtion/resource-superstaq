@@ -463,33 +463,53 @@ class Distillery(Layout):
     """
     Lattice layout used for distillation-based methods.
     
-     . | . | . | ... | .
-     a | D | a | ... | D
-     a | a | a | ... | a
-       | S | D | ... | S
-       | a | a | ... | a
-       | q | q | ... | q
-       | a | a | ... | a
-       | T | D | ... | T
-     a | a | a | ... | a
-     a | D | a | ... | D
-     . | . | . | ... | .
+       S | S | ... | S
+       a | a | ... | a
+       q | q | ... | q
+       a | a | ... | a
+       T | T | ... | T
+       a | a | ... | a
+       a | a | ... | a
+       . | . | ... | .
     
     Because the numbers of S and T factories are configurable, the dimensions might not line up resulting in things like:
     
-     . | . | . | .
-     a | D | a | D
-     a | a | a | a
-       | S | D | S
-       | a | a | a
-       | q | q | q
-       | a | a | a | a | a
-       | T | D | T | D | T
-     a | a | a | a | a | a
-     a | D | a | D | a | D
-     . | . | . | . | . | .   
+      S | S | S
+      a | a | a
+      q | q | q
+      a | a | a | a | a
+      T | T | T | T | T
+      a | a | a | a | a
+      a | a | a | a | a
+      . | . | . | . | .   
 
     """
+    #  . | . | . | ... | .
+    #  a | D | a | ... | D
+    #  a | a | a | ... | a
+    #    | S | D | ... | S
+    #    | a | a | ... | a
+    #    | q | q | ... | q
+    #    | a | a | ... | a
+    #    | T | D | ... | T
+    #  a | a | a | ... | a
+    #  a | D | a | ... | D
+    #  . | . | . | ... | .
+    
+    # Because the numbers of S and T factories are configurable, the dimensions might not line up resulting in things like:
+    
+    #  . | . | . | .
+    #  a | D | a | D
+    #  a | a | a | a
+    #    | S | D | S
+    #    | a | a | a
+    #    | q | q | q
+    #    | a | a | a | a | a
+    #    | T | D | T | D | T
+    #  a | a | a | a | a | a
+    #  a | D | a | D | a | D
+    #  . | . | . | . | . | .   
+
     def __init__(
             self,
             input_circuit: cirq.Circuit,
@@ -502,6 +522,7 @@ class Distillery(Layout):
                          )
         self.distil = True
 
+    # generate method with more ancillas for later?
     # def _generate(self):
     #     """
     #     Places and assigns logical qubits according to the Distillery configuration
@@ -560,7 +581,6 @@ class Distillery(Layout):
         """
         qubit_map: dict[cirq.Qid, cirq.GridQubit] = {}
         all_qubits = list(self.input_circuit.all_qubits())
-        # length = max(len(all_qubits), self.num_t_factories, self.num_s_factories)
         s_factories = []
         t_factories = []
         ancillas = []
