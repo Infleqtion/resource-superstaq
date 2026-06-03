@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from resource_estimation.analysis import Report
 import cirq
 import math
 import pytest
@@ -21,7 +22,7 @@ import resource_estimation.ftqc.architecture as arc
 
 
 @pytest.fixture
-def report():
+def report() -> Report:
     return analysis.Report(
         filename="dummy_file.json",
         program_fidelity=0.99,
@@ -63,7 +64,7 @@ def populated_report(report):
     return report
 
 
-def test_get_eps():
+def test_get_eps() -> None:
     q = cirq.GridQubit(0, 0)
     circuit = cirq.Circuit([cirq.Rz(rads=1.23).on(q)] * 5 + [cirq.H.on(q)] * 10)
     approximation_fidelity = 0.59049  # exactly 0.90**5
@@ -80,7 +81,7 @@ def test_get_eps():
     assert other_gates == 0
 
 
-def test_save_and_load_round_trip(report, tmp_path):
+def test_save_and_load_round_trip(report, tmp_path) -> None:
     filepath = report.save(tmp_path)
 
     assert filepath.exists()
@@ -90,7 +91,7 @@ def test_save_and_load_round_trip(report, tmp_path):
     assert loaded_report.info_dict == report.info_dict
 
 
-def test_save_increments_filename(report, tmp_path):
+def test_save_increments_filename(report, tmp_path) -> None:
     filepath1 = report.save(tmp_path)
     filepath2 = report.save(tmp_path)
 
@@ -100,7 +101,7 @@ def test_save_increments_filename(report, tmp_path):
     assert filepath2.name == "re_dummy_file-99-ssm-10-1_1.json"
 
 
-def test_arch(report):
+def test_arch(report) -> None:
     architecture = report.arch
     assert isinstance(architecture, arc.DefaultMovement)
     assert architecture.fold_cultiv
@@ -112,7 +113,7 @@ def test_arch(report):
     assert not architecture.fold_cultiv
 
 
-def test_report_contains_expected_sections(populated_report):
+def test_report_contains_expected_sections(populated_report) -> None:
     report_str = populated_report.report()
 
     assert "Inputs" in report_str
@@ -125,7 +126,7 @@ def test_report_contains_expected_sections(populated_report):
     assert "1.00e+01" in report_str
 
 
-def test_line_dict(report):
+def test_line_dict(report) -> None:
     info_dict = {
         "key1": (10, 1.0),
         "key2": (100, 2.0),
@@ -143,7 +144,7 @@ def test_line_dict(report):
     assert "2.00e+00" in line_dict
 
 
-def test_surface_code_fidelity():
+def test_surface_code_fidelity() -> None:
     assert analysis.surface_code_fidelity(100, p=0.0057) == 0.97
     assert (
         analysis.surface_code_fidelity(7)
@@ -153,7 +154,7 @@ def test_surface_code_fidelity():
     assert analysis.surface_code_fidelity(100, p=0) == 1
 
 
-def test_break_up_ops():
+def test_break_up_ops() -> None:
     q = cirq.LineQubit(0)
     circuit = cirq.Circuit(
         cirq.Rz(rads=0.1).on(q), cirq.X.on(q), cirq.H.on(q), cirq.Rz(rads=0.2).on(q)
@@ -163,7 +164,7 @@ def test_break_up_ops():
 
 
 @pytest.mark.parametrize("fold_cultiv", (True, False))
-def test_get_important_information_t_paths(fold_cultiv):
+def test_get_important_information_t_paths(fold_cultiv) -> None:
     q = cirq.LineQubit(0)
     circuit = cirq.Circuit(
         cirq.T.on(q),
@@ -196,7 +197,7 @@ def test_get_important_information_t_paths(fold_cultiv):
 
 @pytest.mark.filterwarnings("ignore:Max code distance 31 reached:UserWarning")
 @pytest.mark.filterwarnings("ignore:Cultivation Error Options.*:UserWarning")
-def test_get_important_information_warnings():
+def test_get_important_information_warnings() -> None:
     q = cirq.LineQubit(0)
     circuit = cirq.Circuit([cirq.T.on(q)] * 10)
 
@@ -210,7 +211,7 @@ def test_get_important_information_warnings():
     _, _, _, _, _ = analysis.get_important_information(circuit, pfid=1.0, fold_cultiv=False)
 
 
-def test_error_estimate():
+def test_error_estimate() -> None:
     with_transversal = analysis.error_estimate(
         code_distance=9,
         error_per_rz=1e-3,
@@ -263,7 +264,7 @@ def test_error_estimate():
     assert np.allclose(vector, np.array([high_rz_error]))
 
 
-def test_t_path():
+def test_t_path() -> None:
     qubits = [*cirq.LineQubit.range(3)]
     circuit = cirq.Circuit(
         cirq.H.on(qubits[0]),

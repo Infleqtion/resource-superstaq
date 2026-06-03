@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from cirq.ops.raw_types import Operation
+from math import pi
 import copy
 import os
 import sys
@@ -52,7 +54,9 @@ def _notify_metric_collectors(
 
 
 # This function is only visual and is extremely finicky, so it is not tested
-def knock_off_tqdm(moment_idx: int, total: int, tstart: float, message: str):  # pragma: no cover
+def knock_off_tqdm(
+    moment_idx: int, total: int, tstart: float, message: str
+) -> None:  # pragma: no cover
     """
     Implements tqdm-like behavior for the compiler
     """
@@ -87,7 +91,7 @@ def replace_cirq_op(
     op: cirq.Operation,
     layout: Layout,
     transversal_cnot: bool,
-):
+) -> list[Operation]:
     """
     Replacement logic similar to decomposition for cirq operations to be converted to primitives.
 
@@ -311,7 +315,7 @@ def post_op_syndrome_extraction(
     return cirq.map_operations_and_unroll(circuit, _map_func, raise_if_add_qubits=False)
 
 
-def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
+def validate_ops(circuit: cirq.Circuit, verbose: int = 1) -> None:
     """
     Checks that the given circuit is in the Clifford+T gateset.
     """
@@ -430,7 +434,7 @@ def ft_compile(
     layout: Layout,
     arc: arch.Architecture,
     verbose: int = 1,
-    with_barriers=False,
+    with_barriers: bool = False,
     num_threads: int = 1,
     skip_validation: bool = False,
     metric_calculators: dict[str, FTCompileMetricCollector] | None = None,

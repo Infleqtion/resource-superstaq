@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+from cirq.ops.raw_types import Operation
+from cirq.ops.pauli_string import SingleQubitPauliStringGateOperation
 import cirq
 import cirq_superstaq as css
 import numpy as np
@@ -116,7 +119,13 @@ def zpow_to_rz(
     """Converts ZPOW gates to Rz gates minding special angle cases and including the angle factor"""
 
     # Maybe this should be a transformer or something?
-    def _map_fn(op: cirq.Operation, _: int):
+    def _map_fn(
+        op: cirq.Operation, _: int
+    ) -> (
+        Operation
+        | SingleQubitPauliStringGateOperation
+        | list[Operation | SingleQubitPauliStringGateOperation]
+    ):
         if not isinstance(op.gate, cirq.ZPowGate):
             return op
         if css.approx_eq_mod(op.gate.exponent, 1.0, 2, atol=1e-9):

@@ -20,7 +20,7 @@ def _compile_cliff_rz(circuit: cirq.Circuit) -> cirq.Circuit:
     return cliff.compile_gateset(circuit, gateset=cliff.clifford_rz_gateset())
 
 
-def test_fermi():
+def test_fermi() -> None:
     # Test that Fermi-Hubbard circuit is compiled to Clifford + Rz correctly
     # For some reason, I can't do better that 1e-6
     ham_circuit = fermi_hubbard(3, verbose=0)
@@ -40,7 +40,7 @@ def test_fermi():
         assert truth, f"{gate}"
 
 
-def test_kanamori():
+def test_kanamori() -> None:
     # Test that Kanamori circuit is compiled to Clifford + Rz correctly
     # For some reason, I can't do better that 1e-6
     kan_circuit = kanamori(5, verbose=0)
@@ -60,7 +60,7 @@ def test_kanamori():
         assert truth, f"{gate}"
 
 
-def test_already_in_gateset():
+def test_already_in_gateset() -> None:
     op = cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1))
     gateset = cliff.CliffRzGateset(cirq.LineQubit.range(2))
     assert cirq.CNOT in gateset
@@ -71,7 +71,7 @@ def test_already_in_gateset():
     )
 
 
-def test_phx_to_zhzhz():
+def test_phx_to_zhzhz() -> None:
     q = cirq.GridQubit(0, 0)
     I_circuit = cirq.Circuit(cirq.PhasedXPowGate(exponent=0, phase_exponent=0.5).on(q))
     transformed = cliff.phx_to_zhzhz(circuit=I_circuit)
@@ -102,7 +102,7 @@ def test_phx_to_zhzhz():
     )
 
 
-def test_small_circuit():
+def test_small_circuit() -> None:
     random_circuit = cirq.testing.random_circuit(8, 10, 1, random_state=17)
     compiled_circuit = _compile_cliff_rz(random_circuit)
     cirq.testing.assert_allclose_up_to_global_phase(
