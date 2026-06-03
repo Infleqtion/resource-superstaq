@@ -376,3 +376,7 @@ def test_distillery(circuit5: cirq.Circuit):
     distillery.route_cnot(
         ctrl=cirq.GridQubit(2, 1), trgt=cirq.GridQubit(2, 2)
     )  # Hopefully this covers 116?
+
+# if __name__ == '__main__':
+#     x = Distillery(circuit5(), num_t_factories=7, num_s_factories=2)
+#     x.draw()

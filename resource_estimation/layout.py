@@ -560,16 +560,18 @@ class Distillery(Layout):
         """
         qubit_map: dict[cirq.Qid, cirq.GridQubit] = {}
         all_qubits = list(self.input_circuit.all_qubits())
-        length = max(len(all_qubits), self.num_t_factories, self.num_s_factories)
+        # length = max(len(all_qubits), self.num_t_factories, self.num_s_factories)
         s_factories = []
         t_factories = []
         ancillas = []
         for idx, qid in enumerate(sorted(all_qubits)):
             qubit_map[qid] = cirq.GridQubit(2, idx)
         self.set_map_circuit(qubit_map=qubit_map)
-        ancillas = [cirq.GridQubit(row, idx) for idx in range(length) for row in [1,3] + list(range(5,20))]
+        ancillas = [cirq.GridQubit(1, idx) for idx in range(max(len(all_qubits), self.num_s_factories))]
+        ancillas += [cirq.GridQubit(3, idx) for idx in range(max(len(all_qubits), self.num_t_factories))]
         s_factories = [cirq.GridQubit(0, idx) for idx in range(self.num_s_factories)]
         t_factories = [cirq.GridQubit(4, idx) for idx in range(self.num_t_factories)]
+        ancillas += [cirq.GridQubit(row, idx) for idx in range(self.num_t_factories) for row in range(5, 20)]
         G = nx.Graph()
         G.add_nodes_from(
             [(q, dict(patch_type="data")) for q in qubit_map.values()],

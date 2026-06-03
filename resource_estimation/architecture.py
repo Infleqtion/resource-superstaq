@@ -451,13 +451,12 @@ class Architecture(abc.ABC):
     def _distil_cost(self, state_type):
         # No penalties to any base gates
         base_distillation_cost = distil(self, state_type)
-        moment_cost = base_distillation_cost["parallel"]
-        gate_cost = base_distillation_cost["serial"]
 
         # Apply distillation repetition penalty
-        gate_cost = {gate: cost * 15**(self.distillation_repetition-1) for gate, cost in gate_cost.items()}
+        gate_cost = {gate: cost * 15**(self.distillation_repetition-1) for gate, cost in base_distillation_cost['gate_cost'].items()
+                     }
         moment_cost = {
-            moment: cost * 15**(self.distillation_repetition-1) for moment, cost in moment_cost.items()
+            moment: cost * 15**(self.distillation_repetition-1) for moment, cost in base_distillation_cost['moment_cost'].items()
         }
 
         op_time = self.total_time(moment_cost_dict=moment_cost)

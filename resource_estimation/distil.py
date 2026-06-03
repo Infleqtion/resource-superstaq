@@ -68,6 +68,20 @@ def distil(
         raise ValueError("state type must be either H or Y type.")
     return resources
 
+# def _distil_cost(arc, state_type):
+#         # No penalties to any base gates
+#         base_distillation_cost = distil(arc, state_type)
+
+#         # Apply distillation repetition penalty
+#         gate_cost = {gate: cost for gate, cost in base_distillation_cost['gate_cost'].items()
+#                      }
+#         moment_cost = {
+#             moment: cost for moment, cost in base_distillation_cost['moment_cost'].items()
+#         }
+
+#         # op_time = self.total_time(moment_cost_dict=moment_cost)
+#         return {"gate_cost": gate_cost, "moment_cost": moment_cost}
+
 
 if __name__ == '__main__':
     # x = msd.msd_15_to_1()
@@ -79,6 +93,7 @@ if __name__ == '__main__':
     #     cultivation_repetition=5,  # Expected repetitions of the cultivation circuit to get a successful T state
     # )
     ssm = res.architecture.DefaultLattice()
-    x = distil(ssm, state_type='Y')
+    # x = distil(ssm, state_type='H')
+    # x = _distil_cost(ssm, 'H')
     print(x)
 

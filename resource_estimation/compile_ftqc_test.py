@@ -937,21 +937,21 @@ def test_replace_cirq_op_distil(bell_circuit):
         assert op in cirq.GateFamily(expected_type)
 
         
-# def test_different_rounds_distil():
-#     circuit = cirq.Circuit(cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)))
-#     layout = Distillery(input_circuit=circuit)
-#     for k in [1, 5, 7]:
-#         architecture = arch.DefaultMovement(
-#             idling=False,
-#             post_op_correction=True,
-#             d=7,
-#             cultivation_repetition=1,
-#             syndrome_rounds=k,
-#         )
-#         compiled_circuit = comp.ft_compile(layout=layout, arc=architecture)
-#         for op in compiled_circuit.all_operations():
-#             if op in cirq.GateFamily(lsp.SyndromeExtract):
-#                 op.gate.rounds == k
+def test_different_rounds_distil():
+    circuit = cirq.Circuit(cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)))
+    layout = Distillery(input_circuit=circuit)
+    for k in [1, 5, 7]:
+        architecture = arch.DefaultMovement(
+            idling=False,
+            post_op_correction=True,
+            d=7,
+            cultivation_repetition=1,
+            syndrome_rounds=k,
+        )
+        compiled_circuit = comp.ft_compile(layout=layout, arc=architecture)
+        for op in compiled_circuit.all_operations():
+            if op in cirq.GateFamily(lsp.SyndromeExtract):
+                op.gate.rounds == k
 
 
 # def test_bell_distil_FF(bell_circuit):

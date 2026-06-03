@@ -126,14 +126,14 @@ def msd_5_to_1() -> cirq.Circuit:
         ],
     )
 
-    # cir.append(
-    #     [
-    #         cirq.measure(qubits[1], key="m1"),
-    #         cirq.measure(qubits[2], key="m2"),
-    #         cirq.measure(qubits[3], key="m3"),
-    #         cirq.measure(qubits[4], key="m4"),
-    #     ],
-    # )
+    cir.append(
+        [
+            cirq.measure(qubits[1], key="m1"),
+            cirq.measure(qubits[2], key="m2"),
+            cirq.measure(qubits[3], key="m3"),
+            cirq.measure(qubits[4], key="m4"),
+        ],
+    )
 
     cir.append(
         [
@@ -239,13 +239,13 @@ def msd_7_to_1() -> cirq.Circuit:
             cirq.H(qubits[5]),
             cirq.H(qubits[6]),
             cirq.H(qubits[7]),
-            # cirq.measure(qubits[1], key="m6"),
-            # cirq.measure(qubits[2], key="m5"),
-            # cirq.measure(qubits[3], key="m4"),
-            # cirq.measure(qubits[4], key="m3"),
-            # cirq.measure(qubits[5], key="m2"),
-            # cirq.measure(qubits[6], key="m1"),
-            # cirq.measure(qubits[7], key="m0"),
+            cirq.measure(qubits[1], key="m6"),
+            cirq.measure(qubits[2], key="m5"),
+            cirq.measure(qubits[3], key="m4"),
+            cirq.measure(qubits[4], key="m3"),
+            cirq.measure(qubits[5], key="m2"),
+            cirq.measure(qubits[6], key="m1"),
+            cirq.measure(qubits[7], key="m0"),
         ],
     )
 
@@ -400,21 +400,21 @@ def msd_15_to_1() -> cirq.Circuit:
             cirq.H(qubits[12]),
             cirq.H(qubits[13]),
             cirq.H(qubits[14]),
-            # cirq.measure(qubits[0], key="m1"),
-            # cirq.measure(qubits[1], key="m2"),
-            # cirq.measure(qubits[2], key="m3"),
-            # cirq.measure(qubits[3], key="m4"),
-            # cirq.measure(qubits[4], key="m5"),
-            # cirq.measure(qubits[5], key="m6"),
-            # cirq.measure(qubits[6], key="m7"),
-            # cirq.measure(qubits[7], key="m8"),
-            # cirq.measure(qubits[8], key="m9"),
-            # cirq.measure(qubits[9], key="m10"),
-            # cirq.measure(qubits[10], key="m11"),
-            # cirq.measure(qubits[11], key="m12"),
-            # cirq.measure(qubits[12], key="m13"),
-            # cirq.measure(qubits[13], key="m14"),
-            # cirq.measure(qubits[14], key="m15"),
+            cirq.measure(qubits[0], key="m1"),
+            cirq.measure(qubits[1], key="m2"),
+            cirq.measure(qubits[2], key="m3"),
+            cirq.measure(qubits[3], key="m4"),
+            cirq.measure(qubits[4], key="m5"),
+            cirq.measure(qubits[5], key="m6"),
+            cirq.measure(qubits[6], key="m7"),
+            cirq.measure(qubits[7], key="m8"),
+            cirq.measure(qubits[8], key="m9"),
+            cirq.measure(qubits[9], key="m10"),
+            cirq.measure(qubits[10], key="m11"),
+            cirq.measure(qubits[11], key="m12"),
+            cirq.measure(qubits[12], key="m13"),
+            cirq.measure(qubits[13], key="m14"),
+            cirq.measure(qubits[14], key="m15"),
         ],
         # no need to measure index 15, that is our magic state
     )
