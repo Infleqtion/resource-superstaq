@@ -181,14 +181,14 @@ class CliffRzGateset(CliffordGateset):
     A Gateset for a Clifford + Rz
     """
 
-    def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
-        super().__init__(
-            cirq.PhasedXZGate,
-            cirq.GateFamily(cirq.ZPowGate),
-            cirq.GateFamily(cirq.Rz),
-            _qubits=_qubits,
-            atol=atol,
-        )
+
+def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
+    super().__init__(
+        cirq.PhasedXZGate,
+        cirq.GateFamily(cirq.ZPowGate),
+        _qubits=_qubits,
+        atol=atol,
+    )
 
     @property
     def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
@@ -213,12 +213,13 @@ class CliffPhXZGateset(CliffordGateset):
     A Gateset for a Clifford + PhXZ
     """
 
-    def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
-        super().__init__(
-            cirq.PhasedXZGate,
-            _qubits=_qubits,
-            atol=atol,
-        )
+
+def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
+    super().__init__(
+        cirq.PhasedXZGate,
+        _qubits=_qubits,
+        atol=atol,
+    )
 
     @property
     def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
