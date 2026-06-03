@@ -214,11 +214,12 @@ class CliffPhXZGateset(CliffordGateset):
     A Gateset for a Clifford + PhXZ
     """
 
-    def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
-        self._atol = atol
-        super().__init__(
-            cirq.PhasedXZGate,
-        )
+def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
+    super().__init__(
+        cirq.PhasedXZGate,
+        _qubits=_qubits,
+        atol=atol,
+    )
 
     @property
     def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
