@@ -48,6 +48,86 @@ def random_circ():
     )
 
 
+class _RecordingCollector(comp.FTCompileMetricCollector):
+    def __init__(self):
+        self.replacement_gates = []
+        self.replacement_ops = 0
+        self.state_prep_ops = 0
+        self.post_op_events = 0
+        self.post_op_ops = 0
+        self.idling_events = 0
+        self.idling_ops = 0
+        self.move_events = 0
+        self.move_ops = 0
+
+    def on_replacement(
+        self,
+        input_op: cirq.Operation,
+        replacement_ops: list[cirq.Operation],
+        layout: MovementLayout,
+        arc: arch.Architecture,
+    ) -> None:
+        self.replacement_gates.append(input_op.gate)
+        self.replacement_ops += len(replacement_ops)
+
+    def on_state_prep(
+        self,
+        ops: list[cirq.Operation],
+        layout: MovementLayout,
+        arc: arch.Architecture,
+    ) -> None:
+        self.state_prep_ops += len(ops)
+
+    def on_post_op_correction(
+        self,
+        input_op: cirq.Operation,
+        correction_ops: list[cirq.Operation],
+        layout: MovementLayout,
+        arc: arch.Architecture,
+    ) -> None:
+        self.post_op_events += 1
+        self.post_op_ops += len(correction_ops)
+
+    def on_idling(
+        self,
+        moment_idx: int,
+        idling_ops: list[cirq.Operation],
+        layout: MovementLayout,
+        arc: arch.Architecture,
+    ) -> None:
+        self.idling_events += 1
+        self.idling_ops += len(idling_ops)
+
+    def on_moves(
+        self,
+        input_op: cirq.Operation,
+        move_ops: list[cirq.Operation],
+        layout: MovementLayout,
+        arc: arch.Architecture,
+    ) -> None:
+        self.move_events += 1
+        self.move_ops += len(move_ops)
+
+    def finalize(
+        self,
+        circuit: cirq.Circuit,
+        layout: MovementLayout,
+        arc: arch.Architecture,
+    ) -> dict[str, object]:
+        return {
+            "replacement_gates": self.replacement_gates,
+            "replacement_ops": self.replacement_ops,
+            "state_prep_ops": self.state_prep_ops,
+            "post_op_events": self.post_op_events,
+            "post_op_ops": self.post_op_ops,
+            "idling_events": self.idling_events,
+            "idling_ops": self.idling_ops,
+            "move_events": self.move_events,
+            "move_ops": self.move_ops,
+            "final_ops": len(list(circuit.all_operations())),
+        }
+
+
 @pytest.mark.parametrize(
     "with_barriers",
     (True, False),
@@ -327,86 +407,7 @@ def test_verbosity(random_circ):
             assert op in compiled_result.circuit.all_operations()
 
 
-def test_ft_compile_result_and_metrics(bell_circuit):
-    class RecordingCollector(comp.FTCompileMetricCollector):
-        def __init__(self):
-            self.replacement_gates = []
-            self.replacement_ops = 0
-            self.state_prep_ops = 0
-            self.post_op_events = 0
-            self.post_op_ops = 0
-            self.idling_events = 0
-            self.idling_ops = 0
-            self.move_events = 0
-            self.move_ops = 0
-
-        def on_replacement(
-            self,
-            input_op: cirq.Operation,
-            replacement_ops: list[cirq.Operation],
-            layout: MovementLayout,
-            arc: arch.Architecture,
-        ) -> None:
-            self.replacement_gates.append(input_op.gate)
-            self.replacement_ops += len(replacement_ops)
-
-        def on_state_prep(
-            self,
-            ops: list[cirq.Operation],
-            layout: MovementLayout,
-            arc: arch.Architecture,
-        ) -> None:
-            self.state_prep_ops += len(ops)
-
-        def on_post_op_correction(
-            self,
-            input_op: cirq.Operation,
-            correction_ops: list[cirq.Operation],
-            layout: MovementLayout,
-            arc: arch.Architecture,
-        ) -> None:
-            self.post_op_events += 1
-            self.post_op_ops += len(correction_ops)
-
-        def on_idling(
-            self,
-            moment_idx: int,
-            idling_ops: list[cirq.Operation],
-            layout: MovementLayout,
-            arc: arch.Architecture,
-        ) -> None:
-            self.idling_events += 1
-            self.idling_ops += len(idling_ops)
-
-        def on_moves(
-            self,
-            input_op: cirq.Operation,
-            move_ops: list[cirq.Operation],
-            layout: MovementLayout,
-            arc: arch.Architecture,
-        ) -> None:
-            self.move_events += 1
-            self.move_ops += len(move_ops)
-
-        def finalize(
-            self,
-            circuit: cirq.Circuit,
-            layout: MovementLayout,
-            arc: arch.Architecture,
-        ) -> dict[str, object]:
-            return {
-                "replacement_gates": self.replacement_gates,
-                "replacement_ops": self.replacement_ops,
-                "state_prep_ops": self.state_prep_ops,
-                "post_op_events": self.post_op_events,
-                "post_op_ops": self.post_op_ops,
-                "idling_events": self.idling_events,
-                "idling_ops": self.idling_ops,
-                "move_events": self.move_events,
-                "move_ops": self.move_ops,
-                "final_ops": len(list(circuit.all_operations())),
-            }
-
+def test_ft_compile_result_defaults(bell_circuit):
     layout = MovementLayout(bell_circuit)
     architecture = arch.MeasureZonesOnly(
         d=7,
@@ -422,9 +423,11 @@ def test_ft_compile_result_and_metrics(bell_circuit):
     assert isinstance(result.circuit, cirq.Circuit)
     assert result.metrics == {}
 
+
+def test_ft_compile_replacement_metrics():
     q0, q1 = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     lattice_circuit = cirq.Circuit(cirq.CNOT(q0, q1), cirq.T(q0), cirq.S(q1))
-    replacement_collector = RecordingCollector()
+    replacement_collector = _RecordingCollector()
 
     result = comp.ft_compile(
         layout=Column(lattice_circuit),
@@ -443,7 +446,9 @@ def test_ft_compile_result_and_metrics(bell_circuit):
     assert metrics["move_events"] == 0
     assert metrics["final_ops"] == len(list(result.circuit.all_operations()))
 
-    pass_collector = RecordingCollector()
+
+def test_ft_compile_pass_metrics(bell_circuit):
+    pass_collector = _RecordingCollector()
     result = comp.ft_compile(
         layout=MovementLayout(bell_circuit),
         arc=arch.MeasureZonesOnly(
