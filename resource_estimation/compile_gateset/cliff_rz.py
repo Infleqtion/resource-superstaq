@@ -207,7 +207,6 @@ def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
         ]
 
 
-# <<<<<<< HEAD:resource_estimation/cliff_rz.py
 
 
 class CliffPhXZGateset(CliffordGateset):
