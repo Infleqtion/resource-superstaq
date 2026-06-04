@@ -15,6 +15,8 @@ import cirq
 import cirq_superstaq as css
 import numpy as np
 import abc
+import mpmath
+from pygridsynth.multi_qubit_unitary_approximation import approximate_multi_qubit_unitary
 
 
 @cirq.transformer
@@ -134,6 +136,56 @@ def zpow_to_rz(
         deep=context.deep if context else False,
     )
 
+@cirq.transformer
+def gate_to_matrix_gate(circuit: cirq.Circuit, context: cirq.TransformerContext | None = None) -> cirq.Circuit:
+    """Converts circuit into sequence of MatrixGates"""
+    def _map_fn(op: cirq.Operation, _: int):
+        if isinstance(op, cirq.MatrixGate):
+            return op
+        matrix = cirq.unitary(op)
+        return cirq.MatrixGate(matrix=matrix).on(*op.qubits)
+    return cirq.map_operations_and_unroll(
+        circuit, _map_fn, tags_to_ignore=context.tags_to_ignore if context else(), deep=context.deep if context else False
+    )
+
+@cirq.transformer
+def _decompose_matrix_gates(circuit: cirq.Circuit, epsilon, context: cirq.TransformerContext | None = None) -> cirq.Circuit:
+    d = {
+        'H': cirq.H,
+        'T': cirq.T,
+        'S': cirq.S,
+        'X': cirq.X,
+    }
+    def _map_fn(op, _,):
+        if not cirq.num_qubits(op):
+            return cirq.Circuit()
+        qubit_map = {i: q for i, q in enumerate(op.qubits)}
+        matrix = np_to_mpmath_matrix(cirq.unitary(op))
+        approximation, _ = approximate_multi_qubit_unitary(matrix, num_qubits=cirq.num_qubits(op), epsilon=epsilon)
+        replacement = cirq.Circuit()
+        for discrete_gate in approximation:
+            if hasattr(discrete_gate, 'to_simple_str') and discrete_gate.to_simple_str() in d:
+                op_to_add = d[discrete_gate.to_simple_str()].on(qubit_map[discrete_gate.target_qubit])
+            elif hasattr(discrete_gate, 'control_qubit'):
+                op_to_add = cirq.CNOT.on(
+                    qubit_map[discrete_gate.control_qubit],
+                    qubit_map[discrete_gate.target_qubit]
+                )
+            replacement += [op_to_add]
+        return replacement
+    return cirq.map_operations_and_unroll(
+        circuit,
+        _map_fn,
+        tags_to_ignore=context.tags_to_ignore if context else (),
+        deep=context.deep if context else False,
+    )
+
+def np_to_mpmath_matrix(u):
+    return mpmath.matrix([
+        [mpmath.mpc(complex(z).real, complex(z).imag) for z in row]
+        for row in u
+    ])
+
 
 class CliffordGateset(cirq.TwoQubitCompilationTargetGateset, abc.ABC):
     """Base class for Gatesets with large overlap."""
@@ -228,6 +280,96 @@ class CliffPhXZGateset(CliffordGateset):
             cirq.create_transformer_with_kwargs(cirq.drop_negligible_operations, atol=self._atol),
             cirq.drop_empty_moments,
             cirq.create_transformer_with_kwargs(eject_z, atol=self._atol),
+            cirq.create_transformer_with_kwargs(cirq.drop_negligible_operations, atol=self._atol),
+            cirq.align_left,
+            cirq.synchronize_terminal_measurements,
+            cirq.drop_empty_moments,
+        ]
+
+
+class CliffTDirect(cirq.TwoQubitCompilationTargetGateset):
+    _map = {
+        'H': cirq.H,
+        'T': cirq.T,
+        'S': cirq.S,
+        'X': cirq.X,
+        'Z': cirq.Z,
+        'Y': cirq.Y
+    }
+    def __init__(self, epsilon: float, _qubits=None, atol: float = 1e-8) -> None:
+        self._atol = atol
+        self._qubits = _qubits
+        self._epsilon = epsilon
+
+        super().__init__(
+            cirq.T,
+            cirq.H,
+            cirq.S,
+            cirq.X,
+            cirq.Z,
+            cirq.GateFamily(cirq.CX, ignore_global_phase=True),
+            preserve_moment_structure=False,
+            reorder_operations=False,
+        )
+    
+    def _decompose_single_qubit_operation(
+        self,
+        op: cirq.Operation,
+        moment_idx: int = -1
+    ) -> cirq.OP_TREE:
+        if op in self:
+            return op
+        matrix = np_to_mpmath_matrix(cirq.unitary(op))
+        approximation, _ = approximate_multi_qubit_unitary(matrix, num_qubits=cirq.num_qubits(op), epsilon=mpmath.mpmathify(self._epsilon))
+        replacement = cirq.Circuit()
+        for discrete_gate in approximation:
+            name = discrete_gate.to_simple_str()
+    
+            if name in self._map:
+                replacement.append(self._map[name].on(*op.qubits))
+        return replacement
+
+    
+    def _decompose_two_qubit_operation(
+        self, op: cirq.Operation, moment_idx: int = -1
+    ) -> cirq.OP_TREE:
+        if op in self:
+            return op
+        qubit_map = {i: q for i, q in enumerate(op.qubits)}
+        matrix = np_to_mpmath_matrix(cirq.unitary(op))
+        approximation, _ = approximate_multi_qubit_unitary(matrix, num_qubits=cirq.num_qubits(op), epsilon=mpmath.mpmathify(self._epsilon))
+        replacement = cirq.Circuit()
+        for discrete_gate in approximation:
+            if hasattr(discrete_gate, 'to_simple_str') and discrete_gate.to_simple_str() in self._map:
+                op_to_add = self._map[discrete_gate.to_simple_str()].on(qubit_map[discrete_gate.target_qubit])
+            elif hasattr(discrete_gate, 'control_qubit'):
+                op_to_add = cirq.CNOT.on(
+                    qubit_map[discrete_gate.control_qubit],
+                    qubit_map[discrete_gate.target_qubit]
+                )
+            replacement += [op_to_add]
+        return replacement
+
+    @property
+    def preprocess_transformers(self) -> list[cirq.TRANSFORMER]:
+        """List of transformers which should be run before decomposing individual operations."""
+        return [
+            cirq.drop_negligible_operations,
+            cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=1),
+            cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=2),
+            *super().preprocess_transformers
+        ]
+    @property
+    def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
+        """List of transformers which should be run after decomposing individual operations."""
+        return [
+            # cirq.create_transformer_with_kwargs(eject_z, atol=self._atol),  # Some weird behavior comes from this
+            # cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=1),
+            # cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=2),
+            # gate_to_matrix_gate,
+            # cirq.create_transformer_with_kwargs(_decompose_matrix_gates, epsilon=self._epsilon),
+            cirq.create_transformer_with_kwargs(cirq.drop_negligible_operations, atol=self._atol),
+            cirq.drop_empty_moments,
             cirq.create_transformer_with_kwargs(cirq.drop_negligible_operations, atol=self._atol),
             cirq.align_left,
             cirq.synchronize_terminal_measurements,

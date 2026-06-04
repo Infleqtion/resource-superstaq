@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import cirq
 
-from resource_estimation.compile_gateset.cliff_rz import CliffRzGateset, CliffPhXZGateset
+from resource_estimation.compile_gateset.cliff_rz import CliffRzGateset, CliffPhXZGateset, CliffTDirect
 from resource_estimation.compile_gateset.clifford_t import compile_cirq_to_clifford_t
+import warnings  # Needed to ignore a FutureWarning from cirq
 
 _CLIFFORD_T_REQUIRED_GATES = (cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.T)
 _CLIFFORD_T_OPTIONAL_GATES = (cirq.I, cirq.MeasurementGate, cirq.ResetChannel)
@@ -51,6 +52,16 @@ def clifford_phxz_gateset(atol: float = 1e-8) -> cirq.Gateset:
     """
     return CliffPhXZGateset(atol=atol)
 
+def clifford_t_direct_gateset(eps: float, atol: float = 1e-8):
+    """Returns the CliffTDirect gateset.
+
+    Args:
+        atol: Maximum allowable approximation error for each synthesized gate.
+
+    Returns:
+        A Cirq gateset for compiling circuits to directly to Clifford + T.
+    """
+    return CliffTDirect(epsilon=eps, atol=atol)
 
 def clifford_t_gateset(atol: float) -> cirq.Gateset:
     """Returns the default Clifford + T gateset.
@@ -100,4 +111,6 @@ def compile_gateset(
             raise ValueError("Clifford + T gatesets must define an `_atol` attribute.")
         return compile_cirq_to_clifford_t(circuit, eps=gateset._atol, verbose=verbose)
 
-    return cirq.optimize_for_target_gateset(circuit, gateset=gateset)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        return cirq.optimize_for_target_gateset(circuit, gateset=gateset)

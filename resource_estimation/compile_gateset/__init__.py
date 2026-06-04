@@ -14,9 +14,11 @@
 from resource_estimation.compile_gateset.cliff_rz import (
     CliffRzGateset,
     CliffPhXZGateset,
+    CliffTDirect,
     eject_z,
     phx_to_zhzhz,
     zpow_to_rz,
+    gate_to_matrix_gate
 )
 from resource_estimation.compile_gateset.clifford_t import (
     approx_rz,
@@ -36,6 +38,7 @@ from resource_estimation.compile_gateset.compile_gateset import (
 __all__ = [
     "CliffRzGateset",
     "CliffPhXZGateset",
+    "CliffTDirect"
     "approx_rz",
     "approx_phxz",
     "cin_cliffs",
@@ -49,4 +52,5 @@ __all__ = [
     "process_cirq_str",
     "toffoli_decompose",
     "zpow_to_rz",
+    "gate_to_matrix_gate"
 ]
