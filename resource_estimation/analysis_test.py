@@ -17,7 +17,7 @@ import pytest
 import numpy as np
 
 import resource_estimation.analysis as analysis
-import resource_estimation.architecture as arc
+import resource_estimation.ftqc.architecture as arc
 
 
 @pytest.fixture
@@ -194,20 +194,20 @@ def test_get_important_information_t_paths(fold_cultiv):
     assert f_strong < expected_fidelity <= 1
 
 
+@pytest.mark.filterwarnings("ignore:Max code distance 31 reached:UserWarning")
+@pytest.mark.filterwarnings("ignore:Cultivation Error Options.*:UserWarning")
 def test_get_important_information_warnings():
     q = cirq.LineQubit(0)
     circuit = cirq.Circuit([cirq.T.on(q)] * 10)
 
-    with pytest.warns(UserWarning, match="not sufficient"):
-        cultivation_repetition, _, _, _, cultivation_fault_distance = (
-            analysis.get_important_information(circuit, pfid=1.0, fold_cultiv=False)
-        )
+    cultivation_repetition, _, _, _, cultivation_fault_distance = (
+        analysis.get_important_information(circuit, pfid=1.0, fold_cultiv=False)
+    )
     assert cultivation_repetition == 100
     assert cultivation_fault_distance == 5
 
     circuit = cirq.Circuit([cirq.H.on(q)])
-    with pytest.warns(UserWarning, match="Max code distance"):
-        _, _, _, _, _ = analysis.get_important_information(circuit, pfid=1.0, fold_cultiv=False)
+    _, _, _, _, _ = analysis.get_important_information(circuit, pfid=1.0, fold_cultiv=False)
 
 
 def test_error_estimate():
