@@ -11,19 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 from itertools import chain
 
 import cirq
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import networkx as nx
+
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+
 from .ftqc.layout import Layout
 
 
 def visualize_layout_moment(
     G: nx.Graph, moment_paths: list[list[str]], column_layout: Layout
-):  # pragma: no cover
+) -> None:  # pragma: no cover
     """
     This probably does not work anymore without a significant amount of changes.
     """
@@ -84,7 +88,7 @@ def visualize_layout_moment(
     plt.show()
 
 
-def display_NN_graph(G: nx.Graph):  # pragma: no cover
+def display_NN_graph(G: nx.Graph) -> None:  # pragma: no cover
     """
     This can display the connectivity graph of a layout effectively
     """
@@ -117,7 +121,7 @@ def display_NN_graph(G: nx.Graph):  # pragma: no cover
     plt.show()
 
 
-def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pragma: no cover
+def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout) -> None:  # pragma: no cover
     """
     Little animation for tracking factory usage in the (slow) movement layout. The new fast
     layouts don't really use graphs
@@ -134,7 +138,7 @@ def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pragm
             labels[grid_qubit] = "d"
             G.nodes[grid_qubit]["color"] = "red"
 
-    def animate(i):
+    def animate(i) -> None:
         moment_ops = ops[i]
         G = lay.layout_graph
         for edge in G.edges:
@@ -169,7 +173,9 @@ def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pragm
     plt.show()
 
 
-def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pragma: no cover
+def display_lattice_moments(
+    ops: list[list[cirq.Operation]], lay: Layout
+) -> None:  # pragma: no cover
     """
     Little animation for tracking factory usage in the (slow) lattice surgery layout. The new fast
     layouts don't really use graphs, maybe there is some way to change these to bring it back though
@@ -189,7 +195,7 @@ def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pr
             labels[grid_qubit] = "a"
             G.nodes[grid_qubit]["color"] = "cyan"
 
-    def animate(i):
+    def animate(i) -> None:
         moment_ops = ops[i]
         G = lay.layout_graph
         for edge in G.edges:
@@ -228,7 +234,7 @@ def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pr
 
 def animate_layout_moment(
     G: nx.Graph, moment_paths: list[list[str]], column_layout: Layout
-):  # pragma: no cover
+) -> None:  # pragma: no cover
     """
     Not sure if this visualization works anymore, hard to get the moment_paths
     """
@@ -247,7 +253,7 @@ def animate_layout_moment(
     for edge in G.edges:
         G.edges[edge]["color"] = "black"
 
-    def animate(i):
+    def animate(i) -> None:
         if i != 0:
             if G.nodes[moment_paths_flat[i]]["color"] == "yellow":
                 G.nodes[moment_paths_flat[i]]["color"] = "magenta"
@@ -273,7 +279,7 @@ def animate_layout_moment(
     plt.show()
 
 
-def draw_2d_array_ascii(arr):  # pragma: no cover
+def draw_2d_array_ascii(arr) -> None:  # pragma: no cover
     RED = "\033[31m"
     GREEN = "\033[32m"
     BLUE = "\033[34m"
@@ -330,14 +336,14 @@ class C:
     MAGENTA = "\033[95m"
 
 
-def boxed_header(title, width=40):
+def boxed_header(title, width: int = 40) -> str:
     pad = width - len(title) - 2
     left = pad // 2
     right = pad - left
     return f"{'=' * left} {title} {'=' * right}"
 
 
-def hr(width=40):  # pragma: no cover
+def hr(width: int = 40) -> LiteralString:  # pragma: no cover
     return "=" * width
 
 
