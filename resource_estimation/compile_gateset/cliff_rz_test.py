@@ -18,19 +18,27 @@ import pytest
 
 
 def _compile_cliff_rz(circuit: cirq.Circuit) -> cirq.Circuit:
-    return cliff.compile_gateset(circuit, gateset=cliff.clifford_rz_gateset())
-
+    return cliff.compile_gateset(
+        circuit,
+        gateset=cliff.clifford_rz_gateset(atol=1e-15)
+    )
 
 def _compile_cliff_phxz(circuit: cirq.Circuit) -> cirq.Circuit:
-    return cliff.compile_gateset(circuit, gateset=cliff.clifford_phxz_gateset())
+    return cliff.compile_gateset(circuit, gateset=cliff.clifford_phxz_gateset(atol=1e-15))
+
+def _compile_cliff_t_direct(circuit: cirq.Circuit) -> cirq.Circuit:
+    return cliff.compile_gateset(circuit, gateset=cliff.clifford_t_direct_gateset(eps=1e-9, atol=1e-15))
 
 
 @pytest.mark.parametrize(
     "func, gateset",
-    [(_compile_cliff_rz, cliff.CliffRzGateset()), (_compile_cliff_phxz, cliff.CliffPhXZGateset())],
+    [
+        (_compile_cliff_rz, cliff.CliffRzGateset()), 
+        (_compile_cliff_phxz, cliff.CliffPhXZGateset()),
+        # (_compile_cliff_t_direct, cliff.CliffTDirect(epsilon=1e-8)),
+    ],
 )
 def test_fermi(func, gateset):
-    # Test that Fermi-Hubbard circuit is compiled to Clifford + Rz correctly
     # For some reason, I can't do better that 1e-6
     ham_circuit = fermi_hubbard(3, verbose=0)
     compiled_circuit = func(circuit=ham_circuit)
@@ -45,7 +53,11 @@ def test_fermi(func, gateset):
 
 @pytest.mark.parametrize(
     "func, gateset",
-    [(_compile_cliff_rz, cliff.CliffRzGateset()), (_compile_cliff_phxz, cliff.CliffPhXZGateset())],
+    [
+        (_compile_cliff_rz, cliff.CliffRzGateset()), 
+        (_compile_cliff_phxz, cliff.CliffPhXZGateset()),
+        # (_compile_cliff_t_direct, cliff.CliffTDirect(epsilon=1e-8)),  # This runs far too slow to be a useful test
+    ]
 )
 def test_kanamori(func, gateset):
     # Test that Kanamori circuit is compiled to Clifford + Rz correctly
@@ -103,12 +115,58 @@ def test_phx_to_zhzhz():
     )
 
 
-@pytest.mark.parametrize("func", (_compile_cliff_rz, _compile_cliff_phxz))
+@pytest.mark.parametrize(
+        "func", 
+        (
+            _compile_cliff_rz, 
+            _compile_cliff_phxz, 
+            # _compile_cliff_t_direct,
+        )
+    )
 def test_small_circuit(func):
     random_circuit = cirq.testing.random_circuit(8, 10, 1, random_state=17)
     compiled_circuit = func(random_circuit)
+    print(compiled_circuit)
     cirq.testing.assert_allclose_up_to_global_phase(
-        cirq.final_state_vector(random_circuit),
-        cirq.final_state_vector(compiled_circuit),
+        cirq.unitary(random_circuit),
+        cirq.unitary(compiled_circuit),
         atol=1e-6,  # For sanity
+    )
+
+@pytest.mark.parametrize('qubits', (1, 2))
+@pytest.mark.parametrize('compiler', (_compile_cliff_rz, _compile_cliff_phxz, _compile_cliff_t_direct))
+def test_random_circuits(qubits, compiler):
+    U = cirq.testing.random_unitary(dim=2**qubits, random_state=7)
+    circuit = cirq.Circuit(cirq.MatrixGate(U).on(*cirq.LineQubit.range(qubits)))
+    compiled = compiler(circuit)
+    cirq.testing.assert_allclose_up_to_global_phase(
+        cirq.unitary(compiled),
+        cirq.unitary(circuit),
+        atol=1e-6,
+    )
+
+def test_op_not_replaced():
+    q1, q2 = cirq.LineQubit.range(2)
+    op1 = cirq.S.on(q1)
+    decomposed_op = cliff.CliffTDirect(epsilon=1e-3)._decompose_single_qubit_operation(op=op1)
+    assert op1 is decomposed_op
+    op2 = cirq.CNOT.on(q1, q2)
+    decomposed_op = cliff.CliffTDirect(epsilon=1e-3)._decompose_two_qubit_operation(op=op2)
+    assert op2 is decomposed_op
+
+def test_replace_op_with_pygridsynth():
+    with pytest.raises(ValueError, match="Support for multi-qubit gates"):
+        _ = cliff.replace_op_with_pygridsynth(
+            cirq.MatrixGate(
+                cirq.testing.random_unitary(dim=8, random_state=7)
+            ).on(*cirq.LineQubit.range(3)),
+            1e-3
+        )
+    U = cirq.testing.random_unitary(dim=4, random_state=7)
+    circuit = cirq.Circuit(cirq.MatrixGate(U).on(*cirq.LineQubit.range(2)))
+    direct_replacement = cliff.replace_op_with_pygridsynth(next(circuit.all_operations()), 1e-7)
+    cirq.testing.assert_allclose_up_to_global_phase(
+        cirq.unitary(direct_replacement),
+        cirq.unitary(circuit),
+        atol=1e-6,
     )

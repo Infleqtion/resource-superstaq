@@ -106,7 +106,7 @@ def compile_gateset(
             attribute. Use `clifford_t_gateset(atol=...)` to construct the
             default Clifford + T target.
     """
-    if _is_clifford_t_gateset(gateset):
+    if _is_clifford_t_gateset(gateset) and not isinstance(gateset, CliffTDirect):
         if not hasattr(gateset, "_atol"):
             raise ValueError("Clifford + T gatesets must define an `_atol` attribute.")
         return compile_cirq_to_clifford_t(circuit, eps=gateset._atol, verbose=verbose)

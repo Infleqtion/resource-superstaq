@@ -18,7 +18,8 @@ from resource_estimation.compile_gateset.cliff_rz import (
     eject_z,
     phx_to_zhzhz,
     zpow_to_rz,
-    gate_to_matrix_gate
+    replace_op_with_pygridsynth,
+    # gate_to_matrix_gate
 )
 from resource_estimation.compile_gateset.clifford_t import (
     approx_rz,
@@ -31,6 +32,7 @@ from resource_estimation.compile_gateset.clifford_t import (
 from resource_estimation.compile_gateset.compile_gateset import (
     clifford_rz_gateset,
     clifford_phxz_gateset,
+    clifford_t_direct_gateset,
     clifford_t_gateset,
     compile_gateset,
 )
@@ -44,6 +46,7 @@ __all__ = [
     "cin_cliffs",
     "clifford_rz_gateset",
     "clifford_phxz_gateset",
+    "clifford_t_direct_gateset",
     "clifford_t_gateset",
     "compile_cirq_to_clifford_t",
     "compile_gateset",
@@ -52,5 +55,6 @@ __all__ = [
     "process_cirq_str",
     "toffoli_decompose",
     "zpow_to_rz",
-    "gate_to_matrix_gate"
+    "replace_op_with_pygridsynth",
+    # "gate_to_matrix_gate"
 ]

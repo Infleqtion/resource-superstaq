@@ -136,56 +136,58 @@ def zpow_to_rz(
         deep=context.deep if context else False,
     )
 
-@cirq.transformer
-def gate_to_matrix_gate(circuit: cirq.Circuit, context: cirq.TransformerContext | None = None) -> cirq.Circuit:
-    """Converts circuit into sequence of MatrixGates"""
-    def _map_fn(op: cirq.Operation, _: int):
-        if isinstance(op, cirq.MatrixGate):
-            return op
-        matrix = cirq.unitary(op)
-        return cirq.MatrixGate(matrix=matrix).on(*op.qubits)
-    return cirq.map_operations_and_unroll(
-        circuit, _map_fn, tags_to_ignore=context.tags_to_ignore if context else(), deep=context.deep if context else False
-    )
-
-@cirq.transformer
-def _decompose_matrix_gates(circuit: cirq.Circuit, epsilon, context: cirq.TransformerContext | None = None) -> cirq.Circuit:
-    d = {
-        'H': cirq.H,
-        'T': cirq.T,
-        'S': cirq.S,
-        'X': cirq.X,
-    }
-    def _map_fn(op, _,):
-        if not cirq.num_qubits(op):
-            return cirq.Circuit()
-        qubit_map = {i: q for i, q in enumerate(op.qubits)}
-        matrix = np_to_mpmath_matrix(cirq.unitary(op))
-        approximation, _ = approximate_multi_qubit_unitary(matrix, num_qubits=cirq.num_qubits(op), epsilon=epsilon)
-        replacement = cirq.Circuit()
-        for discrete_gate in approximation:
-            if hasattr(discrete_gate, 'to_simple_str') and discrete_gate.to_simple_str() in d:
-                op_to_add = d[discrete_gate.to_simple_str()].on(qubit_map[discrete_gate.target_qubit])
-            elif hasattr(discrete_gate, 'control_qubit'):
-                op_to_add = cirq.CNOT.on(
-                    qubit_map[discrete_gate.control_qubit],
-                    qubit_map[discrete_gate.target_qubit]
-                )
-            replacement += [op_to_add]
-        return replacement
-    return cirq.map_operations_and_unroll(
-        circuit,
-        _map_fn,
-        tags_to_ignore=context.tags_to_ignore if context else (),
-        deep=context.deep if context else False,
-    )
-
-def np_to_mpmath_matrix(u):
+# I hate having so many functions written by AI here... >:(
+def _np_to_mpmath_matrix(u):
+    """Converts numpy arrays to mpmath matrices to be compatible with pygridsynth"""
     return mpmath.matrix([
         [mpmath.mpc(complex(z).real, complex(z).imag) for z in row]
         for row in u
     ])
 
+def _normalize_to_su(U):
+    """Applies global phase to ensure gates are in SU(2) and compatible with pygridsynth"""
+    n = U.rows
+    detU = mpmath.det(U)
+    phase = detU ** (-mpmath.mpf(1) / n)
+    return phase * U, phase
+
+def replace_op_with_pygridsynth(op: cirq.Operation, epsilon: float) -> cirq.Circuit:
+    """Gets pygridsynth replacement gates for cirq Operation up to two qubits"""
+    if len(op.qubits) > 2:
+        raise ValueError("Support for multi-qubit gates not currently available")
+    
+    qubit_map = {i: q for i, q in enumerate(op.qubits)}
+    matrix = _np_to_mpmath_matrix(cirq.unitary(op))
+    matrix, _ = _normalize_to_su(matrix)
+    num_qubits = len(op.qubits)
+    approximation, _ = approximate_multi_qubit_unitary(
+        matrix,
+        num_qubits=num_qubits,
+        epsilon=mpmath.mpmathify(epsilon),
+    )
+    replacement = cirq.Circuit()
+    for discrete_gate in approximation[::-1]:
+        name = type(discrete_gate).__name__
+        if name == "WGate":  # Ignore global phase
+            continue
+        elif name == "HGate":
+            op_to_add = cirq.H.on(qubit_map[discrete_gate.target_qubit])
+        elif name == "SGate":
+            op_to_add = cirq.S.on(qubit_map[discrete_gate.target_qubit])
+        elif name == "TGate":
+            op_to_add = cirq.T.on(qubit_map[discrete_gate.target_qubit])
+        elif name == "SXGate":  # See https://github.com/quantum-programming/pygridsynth/blob/main/pygridsynth/quantum_gate.py
+            op_to_add = cirq.X.on(qubit_map[discrete_gate.target_qubit])
+        elif name == "CxGate":
+            op_to_add = cirq.CNOT.on(
+                qubit_map[discrete_gate.control_qubit],
+                qubit_map[discrete_gate.target_qubit]
+            )
+        else:
+            # Coverage is omitted here because this should not run unless something unexpected happens with pygridsynth
+            raise ValueError(f"Unsupported pygridsynth gate: {discrete_gate!r}")  # pragma: no cover
+        replacement += [op_to_add]
+    return replacement
 
 class CliffordGateset(cirq.TwoQubitCompilationTargetGateset, abc.ABC):
     """Base class for Gatesets with large overlap."""
@@ -288,14 +290,6 @@ class CliffPhXZGateset(CliffordGateset):
 
 
 class CliffTDirect(cirq.TwoQubitCompilationTargetGateset):
-    _map = {
-        'H': cirq.H,
-        'T': cirq.T,
-        'S': cirq.S,
-        'X': cirq.X,
-        'Z': cirq.Z,
-        'Y': cirq.Y
-    }
     def __init__(self, epsilon: float, _qubits=None, atol: float = 1e-8) -> None:
         self._atol = atol
         self._qubits = _qubits
@@ -306,6 +300,7 @@ class CliffTDirect(cirq.TwoQubitCompilationTargetGateset):
             cirq.H,
             cirq.S,
             cirq.X,
+            cirq.Y,
             cirq.Z,
             cirq.GateFamily(cirq.CX, ignore_global_phase=True),
             preserve_moment_structure=False,
@@ -319,15 +314,7 @@ class CliffTDirect(cirq.TwoQubitCompilationTargetGateset):
     ) -> cirq.OP_TREE:
         if op in self:
             return op
-        matrix = np_to_mpmath_matrix(cirq.unitary(op))
-        approximation, _ = approximate_multi_qubit_unitary(matrix, num_qubits=cirq.num_qubits(op), epsilon=mpmath.mpmathify(self._epsilon))
-        replacement = cirq.Circuit()
-        for discrete_gate in approximation:
-            name = discrete_gate.to_simple_str()
-    
-            if name in self._map:
-                replacement.append(self._map[name].on(*op.qubits))
-        return replacement
+        return replace_op_with_pygridsynth(op, self._epsilon)
 
     
     def _decompose_two_qubit_operation(
@@ -335,28 +322,15 @@ class CliffTDirect(cirq.TwoQubitCompilationTargetGateset):
     ) -> cirq.OP_TREE:
         if op in self:
             return op
-        qubit_map = {i: q for i, q in enumerate(op.qubits)}
-        matrix = np_to_mpmath_matrix(cirq.unitary(op))
-        approximation, _ = approximate_multi_qubit_unitary(matrix, num_qubits=cirq.num_qubits(op), epsilon=mpmath.mpmathify(self._epsilon))
-        replacement = cirq.Circuit()
-        for discrete_gate in approximation:
-            if hasattr(discrete_gate, 'to_simple_str') and discrete_gate.to_simple_str() in self._map:
-                op_to_add = self._map[discrete_gate.to_simple_str()].on(qubit_map[discrete_gate.target_qubit])
-            elif hasattr(discrete_gate, 'control_qubit'):
-                op_to_add = cirq.CNOT.on(
-                    qubit_map[discrete_gate.control_qubit],
-                    qubit_map[discrete_gate.target_qubit]
-                )
-            replacement += [op_to_add]
-        return replacement
+        return replace_op_with_pygridsynth(op, self._epsilon)
 
     @property
     def preprocess_transformers(self) -> list[cirq.TRANSFORMER]:
         """List of transformers which should be run before decomposing individual operations."""
         return [
             cirq.drop_negligible_operations,
-            cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=1),
-            cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=2),
+            # cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=1),
+            # cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=2),
             *super().preprocess_transformers
         ]
     @property
