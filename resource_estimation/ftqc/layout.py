@@ -11,28 +11,45 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 import abc
+from collections import deque
+from dataclasses import dataclass, field
+from itertools import combinations, product
+from math import ceil, sqrt
+from typing import Literal
+
 import cirq
 import networkx as nx
 import numpy as np
-from collections import deque
-from dataclasses import dataclass
-from typing import Literal
-from math import ceil, sqrt
-from itertools import combinations, product
+
+from .factory_specs import FactorySpec, FactoryType
 
 
 @dataclass
 class Layout(abc.ABC):
     """
-    Base class for layouts used by the fault tolerant compiler to track factory use and CNOT routing
+    Base class for fault-tolerant compiler layouts.
+
+    Attributes:
+        input_circuit: Logical input circuit to map onto the layout.
+        num_t_factories: Number of T factory patches requested for the layout.
+        num_s_factories: Number of S factory patches requested for the layout.
+        factory_specs: Static factory metadata keyed by `ftype`. Correction
+            policies on these specs are the future home for reaction dynamics.
+        mapped_circuit: Input circuit after qubits are mapped to layout
+            `GridQubit`s by `_generate`.
+        layout_graph: Graph whose nodes are data, factory, and ancilla patches.
+            Factory nodes use `patch_type="factory"` and an `ftype` value.
     """
 
     input_circuit: cirq.Circuit
     num_t_factories: int = 0
     num_s_factories: int = 0
+    factory_specs: dict[FactoryType, FactorySpec] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.mapped_circuit = None
         self.layout_graph = None
         self._available_t_factories = deque()
@@ -215,7 +232,7 @@ class MovementLayout(Layout):
     """
 
     # TODO: build this implementation
-    def __init__(self, input_circuit: cirq.Circuit, num_t_factories: int = 1):
+    def __init__(self, input_circuit: cirq.Circuit, num_t_factories: int = 1) -> None:
         super().__init__(
             input_circuit=input_circuit, num_t_factories=num_t_factories, num_s_factories=0
         )
@@ -234,7 +251,7 @@ class Column(Layout):
     ...
     """
 
-    def __init__(self, input_circuit: cirq.Circuit):
+    def __init__(self, input_circuit: cirq.Circuit) -> None:
         rows = ceil(len(input_circuit.all_qubits()) / 2)
         num_s_factories = 2 * rows
         num_t_factories = 2 * rows
@@ -312,7 +329,7 @@ class FactorySandwich(Layout):
     T | T | T | T
     """
 
-    def _generate(self):
+    def _generate(self) -> None:
         """
         Places and assigns logical qubits according to the Sandwich configuration
         """
@@ -364,11 +381,11 @@ class Embedded(Layout):
     """
 
     # TODO: figure out a way o make the number of factories configurable
-    def __init__(self, input_circuit: cirq.Circuit):
+    def __init__(self, input_circuit: cirq.Circuit) -> None:
         # TODO: Find the formula for this
         super().__init__(input_circuit=input_circuit, num_s_factories=0, num_t_factories=0)
 
-    def _generate(self):
+    def _generate(self) -> None:
         """
         Builds a large embedded logical qubit array by starting from a nearest neighbor array and adding rows/columns of other qubit types
         """

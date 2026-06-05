@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 import math
 from functools import cache
 import cirq
@@ -95,7 +96,9 @@ def cin_cliffs(gate: cirq.Gate) -> bool:
     return gate in [cirq.H, cirq.S, cirq.Z, cirq.CNOT, cirq.I, cirq.X]
 
 
-def compile_cirq_to_clifford_t(circ: cirq.Circuit, eps: float, verbose=True) -> cirq.Circuit:
+def compile_cirq_to_clifford_t(
+    circ: cirq.Circuit, eps: float, verbose: bool = True
+) -> cirq.Circuit:
     """
     Synthesizes the Clifford + Rz circuit into a Clifford + T circuit
     The eps parameter defines the maximum allowable error in the angle of each synthesized Rz gate

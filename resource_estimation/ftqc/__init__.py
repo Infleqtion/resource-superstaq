@@ -21,7 +21,6 @@ from resource_estimation.ftqc.architecture import (
     convert_globals_to_phasedxz,
 )
 from resource_estimation.ftqc.compile_ftqc import (
-    FTCompileResult,
     add_moves,
     ft_compile,
     handle_idling,
@@ -30,6 +29,11 @@ from resource_estimation.ftqc.compile_ftqc import (
     teleport_S,
     teleport_T,
     validate_ops,
+)
+from resource_estimation.ftqc.compile_metrics import (
+    FTCompileMetricCollector,
+    FTCompileResult,
+    ReactionDepthMetricCollector,
 )
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.layout import (
@@ -71,6 +75,7 @@ __all__ = [
     "EndpointPatch",
     "ErrorCorrect",
     "FactorySandwich",
+    "FTCompileMetricCollector",
     "FTCompileResult",
     "IntermediatePatch",
     "Layout",
@@ -79,6 +84,7 @@ __all__ = [
     "MovementLayout",
     "Move",
     "ResourceEstimator",
+    "ReactionDepthMetricCollector",
     "RotatedCodePatch",
     "Split",
     "Superconductor",

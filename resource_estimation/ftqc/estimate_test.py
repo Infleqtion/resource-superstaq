@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from resource_estimation.ftqc.estimate import ResourceEstimator
 from math import pi
 import cirq
 import pytest
@@ -21,7 +22,7 @@ from numpy import isclose
 
 
 @pytest.fixture
-def lattice_estimator():
+def lattice_estimator() -> ResourceEstimator:
     return est.ResourceEstimator(
         arc=arch.DefaultLattice(
             d=5,
@@ -34,7 +35,7 @@ def lattice_estimator():
 
 
 @pytest.fixture
-def movement_estimator():
+def movement_estimator() -> ResourceEstimator:
     return est.ResourceEstimator(
         arc=arch.DefaultMovement(
             d=5,
@@ -69,7 +70,7 @@ def movement_estimator():
         ),
     ],
 )
-def test_all_primitives(estimator):
+def test_all_primitives(estimator) -> None:
     dummy_qubits = [cirq.GridQubit(i, j) for i in range(3) for j in range(3)]
     circuit = cirq.Circuit()
     circuit += [cirq.I.on(q) for q in dummy_qubits]
@@ -104,7 +105,7 @@ def test_all_primitives(estimator):
     assert isclose(t1, t2, atol=0.00001)
 
 
-def test_parallel_circuit_cost(lattice_estimator, movement_estimator):
+def test_parallel_circuit_cost(lattice_estimator, movement_estimator) -> None:
     # TODO: This test could (should?) be considerably more thorough than the coverage requirement would imply
     qubit_a, qubit_b, qubit_c, qubit_d = (
         cirq.GridQubit(0, 0),
@@ -145,7 +146,7 @@ def test_parallel_circuit_cost(lattice_estimator, movement_estimator):
     }
 
 
-def test_self_returns(movement_estimator, lattice_estimator):
+def test_self_returns(movement_estimator, lattice_estimator) -> None:
     # TODO: There are no self-returns anymore so this function is not well named
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit(
@@ -168,7 +169,7 @@ def test_self_returns(movement_estimator, lattice_estimator):
     }
 
 
-def test_error_handling(lattice_estimator, movement_estimator):
+def test_error_handling(lattice_estimator, movement_estimator) -> None:
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     # Check Bad Lattice Surgery Circuit
     bad_circuit = cirq.Circuit([lsp.Cultivate(pi / 2).on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b)])
@@ -188,7 +189,7 @@ def test_error_handling(lattice_estimator, movement_estimator):
 
 
 # TODO: Might be worth having one or two more example tests for the critical path algorithm
-def test_critical_path():
+def test_critical_path() -> None:
     q0, q1 = cirq.LineQubit.range(2)
     c1 = cirq.Circuit()
     c1 += cirq.S.on(q0)
@@ -241,7 +242,7 @@ def test_critical_path():
     )
 
 
-def test_physical_qubit_count(lattice_estimator):
+def test_physical_qubit_count(lattice_estimator) -> None:
     test_circuit = cirq.Circuit(
         [
             cirq.I.on(cirq.GridQubit(0, 0)),

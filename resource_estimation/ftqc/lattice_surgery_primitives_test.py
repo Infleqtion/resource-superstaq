@@ -19,7 +19,7 @@ import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from numpy.testing import assert_array_equal
 
 
-def test_merge():
+def test_merge() -> None:
     merge_gate = lsp.Merge(2, smooth=True)
     assert merge_gate.smooth
     assert merge_gate.num_qubits() == 2
@@ -31,7 +31,7 @@ def test_merge():
     assert str(merge_gate) == "MERGE"
 
 
-def test_split():
+def test_split() -> None:
     partitions = [1, 2, 3, 4]
     split_gate = lsp.Split(partitions=partitions, smooth=True)
     assert split_gate.smooth
@@ -46,7 +46,7 @@ def test_split():
     assert split_gate.partitions == partitions
 
 
-def test_syndrome_extract():
+def test_syndrome_extract() -> None:
     for i in [1, 2, 3, 4]:
         extraction_gate = lsp.SyndromeExtract(i, i * 2)
         assert extraction_gate.num_qubits() == i
@@ -54,19 +54,19 @@ def test_syndrome_extract():
         assert str(extraction_gate) == f"SE({i * 2})"
 
 
-def test_error_correct():
+def test_error_correct() -> None:
     error_correction_gate = lsp.ErrorCorrect(1)
     assert str(error_correction_gate) == "ERROR CORRECT"
 
 
-def test_cultivate():
+def test_cultivate() -> None:
     theta = pi / 2
     cultivation_gate = lsp.Cultivate(theta=theta)
     assert cultivation_gate.theta == theta
     assert str(cultivation_gate) == "CULT(1.571)"
 
 
-def test_move():
+def test_move() -> None:
     a, b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     alley_move = lsp.Move(None).on(a, b)
     assert str(alley_move) == "MOVE(q(0, 0), q(0, 1))"
@@ -76,7 +76,7 @@ def test_move():
     assert str(measure_move) == "MOVE_MZ(q(0, 1))"
 
 
-def test_rotated_code_patch():
+def test_rotated_code_patch() -> None:
     with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
         lsp.RotatedCodePatch(4)
 
@@ -123,7 +123,7 @@ def test_rotated_code_patch():
     assert patch.total_x_syndrome_cnots() == 84
 
 
-def test_buffer():
+def test_buffer() -> None:
     d = 7
     smooth_buff = lsp.BufferCodePatch(d=d, smooth=True)
     rough_buff = lsp.BufferCodePatch(d=d, smooth=False)
@@ -153,7 +153,7 @@ def test_buffer():
     )
 
 
-def test_intermediate_patch():
+def test_intermediate_patch() -> None:
     d = 7
     smooth_inter = lsp.IntermediatePatch(d=d, smooth=True)
     rough_inter = lsp.IntermediatePatch(d=d, smooth=False)
@@ -182,7 +182,7 @@ def test_intermediate_patch():
     )
 
 
-def test_endpoint_patch():
+def test_endpoint_patch() -> None:
     d = 7
     smooth_end = lsp.EndpointPatch(d=d, smooth=True)
     rough_end = lsp.EndpointPatch(d=d, smooth=False)
@@ -211,7 +211,7 @@ def test_endpoint_patch():
     )
 
 
-def test_serialization():
+def test_serialization() -> None:
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit(
         [
@@ -238,7 +238,7 @@ def test_serialization():
     )
 
 
-def test_repr():
+def test_repr() -> None:
     qa, qb = cirq.LineQubit.range(2)
     merge = lsp.Merge(2, smooth=False).on(qa, qb)
     assert (
@@ -274,7 +274,7 @@ def test_repr():
     assert repr(move) == "lsp.Move(zone=measure).on(cirq.LineQubit(0))"
 
 
-def test_patch_eq_and_hash():
+def test_patch_eq_and_hash() -> None:
     patch1 = lsp.RotatedCodePatch(3)
     patch2 = lsp.RotatedCodePatch(5)
     assert patch1 != patch2

@@ -33,7 +33,8 @@ show-fixes = true
 
 # Specific linting rules to enable in `ruff`
 lint.select = [
-  "F401",   # unused imports
+    "FA",    # flake8-future-annotations
+    "F401",  # unused imports
 ]
 lint.ignore = [
   "ANN401",
