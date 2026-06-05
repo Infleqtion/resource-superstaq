@@ -14,11 +14,12 @@
 from cirq.circuits.circuit import Circuit
 import cirq
 import pytest
+import resource_estimation.ftqc.factory_specs as factory_specs
 from resource_estimation.ftqc import (
     Column,
+    Embedded,
     FactorySandwich,
     MovementLayout,
-    Embedded,
 )
 
 
@@ -32,6 +33,41 @@ def circuit5() -> Circuit:
         42,
     )
     return circuit
+
+
+def test_movement_layout_defaults_to_t_factory_spec(circuit5: cirq.Circuit) -> None:
+    movement = MovementLayout(circuit5, num_t_factories=3)
+
+    assert movement.factory_specs == {"t": factory_specs.T_AUTO_CORRECTED_FACTORY_SPEC}
+
+
+def test_lattice_layouts_default_to_t_and_s_factory_specs(circuit5: cirq.Circuit) -> None:
+    expected_specs = {
+        "t": factory_specs.T_AUTO_CORRECTED_FACTORY_SPEC,
+        "s": factory_specs.S_AUTO_CORRECTED_FACTORY_SPEC,
+    }
+
+    assert Column(circuit5).factory_specs == expected_specs
+    assert (
+        FactorySandwich(circuit5, num_t_factories=3, num_s_factories=5).factory_specs
+        == expected_specs
+    )
+    assert Embedded(circuit5).factory_specs == expected_specs
+
+
+def test_explicit_factory_specs_replace_defaults(circuit5: cirq.Circuit) -> None:
+    assert MovementLayout(circuit5, num_t_factories=3, factory_specs={}).factory_specs == {}
+    assert Column(circuit5, factory_specs={}).factory_specs == {}
+
+
+def test_explicit_factory_specs_are_copied(circuit5: cirq.Circuit) -> None:
+    custom_specs = {"t": factory_specs.T_NON_AUTO_CORRECTED_FACTORY_SPEC}
+
+    movement = MovementLayout(circuit5, num_t_factories=3, factory_specs=custom_specs)
+    custom_specs["s"] = factory_specs.S_AUTO_CORRECTED_FACTORY_SPEC
+
+    assert movement.factory_specs is not custom_specs
+    assert movement.factory_specs == {"t": factory_specs.T_NON_AUTO_CORRECTED_FACTORY_SPEC}
 
 
 def test_column(circuit5: cirq.Circuit) -> None:

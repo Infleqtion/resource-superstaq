@@ -354,6 +354,15 @@ def _decompose_to_primitives(
     )
     transversal_cnot = cirq.CX in primitives
 
+    for op in circuit.all_operations():
+        _notify_metric_collectors(
+            metric_calculators,
+            "on_logical_operation",
+            op,
+            layout,
+            arc,
+        )
+
     def _map_fn(op: cirq.Operation) -> list[cirq.Operation]:
         replacement_ops = replace_cirq_op(op=op, layout=layout, transversal_cnot=transversal_cnot)
         _notify_metric_collectors(

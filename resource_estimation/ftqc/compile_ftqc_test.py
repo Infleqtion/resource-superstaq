@@ -19,9 +19,10 @@ import cirq
 import pytest
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.compile_ftqc as comp
+import resource_estimation.ftqc.factory_specs as factory_specs
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from cirq_superstaq import Barrier
-from resource_estimation.ftqc import MovementLayout, Column, Embedded
+from resource_estimation.ftqc import Column, Embedded, MovementLayout, ReactionDepthMetricCollector
 
 
 @pytest.fixture
@@ -51,6 +52,7 @@ def random_circ() -> Circuit:
 
 class _RecordingCollector(comp.FTCompileMetricCollector):
     def __init__(self):
+        self.logical_gates = []
         self.replacement_gates = []
         self.replacement_ops = 0
         self.state_prep_ops = 0
@@ -60,6 +62,14 @@ class _RecordingCollector(comp.FTCompileMetricCollector):
         self.idling_ops = 0
         self.move_events = 0
         self.move_ops = 0
+
+    def on_logical_operation(
+        self,
+        input_op: cirq.Operation,
+        layout: MovementLayout,
+        arc: arch.Architecture,
+    ) -> None:
+        self.logical_gates.append(input_op.gate)
 
     def on_replacement(
         self,
@@ -116,6 +126,8 @@ class _RecordingCollector(comp.FTCompileMetricCollector):
         arc: arch.Architecture,
     ) -> dict[str, object]:
         return {
+            "logical_gates": self.logical_gates,
+            "logical_ops": len(self.logical_gates),
             "replacement_gates": self.replacement_gates,
             "replacement_ops": self.replacement_ops,
             "state_prep_ops": self.state_prep_ops,
@@ -437,6 +449,7 @@ def test_ft_compile_replacement_metrics():
     )
     metrics = result.metrics["recording"]
 
+    assert metrics["logical_gates"] == [cirq.CNOT, cirq.T, cirq.S]
     assert cirq.CNOT in metrics["replacement_gates"]
     assert cirq.T in metrics["replacement_gates"]
     assert cirq.S in metrics["replacement_gates"]
@@ -446,6 +459,84 @@ def test_ft_compile_replacement_metrics():
     assert metrics["idling_events"] == 0
     assert metrics["move_events"] == 0
     assert metrics["final_ops"] == len(list(result.circuit.all_operations()))
+
+
+def test_ft_compile_splits_logical_operation_and_replacement_metric_hooks():
+    qubit = cirq.LineQubit(0)
+    circuit = cirq.Circuit(cirq.T(qubit), cirq.H(qubit))
+    collector = _RecordingCollector()
+
+    comp.ft_compile(
+        layout=MovementLayout(circuit, num_t_factories=1),
+        arc=arch.DefaultMovement(idling=False, post_op_correction=False),
+        verbose=False,
+        metric_calculators={"recording": collector},
+    )
+
+    assert collector.logical_gates == [cirq.T, cirq.H]
+    assert collector.replacement_gates == [cirq.T]
+
+
+def test_ft_compile_reaction_depth_metric_uses_layout_default_factory_specs(t_circuit):
+    result = comp.ft_compile(
+        layout=MovementLayout(t_circuit, num_t_factories=1),
+        arc=arch.DefaultMovement(idling=False, post_op_correction=False),
+        verbose=False,
+        metric_calculators={"reaction_depth": ReactionDepthMetricCollector()},
+    )
+
+    assert result.metrics["reaction_depth"] == {cirq.GridQubit(0, 1): {"X": 0, "Z": 1}}
+
+
+def test_ft_compile_reaction_depth_metric_observes_kept_primitive_cliffords():
+    qubit = cirq.LineQubit(0)
+    circuit = cirq.Circuit(cirq.T(qubit), cirq.H(qubit))
+
+    result = comp.ft_compile(
+        layout=MovementLayout(circuit, num_t_factories=1),
+        arc=arch.DefaultMovement(idling=False, post_op_correction=False),
+        verbose=False,
+        metric_calculators={"reaction_depth": ReactionDepthMetricCollector()},
+    )
+
+    assert result.metrics["reaction_depth"] == {cirq.GridQubit(0, 0): {"X": 1, "Z": 0}}
+
+
+def test_ft_compile_reaction_depth_metric_applies_factory_dynamic_once():
+    qubit = cirq.LineQubit(0)
+    calls = 0
+
+    def reaction_dynamic(
+        old_depths: factory_specs.ReactionDepthState,
+    ) -> factory_specs.ReactionDepthState:
+        nonlocal calls
+        calls += 1
+        old_depth = old_depths[0]
+        return [{"Z": old_depth.get("Z", 0) + 1}]
+
+    factory_spec = factory_specs.FactorySpec(
+        name="counting-t",
+        ftype="t",
+        produced_gate=cirq.T,
+        correction_policy=factory_specs.CorrectionPolicy(
+            name="counting-correction",
+            reaction_dynamic=reaction_dynamic,
+        ),
+    )
+
+    result = comp.ft_compile(
+        layout=MovementLayout(
+            cirq.Circuit(cirq.T(qubit)),
+            num_t_factories=1,
+            factory_specs={"t": factory_spec},
+        ),
+        arc=arch.DefaultMovement(idling=False, post_op_correction=False),
+        verbose=False,
+        metric_calculators={"reaction_depth": ReactionDepthMetricCollector()},
+    )
+
+    assert calls == 1
+    assert result.metrics["reaction_depth"] == {cirq.GridQubit(0, 0): {"X": 0, "Z": 1}}
 
 
 def test_ft_compile_pass_metrics(bell_circuit):

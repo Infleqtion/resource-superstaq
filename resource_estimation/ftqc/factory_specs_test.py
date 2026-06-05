@@ -89,7 +89,6 @@ def test_standard_factory_specs(auto_corrected_spec, non_auto_corrected_spec, ft
     "correction_policy",
     [
         factory_specs.T_NON_AUTO_CORRECTED_CORRECTION_POLICY,
-        factory_specs.S_AUTO_CORRECTED_CORRECTION_POLICY,
         factory_specs.S_NON_AUTO_CORRECTED_CORRECTION_POLICY,
         factory_specs.CCZ_NON_AUTO_CORRECTED_CORRECTION_POLICY,
     ],
@@ -111,6 +110,13 @@ def test_t_auto_corrected_reaction_dynamic_updates_single_qubit(old_depth, expec
     assert factory_specs.T_AUTO_CORRECTED_CORRECTION_POLICY.reaction_dynamic([old_depth]) == [
         expected_depth
     ]
+
+
+def test_s_auto_corrected_reaction_dynamic_increments_both_bases_with_warning():
+    with pytest.warns(UserWarning, match="work in progress"):
+        assert factory_specs.S_AUTO_CORRECTED_CORRECTION_POLICY.reaction_dynamic(
+            [{"X": 2, "Z": 5}]
+        ) == [{"X": 3, "Z": 6}]
 
 
 @pytest.mark.parametrize(
@@ -164,3 +170,36 @@ def test_ccz_auto_corrected_reaction_dynamic_updates_controls_and_target(
         factory_specs.CCZ_AUTO_CORRECTED_CORRECTION_POLICY.reaction_dynamic(old_depths)
         == expected_depths
     )
+
+
+@pytest.mark.parametrize(
+    ("num_t_factories", "num_s_factories", "expected_specs"),
+    [
+        pytest.param(0, 0, {}, id="no_factories"),
+        pytest.param(
+            1,
+            0,
+            {"t": factory_specs.T_AUTO_CORRECTED_FACTORY_SPEC},
+            id="t_factories_only",
+        ),
+        pytest.param(
+            0,
+            1,
+            {"s": factory_specs.S_AUTO_CORRECTED_FACTORY_SPEC},
+            id="s_factories_only",
+        ),
+        pytest.param(
+            2,
+            3,
+            {
+                "t": factory_specs.T_AUTO_CORRECTED_FACTORY_SPEC,
+                "s": factory_specs.S_AUTO_CORRECTED_FACTORY_SPEC,
+            },
+            id="t_and_s_factories",
+        ),
+    ],
+)
+def test_default_factory_specs_match_present_factory_types(
+    num_t_factories, num_s_factories, expected_specs
+):
+    assert factory_specs.default_factory_specs(num_t_factories, num_s_factories) == expected_specs
