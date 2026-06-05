@@ -15,7 +15,11 @@ from __future__ import annotations
 
 import cirq
 
-from resource_estimation.compile_gateset.cliff_rz import CliffRzGateset, CliffPhXZGateset, CliffTDirect
+from resource_estimation.compile_gateset.cliff_rz import (
+    CliffRzGateset,
+    CliffPhXZGateset,
+    CliffTDirect,
+)
 from resource_estimation.compile_gateset.clifford_t import compile_cirq_to_clifford_t
 import warnings  # Needed to ignore a FutureWarning from cirq
 
@@ -52,6 +56,7 @@ def clifford_phxz_gateset(atol: float = 1e-8) -> cirq.Gateset:
     """
     return CliffPhXZGateset(atol=atol)
 
+
 def clifford_t_direct_gateset(eps: float, atol: float = 1e-8):
     """Returns the CliffTDirect gateset.
 
@@ -62,6 +67,7 @@ def clifford_t_direct_gateset(eps: float, atol: float = 1e-8):
         A Cirq gateset for compiling circuits to directly to Clifford + T.
     """
     return CliffTDirect(epsilon=eps, atol=atol)
+
 
 def clifford_t_gateset(atol: float) -> cirq.Gateset:
     """Returns the default Clifford + T gateset.

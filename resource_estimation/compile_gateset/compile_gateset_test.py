@@ -24,9 +24,14 @@ from resource_estimation.compile_gateset import (
     compile_gateset,
 )
 
+
 @pytest.fixture
 def random_circuit():
-    return cirq.Circuit(cirq.MatrixGate(cirq.testing.random_unitary(dim=8, random_state=7)).on(*cirq.LineQubit.range(3)))
+    return cirq.Circuit(
+        cirq.MatrixGate(cirq.testing.random_unitary(dim=8, random_state=7)).on(
+            *cirq.LineQubit.range(3)
+        )
+    )
 
 
 def test_compile_cliff_rz_gateset() -> None:
@@ -38,6 +43,7 @@ def test_compile_cliff_rz_gateset() -> None:
 
     assert all(op.gate in allowed for op in compiled.all_operations())
 
+
 def test_compile_cliff_phxz_gateset() -> None:
     q = cirq.LineQubit(0)
     circuit = cirq.Circuit(cirq.Rx(rads=pi / 7).on(q))
@@ -46,6 +52,7 @@ def test_compile_cliff_phxz_gateset() -> None:
     allowed = cirq.Gateset(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.PhasedXZGate)
 
     assert all(op.gate in allowed for op in compiled.all_operations())
+
 
 def test_compile_cliff_t_direct_gateset(random_circuit) -> None:
     q = cirq.LineQubit(0)

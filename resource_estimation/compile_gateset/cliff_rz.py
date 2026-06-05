@@ -136,13 +136,12 @@ def zpow_to_rz(
         deep=context.deep if context else False,
     )
 
+
 # I hate having so many functions written by AI here... >:(
 def _np_to_mpmath_matrix(u):
     """Converts numpy arrays to mpmath matrices to be compatible with pygridsynth"""
-    return mpmath.matrix([
-        [mpmath.mpc(complex(z).real, complex(z).imag) for z in row]
-        for row in u
-    ])
+    return mpmath.matrix([[mpmath.mpc(complex(z).real, complex(z).imag) for z in row] for row in u])
+
 
 def _normalize_to_su(U):
     """Applies global phase to ensure gates are in SU(2) and compatible with pygridsynth"""
@@ -151,11 +150,12 @@ def _normalize_to_su(U):
     phase = detU ** (-mpmath.mpf(1) / n)
     return phase * U, phase
 
+
 def replace_op_with_pygridsynth(op: cirq.Operation, epsilon: float) -> cirq.Circuit:
     """Gets pygridsynth replacement gates for cirq Operation up to two qubits"""
     if len(op.qubits) > 2:
         raise ValueError("Support for multi-qubit gates not currently available")
-    
+
     qubit_map = {i: q for i, q in enumerate(op.qubits)}
     matrix = _np_to_mpmath_matrix(cirq.unitary(op))
     matrix, _ = _normalize_to_su(matrix)
@@ -176,18 +176,20 @@ def replace_op_with_pygridsynth(op: cirq.Operation, epsilon: float) -> cirq.Circ
             op_to_add = cirq.S.on(qubit_map[discrete_gate.target_qubit])
         elif name == "TGate":
             op_to_add = cirq.T.on(qubit_map[discrete_gate.target_qubit])
-        elif name == "SXGate":  # See https://github.com/quantum-programming/pygridsynth/blob/main/pygridsynth/quantum_gate.py
+        elif (
+            name == "SXGate"
+        ):  # See https://github.com/quantum-programming/pygridsynth/blob/main/pygridsynth/quantum_gate.py
             op_to_add = cirq.X.on(qubit_map[discrete_gate.target_qubit])
         elif name == "CxGate":
             op_to_add = cirq.CNOT.on(
-                qubit_map[discrete_gate.control_qubit],
-                qubit_map[discrete_gate.target_qubit]
+                qubit_map[discrete_gate.control_qubit], qubit_map[discrete_gate.target_qubit]
             )
         else:
             # Coverage is omitted here because this should not run unless something unexpected happens with pygridsynth
             raise ValueError(f"Unsupported pygridsynth gate: {discrete_gate!r}")  # pragma: no cover
         replacement += [op_to_add]
     return replacement
+
 
 class CliffordGateset(cirq.TwoQubitCompilationTargetGateset, abc.ABC):
     """Base class for Gatesets with large overlap."""
@@ -306,17 +308,14 @@ class CliffTDirect(cirq.TwoQubitCompilationTargetGateset):
             preserve_moment_structure=False,
             reorder_operations=False,
         )
-    
+
     def _decompose_single_qubit_operation(
-        self,
-        op: cirq.Operation,
-        moment_idx: int = -1
+        self, op: cirq.Operation, moment_idx: int = -1
     ) -> cirq.OP_TREE:
         if op in self:
             return op
         return replace_op_with_pygridsynth(op, self._epsilon)
 
-    
     def _decompose_two_qubit_operation(
         self, op: cirq.Operation, moment_idx: int = -1
     ) -> cirq.OP_TREE:
@@ -331,8 +330,9 @@ class CliffTDirect(cirq.TwoQubitCompilationTargetGateset):
             cirq.drop_negligible_operations,
             # cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=1),
             # cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=2),
-            *super().preprocess_transformers
+            *super().preprocess_transformers,
         ]
+
     @property
     def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
         """List of transformers which should be run after decomposing individual operations."""
