@@ -15,7 +15,7 @@ from __future__ import annotations
 
 try:  # Different behavior for 3.10 and 3.11
     from typing import Self
-except ImportError:
+except ImportError:  # pragma: no cover
     from typing_extensions import Self
 import json
 import shutil
