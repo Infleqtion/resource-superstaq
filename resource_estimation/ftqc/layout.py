@@ -18,11 +18,12 @@ from collections import deque
 from dataclasses import dataclass, field
 from itertools import combinations, product
 from math import ceil, sqrt
-from typing import Literal, override
+from typing import Literal
 
 import cirq
 import networkx as nx
 import numpy as np
+from typing_extensions import override
 
 from .factory_specs import FactorySpec, FactoryType, default_factory_specs
 

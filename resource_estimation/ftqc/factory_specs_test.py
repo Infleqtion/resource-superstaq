@@ -38,6 +38,7 @@ def test_factory_spec_stores_correction_metadata():
     assert factory_spec.produced_gate == cirq.T
     assert factory_spec.correction_policy is correction_policy
     assert factory_spec.correction_policy.reaction_dynamic is reaction_dynamic
+    assert factory_spec.correction_policy.reaction_dynamic([{"X": 1, "Z": 2}]) == [{"X": 1, "Z": 2}]
 
 
 def test_factory_type_for_gate_matches_layout_ftype_strings():

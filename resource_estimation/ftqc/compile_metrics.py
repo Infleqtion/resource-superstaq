@@ -15,9 +15,9 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import override
 
 import cirq
+from typing_extensions import override
 
 from . import architecture as arch
 from .factory_specs import ReactionBasis, ReactionDepth, factory_type_for_gate
@@ -296,8 +296,6 @@ class ReactionDepthMetricCollector(FTCompileMetricCollector):
                     propagated_pauli = source_pauli.conjugated_by(input_op)
                     for target_qubit in propagated_pauli.qubits:
                         target_pauli = propagated_pauli.get(target_qubit)
-                        if target_pauli is None:
-                            continue
                         for target_basis in self._reaction_bases_for_pauli(target_pauli):
                             target_depth = new_depths[target_qubit]
                             target_depth[target_basis] = max(target_depth[target_basis], depth)

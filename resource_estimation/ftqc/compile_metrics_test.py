@@ -18,6 +18,7 @@ import resource_estimation.ftqc as ftqc
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.compile_ftqc as comp
 import resource_estimation.ftqc.compile_metrics as compile_metrics
+import resource_estimation.ftqc.factory_specs as factory_specs
 from resource_estimation.ftqc import Column, MovementLayout
 
 
@@ -121,6 +122,35 @@ def test_reaction_depth_metric_prefers_factory_dynamic_for_factory_gate():
     assert collector.reaction_depth[qubit] == {"X": 2, "Z": 3}
 
 
+def test_reaction_depth_metric_rejects_wrong_arity_factory_dynamic():
+    qubit = cirq.GridQubit(0, 0)
+    collector = compile_metrics.ReactionDepthMetricCollector()
+
+    def reaction_dynamic(
+        old_depths: factory_specs.ReactionDepthState,
+    ) -> factory_specs.ReactionDepthState:
+        return []
+
+    layout = MovementLayout(
+        cirq.Circuit(cirq.T(qubit)),
+        num_t_factories=1,
+        factory_specs={
+            "t": factory_specs.FactorySpec(
+                name="bad-t",
+                ftype="t",
+                produced_gate=cirq.T,
+                correction_policy=factory_specs.CorrectionPolicy(
+                    name="bad-correction",
+                    reaction_dynamic=reaction_dynamic,
+                ),
+            )
+        },
+    )
+
+    with pytest.raises(ValueError, match="returned 0 updates for 1 qubits"):
+        collector.on_logical_operation(cirq.T(qubit), layout, arch.DefaultMovement())
+
+
 def test_reaction_depth_metric_rejects_non_factory_non_clifford():
     qubit = cirq.GridQubit(0, 0)
     collector = compile_metrics.ReactionDepthMetricCollector()
@@ -131,3 +161,30 @@ def test_reaction_depth_metric_rejects_non_factory_non_clifford():
             MovementLayout(cirq.Circuit(cirq.T(qubit)), num_t_factories=1, factory_specs={}),
             arch.DefaultMovement(),
         )
+
+
+def test_reaction_depth_metric_wraps_clifford_conjugation_errors(monkeypatch):
+    class _FailingPauliString:
+        def conjugated_by(self, input_op: cirq.Operation) -> cirq.PauliString:
+            raise ValueError("cannot conjugate")
+
+    qubit = cirq.GridQubit(0, 0)
+    collector = compile_metrics.ReactionDepthMetricCollector()
+    collector.reaction_depth[qubit].update({"X": 1, "Z": 0})
+    monkeypatch.setattr(
+        collector,
+        "_pauli_string_for_basis",
+        lambda qubit, basis: _FailingPauliString(),
+    )
+
+    with pytest.raises(ValueError, match="non-Clifford operation without a factory spec"):
+        collector.on_logical_operation(
+            cirq.H(qubit),
+            MovementLayout(cirq.Circuit(cirq.H(qubit)), factory_specs={}),
+            arch.DefaultMovement(),
+        )
+
+
+def test_reaction_depth_metric_rejects_unsupported_pauli_factor():
+    with pytest.raises(ValueError, match="Unsupported Pauli factor"):
+        compile_metrics.ReactionDepthMetricCollector._reaction_bases_for_pauli(cirq.I)
