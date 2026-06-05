@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
+
 try:  # Different behavior for 3.10 and 3.11
     from typing import Self
 except ImportError:
