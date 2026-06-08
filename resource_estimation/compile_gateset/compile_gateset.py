@@ -57,14 +57,15 @@ def clifford_phxz_gateset(atol: float = 1e-8) -> cirq.Gateset:
     return CliffPhXZGateset(atol=atol)
 
 
-def clifford_t_direct_gateset(eps: float, atol: float = 1e-8):
+def clifford_t_direct_gateset(eps: float, atol: float = 1e-8) -> CliffTDirect:
     """Returns the CliffTDirect gateset.
 
     Args:
-        atol: Maximum allowable approximation error for each synthesized gate.
+        eps: Maximum allowable approximation error for each synthesized gate.
+        atol: Absolute tolerance used when decomposing and simplifying operations.
 
     Returns:
-        A Cirq gateset for compiling circuits to directly to Clifford + T.
+        A Cirq gateset for compiling circuits directly to Clifford + T.
     """
     return CliffTDirect(epsilon=eps, atol=atol)
 
@@ -118,5 +119,5 @@ def compile_gateset(
         return compile_cirq_to_clifford_t(circuit, eps=gateset._atol, verbose=verbose)
 
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning)
+        warnings.filterwarnings("ignore", category=FutureWarning, module=r"^cirq(\\.|$)")
         return cirq.optimize_for_target_gateset(circuit, gateset=gateset)

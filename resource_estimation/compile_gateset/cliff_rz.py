@@ -147,13 +147,15 @@ def zpow_to_rz(
 
 
 # I hate having so many functions written by AI here... >:(
-def _np_to_mpmath_matrix(u):
-    """Converts numpy arrays to mpmath matrices to be compatible with pygridsynth"""
-    return mpmath.matrix([[mpmath.mpc(complex(z).real, complex(z).imag) for z in row] for row in u])
+def _np_to_mpmath_matrix(u: np.ndarray) -> mpmath.matrix:
+    """Converts a NumPy array to an mpmath matrix for compatibility with pygridsynth."""
+    return mpmath.matrix(
+        [[mpmath.mpc(complex(z).real, complex(z).imag) for z in row] for row in u]
+    )
 
 
-def _normalize_to_su(U):
-    """Applies global phase to ensure gates are in SU(2) and compatible with pygridsynth"""
+def _normalize_to_su(U: mpmath.matrix) -> tuple[mpmath.matrix, mpmath.mpc]:
+    """Applies a global phase to ensure the matrix is in SU(n) for pygridsynth."""
     n = U.rows
     detU = mpmath.det(U)
     phase = detU ** (-mpmath.mpf(1) / n)
