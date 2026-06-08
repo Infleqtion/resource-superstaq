@@ -37,6 +37,7 @@ DEFAULT_STR2NUM = {
     "Data Qubit": 3,
     "Ancilla Patch": 4,
     "Distillation": 5,
+    "CNOT": 6
 }
 
 
@@ -65,7 +66,7 @@ def layout_to_array(layout, str2num=None):
     max_col = max(node.col for node in G.nodes)
 
     A = np.full((max_row + 1, max_col + 1), str2num["None"], dtype=int)
-    key_map = {"data": "Data Qubit", "ancilla": "Ancilla Patch", "t": "T Factory", "s": "S Factory", "block": "Distillation"}
+    key_map = {"data": "Data Qubit", "ancilla": "Ancilla Patch", "t": "T Factory", "s": "S Factory", "block": "Distillation", "CNOT": "CNOT"}
     for node in G.nodes:
         node_dict = G.nodes[node]
         key = node_dict["ftype"] if "ftype" in node_dict else node_dict["patch_type"]
@@ -507,8 +508,8 @@ if __name__ == "__main__":
             column_layout, 
             sandwich1, sandwich2, 
             embedded_layout, 
-            movement1, 
-            distillery
+            movement1,
+            movement2,
         ]
 
     category_colors = {
@@ -518,6 +519,7 @@ if __name__ == "__main__":
         "Data Qubit": "#a4f0c2",
         "Ancilla Patch": "#f5bad6",
         "Distillation": "#E6E6FA",
+        "CNOT": "#ed6340"
     }
 
     fig, axes = plot_layouts(
