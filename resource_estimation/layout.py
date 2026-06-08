@@ -171,6 +171,8 @@ class Layout(abc.ABC):
         G = self.layout_graph
 
         def custom_weight(u: cirq.GridQubit, v: cirq.GridQubit, attr: dict) -> int | None:
+            if G.nodes[v]["patch_type"] == "block" or G.nodes[u]["patch_type"] == "block":
+                return None
             if (G.nodes[v]["patch_type"] == "data") or (G.nodes[v]["patch_type"] == "factory"):
                 # Must go through at least one ancilla
                 if (v == trgt and u == ctrl) or (u == trgt and v == ctrl):
@@ -196,6 +198,7 @@ class Layout(abc.ABC):
             "s": "yellow",
             "data": "green",
             "ancilla": "blue",
+            "block": "pink"
         }
         G = self.layout_graph
         node_color = []
@@ -582,14 +585,25 @@ class Distillery(Layout):
         s_factories = []
         t_factories = []
         ancillas = []
+        distil_block = []
         for idx, qid in enumerate(sorted(all_qubits)):
             qubit_map[qid] = cirq.GridQubit(2, idx)
         self.set_map_circuit(qubit_map=qubit_map)
-        ancillas = [cirq.GridQubit(1, idx) for idx in range(max(len(all_qubits), self.num_s_factories))]
-        ancillas += [cirq.GridQubit(3, idx) for idx in range(max(len(all_qubits), self.num_t_factories))]
-        s_factories = [cirq.GridQubit(0, idx) for idx in range(self.num_s_factories)]
-        t_factories = [cirq.GridQubit(4, idx) for idx in range(self.num_t_factories)]
-        ancillas += [cirq.GridQubit(row, idx) for idx in range(self.num_t_factories) for row in range(5, 20)]
+        for idx in range(2*max(self.num_s_factories, self.num_t_factories)):
+            even = idx % 2 == 0
+            s_factories += [cirq.GridQubit(0, idx)] if even and (idx < 2*self.num_s_factories - 1) else []
+            t_factories += [cirq.GridQubit(4, idx)] if even and (idx < 2*self.num_t_factories - 1) else []
+            ancillas += [cirq.GridQubit(0, idx)] if not even and (idx < 2*self.num_s_factories - 1) else []
+            block_range = range(4, 12) if not even else range(5, 12)
+            distil_block += [cirq.GridQubit(idy, idx) for idy in block_range] if idx < 2*self.num_t_factories - 1 else []
+        ancillas += [cirq.GridQubit(1, idx) for idx in range(max(2*self.num_s_factories - 1, len(all_qubits)))]
+        ancillas += [cirq.GridQubit(3, idx) for idx in range(max(2*self.num_t_factories - 1, len(all_qubits)))]
+
+        # ancillas = [cirq.GridQubit(1, idx) for idx in range(2*max(len(all_qubits), self.num_s_factories))]
+        # ancillas += [cirq.GridQubit(3, idx) for idx in range(max(len(all_qubits), self.num_t_factories))]
+        # s_factories = [cirq.GridQubit(0, 2*idx) for idx in range(self.num_s_factories)]
+        # t_factories = [cirq.GridQubit(4, idx) for idx in range(self.num_t_factories)]
+        # distil_block = [cirq.GridQubit(row, idx) for idx in range(self.num_t_factories) for row in range(5, 20)]
         G = nx.Graph()
         G.add_nodes_from(
             [(q, dict(patch_type="data")) for q in qubit_map.values()],
@@ -602,6 +616,9 @@ class Distillery(Layout):
         )
         G.add_nodes_from(
             [(q, dict(patch_type="ancilla")) for q in ancillas],
+        )
+        G.add_nodes_from(
+            [(q, dict(patch_type="block")) for q in distil_block]
         )
         G.add_edges_from(
             [
