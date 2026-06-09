@@ -511,8 +511,8 @@ class Distillery(Layout):
     def __init__(
             self,
             input_circuit: cirq.Circuit,
-            num_t_factories: int = 0,
-            num_s_factories: int = 0,
+            num_t_factories: int = 1,
+            num_s_factories: int = 1,
     ):
         super().__init__(input_circuit=input_circuit,
                          num_t_factories=num_t_factories,
