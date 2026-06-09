@@ -103,10 +103,7 @@ def replace_cirq_op(
 
 
 def teleport_T(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
-    if hasattr(layout, "distil"):
-        distil = True
-    else:
-        distil = False
+    distil = hasattr(layout, "distil")
     available_t_factories = layout.available_t_factories
     all_t_factories = [
         factory
