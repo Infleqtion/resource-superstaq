@@ -80,6 +80,8 @@ def replace_cirq_op(
     primitives: cirq gates that are allowed in the underlying architecture
     verbose: flag to print more information
     """
+    if type(op.gate) is css.Barrier:
+        return []
     if op.gate == cirq.T:
         return teleport_T(op, layout)
     elif op.gate == cirq.S:
@@ -285,7 +287,8 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
     valid_types = (
         cirq.MeasurementGate,
         cirq.ResetChannel,
-        cirq.Rz,  # TODO: Why is this in here
+        # css.Barrier,
+        # cirq.Rz,  # TODO: Why is this in here
     )
     total_ops = len(list(circuit.all_operations()))
     if not all(
