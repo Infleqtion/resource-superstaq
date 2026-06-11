@@ -22,7 +22,6 @@ from . import (
     visualizations,
     clifford_t,
     distil,
-    magic_state_distillation,
 )
 
 __all__ = [
@@ -36,5 +35,4 @@ __all__ = [
     "cliff_rz",
     "clifford_t",
     "distil",
-    "magic_state_distillation",
 ]

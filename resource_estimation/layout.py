@@ -171,7 +171,8 @@ class Layout(abc.ABC):
         G = self.layout_graph
 
         def custom_weight(u: cirq.GridQubit, v: cirq.GridQubit, attr: dict) -> int | None:
-            if G.nodes[v]["patch_type"] == "block" or G.nodes[u]["patch_type"] == "block":
+            # First condition not covered because Distillation has not been implemented for lattice layouts
+            if G.nodes[v]["patch_type"] == "block" or G.nodes[u]["patch_type"] == "block":  # pragma: no cover
                 return None
             if (G.nodes[v]["patch_type"] == "data") or (G.nodes[v]["patch_type"] == "factory"):
                 # Must go through at least one ancilla
@@ -459,8 +460,56 @@ class Embedded(Layout):
         self.num_s_factories = len(s_factories)
         self.num_t_factories = len(t_factories)
 
+class MovementDistillery(MovementLayout):
+    def __init__(
+            self,
+            input_circuit: cirq.Circuit,
+            num_t_factories: int = 0,
+    ):
+        super().__init__(input_circuit=input_circuit,
+                         num_t_factories=num_t_factories,
+                         )
+        self.distil = True
 
-class Distillery(Layout):
+    def _generate(self):
+        program_qubits = len(self.input_circuit.all_qubits())
+        distillation_qubits = 31 * self.num_t_factories
+        total_qubits = program_qubits + distillation_qubits
+        side_length = ceil(sqrt(total_qubits))
+
+        def idx_to_xy(idx: int) -> tuple[int, int]:
+            x = idx // side_length
+            y = idx % side_length
+            return x, y   
+
+        qubit_map = {
+            qid: cirq.GridQubit(*idx_to_xy(idx))
+            for idx, qid in enumerate(sorted(self.input_circuit.all_qubits()))
+        }
+        self.set_map_circuit(qubit_map=qubit_map)
+        G = nx.Graph()
+        G.add_nodes_from(
+            [(q, dict(patch_type="data")) for q in qubit_map.values()],
+        )
+        for factory_index in range(self.num_t_factories):
+            qubit_index = factory_index*31 + program_qubits
+            output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
+            G.add_node(output_qubit, patch_type="factory", ftype="t", fid=factory_index, used=True)
+            block_qubits = [cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, 31)]
+            G.add_nodes_from(
+                [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
+            )
+        G.add_edges_from((n1, n2) for n1, n2 in combinations(G.nodes, 2))
+        self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
+        self.layout_graph = G
+
+    def distillation_block(self, factory_qubit: cirq.GridQubit) -> list[cirq.GridQubit]:
+        G = self.layout_graph
+        fid = G.nodes[factory_qubit]['fid']
+        block_qubits = [q for q in G.nodes if (G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid)]
+        return block_qubits + [factory_qubit]
+      
+class Distillery(Layout):  # pragma: no cover
     """
     Lattice layout used for distillation-based methods.
     

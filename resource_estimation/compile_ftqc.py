@@ -11,6 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from resource_estimation.architecture import Architecture
 from math import pi
 import copy
 from functools import partial
@@ -80,8 +85,6 @@ def replace_cirq_op(
     primitives: cirq gates that are allowed in the underlying architecture
     verbose: flag to print more information
     """
-    if type(op.gate) is css.Barrier:
-        return []
     if op.gate == cirq.T:
         return teleport_T(op, layout)
     elif op.gate == cirq.S:
@@ -118,7 +121,9 @@ def teleport_T(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
     operations = []
     if not available_t_factories:
         if distil:
-            operations += [lsp.Distil().on(factory) for factory in all_t_factories]
+            operations += [
+                lsp.Distil().on(*layout.distillation_block(factory)) for factory in all_t_factories
+            ]
         else:
             operations += [lsp.Cultivate(pi / 4).on(factory) for factory in all_t_factories]
         layout.reload_factories("t")
@@ -287,7 +292,7 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
     valid_types = (
         cirq.MeasurementGate,
         cirq.ResetChannel,
-        # css.Barrier,
+        css.Barrier,
         # cirq.Rz,  # TODO: Why is this in here
     )
     total_ops = len(list(circuit.all_operations()))
@@ -301,7 +306,7 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
 def _decompose_to_primitives(
     circuit: cirq.Circuit,
     layout: Layout,
-    arc: arch.Architecture,
+    arc: Architecture,
 ) -> tuple[cirq.Circuit, list[cirq.GridQubit]]:
     primitives = cirq.Gateset(
         *(cirq.GateFamily(g._gate, ignore_global_phase=False) for g in arc.primitives.gates)
@@ -358,7 +363,7 @@ def add_moves(
 
 def ft_compile(
     layout: Layout,
-    arc: arch.Architecture,
+    arc: Architecture,
     verbose: int = 1,
     with_barriers=False,
     num_threads: int = 1,

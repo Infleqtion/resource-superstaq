@@ -22,7 +22,9 @@ import cirq
 from . import lattice_surgery_primitives as lsp
 from cirq_superstaq.ops.qubit_gates import ParallelRGate
 from resource_estimation.stim_functions import cultivate
-from resource_estimation.distil import distil
+from resource_estimation.distil import distil_15_to_1
+from resource_estimation.compile_ftqc import add_moves
+from resource_estimation.estimate import ResourceEstimator
 import abc
 
 
@@ -367,20 +369,6 @@ class Architecture(abc.ABC):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
-    @cached_property
-    def _distil_cost(self,):
-        # No penalties to any base gates
-        base_distillation_cost = distil(self)
-
-        # Apply distillation repetition penalty
-        gate_cost = {gate: cost * 15**(self.distillation_repetition-1) for gate, cost in base_distillation_cost['gate_cost'].items()
-                     }
-        moment_cost = {
-            moment: cost * 15**(self.distillation_repetition-1) for moment, cost in base_distillation_cost['moment_cost'].items()
-        }
-
-        op_time = self.total_time(moment_cost_dict=moment_cost)
-        return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}    
 
     @property
     def rounds(self):
@@ -452,15 +440,12 @@ class Architecture(abc.ABC):
     def h_cost(self, op: cirq.Operation) -> dict:
         return self._h_cost
 
-    def distil_cost(self, op: cirq.Operation) -> dict:
-            return self._distil_cost
 
     ### Extra Methods ###
     def __post_init__(self):
         # Initialize with all shared Primitives then add special ones later
         self.op_cost = {
             lsp.Cultivate: self.cultivate_cost,
-            lsp.Distil: self.distil_cost,
             lsp.SyndromeExtract: self.syndrome_extract_cost,
             lsp.ErrorCorrect: self.error_correct_cost,
             type(cirq.X): self.x_cost,
@@ -513,7 +498,6 @@ class DefaultLattice(Architecture):
                 lsp.Merge,
                 lsp.Split,
                 lsp.Cultivate,
-                lsp.Distil,
                 lsp.ErrorCorrect,
                 lsp.SyndromeExtract,
                 cirq.I,
@@ -782,12 +766,36 @@ class DefaultMovement(Architecture):
         new_gate_cost[cirq.QubitPermutationGate] = permutations_to_add
         new_time = self.total_time(new_moment_cost)
         return {"op_time": new_time, "gate_cost": new_gate_cost, "moment_cost": new_moment_cost}
-
+    
+    def distil_t_cost(self, op: cirq.Operation) -> dict:
+        return self._distil_t_cost
+    
+    @cached_property
+    def _distil_t_cost(self):
+        """
+        Cost to get a T state using 15-to-1 distillation
+        """
+        mapped_circuit = distil_15_to_1()
+        with_moves = add_moves(
+            mapped_circuit,
+            zone_ops=self.zone_ops if self.zone_ops is not None else cirq.Gateset(),
+            alley_ops=self.alley_ops if self.alley_ops is not None else cirq.Gateset(),
+        )
+        estimator = ResourceEstimator(self)
+        rep_time = estimator.parallel_circuit_time(with_moves)
+        rep_moments = estimator.parallel_circuit_cost(with_moves)
+        rep_gates = estimator.serial_circuit_cost(with_moves)
+        op_time = rep_time * self.distillation_repetition
+        moment_cost = Counter({key: val*self.distillation_repetition for key, val in rep_moments.items()})
+        gate_cost = Counter({key: val*self.distillation_repetition for key, val in rep_gates.items()})
+        return {'op_time': op_time, 'moment_cost': moment_cost, 'gate_cost': gate_cost}
+    
     def __post_init__(self) -> None:
         super().__post_init__()
         self.op_cost[type(cirq.CNOT)] = self.cnot_cost
         self.op_cost[type(cirq.S)] = self.s_cost
         self.op_cost[lsp.Move] = self.move_cost
+        self.op_cost[lsp.Distil] = self.distil_t_cost
 
     @property
     def __name__(self) -> str:

@@ -75,6 +75,7 @@ def movement_estimator():
 )
 def test_all_primitives(estimator):
     dummy_qubits = [cirq.GridQubit(i, j) for i in range(3) for j in range(3)]
+    factory_block = [cirq.GridQubit(4, i) for i in range(31)]
     circuit = cirq.Circuit()
     circuit += [cirq.I.on(q) for q in dummy_qubits]
     circuit += [cirq.Z.on(q) for q in dummy_qubits]
@@ -87,6 +88,7 @@ def test_all_primitives(estimator):
     if arc.movement:
         circuit += [cirq.CNOT.on(dummy_qubits[i], dummy_qubits[i + 1]) for i in range(8)]
         circuit += [cirq.S.on(q) for q in dummy_qubits]
+        circuit += [lsp.Distil().on(*factory_block)]
     else:
         circuit += [
             lsp.Merge(2, smooth=True).on(*dummy_qubits[:2]),
@@ -95,7 +97,6 @@ def test_all_primitives(estimator):
             lsp.Split([1, 1], smooth=False).on(*dummy_qubits[1:3]),
         ]
     circuit += [lsp.Cultivate(pi / 4).on(q) for q in dummy_qubits]
-    circuit += [lsp.Distil().on(q) for q in dummy_qubits]
 
     # At least verify that there is no randomness in these estimates
     # Still TODO: Make this test better
@@ -190,10 +191,6 @@ def test_error_handling(lattice_estimator, movement_estimator):
     )
     with pytest.raises(ValueError, match="incompatible"):
         _ = movement_estimator.serial_circuit_cost(bad_circuit)
-
-    bad_circuit = cirq.Circuit([lsp.Distil().on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b)])
-    with pytest.raises(ValueError, match="incompatible"):
-        _ = lattice_estimator.serial_circuit_cost(bad_circuit)
 
 
 

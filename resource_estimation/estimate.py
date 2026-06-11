@@ -11,11 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from resource_estimation.architecture import Architecture
+
 import warnings
 from collections import Counter
 import cirq
+import cirq_superstaq as css
 from resource_estimation.cliff_rz import compile_cliff_rz
-from resource_estimation.architecture import Architecture
 from tqdm import tqdm
 from functools import cached_property
 from random import choice

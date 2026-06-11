@@ -241,10 +241,12 @@ class Cultivate(cirq.Gate):
 @cirq.value_equality    
 class Distil(cirq.Gate):
     """
-    Subclassed cirq gate to represent the distillation of a single magic state using 16 code patches.
+    Subclassed cirq gate to represent the distillation of a single T state using 16 code patches.
     The underlying implementation is assumed to be the one in https://arxiv.org/abs/quant-ph/0403025.
+    Noisy T gates are assumed to come from cultivation, resulting in 15 additional logical patches.
+    
 
-    Distil|0^16> --> (|0> + e^(iθ)|1>)/√2 |0^15>
+    Distil|0^31> --> (|0> + e^(1j*pi/4)|1>)/√2 |0^30>
     
     """
 
@@ -252,7 +254,7 @@ class Distil(cirq.Gate):
         pass
     
     def num_qubits(self,):
-        return 1
+        return 31
 
     def __str__(self) -> str:
         return "DISTIL"
