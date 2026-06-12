@@ -149,9 +149,7 @@ def zpow_to_rz(
 # I hate having so many functions written by AI here... >:(
 def _np_to_mpmath_matrix(u: np.ndarray) -> mpmath.matrix:
     """Converts a NumPy array to an mpmath matrix for compatibility with pygridsynth."""
-    return mpmath.matrix(
-        [[mpmath.mpc(complex(z).real, complex(z).imag) for z in row] for row in u]
-    )
+    return mpmath.matrix([[mpmath.mpc(complex(z).real, complex(z).imag) for z in row] for row in u])
 
 
 def _normalize_to_su(U: mpmath.matrix) -> tuple[mpmath.matrix, mpmath.mpc]:
