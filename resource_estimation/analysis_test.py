@@ -11,13 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import cirq
 import math
-import pytest
-import numpy as np
 
-import resource_estimation.analysis as analysis
+import cirq
+import numpy as np
+import pytest
+
 import resource_estimation.architecture as arc
+from resource_estimation import analysis
 
 
 @pytest.fixture

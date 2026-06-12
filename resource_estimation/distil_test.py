@@ -11,11 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from math import pi
+
 import cirq
 import pytest
+
 from resource_estimation.distil import distil_15_to_1
 from resource_estimation.lattice_surgery_primitives import Cultivate
-from math import pi
 
 # Need to add tests here.
 
@@ -86,8 +88,7 @@ def base_15_to_one() -> cirq.Circuit:
 
 
 def test_15_to_one(base_15_to_one):
-    """
-    Simple check to confirm that the compression technique agrees with the standard circuit
+    """Simple check to confirm that the compression technique agrees with the standard circuit
     """
     circuit = distil_15_to_1()
 

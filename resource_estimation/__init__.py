@@ -14,25 +14,25 @@
 from . import (
     architecture,
     cliff_rz,
+    clifford_t,
     compile_ftqc,
+    distil,
     estimate,
     lattice_surgery_primitives,
     layout,
     stim_functions,
     visualizations,
-    clifford_t,
-    distil,
 )
 
 __all__ = [
     "architecture",
-    "stim_functions",
-    "lattice_surgery_primitives",
-    "estimate",
-    "compile_ftqc",
-    "layout",
-    "visualizations",
     "cliff_rz",
     "clifford_t",
+    "compile_ftqc",
     "distil",
+    "estimate",
+    "lattice_surgery_primitives",
+    "layout",
+    "stim_functions",
+    "visualizations",
 ]

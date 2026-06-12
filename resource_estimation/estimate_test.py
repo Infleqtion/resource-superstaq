@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from math import pi
+
 import cirq
 import pytest
+from numpy import isclose
+
 import resource_estimation.architecture as arch
 import resource_estimation.estimate as est
 import resource_estimation.lattice_surgery_primitives as lsp
-from numpy import isclose
 
 
 @pytest.fixture

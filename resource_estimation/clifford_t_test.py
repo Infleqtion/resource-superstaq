@@ -11,14 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import cirq
-import pytest
 from math import pi
+
+import cirq
 import numpy as np
+import pytest
+
 from resource_estimation.clifford_t import (
+    approx_rz,
     compile_cirq_to_clifford_t,
     process_cirq_str,
-    approx_rz,
     toffoli_decompose,
 )
 

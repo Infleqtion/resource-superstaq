@@ -13,23 +13,24 @@
 # limitations under the License.
 import json
 import shutil
-from dataclasses import dataclass, asdict, field
-from pathlib import Path
+import warnings
+from collections import Counter
+from dataclasses import asdict, dataclass, field
 from functools import partial
+from pathlib import Path
+
+import cirq
+import numpy as np
 from tqdm import tqdm
+
 from resource_estimation.architecture import (
-    DefaultMovement,
     DefaultLattice,
+    DefaultMovement,
     DualSpeciesMovement,
     MeasureZonesOnly,
     Superconductor,
 )
 from resource_estimation.visualizations import C, boxed_header
-import cirq
-from collections import Counter
-import numpy as np
-import warnings
-
 
 STR2ARCH = {
     "ssm": partial(DefaultMovement, idling=False, post_op_correction=True),
@@ -48,8 +49,7 @@ except OSError:  # pragma: no cover
 def get_eps(
     cliff_rz_circuit: cirq.Circuit, approximation_fidelity: float
 ) -> tuple[float, int, int]:
-    """
-    Gets the per-angle rotation approximation parameter epsilon such that the
+    """Gets the per-angle rotation approximation parameter epsilon such that the
     product of all Rz gate fidelities is equal to the requested
     `approximation_fidelity` (i.e., the total approximation fidelity is no less
     than the requested target).
@@ -71,15 +71,13 @@ def get_eps(
 
 
 def surface_code_fidelity(d, A=0.03, pth=0.0057, p=0.001) -> float:
-    """
-    Fidelity of surface code operations according to the Fowler paper (Eq 11 of https://web.physics.ucsb.edu/~martinisgroup/papers/Fowler2012.pdf)
+    """Fidelity of surface code operations according to the Fowler paper (Eq 11 of https://web.physics.ucsb.edu/~martinisgroup/papers/Fowler2012.pdf)
     """
     return 1 - A * (p / pth) ** ((d + 1) // 2)
 
 
 def get_t_path(circuit: cirq.Circuit, verbose=True):
-    """
-    Get the T Path of a logical circuit
+    """Get the T Path of a logical circuit
     Good for comparing with cost model resource estimations
     """
     qubit_paths = {qubit: [] for qubit in circuit.all_qubits()}
@@ -107,8 +105,7 @@ def get_important_information(
     fold_cultiv: bool,
     pfid=0.99,
 ) -> tuple[int, int, Counter, float, int]:
-    """
-    Get information used to set certain error-correction assumptions.
+    """Get information used to set certain error-correction assumptions.
 
     Given a Clifford + T circuit and a target program fidelity, determine which
     T-gate fidelity level is needed to stay within the error budget. If neither
@@ -170,8 +167,7 @@ def get_important_information(
 
 
 def break_up_ops(cliff_rz_circuit: cirq.Circuit) -> tuple[int, int]:
-    """
-    Counts operations in Clifford + Rz circuit according to Rz Gates (continuous angle rotations) and Cliffords
+    """Counts operations in Clifford + Rz circuit according to Rz Gates (continuous angle rotations) and Cliffords
     """
     total_ops = 0
     num_rz_gates = 0
@@ -222,8 +218,7 @@ def error_estimate(
 
 @dataclass
 class Report:
-    """
-    Class for containing information about a resource estimate to be saved and reviewed later.
+    """Class for containing information about a resource estimate to be saved and reviewed later.
     """
 
     ## Inputs
@@ -348,12 +343,12 @@ class Report:
             filepath = savedir / f"{base}_{iteration}.{ext}"
         with open(filepath, "w") as f:
             json.dump(asdict(self), f, indent=4)
-        print(f"{C.OKGREEN}Saved Report to {C.END}{C.OKCYAN}{str(filepath)}{C.END}")
+        print(f"{C.OKGREEN}Saved Report to {C.END}{C.OKCYAN}{filepath!s}{C.END}")
         return filepath
 
     @classmethod
     def load(cls, filename):
-        with open(filename, "r") as f:
+        with open(filename) as f:
             configs = json.load(f)
         return cls(**configs)
 

@@ -11,14 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import cirq
 from math import pi
+
+import cirq
+
 from resource_estimation.lattice_surgery_primitives import Cultivate
 
 
 def distil_15_to_1() -> cirq.Circuit:
-    """
-    Generates a 15-to-1 non-recursive distillation circuit.
+    """Generates a 15-to-1 non-recursive distillation circuit.
     The circuit is a compact version of the one in https://github.com/Infleqtion/client-superstaq/blob/main/cirq-superstaq/cirq_superstaq/circuits/msd.py
     T gates are produced via cultivation.
     The assumed qubit footprint is based on Movement Architectures.

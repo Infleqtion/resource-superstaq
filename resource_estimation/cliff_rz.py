@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import cirq
 import cirq_superstaq as css
 import numpy as np
-import warnings
 
 # warnings.filterwarnings(category=FutureWarning, action="ignore")
 
@@ -138,8 +138,7 @@ def zpow_to_rz(
 
 
 class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
-    """
-    A Gateset for a Clifford + Rz
+    """A Gateset for a Clifford + Rz
     """
 
     def __init__(self, atol: float = 1e-8) -> None:

@@ -13,13 +13,14 @@
 # limitations under the License.
 import cirq
 import pytest
-from cultiv import make_end2end_cultivation_circuit, make_cirq_circuits
+import stim
+from cultiv import make_cirq_circuits, make_end2end_cultivation_circuit
+
 from resource_estimation.stim_functions import (
     count_stim_resources,
     cultivate,
     load_saved_cost,
 )
-import stim
 
 
 @pytest.fixture

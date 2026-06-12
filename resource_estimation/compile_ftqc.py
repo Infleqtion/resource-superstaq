@@ -13,26 +13,28 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from resource_estimation.architecture import Architecture
-from math import pi
 import copy
-from functools import partial
-from collections.abc import Iterator
-import cirq
-import cirq_superstaq as css
-import numpy as np
-from . import architecture as arch
-from . import lattice_surgery_primitives as lsp
-from cirq_superstaq import Barrier, barrier
-from .layout import Layout
-from tqdm import tqdm
-from time import time
 import os
 import sys
+from collections.abc import Iterator
+from functools import partial
+from math import pi
+from time import time
 from warnings import warn
+
+import cirq
+import cirq_superstaq as css
+from cirq_superstaq import Barrier, barrier
+from tqdm import tqdm
+
+from . import lattice_surgery_primitives as lsp
+from .layout import Layout
+
 # IMPORTANT NOTES
 # Classical control has not been implemented yet
 #   If you requested S, I assume you measure 1 and have to do Z
@@ -43,8 +45,7 @@ from warnings import warn
 
 # This function is only visual and is extremely finicky, so it is not tested
 def knock_off_tqdm(moment_idx: int, total: int, tstart: float, message: str):  # pragma: no cover
-    """
-    Implements tqdm-like behavior for the compiler
+    """Implements tqdm-like behavior for the compiler
     """
     if not sys.stdout.isatty():
         # This is to ensure that testing can progress as normal
@@ -78,8 +79,7 @@ def replace_cirq_op(
     layout: Layout,
     transversal_cnot: bool,
 ):
-    """
-    Replacement logic similar to decomposition for cirq operations to be converted to primitives.
+    """Replacement logic similar to decomposition for cirq operations to be converted to primitives.
 
     op: cirq operation to be unrolled
     layout: Layout of the logical qubits
@@ -88,9 +88,9 @@ def replace_cirq_op(
     """
     if op.gate == cirq.T:
         return teleport_T(op, layout)
-    elif op.gate == cirq.S:
+    if op.gate == cirq.S:
         return teleport_S(op, layout)
-    elif op.gate == cirq.CNOT and not transversal_cnot:
+    if op.gate == cirq.CNOT and not transversal_cnot:
         path_patches = layout.route_cnot(*op.qubits)
         num_qubits = len(path_patches)
         return [
@@ -101,11 +101,10 @@ def replace_cirq_op(
             lsp.Merge(num_qubits=num_qubits - 1, smooth=False).on(*path_patches[1:]),
             lsp.Split(partitions=[1] * (len(path_patches[1:])), smooth=False).on(*path_patches[1:]),
         ]
-    else:
-        raise ValueError(
-            f"Invalid Op for "
-            f"{'transversal' if transversal_cnot else 'non-transversal'} CNOT: {op.gate}"
-        )
+    raise ValueError(
+        f"Invalid Op for "
+        f"{'transversal' if transversal_cnot else 'non-transversal'} CNOT: {op.gate}"
+    )
 
 
 def teleport_T(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
@@ -164,11 +163,9 @@ def teleport_S(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
 def handle_idling(
     circuit: cirq.Circuit, layout: Layout, with_barriers: bool, rounds: int, verbose=0
 ) -> cirq.Circuit:
-    """
-    Helper function for the compiler that handles idling. This way we can experiment with different kinds of idling or even turn it off entirely.
+    """Helper function for the compiler that handles idling. This way we can experiment with different kinds of idling or even turn it off entirely.
     This function is still a work in progress, but it is likely to take the form of various compiler passes.
     """
-
     # TODO: This pass is a main bottleneck for larger experiments, so make it faster
     # Assemble Qubits that will be subject to Idling
     G = layout.layout_graph
@@ -227,10 +224,8 @@ def post_op_syndrome_extraction(
     rounds: int,
     verbose: int = 0,
 ) -> cirq.Circuit:
+    """For movement, it has been suggested that we just do syndrome extraction (for a single round) right after a logical operations.
     """
-    For movement, it has been suggested that we just do syndrome extraction (for a single round) right after a logical operations.
-    """
-
     # Allowing a little bit of flexibility on what we want to correct
     # Might even want to add Lattice Primitives, but there aren't many (any?) that are not implicitly corrected
     ops_to_correct = [
@@ -277,8 +272,7 @@ def post_op_syndrome_extraction(
 
 
 def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
-    """
-    Checks that the given circuit is in the Clifford+T gateset.
+    """Checks that the given circuit is in the Clifford+T gateset.
     """
     # TODO: This function probably belongs in some utilities file, since it is not particularly integral to compiling.
     valid_gates = (
@@ -301,7 +295,7 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
         op.gate in valid_gates or isinstance(op.gate, valid_types)
         for op in tqdm(circuit.all_operations(), total=total_ops, disable=not verbose)
     ):
-        raise ValueError(f"This compiler only handles Clifford + Rz circuits")
+        raise ValueError("This compiler only handles Clifford + Rz circuits")
 
 
 def _decompose_to_primitives(
@@ -329,8 +323,7 @@ def _decompose_to_primitives(
 def add_moves(
     circuit: cirq.Circuit, zone_ops: cirq.Gateset, alley_ops: cirq.Gateset, verbose: int = 0
 ) -> cirq.Circuit:
-    """
-    Handles replacement moves for both alley movement and interaction zone movement
+    """Handles replacement moves for both alley movement and interaction zone movement
     """
     total = len(circuit)
     tstart = time()
@@ -370,8 +363,7 @@ def ft_compile(
     num_threads: int = 1,
     skip_validation: bool = False,
 ):
-    """
-    Basic read/replace compiler that converts a cirq Circuit over the Clifford + T gateset to a cirq circuit of primitives.
+    """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T gateset to a cirq circuit of primitives.
     The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
     The architecture input contains information about what primtives are accessible to the compiler and which extra passes should be added to the primitive circuit.
     The passes available are post op correction and idling.

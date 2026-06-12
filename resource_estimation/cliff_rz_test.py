@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import cirq
+
 import resource_estimation.cliff_rz as cliff
-from scripts.circuits import kanamori, fermi_hubbard
+from scripts.circuits import fermi_hubbard, kanamori
 
 
 def test_fermi():

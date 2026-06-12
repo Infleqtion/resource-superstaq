@@ -13,12 +13,13 @@
 # limitations under the License.
 import cirq
 import pytest
+
 from resource_estimation.layout import (
     Column,
-    MovementDistillery,
-    FactorySandwich,
-    MovementLayout,
     Embedded,
+    FactorySandwich,
+    MovementDistillery,
+    MovementLayout,
 )
 
 

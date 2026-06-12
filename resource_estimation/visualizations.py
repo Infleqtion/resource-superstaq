@@ -14,9 +14,10 @@
 from itertools import chain
 
 import cirq
-import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import networkx as nx
+from matplotlib import animation
+
 from . import lattice_surgery_primitives as lsp
 from .layout import Layout
 
@@ -24,8 +25,7 @@ from .layout import Layout
 def visualize_layout_moment(
     G: nx.Graph, moment_paths: list[list[str]], column_layout: Layout
 ):  # pragma: no cover
-    """
-    This probably does not work anymore without a significant amount of changes.
+    """This probably does not work anymore without a significant amount of changes.
     """
     moment_paths_flat = list(chain.from_iterable(moment_paths))
     diction = {}
@@ -42,9 +42,9 @@ def visualize_layout_moment(
     distinct_moments = [[]]
     for path in moment_paths:
         inserted = False
-        for i in range(0, len(distinct_moments)):
+        for i in range(len(distinct_moments)):
             conflict = False
-            for j in range(0, len(distinct_moments[i])):
+            for j in range(len(distinct_moments[i])):
                 if has_intersection(distinct_moments[i][j], path):
                     conflict = True
             if not conflict:
@@ -58,9 +58,9 @@ def visualize_layout_moment(
         ncols=1,
         figsize=(7, len(distinct_moments) * column_layout.rows),
     )
-    for i in range(0, len(distinct_moments)):
+    for i in range(len(distinct_moments)):
         for path in distinct_moments[i]:
-            for j in range(0, len(path) - 1):
+            for j in range(len(path) - 1):
                 if path[j][0] == "a":
                     G.nodes[path[j]]["color"] = "yellow"
                 G.edges[path[j], path[j + 1]]["color"] = "yellow"
@@ -85,8 +85,7 @@ def visualize_layout_moment(
 
 
 def display_NN_graph(G: nx.Graph):  # pragma: no cover
-    """
-    This can display the connectivity graph of a layout effectively
+    """This can display the connectivity graph of a layout effectively
     """
     pos_dict = {}
     labels = {}
@@ -118,8 +117,7 @@ def display_NN_graph(G: nx.Graph):  # pragma: no cover
 
 
 def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pragma: no cover
-    """
-    Little animation for tracking factory usage in the (slow) movement layout. The new fast
+    """Little animation for tracking factory usage in the (slow) movement layout. The new fast
     layouts don't really use graphs
     """
     G = lay.layout_graph
@@ -170,8 +168,7 @@ def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pragm
 
 
 def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pragma: no cover
-    """
-    Little animation for tracking factory usage in the (slow) lattice surgery layout. The new fast
+    """Little animation for tracking factory usage in the (slow) lattice surgery layout. The new fast
     layouts don't really use graphs, maybe there is some way to change these to bring it back though
     """
     G = lay.layout_graph
@@ -199,7 +196,7 @@ def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pr
                 if G.nodes[op.qubits[0]]["patch_type"] == "factory":
                     G.nodes[op.qubits[0]]["color"] = "gray"
                 merging_qubits = list(op.qubits)
-                for i in range(0, len(merging_qubits) - 1):
+                for i in range(len(merging_qubits) - 1):
                     G.edges[(merging_qubits[i], merging_qubits[i + 1])]["color"] = "yellow"
             if op.gate in cirq.GateFamily(lsp.Cultivate):
                 G.nodes[op.qubits[0]]["color"] = "green"
@@ -229,8 +226,7 @@ def display_lattice_moments(ops: list[list[cirq.Operation]], lay: Layout):  # pr
 def animate_layout_moment(
     G: nx.Graph, moment_paths: list[list[str]], column_layout: Layout
 ):  # pragma: no cover
-    """
-    Not sure if this visualization works anymore, hard to get the moment_paths
+    """Not sure if this visualization works anymore, hard to get the moment_paths
     """
     moment_paths_flat = list(chain.from_iterable(moment_paths))
     diction = {}
@@ -307,7 +303,7 @@ def draw_2d_array_ascii(arr):  # pragma: no cover
             else:
                 color = BLUE
             print(color + s.center(box_width) + RESET + "|", end="")
-        print("")
+        print()
 
         # Bottom border of boxes and connecting lines
         if r < rows - 1:
@@ -342,8 +338,7 @@ def hr(width=40):  # pragma: no cover
 
 
 def make_pretty(obj) -> str:  # pragma: no cover
-    """
-    Pulling out the pretty functionality from the ResourceEstimator class to avoid doubling resource calls
+    """Pulling out the pretty functionality from the ResourceEstimator class to avoid doubling resource calls
     """
     if hasattr(obj, "__name__"):
         return obj.__name__

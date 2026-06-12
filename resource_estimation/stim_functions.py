@@ -15,11 +15,11 @@ import json
 import os
 import warnings
 from collections import Counter
+from typing import Literal, Optional
 
 import cirq
 import cultiv
 import stim
-from typing import Literal
 
 STR2GATE = {
     "PhasedXZGate": cirq.PhasedXZGate,
@@ -32,8 +32,7 @@ STR2GATE = {
 
 
 def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.Gate, int]]:
-    """
-    Parses stim circuit to count relevant operations and returns both parallel and serial costs
+    """Parses stim circuit to count relevant operations and returns both parallel and serial costs
     """
     # A map from Stim operations to replacement physical operations
     op_map = {
@@ -67,11 +66,11 @@ def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.G
     for instr in stim_circuit:
         if instr.name in ops_to_ignore:
             continue
-        elif instr.name == "TICK":
+        if instr.name == "TICK":
             total_parallel += tick_total
             tick_total = Counter({})  # Reset moment counting
             continue
-        elif instr.name == "REPEAT":
+        if instr.name == "REPEAT":
             repeats = instr.repeat_count
             one_round = count_stim_resources(instr.body_copy())
             total_serial += {k: v * repeats for k, v in one_round["serial"].items()}
@@ -96,11 +95,10 @@ def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.G
 def load_saved_cost(
     dsurface: int,
     op_key: Literal["cultivate", "cnot", "memory_d_rounds", "memory_1_round"],
-    style: Literal[None, "gidney", "yale"] = None,
-    fault_distance: Literal[None, 3, 5] = None,
+    style: Optional[Literal["gidney", "yale"]] = None,
+    fault_distance: Optional[Literal[3, 5]] = None,
 ) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
-    """
-    Gets saved serial and parallel costs from the `cultivate_costs.json` file
+    """Gets saved serial and parallel costs from the `cultivate_costs.json` file
     Converts saved strings to proper cirq gate objects
     """
     if op_key == "cultivate" and style is None:
@@ -108,7 +106,7 @@ def load_saved_cost(
     if op_key == "cultivate" and fault_distance is None:
         raise ValueError("Fault distance cannot be None for cultivation")
     with open(
-        os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json", "r"
+        os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json"
     ) as f:
         saved_costs = json.load(f)
     loaded_costs = (
@@ -130,8 +128,7 @@ def cultivate(
     fold=False,
     for_test=False,
 ) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
-    """
-    Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
+    """Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
     If the final patch size is less than 25 it reads from saved resources instead of calling the functions directly
     The `for_test` argument is to turn off the loading behvior for the purpose of testing
     """

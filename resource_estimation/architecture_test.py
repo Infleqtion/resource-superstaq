@@ -15,14 +15,15 @@ import json
 import os
 from collections import Counter
 from math import ceil, pi
-import numpy as np
 
 import cirq
+import numpy as np
 import pytest
+from cirq_superstaq import ParallelRGate
+
 import resource_estimation.architecture as arch
 import resource_estimation.estimate as est
 import resource_estimation.lattice_surgery_primitives as lsp
-from cirq_superstaq import ParallelRGate
 from resource_estimation.stim_functions import cultivate, load_saved_cost
 
 
@@ -353,7 +354,7 @@ def test_against_cultiv(d):
     # Test Syndrome Extract
     # Set up memory circuit
     with open(
-        os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json", "r"
+        os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json"
     ) as f:
         saved_resources = json.load(f)
 
@@ -487,7 +488,6 @@ def test_lattice_moment_costs(lattice_architecture):
     # Test that all primitives have correct moment costs
     op = lsp.Cultivate(pi / 4).on(cirq.GridQubit(0, 0))
     cost = lattice_architecture.moment_cost(op=op)
-    pass
 
     op = cirq.H.on(cirq.GridQubit(0, 0))
     cost = lattice_architecture.moment_cost(op)
@@ -820,8 +820,7 @@ def test_folded_architecture():
 
 
 def test_convert_globals_to_phasedxz():
-    """
-    Confirm that the conversion function works as expected
+    """Confirm that the conversion function works as expected
     """
     sc = arch.Superconductor()
     example1 = {

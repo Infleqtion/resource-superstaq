@@ -11,17 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from collections import Counter, deque
-from math import pi
 import textwrap
+from collections import Counter
+from math import pi
+
 import cirq
-from numpy import isclose
 import pytest
+from cirq_superstaq import Barrier
+
 import resource_estimation.architecture as arch
 import resource_estimation.compile_ftqc as comp
 import resource_estimation.lattice_surgery_primitives as lsp
-from cirq_superstaq import Barrier
-from resource_estimation.layout import MovementDistillery, MovementLayout, Column, Embedded
+from resource_estimation.layout import Column, Embedded, MovementDistillery, MovementLayout
 
 
 @pytest.fixture
@@ -31,7 +32,7 @@ def bell_circuit():
     return circuit
 
 
-@pytest.fixture()
+@pytest.fixture
 def t_circuit():
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit([cirq.H.on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b), cirq.T.on(qubit_b)])
