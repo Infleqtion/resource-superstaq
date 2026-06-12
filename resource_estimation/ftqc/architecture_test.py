@@ -645,9 +645,6 @@ def test_classmethods() -> None:
     }
     ls_arc = arch.Architecture.from_dict(lattice_input_dict)
     assert ls_arc.phys_gate_times[cirq.CZ] == 99
-    import os
-
-    print(os.getcwd())
     ls_arc = arch.Architecture.from_json("data/lattice_test.json")
     assert ls_arc.phys_gate_times[cirq.CZ] == 99
 

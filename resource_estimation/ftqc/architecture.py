@@ -257,7 +257,7 @@ class Architecture(abc.ABC):
 
     ### Fundamental Cost Counting Methods ###
     # These should never be overwritten
-    def gate_cost(self, op: cirq.Operation) -> dict[type[Gate], int]:
+    def gate_cost(self, op: cirq.Operation) -> dict[type[cirq.Gate], int]:
         try:
             return self.op_cost[type(op.gate)](op)["gate_cost"]
         except KeyError:

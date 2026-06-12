@@ -485,7 +485,7 @@ class MovementDistillery(MovementLayout):
             G.add_nodes_from(
                 [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
             )
-        G.add_edges_from((n1, n2) for n1, n2 in combinations(G.nodes, 2))
+        # Movement layouts assume all-to-all connectivity; avoid storing O(n^2) edges explicitly.
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
 

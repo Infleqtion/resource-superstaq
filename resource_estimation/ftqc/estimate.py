@@ -30,7 +30,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 class ResourceEstimator:
     """Class for resource estimator objects defined by the given architecture"""
 
-    def __init__(self, arc: Architecture):
+    def __init__(self, arc: Architecture) -> None:
         self.arc = arc
 
     def validate_circuit_ops(self, circuit: cirq.Circuit) -> None:

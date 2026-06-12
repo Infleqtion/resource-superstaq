@@ -950,4 +950,4 @@ def test_different_rounds_distil() -> None:
         compiled_circuit = comp.ft_compile(layout=layout, arc=architecture)
         for op in compiled_circuit.all_operations():
             if op in cirq.GateFamily(lsp.SyndromeExtract):
-                op.gate.rounds == k
+                assert op.gate.rounds == k

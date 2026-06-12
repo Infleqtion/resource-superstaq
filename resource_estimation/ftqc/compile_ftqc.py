@@ -44,7 +44,7 @@ from .layout import Layout
 
 
 # This function is only visual and is extremely finicky, so it is not tested
-def knock_off_tqdm(moment_idx: int, total: int, tstart: float, message: str):  # pragma: no cover
+def knock_off_tqdm(moment_idx: int, total: int, tstart: float, message: str) -> None:  # pragma: no cover
     """Implements tqdm-like behavior for the compiler"""
     if not sys.stdout.isatty():
         # This is to ensure that testing can progress as normal

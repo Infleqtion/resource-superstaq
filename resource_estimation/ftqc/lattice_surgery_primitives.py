@@ -93,7 +93,7 @@ class Split(cirq.Gate):
     Spilt([1, 3, 2]).on([X, Y, Z, P, Q , R]) --> [X], [Y, Z, P], [Q, R]
     """
 
-    def __init__(self, partitions: list[int], smooth=True) -> None:
+    def __init__(self, partitions: list[int], smooth: bool = True) -> None:
         self._num_qubits = sum(partitions)
         self._partitions = partitions
         self._smooth = smooth
@@ -112,7 +112,7 @@ class Split(cirq.Gate):
     def __str__(self) -> str:
         return "SPLIT"
 
-    def _json_dict_(self) -> dict[str, bool | int]:
+    def _json_dict_(self) -> dict[str, bool | list[int]]:
         return {"smooth": self._smooth, "partitions": self._partitions}
 
     def __repr__(self) -> str:
@@ -253,8 +253,8 @@ class Distil(cirq.Gate):
     def __str__(self) -> str:
         return "DISTIL"
 
-    def _json_dict_(self) -> dict:
-        return dict()
+    def _json_dict_(self) -> dict[str, object]:
+        return {}
 
     def __repr__(self) -> str:
         return "lsp.Distil()"
@@ -263,7 +263,7 @@ class Distil(cirq.Gate):
     def _json_namespace_(cls) -> str:
         return "lsp"
 
-    def _value_equality_values_(self) -> tuple:
+    def _value_equality_values_(self) -> tuple[()]:
         return ()
 
 
