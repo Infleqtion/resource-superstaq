@@ -28,7 +28,6 @@ def lattice_estimator():
             idling=True,
             post_op_correction=1,
             cultivation_repetition=1,
-            distillation_repetition=1,
             syndrome_rounds=None,
         )
     )
@@ -67,7 +66,6 @@ def movement_estimator():
                 idling=True,
                 post_op_correction=1,
                 cultivation_repetition=1,
-                distillation_repetition=1,
                 syndrome_rounds=None,
             )
         ),

@@ -190,7 +190,6 @@ class Architecture(abc.ABC):
         movement: bool,
         d: int = 7,
         cultivation_repetition: int = 1,
-        distillation_repetition: int = 1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds: int | None = None,
         fold_cultiv: bool = False,
@@ -201,7 +200,6 @@ class Architecture(abc.ABC):
         self.d = d
         self.patch = lsp.RotatedCodePatch(self.d)
         self.cultivation_repetition = cultivation_repetition
-        self.distillation_repetition = distillation_repetition
         self.cultivation_fault_distance = cultivation_fault_distance
         self.syndrome_rounds = syndrome_rounds
         self.fold_cultiv = fold_cultiv
@@ -478,7 +476,6 @@ class DefaultLattice(Architecture):
         post_op_correction: bool = True,
         d=7,
         cultivation_repetition=1,
-        distillation_repetition=1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds=None,
     ) -> None:
@@ -488,7 +485,6 @@ class DefaultLattice(Architecture):
             movement=False,
             d=d,
             cultivation_repetition=cultivation_repetition,
-            distillation_repetition=distillation_repetition,
             cultivation_fault_distance=cultivation_fault_distance,
             syndrome_rounds=syndrome_rounds,
             fold_cultiv=False,
@@ -605,11 +601,11 @@ class DefaultMovement(Architecture):
             movement=True,
             d=d,
             cultivation_repetition=cultivation_repetition,
-            distillation_repetition=distillation_repetition,
             cultivation_fault_distance=cultivation_fault_distance,
             syndrome_rounds=syndrome_rounds,
             fold_cultiv=fold_cultiv,
         )
+        self.distillation_repetition = distillation_repetition
         self._primitives = cirq.Gateset(
             *[
                 lsp.Cultivate,
@@ -771,7 +767,7 @@ class DefaultMovement(Architecture):
         return self._distil_t_cost
     
     @cached_property
-    def _distil_t_cost(self):
+    def _distil_t_cost(self) -> dict:
         """
         Cost to get a T state using 15-to-1 distillation
         """

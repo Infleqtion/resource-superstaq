@@ -90,7 +90,7 @@ def distil_15_to_1() -> cirq.Circuit:
     exp.append(
         cirq.CNOT.on(ctrl, trgt) for ctrl, trgt in zip(cults, qubits[:-1])
     )
-    exp.append(cirq.Moment(cirq.measure_each(*cults[:-1])))
+    exp.append(cirq.Moment(cirq.measure_each(*cults)))
     exp.append(cirq.Moment(
         cirq.S.on_each(*qubits[:-1])  # Techinically should be based on the measurement outcome
     ))

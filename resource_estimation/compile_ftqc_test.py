@@ -969,30 +969,6 @@ def test_hm_moves():
         output_circuit,
         str(expected_output_circuit),
     )
-
-    # input_circuit = cirq.Circuit(
-    #     lsp.SyndromeExtract(1, 1).on_each(a, b),
-    #     lsp.Distil().on(c),
-    #     cirq.CNOT.on(c, b),
-    #     cirq.CNOT.on(a, b),
-    #     cirq.MeasurementGate(1, key="").on(c),
-    # )
-    # expected_output_circuit = cirq.Circuit(
-    #     lsp.SyndromeExtract(1, 1).on_each(a, b),
-    #     lsp.Distil().on(c),
-    #     lsp.Move(zone=None).on(c, b),
-    #     cirq.CNOT.on(c, b),
-    #     lsp.Move(zone=None).on(b, c),
-    #     lsp.Move(zone=None).on(a, b),
-    #     cirq.CNOT.on(a, b),
-    #     lsp.Move(zone=None).on(b, a),
-    #     cirq.MeasurementGate(1, key="").on(c),
-    # )
-    # output_circuit = comp.add_moves(input_circuit, **arch_info)
-    # cirq.testing.assert_has_diagram(
-    #     output_circuit,
-    #     str(expected_output_circuit),
-    # )
     
 
 def test_replace_cirq_op_distil(bell_circuit):
