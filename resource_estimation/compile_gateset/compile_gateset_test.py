@@ -26,7 +26,7 @@ from resource_estimation.compile_gateset import (
 
 
 @pytest.fixture
-def random_circuit():
+def random_circuit() -> cirq.Circuit:
     return cirq.Circuit(
         cirq.MatrixGate(cirq.testing.random_unitary(dim=8, random_state=7)).on(
             *cirq.LineQubit.range(3)

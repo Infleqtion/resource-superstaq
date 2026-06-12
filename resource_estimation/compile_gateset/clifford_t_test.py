@@ -40,7 +40,7 @@ def test_compile_cirq_to_clifford_t(theta, eps) -> None:
 @pytest.mark.parametrize("b", (pi + 1, 2 * pi - pi / 7, pi / 4))
 @pytest.mark.parametrize("c", (pi / 3, pi + 1, 2 * pi - pi / 7))
 @pytest.mark.parametrize("eps", (1e-1, 1e-3, 1e-5, 1e-7))
-def test_compile_cirq_to_clifford_t_phxz(a, b, c, eps):
+def test_compile_cirq_to_clifford_t_phxz(a, b, c, eps) -> None:
     circuit = cirq.Circuit(
         cirq.PhasedXZGate(x_exponent=a, z_exponent=b, axis_phase_exponent=c).on(
             cirq.GridQubit(0, 0)

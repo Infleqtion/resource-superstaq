@@ -139,7 +139,7 @@ def test_small_circuit(func) -> None:
 @pytest.mark.parametrize(
     "compiler", (_compile_cliff_rz, _compile_cliff_phxz, _compile_cliff_t_direct)
 )
-def test_random_circuits(qubits, compiler):
+def test_random_circuits(qubits, compiler) -> None:
     U = cirq.testing.random_unitary(dim=2**qubits, random_state=7)
     circuit = cirq.Circuit(cirq.MatrixGate(U).on(*cirq.LineQubit.range(qubits)))
     compiled = compiler(circuit)
@@ -150,7 +150,7 @@ def test_random_circuits(qubits, compiler):
     )
 
 
-def test_op_not_replaced():
+def test_op_not_replaced() -> None:
     q1, q2 = cirq.LineQubit.range(2)
     op1 = cirq.S.on(q1)
     decomposed_op = cliff.CliffTDirect(epsilon=1e-3)._decompose_single_qubit_operation(op=op1)
@@ -160,7 +160,7 @@ def test_op_not_replaced():
     assert op2 is decomposed_op
 
 
-def test_replace_op_with_pygridsynth():
+def test_replace_op_with_pygridsynth() -> None:
     with pytest.raises(ValueError, match="Support for multi-qubit gates"):
         _ = cliff.replace_op_with_pygridsynth(
             cirq.MatrixGate(cirq.testing.random_unitary(dim=8, random_state=7)).on(

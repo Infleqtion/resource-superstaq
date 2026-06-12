@@ -119,5 +119,5 @@ def compile_gateset(
         return compile_cirq_to_clifford_t(circuit, eps=gateset._atol, verbose=verbose)
 
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, module=r"^cirq(\\.|$)")
+        warnings.filterwarnings("ignore", category=FutureWarning, module=r"cirq")
         return cirq.optimize_for_target_gateset(circuit, gateset=gateset)
