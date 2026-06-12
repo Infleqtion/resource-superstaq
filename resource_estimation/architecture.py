@@ -367,7 +367,6 @@ class Architecture(abc.ABC):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
-
     @property
     def rounds(self):
         if self.syndrome_rounds is None:
@@ -437,7 +436,6 @@ class Architecture(abc.ABC):
 
     def h_cost(self, op: cirq.Operation) -> dict:
         return self._h_cost
-
 
     ### Extra Methods ###
     def __post_init__(self):
@@ -546,7 +544,6 @@ class DefaultLattice(Architecture):
         )
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
-
 
     @cached_property
     def _cultivate_t_cost(self):
@@ -762,10 +759,10 @@ class DefaultMovement(Architecture):
         new_gate_cost[cirq.QubitPermutationGate] = permutations_to_add
         new_time = self.total_time(new_moment_cost)
         return {"op_time": new_time, "gate_cost": new_gate_cost, "moment_cost": new_moment_cost}
-    
+
     def distil_t_cost(self, op: cirq.Operation) -> dict:
         return self._distil_t_cost
-    
+
     @cached_property
     def _distil_t_cost(self) -> dict:
         """
@@ -782,10 +779,14 @@ class DefaultMovement(Architecture):
         rep_moments = estimator.parallel_circuit_cost(with_moves)
         rep_gates = estimator.serial_circuit_cost(with_moves)
         op_time = rep_time * self.distillation_repetition
-        moment_cost = Counter({key: val*self.distillation_repetition for key, val in rep_moments.items()})
-        gate_cost = Counter({key: val*self.distillation_repetition for key, val in rep_gates.items()})
-        return {'op_time': op_time, 'moment_cost': moment_cost, 'gate_cost': gate_cost}
-    
+        moment_cost = Counter(
+            {key: val * self.distillation_repetition for key, val in rep_moments.items()}
+        )
+        gate_cost = Counter(
+            {key: val * self.distillation_repetition for key, val in rep_gates.items()}
+        )
+        return {"op_time": op_time, "moment_cost": moment_cost, "gate_cost": gate_cost}
+
     def __post_init__(self) -> None:
         super().__post_init__()
         self.op_cost[type(cirq.CNOT)] = self.cnot_cost

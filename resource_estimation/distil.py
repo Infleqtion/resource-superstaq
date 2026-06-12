@@ -33,67 +33,59 @@ def distil_15_to_1() -> cirq.Circuit:
     """
     qubits = cirq.LineQubit.range(15) + [cirq.NamedQubit("F")]
     cults = [cirq.NamedQubit(f"C{i}") for i in range(15)]
-    exp = cirq.Circuit([
-        cirq.ResetChannel().on_each(*qubits),
-        Cultivate(pi/4).on_each(*cults),
-        cirq.H(qubits[0]),
-        cirq.H(qubits[1]),
-        cirq.H(qubits[3]),
-        cirq.H(qubits[7]),
-        cirq.H(qubits[15]),
-
-        cirq.CNOT.on(qubits[7], qubits[14]),
-        cirq.CNOT.on(qubits[3], qubits[12]),
-        cirq.CNOT.on(qubits[1], qubits[10]),
-        cirq.CNOT.on(qubits[0], qubits[6]),
-        
-        cirq.CNOT.on(qubits[7], qubits[13]),
-        cirq.CNOT.on(qubits[3], qubits[11]),
-        cirq.CNOT.on(qubits[1], qubits[14]),
-        cirq.CNOT.on(qubits[0], qubits[10]),
-
-        cirq.CNOT.on(qubits[7], qubits[12]),
-        cirq.CNOT.on(qubits[3], qubits[6]),
-        cirq.CNOT.on(qubits[1], qubits[13]),
-        cirq.CNOT.on(qubits[0], qubits[14]),
-
-        cirq.CNOT.on(qubits[7], qubits[8]),
-        cirq.CNOT.on(qubits[3], qubits[14]),
-        cirq.CNOT.on(qubits[1], qubits[9]),
-        cirq.CNOT.on(qubits[0], qubits[4]),
-
-        cirq.CNOT.on(qubits[7], qubits[9]),
-        cirq.CNOT.on(qubits[3], qubits[4]),
-        cirq.CNOT.on(qubits[1], qubits[2]),
-        cirq.CNOT.on(qubits[0], qubits[8]),
-        cirq.CNOT.on(qubits[-1], qubits[14]),
-        cirq.CNOT.on(qubits[14], qubits[11]),
-
-        cirq.CNOT.on(qubits[7], qubits[10]),
-        cirq.CNOT.on(qubits[3], qubits[5]),
-        cirq.CNOT.on(qubits[1], qubits[6]),
-        cirq.CNOT.on(qubits[0], qubits[12]),
-        cirq.CNOT.on(qubits[14], qubits[5]),
-
-
-        cirq.CNOT.on(qubits[7], qubits[11]),
-        cirq.CNOT.on(qubits[3], qubits[13]),
-        cirq.CNOT.on(qubits[1], qubits[5]),
-        cirq.CNOT.on(qubits[0], qubits[2]),
-
-        cirq.CNOT.on(qubits[14], qubits[9]),
-        cirq.CNOT.on(qubits[14], qubits[8]),
-        cirq.CNOT.on(qubits[14], qubits[4]),
-        cirq.CNOT.on(qubits[14], qubits[2]),
-
-    ])
-    exp.append(
-        cirq.CNOT.on(ctrl, trgt) for ctrl, trgt in zip(cults, qubits[:-1])
+    exp = cirq.Circuit(
+        [
+            cirq.ResetChannel().on_each(*qubits),
+            Cultivate(pi / 4).on_each(*cults),
+            cirq.H(qubits[0]),
+            cirq.H(qubits[1]),
+            cirq.H(qubits[3]),
+            cirq.H(qubits[7]),
+            cirq.H(qubits[15]),
+            cirq.CNOT.on(qubits[7], qubits[14]),
+            cirq.CNOT.on(qubits[3], qubits[12]),
+            cirq.CNOT.on(qubits[1], qubits[10]),
+            cirq.CNOT.on(qubits[0], qubits[6]),
+            cirq.CNOT.on(qubits[7], qubits[13]),
+            cirq.CNOT.on(qubits[3], qubits[11]),
+            cirq.CNOT.on(qubits[1], qubits[14]),
+            cirq.CNOT.on(qubits[0], qubits[10]),
+            cirq.CNOT.on(qubits[7], qubits[12]),
+            cirq.CNOT.on(qubits[3], qubits[6]),
+            cirq.CNOT.on(qubits[1], qubits[13]),
+            cirq.CNOT.on(qubits[0], qubits[14]),
+            cirq.CNOT.on(qubits[7], qubits[8]),
+            cirq.CNOT.on(qubits[3], qubits[14]),
+            cirq.CNOT.on(qubits[1], qubits[9]),
+            cirq.CNOT.on(qubits[0], qubits[4]),
+            cirq.CNOT.on(qubits[7], qubits[9]),
+            cirq.CNOT.on(qubits[3], qubits[4]),
+            cirq.CNOT.on(qubits[1], qubits[2]),
+            cirq.CNOT.on(qubits[0], qubits[8]),
+            cirq.CNOT.on(qubits[-1], qubits[14]),
+            cirq.CNOT.on(qubits[14], qubits[11]),
+            cirq.CNOT.on(qubits[7], qubits[10]),
+            cirq.CNOT.on(qubits[3], qubits[5]),
+            cirq.CNOT.on(qubits[1], qubits[6]),
+            cirq.CNOT.on(qubits[0], qubits[12]),
+            cirq.CNOT.on(qubits[14], qubits[5]),
+            cirq.CNOT.on(qubits[7], qubits[11]),
+            cirq.CNOT.on(qubits[3], qubits[13]),
+            cirq.CNOT.on(qubits[1], qubits[5]),
+            cirq.CNOT.on(qubits[0], qubits[2]),
+            cirq.CNOT.on(qubits[14], qubits[9]),
+            cirq.CNOT.on(qubits[14], qubits[8]),
+            cirq.CNOT.on(qubits[14], qubits[4]),
+            cirq.CNOT.on(qubits[14], qubits[2]),
+        ]
     )
+    exp.append(cirq.CNOT.on(ctrl, trgt) for ctrl, trgt in zip(cults, qubits[:-1]))
     exp.append(cirq.Moment(cirq.measure_each(*cults)))
-    exp.append(cirq.Moment(
-        cirq.S.on_each(*qubits[:-1])  # Techinically should be based on the measurement outcome
-    ))
+    exp.append(
+        cirq.Moment(
+            cirq.S.on_each(*qubits[:-1])  # Techinically should be based on the measurement outcome
+        )
+    )
     exp.append(cirq.Moment(cirq.H.on_each(*qubits[:-1])))
     exp.append(cirq.Moment(cirq.measure_each(*qubits[:-1])))
 

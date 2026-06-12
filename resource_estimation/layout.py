@@ -172,7 +172,9 @@ class Layout(abc.ABC):
 
         def custom_weight(u: cirq.GridQubit, v: cirq.GridQubit, attr: dict) -> int | None:
             # First condition not covered because Distillation has not been implemented for lattice layouts
-            if G.nodes[v]["patch_type"] == "block" or G.nodes[u]["patch_type"] == "block":  # pragma: no cover
+            if (
+                G.nodes[v]["patch_type"] == "block" or G.nodes[u]["patch_type"] == "block"
+            ):  # pragma: no cover
                 return None
             if (G.nodes[v]["patch_type"] == "data") or (G.nodes[v]["patch_type"] == "factory"):
                 # Must go through at least one ancilla
@@ -199,7 +201,7 @@ class Layout(abc.ABC):
             "s": "yellow",
             "data": "green",
             "ancilla": "blue",
-            "block": "pink"
+            "block": "pink",
         }
         G = self.layout_graph
         node_color = []
@@ -460,15 +462,17 @@ class Embedded(Layout):
         self.num_s_factories = len(s_factories)
         self.num_t_factories = len(t_factories)
 
+
 class MovementDistillery(MovementLayout):
     def __init__(
-            self,
-            input_circuit: cirq.Circuit,
-            num_t_factories: int = 0,
+        self,
+        input_circuit: cirq.Circuit,
+        num_t_factories: int = 0,
     ):
-        super().__init__(input_circuit=input_circuit,
-                         num_t_factories=num_t_factories,
-                         )
+        super().__init__(
+            input_circuit=input_circuit,
+            num_t_factories=num_t_factories,
+        )
         self.distil = True
 
     def _generate(self):
@@ -480,7 +484,7 @@ class MovementDistillery(MovementLayout):
         def idx_to_xy(idx: int) -> tuple[int, int]:
             x = idx // side_length
             y = idx % side_length
-            return x, y   
+            return x, y
 
         qubit_map = {
             qid: cirq.GridQubit(*idx_to_xy(idx))
@@ -492,7 +496,7 @@ class MovementDistillery(MovementLayout):
             [(q, dict(patch_type="data")) for q in qubit_map.values()],
         )
         for factory_index in range(self.num_t_factories):
-            qubit_index = factory_index*31 + program_qubits
+            qubit_index = factory_index * 31 + program_qubits
             output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
             G.add_node(output_qubit, patch_type="factory", ftype="t", fid=factory_index, used=True)
             block_qubits = [cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, 31)]
@@ -505,7 +509,10 @@ class MovementDistillery(MovementLayout):
 
     def distillation_block(self, factory_qubit: cirq.GridQubit) -> list[cirq.GridQubit]:
         G = self.layout_graph
-        fid = G.nodes[factory_qubit]['fid']
-        block_qubits = [q for q in G.nodes if (G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid)]
+        fid = G.nodes[factory_qubit]["fid"]
+        block_qubits = [
+            q
+            for q in G.nodes
+            if (G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid)
+        ]
         return block_qubits + [factory_qubit]
-      

@@ -238,22 +238,27 @@ class Cultivate(cirq.Gate):
     def _value_equality_values_(self) -> float:
         return self._theta
 
-@cirq.value_equality    
+
+@cirq.value_equality
 class Distil(cirq.Gate):
     """
     Subclassed cirq gate to represent the distillation of a single T state using 16 code patches.
     The underlying implementation is assumed to be the one in https://arxiv.org/abs/quant-ph/0403025.
     Noisy T gates are assumed to come from cultivation, resulting in 15 additional logical patches.
-    
+
 
     Distil|0^31> --> (|0> + e^(1j*pi/4)|1>)/√2 |0^30>
-    
+
     """
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         pass
-    
-    def num_qubits(self,):
+
+    def num_qubits(
+        self,
+    ):
         return 31
 
     def __str__(self) -> str:
@@ -271,6 +276,7 @@ class Distil(cirq.Gate):
 
     def _value_equality_values_(self) -> float:
         return ()
+
 
 @cirq.value_equality
 class Move(cirq.Gate):

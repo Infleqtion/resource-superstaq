@@ -876,7 +876,7 @@ def test_ssm_moves():
     #     output_circuit,
     #     str(expected_output_circuit),
     # )
-    
+
 
 def test_mzo_moves():
     arch_type = arch.MeasureZonesOnly
@@ -969,7 +969,7 @@ def test_hm_moves():
         output_circuit,
         str(expected_output_circuit),
     )
-    
+
 
 def test_replace_cirq_op_distil(bell_circuit):
     distillery_layout = MovementDistillery(bell_circuit, num_t_factories=2)
@@ -990,7 +990,7 @@ def test_replace_cirq_op_distil(bell_circuit):
     for op, expected_type in zip(returned_ops, expected_types):
         assert op in cirq.GateFamily(expected_type)
 
-        
+
 def test_different_rounds_distil():
     circuit = cirq.Circuit(cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)))
     layout = MovementDistillery(input_circuit=circuit)

@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from resource_estimation.architecture import Architecture
 from math import pi

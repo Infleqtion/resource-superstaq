@@ -191,7 +191,6 @@ def test_error_handling(lattice_estimator, movement_estimator):
         _ = movement_estimator.serial_circuit_cost(bad_circuit)
 
 
-
 # TODO: Might be worth having one or two more example tests for the critical path algorithm
 def test_critical_path():
     q0, q1 = cirq.LineQubit.range(2)

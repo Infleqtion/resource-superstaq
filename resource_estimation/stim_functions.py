@@ -171,4 +171,3 @@ def cultivate(
         )
         resources = count_stim_resources(stim_circuit=stim_circuit)
     return resources
-
