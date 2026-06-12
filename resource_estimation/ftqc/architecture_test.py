@@ -21,10 +21,10 @@ import numpy as np
 import pytest
 from cirq_superstaq import ParallelRGate
 
-import resource_estimation.architecture as arch
-import resource_estimation.estimate as est
-import resource_estimation.lattice_surgery_primitives as lsp
-from resource_estimation.stim_functions import cultivate, load_saved_cost
+import resource_estimation.ftqc.architecture as arch
+import resource_estimation.ftqc.estimate as est
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+from resource_estimation.ftqc.stim_functions import cultivate, load_saved_cost
 
 
 @pytest.fixture
@@ -354,7 +354,7 @@ def test_against_cultiv(d):
     # Test Syndrome Extract
     # Set up memory circuit
     with open(
-        os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json"
+        os.path.dirname(os.path.abspath(__file__)) + "/../../data/cultivate_costs.json"
     ) as f:
         saved_resources = json.load(f)
 
@@ -647,7 +647,8 @@ def test_classmethods():
     }
     ls_arc = arch.Architecture.from_dict(lattice_input_dict)
     assert ls_arc.phys_gate_times[cirq.CZ] == 99
-
+    import os
+    print(os.getcwd())
     ls_arc = arch.Architecture.from_json("data/lattice_test.json")
     assert ls_arc.phys_gate_times[cirq.CZ] == 99
 

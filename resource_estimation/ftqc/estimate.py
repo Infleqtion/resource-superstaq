@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from resource_estimation.architecture import Architecture
+    from resource_estimation.ftqc.architecture import Architecture
 
 import warnings
 from collections import Counter

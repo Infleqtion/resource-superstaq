@@ -17,7 +17,7 @@ import cirq
 import pytest
 from numpy.testing import assert_array_equal
 
-import resource_estimation.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 
 
 def test_merge():

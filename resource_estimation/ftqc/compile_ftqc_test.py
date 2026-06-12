@@ -19,10 +19,10 @@ import cirq
 import pytest
 from cirq_superstaq import Barrier
 
-import resource_estimation.architecture as arch
-import resource_estimation.compile_ftqc as comp
-import resource_estimation.lattice_surgery_primitives as lsp
-from resource_estimation.layout import Column, Embedded, MovementDistillery, MovementLayout
+import resource_estimation.ftqc.architecture as arch
+import resource_estimation.ftqc.compile_ftqc as comp
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+from resource_estimation.ftqc.layout import Column, Embedded, MovementDistillery, MovementLayout
 
 
 @pytest.fixture

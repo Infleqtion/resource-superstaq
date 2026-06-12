@@ -27,7 +27,7 @@ from resource_estimation.ftqc.distil import distil_15_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.stim_functions import cultivate
 
-from . import lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 
 NEUTRAL_GATES = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.CZ: 0.27,
