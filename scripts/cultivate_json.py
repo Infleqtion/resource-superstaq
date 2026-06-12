@@ -15,6 +15,7 @@ import json
 import sys
 from pathlib import Path
 from typing import Literal
+
 import cirq
 
 parent_dir = Path(__file__).parent.parent
@@ -22,9 +23,9 @@ sys.path.insert(0, str(parent_dir))
 import os
 
 import cultiv
-from resource_estimation.stim_functions import count_stim_resources, STR2GATE
 from tqdm import tqdm
 
+from resource_estimation.stim_functions import STR2GATE, count_stim_resources
 
 GATE2STR = {v: k for k, v in STR2GATE.items()}
 
@@ -32,8 +33,7 @@ GATE2STR = {v: k for k, v in STR2GATE.items()}
 def format_cost_dict(
     cost_dict: dict[Literal["serial", "parallel"], dict[cirq.Gate, int]],
 ) -> dict[Literal["serial", "parallel"], dict[str, int]]:
-    """
-    Converts cost dictionaries from `count_stim_resources` from cirq gate to string format
+    """Converts cost dictionaries from `count_stim_resources` from cirq gate to string format
     """
     reformatted = {
         "serial": {GATE2STR[k]: v for k, v in cost_dict["serial"].items()},

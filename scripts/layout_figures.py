@@ -11,24 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import cirq
-import numpy as np
-import matplotlib.pyplot as plt
 import sys
-import matplotlib.pyplot as plt
+from pathlib import Path
+
+import cirq
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
-from pathlib import Path
+import matplotlib.pyplot as plt
+import numpy as np
 
 parent_dir = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(parent_dir))
 import resource_estimation as res
-
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import matplotlib.patches as mpatches
-
 
 DEFAULT_STR2NUM = {
     "None": 0,
@@ -37,13 +31,12 @@ DEFAULT_STR2NUM = {
     "Data Qubit": 3,
     "Ancilla Patch": 4,
     "Distillation": 5,
-    "CNOT": 6
+    "CNOT": 6,
 }
 
 
 def layout_to_array(layout, str2num=None):
-    """
-    Convert a layout object's `layout_graph` into a 2D numpy array.
+    """Convert a layout object's `layout_graph` into a 2D numpy array.
 
     Parameters
     ----------
@@ -52,7 +45,7 @@ def layout_to_array(layout, str2num=None):
     str2num : dict, optional
         Mapping from string type to integer code.
 
-    Returns
+    Returns:
     -------
     np.ndarray
         Array A such that A[row, col] contains the numeric code for that node.
@@ -66,7 +59,14 @@ def layout_to_array(layout, str2num=None):
     max_col = max(node.col for node in G.nodes)
 
     A = np.full((max_row + 1, max_col + 1), str2num["None"], dtype=int)
-    key_map = {"data": "Data Qubit", "ancilla": "Ancilla Patch", "t": "T Factory", "s": "S Factory", "block": "Distillation", "CNOT": "CNOT"}
+    key_map = {
+        "data": "Data Qubit",
+        "ancilla": "Ancilla Patch",
+        "t": "T Factory",
+        "s": "S Factory",
+        "block": "Distillation",
+        "CNOT": "CNOT",
+    }
     for node in G.nodes:
         node_dict = G.nodes[node]
         key = node_dict["ftype"] if "ftype" in node_dict else node_dict["patch_type"]
@@ -82,8 +82,7 @@ def make_layout_colormap(
     base_cmap_name="tab10",
     category_colors=None,
 ):
-    """
-    Build a discrete colormap and normalization for categorical plotting.
+    """Build a discrete colormap and normalization for categorical plotting.
 
     Parameters
     ----------
@@ -127,8 +126,7 @@ def make_layout_colormap(
 
 
 def make_legend_patches(str2num=None, cmap=None):
-    """
-    Create legend patches for the categorical colormap.
+    """Create legend patches for the categorical colormap.
     """
     if str2num is None:
         str2num = DEFAULT_STR2NUM
@@ -141,8 +139,7 @@ def make_legend_patches(str2num=None, cmap=None):
 
 
 def pad_array_to_shape(A, target_shape, fill_value=0, align="center"):
-    """
-    Pad a 2D array to a target shape.
+    """Pad a 2D array to a target shape.
 
     Parameters
     ----------
@@ -160,7 +157,7 @@ def pad_array_to_shape(A, target_shape, fill_value=0, align="center"):
         - "bottom_left"
         - "bottom_right"
 
-    Returns
+    Returns:
     -------
     np.ndarray
         Padded array.
@@ -203,8 +200,7 @@ def pad_array_to_shape(A, target_shape, fill_value=0, align="center"):
 
 
 def normalize_transpose_arg(transpose, n):
-    """
-    Allow transpose to be either a single bool or a list of bools.
+    """Allow transpose to be either a single bool or a list of bools.
     """
     if isinstance(transpose, bool):
         return [transpose] * n
@@ -216,8 +212,7 @@ def normalize_transpose_arg(transpose, n):
 
 
 def add_pixel_grid(ax, shape, linewidth=0.5, color="black"):
-    """
-    Add borders around each displayed pixel/cell.
+    """Add borders around each displayed pixel/cell.
     """
     nrows, ncols = shape
 
@@ -228,8 +223,7 @@ def add_pixel_grid(ax, shape, linewidth=0.5, color="black"):
 
 
 def style_axes(ax, border_linewidth=2):
-    """
-    Remove major ticks and add a black border around the axes.
+    """Remove major ticks and add a black border around the axes.
     """
     ax.set_xticks([])
     ax.set_yticks([])
@@ -255,8 +249,7 @@ def plot_layout(
     border_linewidth=2,
     category_colors=None,
 ):
-    """
-    Plot a single layout.
+    """Plot a single layout.
 
     Parameters
     ----------
@@ -287,7 +280,7 @@ def plot_layout(
     border_linewidth : float, optional
         Outer axes border width.
 
-    Returns
+    Returns:
     -------
     fig, ax, im
     """
@@ -354,8 +347,7 @@ def plot_layouts(
     border_linewidth=2,
     category_colors=None,
 ):
-    """
-    Plot multiple layouts in a single figure.
+    """Plot multiple layouts in a single figure.
 
     Parameters
     ----------
@@ -392,7 +384,7 @@ def plot_layouts(
     border_linewidth : float, optional
         Outer axes border width.
 
-    Returns
+    Returns:
     -------
     fig, axes
     """
@@ -505,12 +497,13 @@ if __name__ == "__main__":
     movement2 = res.layout.MovementLayout(input_circuit=circuit, num_t_factories=20)
     distillery = res.layout.Distillery(input_circuit=circuit, num_s_factories=7, num_t_factories=5)
     layouts = [
-            column_layout, 
-            sandwich1, sandwich2, 
-            embedded_layout, 
-            movement1,
-            movement2,
-        ]
+        column_layout,
+        sandwich1,
+        sandwich2,
+        embedded_layout,
+        movement1,
+        movement2,
+    ]
 
     category_colors = {
         "None": "#ffffff",
@@ -519,7 +512,7 @@ if __name__ == "__main__":
         "Data Qubit": "#a4f0c2",
         "Ancilla Patch": "#f5bad6",
         "Distillation": "#E6E6FA",
-        "CNOT": "#ed6340"
+        "CNOT": "#ed6340",
     }
 
     fig, axes = plot_layouts(
