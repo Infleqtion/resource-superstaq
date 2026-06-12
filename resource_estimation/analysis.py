@@ -79,11 +79,18 @@ def get_eps(
     return max_error, rz_gates, other_gates
 
 
-def surface_code_fidelity(d: int, A: float = 0.03, pth: float = 0.0057, p: float = 0.001) -> float:
+def surface_code_fidelity(
+    d: npt.ArrayLike,
+    A: npt.ArrayLike = 0.03,
+    pth: float = 0.0057,
+    p: float = 0.001,
+) -> np.floating | npt.NDArray[np.float64]:
     """
     Fidelity of surface code operations according to the Fowler paper (Eq 11 of https://web.physics.ucsb.edu/~martinisgroup/papers/Fowler2012.pdf)
     """
-    return 1 - A * (p / pth) ** ((d + 1) // 2)
+    d_arr = np.asarray(d, dtype=np.int_)
+    A_arr = np.asarray(A, dtype=np.float64)
+    return 1 - A_arr * (p / pth) ** ((d_arr + 1) // 2)
 
 
 def get_t_path(circuit: Circuit, verbose: bool = True) -> list[Operation]:
@@ -221,7 +228,7 @@ def error_estimate(
         # 50% times 2 operations is 1 operation per T gate
         code_ops_from_teleportation += num_t_gates
     total_code_ops = num_clifford + num_c_gates + code_ops_from_teleportation
-    logical_op_fidelity = surface_code_fidelity(int(code_distance), p=hw_noise) ** total_code_ops
+    logical_op_fidelity = surface_code_fidelity(code_distance, p=hw_noise) ** total_code_ops
 
     cultivation_fidelity = (1 - error_per_cult) ** num_t_gates
 
