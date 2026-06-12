@@ -87,8 +87,8 @@ def base_15_to_one() -> cirq.Circuit:
     return circuit[1:-1]  # Just the non-classical part
 
 
-def test_15_to_one(base_15_to_one):
-    """Simple check to confirm that the compression technique agrees with the standard circuit"""
+def test_15_to_one(base_15_to_one) -> None:
+    """Check to confirm that the compression technique agrees with the standard circuit"""
     circuit = distil_15_to_1()
 
     # There should be exactly 15 Cultivations
