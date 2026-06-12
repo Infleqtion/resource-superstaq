@@ -19,6 +19,7 @@ from resource_estimation.compile_gateset import (
     compile_cirq_to_clifford_t,
     process_cirq_str,
     approx_rz,
+    approx_phxz,
     toffoli_decompose,
 )
 
@@ -27,6 +28,24 @@ from resource_estimation.compile_gateset import (
 @pytest.mark.parametrize("eps", (1e-1, 1e-3, 1e-5, 1e-7))
 def test_compile_cirq_to_clifford_t(theta, eps) -> None:
     circuit = cirq.Circuit(cirq.Rz(rads=theta).on(cirq.GridQubit(0, 0)))
+    comp_circuit = compile_cirq_to_clifford_t(circuit, eps=eps, verbose=False)
+    u_expected = cirq.unitary(circuit)
+    u_realized = cirq.unitary(comp_circuit)
+    fid = abs(np.trace(u_realized.conjugate().T @ u_expected) / 2)
+    err = 1 - fid
+    assert err < eps
+
+
+@pytest.mark.parametrize("a", (pi / 3, pi / 4))
+@pytest.mark.parametrize("b", (pi + 1, 2 * pi - pi / 7, pi / 4))
+@pytest.mark.parametrize("c", (pi / 3, pi + 1, 2 * pi - pi / 7))
+@pytest.mark.parametrize("eps", (1e-1, 1e-3, 1e-5, 1e-7))
+def test_compile_cirq_to_clifford_t_phxz(a, b, c, eps) -> None:
+    circuit = cirq.Circuit(
+        cirq.PhasedXZGate(x_exponent=a, z_exponent=b, axis_phase_exponent=c).on(
+            cirq.GridQubit(0, 0)
+        )
+    )
     comp_circuit = compile_cirq_to_clifford_t(circuit, eps=eps, verbose=False)
     u_expected = cirq.unitary(circuit)
     u_realized = cirq.unitary(comp_circuit)
@@ -76,7 +95,9 @@ def test_error_handling() -> None:
         _ = compile_cirq_to_clifford_t(bad_circuit, eps=0.01)
 
     with pytest.raises(ValueError):
-        _ = process_cirq_str(bad_circuit, gates=["P"], q=cirq.GridQubit(0, 0))
+        _ = process_cirq_str(bad_circuit, gates="P", q=cirq.GridQubit(0, 0))
+    with pytest.raises(ValueError):
+        _ = approx_phxz(cirq.CNOT, 1e-5)
 
 
 def test_measure() -> None:
@@ -101,6 +122,19 @@ def test_t_synth() -> None:
     theta, eps = 1.2345678, 1e-8
     true_circuit = cirq.Circuit(cirq.Rz(rads=theta / pi).on(cirq.GridQubit(0, 0)))
     decomp = approx_rz(theta, eps)
+    approx_circuit = cirq.Circuit()
+    process_cirq_str(circ=approx_circuit, gates=decomp, q=cirq.GridQubit(0, 0))
+    rho_true = cirq.density_matrix(cirq.final_density_matrix(true_circuit))
+    rho_approx = cirq.density_matrix(cirq.final_density_matrix(approx_circuit))
+    assert cirq.fidelity(rho_true, rho_approx) >= 1 - eps
+
+
+def test_phxz_synth() -> None:
+    a, b, c = 1.2345678, 2.345678, 3.45678
+    eps = 1e-8
+    base_gate = cirq.PhasedXZGate(x_exponent=a, z_exponent=b, axis_phase_exponent=c)
+    true_circuit = cirq.Circuit(base_gate.on(cirq.GridQubit(0, 0)))
+    decomp = approx_phxz(base_gate, epsilon=eps)
     approx_circuit = cirq.Circuit()
     process_cirq_str(circ=approx_circuit, gates=decomp, q=cirq.GridQubit(0, 0))
     rho_true = cirq.density_matrix(cirq.final_density_matrix(true_circuit))
