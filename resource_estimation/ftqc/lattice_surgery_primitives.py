@@ -20,8 +20,7 @@ import cirq
 
 
 def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
-    """Tells cirq.json how to deserialize custom gates
-    """
+    """Tells cirq.json how to deserialize custom gates"""
     if cirq_type == "lsp.Merge":
         return Merge
     if cirq_type == "lsp.Split":
@@ -348,14 +347,12 @@ class RotatedCodePatch:
 
     @cached_property
     def num_data_qubits(self):
-        """The number of data qubits in surface code patch
-        """
+        """The number of data qubits in surface code patch"""
         return self.d**2
 
     @cached_property
     def num_measure_qubits(self):
-        """The number of measure qubits in a surface code patch
-        """
+        """The number of measure qubits in a surface code patch"""
         return self.d**2 - 1
 
     def num_z_stabs(self, full=True):  # Still assuming square lattice
@@ -368,20 +365,17 @@ class RotatedCodePatch:
         return self.d - 1
 
     def num_x_stabs(self, full=True):  # Still assuming square lattice here
-        """The number of X-type stabilizers in the patch (should be same as Z)
-        """
+        """The number of X-type stabilizers in the patch (should be same as Z)"""
         if full:
             return (self.d - 1) ** 2 // 2
         return self.d - 1
 
     def total_x_syndrome_cnots(self):
-        """The total number of CNOT parity checks incurred when measuring all X stabilizers.
-        """
+        """The total number of CNOT parity checks incurred when measuring all X stabilizers."""
         return 4 * self.num_x_stabs(full=True) + 2 * self.num_x_stabs(full=False)
 
     def total_z_syndrome_cnots(self):
-        """The total number of CNOT parity checks incurred when measuring all Z stabilizers.
-        """
+        """The total number of CNOT parity checks incurred when measuring all Z stabilizers."""
         return 4 * self.num_z_stabs(full=True) + 2 * self.num_z_stabs(full=False)
 
     def __eq__(self, value: object, /) -> bool:

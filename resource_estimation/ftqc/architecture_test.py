@@ -353,9 +353,7 @@ def test_self_returns(movement_architecture, lattice_architecture):
 def test_against_cultiv(d):
     # Test Syndrome Extract
     # Set up memory circuit
-    with open(
-        os.path.dirname(os.path.abspath(__file__)) + "/../../data/cultivate_costs.json"
-    ) as f:
+    with open(os.path.dirname(os.path.abspath(__file__)) + "/../../data/cultivate_costs.json") as f:
         saved_resources = json.load(f)
 
     d_count = load_saved_cost(dsurface=d, op_key="memory_d_rounds")["serial"]
@@ -648,6 +646,7 @@ def test_classmethods():
     ls_arc = arch.Architecture.from_dict(lattice_input_dict)
     assert ls_arc.phys_gate_times[cirq.CZ] == 99
     import os
+
     print(os.getcwd())
     ls_arc = arch.Architecture.from_json("data/lattice_test.json")
     assert ls_arc.phys_gate_times[cirq.CZ] == 99
@@ -821,8 +820,7 @@ def test_folded_architecture():
 
 
 def test_convert_globals_to_phasedxz():
-    """Confirm that the conversion function works as expected
-    """
+    """Confirm that the conversion function works as expected"""
     sc = arch.Superconductor()
     example1 = {
         "gate_cost": {ParallelRGate: 2, cirq.Rz: 3},

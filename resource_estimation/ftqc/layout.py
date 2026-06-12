@@ -26,8 +26,7 @@ import numpy as np
 
 @dataclass
 class Layout(abc.ABC):
-    """Base class for layouts used by the fault tolerant compiler to track factory use and CNOT routing
-    """
+    """Base class for layouts used by the fault tolerant compiler to track factory use and CNOT routing"""
 
     input_circuit: cirq.Circuit
     num_t_factories: int = 0
@@ -42,16 +41,14 @@ class Layout(abc.ABC):
         self._generate()
 
     def set_map_circuit(self, qubit_map: dict[cirq.Qid, cirq.GridQubit]) -> None:
-        """Apply a given mapping from qubits in the input circuit to GridQubits used for compilation
-        """
+        """Apply a given mapping from qubits in the input circuit to GridQubits used for compilation"""
         mapped_circuit = cirq.Circuit(
             moment.transform_qubits(qubit_map) for moment in self.input_circuit
         )
         self.mapped_circuit = mapped_circuit
 
     def reset_graph(self) -> None:
-        """Reset the graph to its starting state by setting all factory qubits to the `used` state
-        """
+        """Reset the graph to its starting state by setting all factory qubits to the `used` state"""
         G = self.layout_graph
         for node in G.nodes:
             if G.nodes[node]["patch_type"] == "factory":
@@ -310,8 +307,7 @@ class FactorySandwich(Layout):
     """
 
     def _generate(self):
-        """Places and assigns logical qubits according to the Sandwich configuration
-        """
+        """Places and assigns logical qubits according to the Sandwich configuration"""
         qubit_map: dict[cirq.Qid, cirq.GridQubit] = {}
         all_qubits = list(self.input_circuit.all_qubits())
         length = max(len(all_qubits), self.num_t_factories, self.num_s_factories)
@@ -364,8 +360,7 @@ class Embedded(Layout):
         super().__init__(input_circuit=input_circuit, num_s_factories=0, num_t_factories=0)
 
     def _generate(self):
-        """Builds a large embedded logical qubit array by starting from a nearest neighbor array and adding rows/columns of other qubit types
-        """
+        """Builds a large embedded logical qubit array by starting from a nearest neighbor array and adding rows/columns of other qubit types"""
         all_qubits = list(self.input_circuit.all_qubits())
         num_logicals = len(all_qubits)
         side_length = ceil(sqrt(num_logicals))

@@ -114,8 +114,7 @@ def _syndrome_extract_cost(
     num_logical_qubits: int,
     d: int,
 ) -> dict[str, dict[cirq.Gate, int]]:
-    """Calculates the cost of syndrome extraction in terms of physical gates
-    """
+    """Calculates the cost of syndrome extraction in terms of physical gates"""
     # This is how SE should look...
     # ...for a (full) X stabilizer
     # RESET H CZ CZ CZ CZ H MEASURE  <--Measure Qubit
@@ -754,8 +753,7 @@ class DefaultMovement(Architecture):
 
     @cached_property
     def _distil_t_cost(self) -> dict:
-        """Cost to get a T state using 15-to-1 distillation
-        """
+        """Cost to get a T state using 15-to-1 distillation"""
         mapped_circuit = distil_15_to_1()
         with_moves = add_moves(
             mapped_circuit,
@@ -975,8 +973,7 @@ class Superconductor(DefaultLattice):
 
 # Deprecated by removing GR gates
 def convert_globals_to_phasedxz(architecture: Architecture, cost_with_globals: dict) -> dict:
-    """Converts costs defined by GR and Rz into PhasedXZ by removing GR and replacing Rz with PhasedXZ to represent arbitrary single qubit rotations
-    """
+    """Converts costs defined by GR and Rz into PhasedXZ by removing GR and replacing Rz with PhasedXZ to represent arbitrary single qubit rotations"""
     gate_cost = cost_with_globals["gate_cost"].copy()
     if ParallelRGate in gate_cost:
         del gate_cost[ParallelRGate]

@@ -45,8 +45,7 @@ from .layout import Layout
 
 # This function is only visual and is extremely finicky, so it is not tested
 def knock_off_tqdm(moment_idx: int, total: int, tstart: float, message: str):  # pragma: no cover
-    """Implements tqdm-like behavior for the compiler
-    """
+    """Implements tqdm-like behavior for the compiler"""
     if not sys.stdout.isatty():
         # This is to ensure that testing can progress as normal
         return
@@ -102,8 +101,7 @@ def replace_cirq_op(
             lsp.Split(partitions=[1] * (len(path_patches[1:])), smooth=False).on(*path_patches[1:]),
         ]
     raise ValueError(
-        f"Invalid Op for "
-        f"{'transversal' if transversal_cnot else 'non-transversal'} CNOT: {op.gate}"
+        f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} CNOT: {op.gate}"
     )
 
 
@@ -224,8 +222,7 @@ def post_op_syndrome_extraction(
     rounds: int,
     verbose: int = 0,
 ) -> cirq.Circuit:
-    """For movement, it has been suggested that we just do syndrome extraction (for a single round) right after a logical operations.
-    """
+    """For movement, it has been suggested that we just do syndrome extraction (for a single round) right after a logical operations."""
     # Allowing a little bit of flexibility on what we want to correct
     # Might even want to add Lattice Primitives, but there aren't many (any?) that are not implicitly corrected
     ops_to_correct = [
@@ -272,8 +269,7 @@ def post_op_syndrome_extraction(
 
 
 def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
-    """Checks that the given circuit is in the Clifford+T gateset.
-    """
+    """Checks that the given circuit is in the Clifford+T gateset."""
     # TODO: This function probably belongs in some utilities file, since it is not particularly integral to compiling.
     valid_gates = (
         cirq.T,
@@ -323,8 +319,7 @@ def _decompose_to_primitives(
 def add_moves(
     circuit: cirq.Circuit, zone_ops: cirq.Gateset, alley_ops: cirq.Gateset, verbose: int = 0
 ) -> cirq.Circuit:
-    """Handles replacement moves for both alley movement and interaction zone movement
-    """
+    """Handles replacement moves for both alley movement and interaction zone movement"""
     total = len(circuit)
     tstart = time()
 
