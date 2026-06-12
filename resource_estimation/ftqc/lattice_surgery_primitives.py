@@ -206,7 +206,7 @@ class Cultivate(cirq.Gate):
     Cultivate(θ)|0> --> (|0> + e^(iθ)|1>)/√2
     """
 
-    def __init__(self, theta) -> None:
+    def __init__(self, theta: float) -> None:
         self._theta = theta
 
     @property
@@ -415,7 +415,7 @@ class IntermediatePatch(RotatedCodePatch):
     Has the X partial stabilizers of a full patch if smooth else the Z partial stabilizers from a full patch
     """
 
-    def __init__(self, d: int, smooth=True) -> None:
+    def __init__(self, d: int, smooth: bool = True) -> None:
         super().__init__(d=d)
         self.smooth = smooth
 
