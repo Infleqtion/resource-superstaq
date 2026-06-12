@@ -24,7 +24,7 @@ from resource_estimation.ftqc.layout import (
 
 
 @pytest.fixture
-def circuit5():
+def circuit5() -> None:
     circuit = cirq.testing.random_circuit(
         cirq.LineQubit.range(5),
         10,
@@ -35,7 +35,7 @@ def circuit5():
     return circuit
 
 
-def test_column(circuit5: cirq.Circuit):
+def test_column(circuit5: cirq.Circuit) -> None:
     column = Column(circuit5)
     column.reload_factories(ftype="s")
     column.reload_factories(ftype="t")
@@ -116,7 +116,7 @@ def test_column(circuit5: cirq.Circuit):
     assert column.route_cnot(ctrl=ctrl, trgt=trgt) in [path_a, path_b]
 
 
-def test_sandwich(circuit5: cirq.Circuit):
+def test_sandwich(circuit5: cirq.Circuit) -> None:
     sandwich = FactorySandwich(circuit5, num_t_factories=3, num_s_factories=5)
     sandwich.reload_factories(ftype="s")
     sandwich.reload_factories(ftype="t")
@@ -163,7 +163,7 @@ def test_sandwich(circuit5: cirq.Circuit):
     )  # Hopefully this covers 116?
 
 
-def test_embedded(circuit5: cirq.Circuit):
+def test_embedded(circuit5: cirq.Circuit) -> None:
     embedded = Embedded(circuit5)
     embedded.reload_factories(ftype="s")
     embedded.reload_factories(ftype="t")
@@ -206,7 +206,7 @@ def test_embedded(circuit5: cirq.Circuit):
     assert embedded.route_cnot(ctrl=ctrl, trgt=trgt) == expected_path
 
 
-def test_movement(circuit5: cirq.Circuit):
+def test_movement(circuit5: cirq.Circuit) -> None:
     movement = MovementLayout(circuit5, num_t_factories=3)
     movement.reload_factories(ftype="s")
     movement.reload_factories(ftype="t")
@@ -241,7 +241,7 @@ def test_movement(circuit5: cirq.Circuit):
     )
 
 
-def test_general_exceptions(circuit5: cirq.Circuit):
+def test_general_exceptions(circuit5: cirq.Circuit) -> None:
     movement = MovementLayout(circuit5)
     with pytest.raises(ValueError, match="not a valid"):
         movement.reload_factories(ftype="q")
@@ -253,7 +253,7 @@ def test_general_exceptions(circuit5: cirq.Circuit):
         _ = movement.nearest_factory(cirq.GridQubit(0, 2), "t")
 
 
-def test_reset_and_reload(circuit5: cirq.Circuit):
+def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
     column = Column(circuit5)
     # Assert all start with the used status
     assert all(
@@ -294,7 +294,7 @@ def test_reset_and_reload(circuit5: cirq.Circuit):
     )
 
 
-def test_distillery(circuit5: cirq.Circuit):
+def test_distillery(circuit5: cirq.Circuit) -> None:
     distillery = MovementDistillery(circuit5, num_t_factories=3)
     distillery.reload_factories(ftype="s")
     distillery.reload_factories(ftype="t")

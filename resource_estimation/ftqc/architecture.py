@@ -749,7 +749,7 @@ class DefaultMovement(Architecture):
         new_time = self.total_time(new_moment_cost)
         return {"op_time": new_time, "gate_cost": new_gate_cost, "moment_cost": new_moment_cost}
 
-    def distil_t_cost(self, op: cirq.Operation) -> dict:
+    def distil_t_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         return self._distil_t_cost
 
     @cached_property
