@@ -12,7 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from typing import Self
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
+    from typing import Any, Callable
+    from resource_estimation.ftqc import Architecture
+    import numpy.typing as npt
+    from cirq import Circuit, Gate, Operation, Qid
 import json
 import shutil
 from dataclasses import dataclass, asdict, field
@@ -33,7 +40,7 @@ import numpy as np
 import warnings
 
 
-STR2ARCH = {
+STR2ARCH: dict[str, Callable[..., Architecture]] = {
     "ssm": partial(DefaultMovement, idling=False, post_op_correction=True),
     "dsnm": partial(DefaultLattice, idling=False, post_op_correction=True),
     "dsm": partial(DualSpeciesMovement, idling=False, post_op_correction=True),
@@ -72,20 +79,27 @@ def get_eps(
     return max_error, rz_gates, other_gates
 
 
-def surface_code_fidelity(d: int, A=0.03, pth=0.0057, p=0.001) -> float:
+def surface_code_fidelity(
+    d: npt.ArrayLike,
+    A: npt.ArrayLike = 0.03,
+    pth: float = 0.0057,
+    p: float = 0.001,
+) -> np.floating | npt.NDArray[np.float64]:
     """
     Fidelity of surface code operations according to the Fowler paper (Eq 11 of https://web.physics.ucsb.edu/~martinisgroup/papers/Fowler2012.pdf)
     """
-    return 1 - A * (p / pth) ** ((d + 1) // 2)
+    d_arr = np.asarray(d, dtype=np.int_)
+    A_arr = np.asarray(A, dtype=np.float64)
+    return 1 - A_arr * (p / pth) ** ((d_arr + 1) // 2)
 
 
-def get_t_path(circuit: cirq.Circuit, verbose: bool = True):
+def get_t_path(circuit: Circuit, verbose: bool = True) -> list[Operation]:
     """
     Get the T Path of a logical circuit
     Good for comparing with cost model resource estimations
     """
-    qubit_paths = {qubit: [] for qubit in circuit.all_qubits()}
-    qubit_times = {qubit: 0 for qubit in circuit.all_qubits()}
+    qubit_paths: dict[Qid, list[Operation]] = {qubit: [] for qubit in circuit.all_qubits()}
+    qubit_times: dict[Qid, float] = {qubit: 0 for qubit in circuit.all_qubits()}
     for op in tqdm(list(circuit.all_operations()), disable=not verbose, colour="cyan"):
         op_qubits = op.qubits
         big_qubit = max(op_qubits, key=lambda qubit: qubit_times[qubit])
@@ -99,16 +113,16 @@ def get_t_path(circuit: cirq.Circuit, verbose: bool = True):
         for qubit in op_qubits:
             qubit_paths[qubit] = big_path.copy()
             qubit_times[qubit] = big_time
-    critical_qubit = max(qubit_times, key=qubit_times.get)
+    critical_qubit = max(qubit_times, key=qubit_times.__getitem__)
     critical_path = qubit_paths[critical_qubit]
     return critical_path
 
 
 def get_important_information(
-    clifford_t_circuit: cirq.Circuit,
+    clifford_t_circuit: Circuit,
     fold_cultiv: bool,
     pfid: float = 0.99,
-) -> tuple[int, int, Counter, float, int]:
+) -> tuple[int, int, Counter[Gate | None], float, int]:
     """
     Get information used to set certain error-correction assumptions.
 
@@ -171,7 +185,7 @@ def get_important_information(
     return cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance
 
 
-def break_up_ops(cliff_rz_circuit: cirq.Circuit) -> tuple[int, int]:
+def break_up_ops(cliff_rz_circuit: Circuit) -> tuple[int, int]:
     """
     Counts operations in Clifford + Rz circuit according to Rz Gates (continuous angle rotations) and Cliffords
     """
@@ -186,20 +200,20 @@ def break_up_ops(cliff_rz_circuit: cirq.Circuit) -> tuple[int, int]:
 
 
 def error_estimate(
-    code_distance: int,
-    error_per_rz: float,
-    error_per_cult: float,
+    code_distance: npt.ArrayLike,
+    error_per_rz: npt.ArrayLike,
+    error_per_cult: npt.ArrayLike,
     num_rz_gates: int,
     num_clifford: int,
     transversal_s_gate: bool = True,
     t_fit_param: float = 4.8,  # fit parameter from synthesis plot for T
     c_fit_param: float = 7.8,  # fit parameter from synthesis plot for H, S
     hw_noise: float = 0.001,
-) -> float:
+) -> float | npt.NDArray[np.float64]:
     # Recast for vectorized operations
-    code_distance = np.asarray(code_distance)
-    error_per_rz = np.asarray(error_per_rz)
-    error_per_cult = np.asarray(error_per_cult)
+    code_distance = np.asarray(code_distance, dtype=np.int_)
+    error_per_rz = np.asarray(error_per_rz, dtype=np.float64)
+    error_per_cult = np.asarray(error_per_cult, dtype=np.float64)
 
     # The fidelity just from approximating each Rz gate up to the given error
     synthesis_fidelity = (1 - error_per_rz) ** (num_rz_gates)
@@ -267,8 +281,8 @@ class Report:
     # Final Resource Estimates
     time_serial: float = np.inf
     time_parallel: float = np.inf
-    gates_serial: dict = field(default_factory=dict)
-    gates_parallel: dict = field(default_factory=dict)
+    gates_serial: dict[str, dict[cirq.Gate, int]] = field(default_factory=dict)
+    gates_parallel: dict[str, dict[cirq.Gate, int]] = field(default_factory=dict)
     physical_qubits: int = -1
     volume: float = np.inf
     resource_time: float = np.inf
@@ -276,7 +290,7 @@ class Report:
     total_time: float = np.inf
 
     @property
-    def info_dict(self):
+    def info_dict(self) -> dict[str, dict[str, Any[str, float, int, bool]]]:
         # This dictionary will be useful for generating organized reports about the data
         return {
             "Inputs": {
@@ -327,7 +341,7 @@ class Report:
         }
 
     @property
-    def arch(self):
+    def arch(self) -> Architecture:
         if self.fold_cultiv:
             return STR2ARCH[self.arch_name](
                 d=self.distance,
@@ -354,7 +368,7 @@ class Report:
         return filepath
 
     @classmethod
-    def load(cls, filename) -> Self:
+    def load(cls, filename: str) -> Self:
         with open(filename, "r") as f:
             configs = json.load(f)
         return cls(**configs)
@@ -365,7 +379,7 @@ class Report:
     def time_line(self, name: str, seconds: float) -> str:
         return f"{C.OKGREEN}Generated {name} in {C.END}{C.YELLOW}{seconds:.3e}{C.END}{C.OKGREEN} seconds{C.END}"
 
-    def line(self, name: str, value: float | int | str | bool, sep: int = 29) -> str:
+    def line(self, name: str, value: Any[float, int, str, bool], sep: int = 29) -> str:
         if isinstance(value, bool):
             c, v = "", str(value)
         elif isinstance(value, int):
@@ -376,7 +390,7 @@ class Report:
             c, v = "", str(value)
         return f"{name}:{' ' * (sep - len(name))}{c}{v}{C.END}"
 
-    def line_dict(self, name: str, info_dict: dict, sep: int = 29) -> str:
+    def line_dict(self, name: str, info_dict: dict[str, tuple[int, float]], sep: int = 29) -> str:
         sub_str = f"""{name}{" " * (sep - len(name) + 1)}Count     Time (μs)\n"""
         for key, (count, time_us) in info_dict.items():
             count_str = f"{C.MAGENTA}{count:.2e}{C.END}"
