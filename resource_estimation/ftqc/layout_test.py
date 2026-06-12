@@ -11,19 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from cirq.circuits.circuit import Circuit
 import cirq
 import pytest
-from resource_estimation.ftqc import (
+
+from resource_estimation.ftqc.layout import (
     Column,
-    FactorySandwich,
-    MovementLayout,
     Embedded,
+    FactorySandwich,
+    MovementDistillery,
+    MovementLayout,
 )
 
 
 @pytest.fixture
-def circuit5() -> Circuit:
+def circuit5() -> cirq.Circuit:
     circuit = cirq.testing.random_circuit(
         cirq.LineQubit.range(5),
         10,
@@ -291,3 +292,37 @@ def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
             if column.layout_graph.nodes[node]["patch_type"] == "factory"
         ]
     )
+
+
+def test_distillery(circuit5: cirq.Circuit) -> None:
+    distillery = MovementDistillery(circuit5, num_t_factories=3)
+    distillery.reload_factories(ftype="s")
+    distillery.reload_factories(ftype="t")
+
+    expected_program_qubits = set(cirq.GridQubit(0, i) for i in range(5))
+    realized_program_qubits = set(
+        q
+        for q in distillery.layout_graph.nodes
+        if distillery.layout_graph.nodes[q]["patch_type"] == "data"
+    )
+    assert expected_program_qubits == realized_program_qubits
+
+    expected_factories = {cirq.GridQubit(0, 5), cirq.GridQubit(3, 6), cirq.GridQubit(6, 7)}
+    realized_factories = distillery._all_factories
+    assert expected_factories == realized_factories
+
+    expected_block_qubits = set(q for q in distillery.layout_graph.nodes) - (
+        expected_program_qubits.union(expected_factories)
+    )
+    realized_block_qubits = set(
+        q
+        for q in distillery.layout_graph.nodes
+        if distillery.layout_graph.nodes[q]["patch_type"] == "block"
+    )
+    assert expected_block_qubits == realized_block_qubits
+
+    # Check that nearest T factory is as expected and changes when used
+    assert distillery.nearest_factory(qubit=cirq.GridQubit(0, 2), ftype="t") == cirq.GridQubit(
+        0, 5
+    )  # Removes (0, 5) from options
+    assert distillery.nearest_factory(qubit=cirq.GridQubit(2, 2), ftype="t") == cirq.GridQubit(3, 6)

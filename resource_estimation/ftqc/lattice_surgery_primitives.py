@@ -13,16 +13,15 @@
 # limitations under the License.
 from __future__ import annotations
 from functools import cached_property
+from typing import Literal, Optional
+
 import cirq
-from typing import Literal
 
 # TODO: Add cirq diagram info
 
 
 def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
-    """
-    Tells cirq.json how to deserialize custom gates
-    """
+    """Tells cirq.json how to deserialize custom gates"""
     if cirq_type == "lsp.Merge":
         return Merge
     if cirq_type == "lsp.Split":
@@ -35,13 +34,14 @@ def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
         return ErrorCorrect
     if cirq_type == "lsp.Move":
         return Move
+    if cirq_type == "lsp.Distil":
+        return Distil
 
 
 @cirq.value_equality
 class Merge(cirq.Gate):
     def __init__(self, num_qubits: int, smooth: bool = True) -> None:
-        """
-        Subclassed cirq gate to represent the Merge operation in lattice surgery.
+        """Subclassed cirq gate to represent the Merge operation in lattice surgery.
         The Merge operation combines the stabilizers of a set of distinct surface code patches along the boundary qubits.
         Depending on these boundaries, the merge can be smooth or rough.
         See https://arxiv.org/pdf/1111.4022 for details.
@@ -68,7 +68,6 @@ class Merge(cirq.Gate):
 
     def _json_dict_(self) -> dict[str, bool | int]:
         return {"num_qubits": self._num_qubits, "smooth": self._smooth}
-        # return cirq.obj_to_dict_helper(self, ["num_qubits", "smooth"])
 
     def __repr__(self) -> str:
         return f"lsp.Merge(num_qubits={self._num_qubits}, smooth={self._smooth})"
@@ -83,8 +82,7 @@ class Merge(cirq.Gate):
 
 @cirq.value_equality
 class Split(cirq.Gate):
-    """
-    Subclassed cirq gate to represent the Split operation in lattice surgery.
+    """Subclassed cirq gate to represent the Split operation in lattice surgery.
     The Split operation turns a surface code patch into several distinct surface code patches by measuring the boundary qubits.
     See https://arxiv.org/pdf/1111.4022 for more information.
     This version of split assumes that there are a number of underlying well-defined qubits, ensuring we always split along known boundaries.
@@ -112,7 +110,7 @@ class Split(cirq.Gate):
         return self._partitions
 
     def __str__(self) -> str:
-        return f"SPLIT"
+        return "SPLIT"
 
     def _json_dict_(self) -> dict[str, bool | list[int]]:
         return {"smooth": self._smooth, "partitions": self._partitions}
@@ -130,8 +128,7 @@ class Split(cirq.Gate):
 
 @cirq.value_equality
 class SyndromeExtract(cirq.Gate):  # For now we are sort of ignoring the "buffer" physical qubits
-    """
-    Subclassed cirq gate to represent the process of measuring the stabilizers of surface code patch.
+    """Subclassed cirq gate to represent the process of measuring the stabilizers of surface code patch.
     This gate is treated as a single logical qubit operation, and ignores the buffer physical qubits that live between code patches to facilitate merge and split operations.
 
     num_qubits: Number of logical qubits being stabilized
@@ -142,17 +139,17 @@ class SyndromeExtract(cirq.Gate):  # For now we are sort of ignoring the "buffer
         self._num_qubits = num_qubits
         self._rounds = rounds
 
-    def _num_qubits_(self):
+    def _num_qubits_(self) -> int:
         return self._num_qubits
 
     @property
-    def rounds(self):
+    def rounds(self) -> int:
         return self._rounds
 
     def __str__(self) -> str:
         return f"SE({self.rounds})"
 
-    def _json_dict_(self):
+    def _json_dict_(self) -> dict[str, bool | int]:
         return {"num_qubits": self._num_qubits, "rounds": self._rounds}
 
     def __repr__(self) -> str:
@@ -168,8 +165,7 @@ class SyndromeExtract(cirq.Gate):  # For now we are sort of ignoring the "buffer
 
 @cirq.value_equality
 class ErrorCorrect(cirq.Gate):
-    """
-    Subclassed cirq gate to represent the correction part of the error correction cycle.
+    """Subclassed cirq gate to represent the correction part of the error correction cycle.
     In a proper implementation this gate might have both digital bookkeeping and physical correction components to it.
     For the purposes of resource estimation, we leave it as a pretty bare-bones gate.
     It should always follow a SyndromeExtract gate.
@@ -180,13 +176,13 @@ class ErrorCorrect(cirq.Gate):
     def __init__(self, num_qubits) -> None:
         self._num_qubits = num_qubits
 
-    def _num_qubits_(self):
+    def _num_qubits_(self) -> int:
         return self._num_qubits
 
     def __str__(self) -> str:
         return "ERROR CORRECT"
 
-    def _json_dict_(self):
+    def _json_dict_(self) -> dict[str, int]:
         return {"num_qubits": self._num_qubits}
 
     def __repr__(self) -> str:
@@ -202,8 +198,7 @@ class ErrorCorrect(cirq.Gate):
 
 @cirq.value_equality
 class Cultivate(cirq.Gate):
-    """
-    Subclassed cirq gate to represent the cultivation of a single magic state on single code patch.
+    """Subclassed cirq gate to represent the cultivation of a single magic state on single code patch.
     The underlying implementation is assumed to be the one in https://arxiv.org/pdf/2409.17595, and is treated as single qubit gate.
 
     theta: The angle for the magic state to be prepared.
@@ -211,11 +206,11 @@ class Cultivate(cirq.Gate):
     Cultivate(θ)|0> --> (|0> + e^(iθ)|1>)/√2
     """
 
-    def __init__(self, theta) -> None:
+    def __init__(self, theta: float) -> None:
         self._theta = theta
 
     @property
-    def theta(self):
+    def theta(self) -> float:
         return self._theta
 
     def num_qubits(self) -> int:
@@ -224,7 +219,7 @@ class Cultivate(cirq.Gate):
     def __str__(self) -> str:
         return f"CULT({round(self.theta, 3)})"
 
-    def _json_dict_(self):
+    def _json_dict_(self) -> dict[str, float]:
         return {"theta": self._theta}
 
     def __repr__(self) -> str:
@@ -239,15 +234,48 @@ class Cultivate(cirq.Gate):
 
 
 @cirq.value_equality
-class Move(cirq.Gate):
+class Distil(cirq.Gate):
+    """Subclassed cirq gate to represent the distillation of a single T state using 16 code patches.
+    The underlying implementation is assumed to be the one in https://arxiv.org/abs/quant-ph/0403025.
+    Noisy T gates are assumed to come from cultivation, resulting in 15 additional logical patches.
+
+
+    Distil|0^31> --> (|0> + e^(1j*pi/4)|1>)/√2 |0^30>
+
     """
-    Subclassed cirq gate to represent a iter-patch movement operation
+
+    def __init__(self) -> None:
+        pass
+
+    def num_qubits(self) -> int:
+        return 31
+
+    def __str__(self) -> str:
+        return "DISTIL"
+
+    def _json_dict_(self) -> dict[str, object]:
+        return {}
+
+    def __repr__(self) -> str:
+        return "lsp.Distil()"
+
+    @classmethod
+    def _json_namespace_(cls) -> str:
+        return "lsp"
+
+    def _value_equality_values_(self) -> tuple[()]:
+        return ()
+
+
+@cirq.value_equality
+class Move(cirq.Gate):
+    """Subclassed cirq gate to represent a iter-patch movement operation
 
     It is currently used to describe both movement to a zone and movement through alleyways to other
     logical qubit patches.
     """
 
-    def __init__(self, zone: Literal[None, "measure", "interact"] = None) -> None:
+    def __init__(self, zone: Optional[Literal["measure", "interact"]] = None) -> None:
         self._num_qubits = 2 if zone is None else 1
         self._zone = zone
 
@@ -261,8 +289,7 @@ class Move(cirq.Gate):
     def __str__(self) -> str:
         if self.zone is None:
             return "MOVE"
-        else:
-            return "MOVE_MZ" if self.zone == "measure" else "MOVE_IZ"
+        return "MOVE_MZ" if self.zone == "measure" else "MOVE_IZ"
 
     def _json_dict_(self) -> dict[str, Literal["interact", "measure"] | None]:
         return {"zone": self._zone}
@@ -274,13 +301,12 @@ class Move(cirq.Gate):
     def _json_namespace_(cls) -> str:
         return "lsp"
 
-    def _value_equality_values_(self) -> int:
-        return self._num_qubits, self._zone
+    def _value_equality_values_(self) -> tuple[int, str | None]:
+        return (self._num_qubits, self._zone)
 
 
 class RotatedCodePatch:
-    """
-    Extremely rough implementation of the rotated surface code.
+    """Extremely rough implementation of the rotated surface code.
     Assumed to be square patches.
 
     d: Code distance defining the surface code patch
@@ -317,48 +343,35 @@ class RotatedCodePatch:
 
     @cached_property
     def num_data_qubits(self) -> int:
-        """
-        The number of data qubits in surface code patch
-        """
+        """The number of data qubits in surface code patch"""
         return self.d**2
 
     @cached_property
     def num_measure_qubits(self) -> int:
-        """
-        The number of measure qubits in a surface code patch
-        """
+        """The number of measure qubits in a surface code patch"""
         return self.d**2 - 1
 
     def num_z_stabs(self, full: bool = True) -> int:  # Still assuming square lattice
-        """
-        The number of Z-type stabilizers in the patch.
+        """The number of Z-type stabilizers in the patch.
         The full flag determines whether to count the complete plaquettes or the incomplete ones.
         Incomplete plaquettes have different costs in terms of resource estimation.
         """
         if full:
             return (self.d - 1) ** 2 // 2
-        else:
-            return self.d - 1
+        return self.d - 1
 
     def num_x_stabs(self, full: bool = True) -> int:  # Still assuming square lattice here
-        """
-        The number of X-type stabilizers in the patch (should be same as Z)
-        """
+        """The number of X-type stabilizers in the patch (should be same as Z)"""
         if full:
             return (self.d - 1) ** 2 // 2
-        else:
-            return self.d - 1
+        return self.d - 1
 
     def total_x_syndrome_cnots(self) -> int:
-        """
-        The total number of CNOT parity checks incurred when measuring all X stabilizers.
-        """
+        """The total number of CNOT parity checks incurred when measuring all X stabilizers."""
         return 4 * self.num_x_stabs(full=True) + 2 * self.num_x_stabs(full=False)
 
     def total_z_syndrome_cnots(self) -> int:
-        """
-        The total number of CNOT parity checks incurred when measuring all Z stabilizers.
-        """
+        """The total number of CNOT parity checks incurred when measuring all Z stabilizers."""
         return 4 * self.num_z_stabs(full=True) + 2 * self.num_z_stabs(full=False)
 
     def __eq__(self, value: object, /) -> bool:
@@ -369,8 +382,7 @@ class RotatedCodePatch:
 
 
 class BufferCodePatch(RotatedCodePatch):
-    """
-    2 x d buffer zone formed between qubit patches
+    """2 x d buffer zone formed between qubit patches
     Includes two partial X stabilizers if the merge is smooth, else two partial Z stabilizers
     """
 
@@ -383,8 +395,7 @@ class BufferCodePatch(RotatedCodePatch):
             return self.d - 1
         if self.smooth:
             return 2
-        else:
-            return 0
+        return 0
 
     def num_z_stabs(self, full: bool = True) -> int:
         if full:
@@ -400,8 +411,7 @@ class BufferCodePatch(RotatedCodePatch):
 
 
 class IntermediatePatch(RotatedCodePatch):
-    """
-    (d - 1) x  (d - 1) patch formed between distant patches during a merge operation
+    """(d - 1) x  (d - 1) patch formed between distant patches during a merge operation
     Has the X partial stabilizers of a full patch if smooth else the Z partial stabilizers from a full patch
     """
 
@@ -434,8 +444,7 @@ class IntermediatePatch(RotatedCodePatch):
 
 
 class EndpointPatch(RotatedCodePatch):
-    """
-    (d - 1) x (d - 1) patch at the endpoints of a merge operation
+    """(d - 1) x (d - 1) patch at the endpoints of a merge operation
     Looks like a normal rotated code patch with three 'flaps' instead of four
     If the merge is smooth, the flaps are X stabilizers else Z
     """

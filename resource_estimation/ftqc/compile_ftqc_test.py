@@ -11,35 +11,36 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from cirq.circuits.circuit import Circuit
+import textwrap
 from collections import Counter
 from math import pi
-import textwrap
+
 import cirq
 import pytest
+from cirq_superstaq import Barrier
+
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.compile_ftqc as comp
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-from cirq_superstaq import Barrier
-from resource_estimation.ftqc import MovementLayout, Column, Embedded
+from resource_estimation.ftqc.layout import Column, Embedded, MovementDistillery, MovementLayout
 
 
 @pytest.fixture
-def bell_circuit() -> Circuit:
+def bell_circuit() -> cirq.Circuit:
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit([cirq.H.on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b)])
     return circuit
 
 
-@pytest.fixture()
-def t_circuit() -> Circuit:
+@pytest.fixture
+def t_circuit() -> cirq.Circuit:
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit([cirq.H.on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b), cirq.T.on(qubit_b)])
     return circuit
 
 
 @pytest.fixture
-def random_circ() -> Circuit:
+def random_circ() -> cirq.Circuit:
     return cirq.testing.random_circuit(
         qubits=5,
         n_moments=8,
@@ -134,6 +135,7 @@ def test_direct_substitution() -> None:
     for op_to_replace in [
         cirq.CNOT.on(*dummy_qubits[:2]),
         cirq.S.on(dummy_qubits[0]),
+        lsp.Distil().on(*cirq.LineQubit.range(31)),
     ]:
         replacement = comp._decompose_to_primitives(
             circuit=cirq.Circuit(op_to_replace),
@@ -176,9 +178,7 @@ def test_replace_cirq_op_lattice(op_type, bell_circuit) -> None:
     layout = Column(bell_circuit)
 
     op_to_replace = op_type.on(*list(layout.mapped_circuit.all_qubits())[: op_type.num_qubits()])
-    print(op_to_replace)
     returned_ops = comp.replace_cirq_op(op=op_to_replace, layout=layout, transversal_cnot=False)
-    print(returned_ops)
 
     if op_type == cirq.S:
         expected_types = [lsp.Cultivate] * 2 + [
@@ -890,7 +890,6 @@ def test_hm_moves() -> None:
         "zone_ops": arch_type.zone_ops if arch_type.zone_ops is not None else cirq.Gateset(),
         "alley_ops": arch_type.alley_ops if arch_type.alley_ops is not None else cirq.Gateset(),
     }
-    print(arch_info)
     a, b, c = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
     input_circuit = cirq.Circuit(
         lsp.SyndromeExtract(1, 1).on_each(a, b),
@@ -915,3 +914,40 @@ def test_hm_moves() -> None:
         output_circuit,
         str(expected_output_circuit),
     )
+
+
+def test_replace_cirq_op_distil(bell_circuit) -> None:
+    distillery_layout = MovementDistillery(bell_circuit, num_t_factories=2)
+
+    op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
+    returned_ops = comp.replace_cirq_op(
+        op=op_to_replace, layout=distillery_layout, transversal_cnot=True
+    )
+    expected_types = [
+        lsp.Distil,
+        lsp.Distil,
+        cirq.CNOT,
+        cirq.MeasurementGate,
+        cirq.S,
+        cirq.ResetChannel,
+    ]
+    assert len(expected_types) == len(returned_ops)
+    for op, expected_type in zip(returned_ops, expected_types):
+        assert op in cirq.GateFamily(expected_type)
+
+
+def test_different_rounds_distil() -> None:
+    circuit = cirq.Circuit(cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)))
+    layout = MovementDistillery(input_circuit=circuit)
+    for k in [1, 5, 7]:
+        architecture = arch.DefaultMovement(
+            idling=False,
+            post_op_correction=True,
+            d=7,
+            cultivation_repetition=1,
+            syndrome_rounds=k,
+        )
+        compiled_circuit = comp.ft_compile(layout=layout, arc=architecture)
+        for op in compiled_circuit.all_operations():
+            if op in cirq.GateFamily(lsp.SyndromeExtract):
+                assert op.gate.rounds == k
