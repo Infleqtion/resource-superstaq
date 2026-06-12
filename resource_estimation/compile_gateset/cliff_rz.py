@@ -337,8 +337,6 @@ class CliffTDirect(cirq.TwoQubitCompilationTargetGateset):
         """List of transformers which should be run before decomposing individual operations."""
         return [
             cirq.drop_negligible_operations,
-            # cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=1),
-            # cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=2),
             *super().preprocess_transformers,
         ]
 
@@ -347,10 +345,6 @@ class CliffTDirect(cirq.TwoQubitCompilationTargetGateset):
         """List of transformers which should be run after decomposing individual operations."""
         return [
             # cirq.create_transformer_with_kwargs(eject_z, atol=self._atol),  # Some weird behavior comes from this
-            # cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=1),
-            # cirq.create_transformer_with_kwargs(cirq.merge_k_qubit_unitaries, k=2),
-            # gate_to_matrix_gate,
-            # cirq.create_transformer_with_kwargs(_decompose_matrix_gates, epsilon=self._epsilon),
             cirq.create_transformer_with_kwargs(cirq.drop_negligible_operations, atol=self._atol),
             cirq.drop_empty_moments,
             cirq.create_transformer_with_kwargs(cirq.drop_negligible_operations, atol=self._atol),
