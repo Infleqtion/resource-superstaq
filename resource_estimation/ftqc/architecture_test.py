@@ -354,7 +354,10 @@ def test_self_returns(movement_architecture, lattice_architecture) -> None:
 def test_against_cultiv(d) -> None:
     # Test Syndrome Extract
     # Set up memory circuit
-    with open(os.path.dirname(os.path.abspath(__file__)) + "/../../data/cultivate_costs.json") as f:
+    data_path = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "data", "cultivate_costs.json")
+    )
+    with open(data_path) as f:
         saved_resources = json.load(f)
 
     d_count = load_saved_cost(dsurface=d, op_key="memory_d_rounds")["serial"]
