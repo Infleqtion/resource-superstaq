@@ -22,10 +22,10 @@ import cirq
 import numpy as np
 from cirq_superstaq.ops.qubit_gates import ParallelRGate
 
-from resource_estimation.compile_ftqc import add_moves
-from resource_estimation.distil import distil_15_to_1
-from resource_estimation.estimate import ResourceEstimator
-from resource_estimation.stim_functions import cultivate
+from resource_estimation.ftqc.compile_ftqc import add_moves
+from resource_estimation.ftqc.distil import distil_15_to_1
+from resource_estimation.ftqc.estimate import ResourceEstimator
+from resource_estimation.ftqc.stim_functions import cultivate
 
 from . import lattice_surgery_primitives as lsp
 
