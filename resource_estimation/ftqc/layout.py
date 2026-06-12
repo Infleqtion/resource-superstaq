@@ -20,7 +20,6 @@ from math import ceil, sqrt
 from typing import Literal
 
 import cirq
-import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
@@ -202,7 +201,6 @@ class Layout(abc.ABC):
             node_color.append(color_dict[key])
         pos = {node: (node.row, node.col) for node in G.nodes}
         nx.draw(G, with_labels=True, node_color=node_color, pos=pos)
-        plt.show()
 
 
 class MovementLayout(Layout):
@@ -213,7 +211,7 @@ class MovementLayout(Layout):
     """
 
     # TODO: build this implementation
-    def __init__(self, input_circuit: cirq.Circuit, num_t_factories: int = 1):
+    def __init__(self, input_circuit: cirq.Circuit, num_t_factories: int = 1) -> None:
         super().__init__(
             input_circuit=input_circuit, num_t_factories=num_t_factories, num_s_factories=0
         )

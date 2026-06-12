@@ -351,7 +351,7 @@ class RotatedCodePatch:
         """The number of measure qubits in a surface code patch"""
         return self.d**2 - 1
 
-    def num_z_stabs(self, full=True) -> int:  # Still assuming square lattice
+    def num_z_stabs(self, full: bool = True) -> int:  # Still assuming square lattice
         """The number of Z-type stabilizers in the patch.
         The full flag determines whether to count the complete plaquettes or the incomplete ones.
         Incomplete plaquettes have different costs in terms of resource estimation.
@@ -360,7 +360,7 @@ class RotatedCodePatch:
             return (self.d - 1) ** 2 // 2
         return self.d - 1
 
-    def num_x_stabs(self, full=True) -> int:  # Still assuming square lattice here
+    def num_x_stabs(self, full: bool = True) -> int:  # Still assuming square lattice here
         """The number of X-type stabilizers in the patch (should be same as Z)"""
         if full:
             return (self.d - 1) ** 2 // 2
@@ -390,14 +390,14 @@ class BufferCodePatch(RotatedCodePatch):
         super().__init__(d=d)
         self.smooth = smooth
 
-    def num_x_stabs(self, full=True) -> int:
+    def num_x_stabs(self, full: bool = True) -> int:
         if full:
             return self.d - 1
         if self.smooth:
             return 2
         return 0
 
-    def num_z_stabs(self, full=True) -> int:
+    def num_z_stabs(self, full: bool = True) -> int:
         if full:
             return self.d - 1
         if self.smooth:
@@ -419,14 +419,14 @@ class IntermediatePatch(RotatedCodePatch):
         super().__init__(d=d)
         self.smooth = smooth
 
-    def num_x_stabs(self, full=True) -> int:
+    def num_x_stabs(self, full: bool = True) -> int:
         if full:
             return super().num_x_stabs(full=True)
         if self.smooth:
             return super().num_x_stabs(full=False)
         return 0
 
-    def num_z_stabs(self, full=True) -> int:
+    def num_z_stabs(self, full: bool = True) -> int:
         if full:
             return super().num_z_stabs(full=True)
         if self.smooth:
@@ -449,18 +449,18 @@ class EndpointPatch(RotatedCodePatch):
     If the merge is smooth, the flaps are X stabilizers else Z
     """
 
-    def __init__(self, d: int, smooth=True) -> None:
+    def __init__(self, d: int, smooth: bool = True) -> None:
         super().__init__(d=d)
         self.smooth = smooth
 
-    def num_x_stabs(self, full=True) -> int:
+    def num_x_stabs(self, full: bool = True) -> int:
         if full:
             return super().num_x_stabs(full=True)
         if self.smooth:
             return super().num_x_stabs(full=False)
         return super().num_x_stabs(full=False) // 2  # 1 set of 'flaps' instead of 2
 
-    def num_z_stabs(self, full=True) -> int:
+    def num_z_stabs(self, full: bool = True) -> int:
         if full:
             return super().num_z_stabs(full=True)
         if self.smooth:

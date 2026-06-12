@@ -464,8 +464,8 @@ class DefaultLattice(Architecture):
         self,
         idling: bool = True,
         post_op_correction: bool = True,
-        d=7,
-        cultivation_repetition=1,
+        d: int = 7,
+        cultivation_repetition: int = 1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds: int | None = None,
     ) -> None:
@@ -578,8 +578,8 @@ class DefaultMovement(Architecture):
         post_op_correction: bool = True,
         d: int = 7,
         fold_cultiv=False,
-        cultivation_repetition=1,
-        distillation_repetition=1,
+        cultivation_repetition: int = 1,
+        distillation_repetition: int = 1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds: int | None = 1,
     ) -> None:

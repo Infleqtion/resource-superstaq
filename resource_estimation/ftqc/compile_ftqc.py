@@ -44,7 +44,9 @@ from .layout import Layout
 
 
 # This function is only visual and is extremely finicky, so it is not tested
-def knock_off_tqdm(moment_idx: int, total: int, tstart: float, message: str) -> None:  # pragma: no cover
+def knock_off_tqdm(
+    moment_idx: int, total: int, tstart: float, message: str
+) -> None:  # pragma: no cover
     """Implements tqdm-like behavior for the compiler"""
     if not sys.stdout.isatty():
         # This is to ensure that testing can progress as normal
@@ -77,7 +79,7 @@ def replace_cirq_op(
     op: cirq.Operation,
     layout: Layout,
     transversal_cnot: bool,
-):
+) -> list[cirq.Operation]:
     """Replacement logic similar to decomposition for cirq operations to be converted to primitives.
 
     op: cirq operation to be unrolled
@@ -159,7 +161,7 @@ def teleport_S(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
 
 
 def handle_idling(
-    circuit: cirq.Circuit, layout: Layout, with_barriers: bool, rounds: int, verbose=0
+    circuit: cirq.Circuit, layout: Layout, with_barriers: bool, rounds: int, verbose: int = 0
 ) -> cirq.Circuit:
     """Helper function for the compiler that handles idling. This way we can experiment with different kinds of idling or even turn it off entirely.
     This function is still a work in progress, but it is likely to take the form of various compiler passes.
@@ -283,15 +285,13 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
     valid_types = (
         cirq.MeasurementGate,
         cirq.ResetChannel,
-        css.Barrier,
-        # cirq.Rz,  # TODO: Why is this in here
     )
     total_ops = len(list(circuit.all_operations()))
     if not all(
         op.gate in valid_gates or isinstance(op.gate, valid_types)
         for op in tqdm(circuit.all_operations(), total=total_ops, disable=not verbose)
     ):
-        raise ValueError("This compiler only handles Clifford + Rz circuits")
+        raise ValueError("This compiler only handles Clifford + T circuits")
 
 
 def _decompose_to_primitives(
@@ -354,10 +354,10 @@ def ft_compile(
     layout: Layout,
     arc: Architecture,
     verbose: int = 1,
-    with_barriers=False,
+    with_barriers: bool = False,
     num_threads: int = 1,
     skip_validation: bool = False,
-):
+) -> cirq.Circuit:
     """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T gateset to a cirq circuit of primitives.
     The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
     The architecture input contains information about what primtives are accessible to the compiler and which extra passes should be added to the primitive circuit.
