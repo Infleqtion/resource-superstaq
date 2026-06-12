@@ -33,7 +33,7 @@ class Layout(abc.ABC):
     num_t_factories: int = 0
     num_s_factories: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.mapped_circuit = None
         self.layout_graph = None
         self._available_t_factories = deque()
@@ -231,7 +231,7 @@ class Column(Layout):
     ...
     """
 
-    def __init__(self, input_circuit: cirq.Circuit):
+    def __init__(self, input_circuit: cirq.Circuit) -> None:
         rows = ceil(len(input_circuit.all_qubits()) / 2)
         num_s_factories = 2 * rows
         num_t_factories = 2 * rows
@@ -307,7 +307,7 @@ class FactorySandwich(Layout):
     T | T | T | T
     """
 
-    def _generate(self):
+    def _generate(self) -> None:
         """Places and assigns logical qubits according to the Sandwich configuration"""
         qubit_map: dict[cirq.Qid, cirq.GridQubit] = {}
         all_qubits = list(self.input_circuit.all_qubits())
@@ -356,11 +356,11 @@ class Embedded(Layout):
     """
 
     # TODO: figure out a way o make the number of factories configurable
-    def __init__(self, input_circuit: cirq.Circuit):
+    def __init__(self, input_circuit: cirq.Circuit) -> None:
         # TODO: Find the formula for this
         super().__init__(input_circuit=input_circuit, num_s_factories=0, num_t_factories=0)
 
-    def _generate(self):
+    def _generate(self) -> None:
         """Builds a large embedded logical qubit array by starting from a nearest neighbor array and adding rows/columns of other qubit types"""
         all_qubits = list(self.input_circuit.all_qubits())
         num_logicals = len(all_qubits)
@@ -450,14 +450,14 @@ class MovementDistillery(MovementLayout):
         self,
         input_circuit: cirq.Circuit,
         num_t_factories: int = 0,
-    ):
+    ) -> None:
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
         )
         self.distil = True
 
-    def _generate(self):
+    def _generate(self) -> None:
         program_qubits = len(self.input_circuit.all_qubits())
         distillation_qubits = 31 * self.num_t_factories
         total_qubits = program_qubits + distillation_qubits
