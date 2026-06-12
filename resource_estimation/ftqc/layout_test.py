@@ -24,7 +24,7 @@ from resource_estimation.ftqc.layout import (
 
 
 @pytest.fixture
-def circuit5() -> None:
+def circuit5() -> cirq.Circuit:
     circuit = cirq.testing.random_circuit(
         cirq.LineQubit.range(5),
         10,

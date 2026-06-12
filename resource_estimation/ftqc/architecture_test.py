@@ -28,21 +28,21 @@ from resource_estimation.ftqc.stim_functions import cultivate, load_saved_cost
 
 
 @pytest.fixture
-def lattice_architecture():
+def lattice_architecture() -> arch.DefaultLattice:
     return arch.DefaultLattice()
 
 
 @pytest.fixture
-def movement_architecture():
+def movement_architecture() -> arch.DefaultMovement:
     return arch.DefaultMovement()
 
 
-def test_architecture_exceptions(lattice_architecture, movement_architecture):
+def test_architecture_exceptions(lattice_architecture, movement_architecture) -> None:
     with pytest.raises(ValueError, match="Cultivation cost"):
         _ = lattice_architecture.cultivate_cost(lsp.Cultivate(1).on(cirq.GridQubit(0, 0)))
 
 
-def test_inplace_exact(lattice_architecture: arch.DefaultLattice):
+def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
     # TODO: Brainstorm a better way to test this feature
     actual_op_cost = lattice_architecture.cultivate_cost(
         lsp.Cultivate(pi / 2).on(cirq.GridQubit(0, 0))
@@ -71,14 +71,14 @@ def test_inplace_exact(lattice_architecture: arch.DefaultLattice):
 
 
 @pytest.mark.parametrize("arc", [arch.DefaultMovement(), arch.DefaultLattice()])
-def test_illegal_gate(arc):
+def test_illegal_gate(arc) -> None:
     illegal_gate = cirq.Rx(rads=2).on(cirq.LineQubit(0))
     with pytest.raises(ValueError, match="Gate not recognized"):
         _ = arc.gate_cost(illegal_gate)
 
 
 @pytest.mark.parametrize("d", (3, 5, 7))
-def test_movement_gate_costs(d):
+def test_movement_gate_costs(d) -> None:
     # Check that all gate costs are correct for movment architectures
     arc = arch.DefaultMovement(d=d)
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
@@ -186,7 +186,7 @@ def test_movement_gate_costs(d):
 
 
 @pytest.mark.parametrize("d", (3, 5, 7))
-def test_lattice_gate_costs(d):
+def test_lattice_gate_costs(d) -> None:
     # Test that gate costs are exact for lattice architectures
 
     arc = arch.DefaultLattice(d=d)
@@ -335,7 +335,7 @@ def test_lattice_gate_costs(d):
         assert expectation == cost
 
 
-def test_self_returns(movement_architecture, lattice_architecture):
+def test_self_returns(movement_architecture, lattice_architecture) -> None:
     # TODO: There are no self-returns anymore so this function is not well named
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     ops_and_expectations = [
@@ -350,7 +350,7 @@ def test_self_returns(movement_architecture, lattice_architecture):
 
 
 @pytest.mark.parametrize("d", (3, 5, 7))
-def test_against_cultiv(d):
+def test_against_cultiv(d) -> None:
     # Test Syndrome Extract
     # Set up memory circuit
     with open(os.path.dirname(os.path.abspath(__file__)) + "/../../data/cultivate_costs.json") as f:
@@ -404,7 +404,7 @@ def test_against_cultiv(d):
     assert circuit_cost[cirq.CZ] == official_cnot_resources[cirq.CZ]
 
 
-def test_movement_moment_costs(movement_architecture):
+def test_movement_moment_costs(movement_architecture) -> None:
     # Test that all primitives have moment costs
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
 
@@ -482,7 +482,7 @@ def test_movement_moment_costs(movement_architecture):
         _ = movement_architecture.moment_cost(op)
 
 
-def test_lattice_moment_costs(lattice_architecture):
+def test_lattice_moment_costs(lattice_architecture) -> None:
     # Test that all primitives have correct moment costs
     op = lsp.Cultivate(pi / 4).on(cirq.GridQubit(0, 0))
     cost = lattice_architecture.moment_cost(op=op)
@@ -546,7 +546,7 @@ def test_lattice_moment_costs(lattice_architecture):
         _ = lattice_architecture.gate_cost(cirq.Rx(rads=7).on(cirq.GridQubit(0, 0)))
 
 
-def test_timing(movement_architecture, lattice_architecture):
+def test_timing(movement_architecture, lattice_architecture) -> None:
     # This test should break first when we introduce real gate times
     gates_with_time = [
         (cirq.PhasedXZGate, 5.0),
@@ -569,7 +569,7 @@ def test_timing(movement_architecture, lattice_architecture):
         lattice_architecture.op_time(cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)))
 
 
-def test_classmethods():
+def test_classmethods() -> None:
     movement_input_dict = {
         "movement": True,
         "idling": True,
@@ -668,7 +668,7 @@ def test_classmethods():
         _ = arch.Architecture.from_dict(input_dict)
 
 
-def test_dual_species_with_movement():
+def test_dual_species_with_movement() -> None:
     # HM never pays for Measurement
     # HM often pays to move for CZ
     # - Transversal CNOT
@@ -722,7 +722,7 @@ def test_dual_species_with_movement():
 
 
 @pytest.mark.parametrize("fold", (True, False))
-def test_mzo(fold):
+def test_mzo(fold) -> None:
     # MZO always pays two Moves per measure
     # - Syndrome Extract
     # - Cultiving (folded or unfolded)
@@ -776,7 +776,7 @@ def test_mzo(fold):
     assert mzo_t_cult == ssm_t_cult
 
 
-def test_string_representations():
+def test_string_representations() -> None:
     ssm = arch.DefaultMovement(
         idling=True, post_op_correction=True, d=9, cultivation_repetition=10, syndrome_rounds=1
     )
@@ -809,7 +809,7 @@ def test_string_representations():
     assert str(dsnm) == "DualSpeciesNoMovement(d=7, cr=1, fd=3)"
 
 
-def test_folded_architecture():
+def test_folded_architecture() -> None:
     folded_movement = arch.DefaultMovement(fold_cultiv=True)
     normal_movement = arch.DefaultMovement(fold_cultiv=False)
 
@@ -819,7 +819,7 @@ def test_folded_architecture():
     assert folded_cultivation_time < normal_cultivation_time
 
 
-def test_convert_globals_to_phasedxz():
+def test_convert_globals_to_phasedxz() -> None:
     """Confirm that the conversion function works as expected"""
     sc = arch.Superconductor()
     example1 = {
@@ -845,7 +845,7 @@ def test_convert_globals_to_phasedxz():
     assert expected == actual
 
 
-def test_logical_move():
+def test_logical_move() -> None:
     arc = arch.DualSpeciesMovement()
     one_hop = lsp.Move(zone=None).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 0))
     two_hop = lsp.Move(zone=None).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 1))
@@ -856,7 +856,7 @@ def test_logical_move():
     assert two_cost == 2 * one_cost
 
 
-def test_y_cult_on_movement():
+def test_y_cult_on_movement() -> None:
     ssm = arch.DefaultMovement(d=11)
     mzo = arch.MeasureZonesOnly(d=11)
     dsm = arch.DualSpeciesMovement(d=11)
