@@ -106,7 +106,7 @@ class Split(cirq.Gate):
         return self._smooth
 
     @property
-    def partitions(self): list[int]:
+    def partitions(self) -> list[int]:
         return self._partitions
 
     def __str__(self) -> str:
@@ -182,7 +182,7 @@ class ErrorCorrect(cirq.Gate):
     def __str__(self) -> str:
         return "ERROR CORRECT"
 
-    def _json_dict_(self) dict[str, int]:
+    def _json_dict_(self) -> dict[str, int]:
         return {"num_qubits": self._num_qubits}
 
     def __repr__(self) -> str:
@@ -291,7 +291,7 @@ class Move(cirq.Gate):
             return "MOVE"
         return "MOVE_MZ" if self.zone == "measure" else "MOVE_IZ"
 
-    def _json_dict_(self) dict[str, Literal["interact", "measure"] | None]:
+    def _json_dict_(self) -> dict[str, Literal["interact", "measure"] | None]:
         return {"zone": self._zone}
 
     def __repr__(self) -> str:
