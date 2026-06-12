@@ -16,8 +16,8 @@ from math import pi
 import cirq
 import pytest
 
-from resource_estimation.distil import distil_15_to_1
-from resource_estimation.lattice_surgery_primitives import Cultivate
+from resource_estimation.ftqc.distil import distil_15_to_1
+from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
 
 # Need to add tests here.
 
