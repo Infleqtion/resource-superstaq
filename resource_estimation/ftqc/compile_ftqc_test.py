@@ -165,8 +165,8 @@ def test_replace_cirq_op_movement(bell_circuit) -> None:
         lsp.Cultivate,
         cirq.CNOT,
         cirq.MeasurementGate,
-        cirq.S,
         cirq.ResetChannel,
+        cirq.S,
     ]
     assert len(expected_types) == len(returned_ops)
     for op, expected_type in zip(returned_ops, expected_types):
@@ -179,13 +179,14 @@ def test_replace_cirq_op_lattice(op_type, bell_circuit) -> None:
 
     op_to_replace = op_type.on(*list(layout.mapped_circuit.all_qubits())[: op_type.num_qubits()])
     returned_ops = comp.replace_cirq_op(op=op_to_replace, layout=layout, transversal_cnot=False)
+    print(cirq.Circuit(returned_ops))
 
     if op_type == cirq.S:
         expected_types = [lsp.Cultivate] * 2 + [
             cirq.CNOT,
             cirq.MeasurementGate,
-            cirq.Z,
             cirq.ResetChannel,
+            cirq.Z,
         ]
     elif op_type == cirq.T:
         expected_types = [
@@ -193,8 +194,8 @@ def test_replace_cirq_op_lattice(op_type, bell_circuit) -> None:
             lsp.Cultivate,
             cirq.CNOT,
             cirq.MeasurementGate,
-            cirq.S,
             cirq.ResetChannel,
+            cirq.S,
         ]
     elif op_type == cirq.CNOT:
         expected_types = [lsp.Merge, lsp.Split, lsp.Merge, lsp.Split]
@@ -923,13 +924,15 @@ def test_replace_cirq_op_distil(bell_circuit) -> None:
     returned_ops = comp.replace_cirq_op(
         op=op_to_replace, layout=distillery_layout, transversal_cnot=True
     )
+    print(cirq.Circuit(returned_ops))
+    print(distillery_layout.distil)
     expected_types = [
         lsp.Distil,
         lsp.Distil,
         cirq.CNOT,
         cirq.MeasurementGate,
-        cirq.S,
         cirq.ResetChannel,
+        cirq.S,
     ]
     assert len(expected_types) == len(returned_ops)
     for op, expected_type in zip(returned_ops, expected_types):

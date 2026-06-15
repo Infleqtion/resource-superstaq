@@ -133,6 +133,22 @@ class Layout(abc.ABC):
     def available_s_factories(self) -> deque[cirq.GridQubit]:
         return self._available_s_factories
 
+    def available_factories(self, ftype: str) -> deque[cirq.GridQubit]:
+        if ftype == "t":
+            return self._available_t_factories
+        elif ftype == "s":
+            return self._available_s_factories
+        elif ftype == "toff":
+            raise NotImplementedError
+        raise ValueError(f"No factories available with type {ftype}")
+
+    def all_factories(self, ftype: str):
+        return [
+            factory
+            for factory in self._all_factories
+            if self.layout_graph.nodes[factory]["ftype"] == ftype
+        ]
+
     def nearest_factory(self, qubit: cirq.GridQubit, ftype: Literal["s", "t"]) -> cirq.GridQubit:
         """Finds the closest factory of desired type according to the Manhattan distance using the GridQubit indices of the factory qubits that do not have the `used` status
         Removes the returned factory from the available options and sets its status to `used`
