@@ -31,6 +31,7 @@ class Layout(abc.ABC):
     input_circuit: cirq.Circuit
     num_t_factories: int = 0
     num_s_factories: int = 0
+    num_ccz_factories: int = 0
 
     def __post_init__(self) -> None:
         self.mapped_circuit = None
@@ -192,6 +193,7 @@ class Layout(abc.ABC):
             "data": "green",
             "ancilla": "blue",
             "block": "pink",
+            "ccz": "orange",
         }
         G = self.layout_graph
         node_color = []
@@ -211,9 +213,13 @@ class MovementLayout(Layout):
     """
 
     # TODO: build this implementation
-    def __init__(self, input_circuit: cirq.Circuit, num_t_factories: int = 1) -> None:
+    def __init__(self,
+                 input_circuit: cirq.Circuit,
+                 num_t_factories: int = 1,
+                 num_ccz_factories: int = 1,
+                 ) -> None:
         super().__init__(
-            input_circuit=input_circuit, num_t_factories=num_t_factories, num_s_factories=0
+            input_circuit=input_circuit, num_t_factories=num_t_factories, num_s_factories=0, num_ccz_factories=num_ccz_factories,
         )
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit):
@@ -445,19 +451,31 @@ class Embedded(Layout):
 
 class MovementDistillery(MovementLayout):
     def __init__(
-        self,
-        input_circuit: cirq.Circuit,
-        num_t_factories: int = 0,
+            self,
+            input_circuit: cirq.Circuit,
+            num_t_factories: int = 0,
+            num_ccz_factories: int = 0
     ) -> None:
+        if self.num_ccz_factories > 0:
+            self.ccz = True
+        else:
+            self.ccz = False
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
+            num_ccz_factories=num_ccz_factories,
         )
         self.distil = True
 
     def _generate(self) -> None:
         program_qubits = len(self.input_circuit.all_qubits())
-        distillation_qubits = 31 * self.num_t_factories
+        # if self.ccz:
+            # 15+8 = 23
+            # distillation_qubits = ((15+8) * self.num_ccz_factories +
+            #                        31 * self.num_t_factories)
+        # else:
+            # distillation_qubits = 31 * self.num_t_factories
+        distillation_qubits = 23 * self.num_ccz_factories
         total_qubits = program_qubits + distillation_qubits
         side_length = ceil(sqrt(total_qubits))
 
@@ -475,11 +493,25 @@ class MovementDistillery(MovementLayout):
         G.add_nodes_from(
             [(q, dict(patch_type="data")) for q in qubit_map.values()],
         )
-        for factory_index in range(self.num_t_factories):
-            qubit_index = factory_index * 31 + program_qubits
+        # for factory_index in range(self.num_t_factories):
+        #     qubit_index = factory_index * 31 + program_qubits
+        #     output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
+        #     G.add_node(output_qubit, patch_type="factory", ftype="t", fid=factory_index, used=True)
+        #     block_qubits = [cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, 31)]
+        #     G.add_nodes_from(
+        #         [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
+        #     )
+        for factory_index in range(self.num_ccz_factories):
+            qubit_index = factory_index * 23 + program_qubits + 0
             output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
             G.add_node(output_qubit, patch_type="factory", ftype="t", fid=factory_index, used=True)
-            block_qubits = [cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, 31)]
+            qubit_index = factory_index * 23 + program_qubits + 1
+            output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
+            G.add_node(output_qubit, patch_type="factory", ftype="t", fid=factory_index, used=True)
+            qubit_index = factory_index * 23 + program_qubits + 2
+            output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
+            G.add_node(output_qubit, patch_type="factory", ftype="t", fid=factory_index, used=True)
+            block_qubits = [cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, 21)]
             G.add_nodes_from(
                 [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
             )

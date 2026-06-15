@@ -1,16 +1,11 @@
 import cirq
 import cirq_superstaq as css
-from typing import Sequence
 
 
 def ccz_8_to_1() -> cirq.Circuit:
     """Function to perform a 8-to-1 CCZ magic state distillation.
        Takes eight Ts to make one CCZ
         Reference: http://arxiv.org/abs/1812.01238 page 7 figure 5.
-
-    Args:
-        qubits: The list of LineQubits of length 16.
-                The last qubit will be the final magic state qubit.
 
     Returns:
         The magic state distillation circuit.
