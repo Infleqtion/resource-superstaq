@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
@@ -97,52 +96,30 @@ def _t_auto_corrected_reaction_dynamic(old_depths: ReactionDepthState) -> Reacti
     return [{"Z": max(old_depth.get("X", 0) + 1, old_depth.get("Z", 0))}]
 
 
-def _t_non_auto_corrected_reaction_dynamic(_old_depths: ReactionDepthState) -> ReactionDepthState:
-    """Raise until non-auto-corrected T reaction dynamics are specified.
+def _t_non_auto_corrected_reaction_dynamic(old_depths: ReactionDepthState) -> ReactionDepthState:
+    """Return reaction-depth updates for non-auto-corrected T factories.
 
     Args:
-        _old_depths: Reaction-depth state before the T correction.
+        old_depths: Single-qubit reaction-depth state before the T correction.
 
-    Raises:
-        NotImplementedError: Always, because this factory dynamic is still a skeleton.
+    Returns:
+        Single-qubit update applying `newX = oldX + 1` and `newZ = oldZ + 1`.
     """
-    raise NotImplementedError("Reaction dynamics for t-non-auto-corrected are not implemented.")
+    old_depth = old_depths[0]
+    return [{"X": old_depth.get("X", 0) + 1, "Z": old_depth.get("Z", 0) + 1}]
 
 
-def _s_auto_corrected_reaction_dynamic(old_depths: ReactionDepthState) -> ReactionDepthState:
-    """Return WIP reaction-depth updates for auto-corrected S factories.
-
-    The current placeholder dynamic increments both bases and warns on use so
-    callers know the S model is provisional.
+def _s_reaction_dynamic(old_depths: ReactionDepthState) -> ReactionDepthState:
+    """Return reaction-depth updates for standard S factories.
 
     Args:
         old_depths: Single-qubit reaction-depth state before the S correction.
 
     Returns:
         Single-qubit update applying `newX = oldX + 1` and `newZ = oldZ + 1`.
-
-    Warns:
-        UserWarning: Always, because this reaction dynamic is a work in progress.
     """
-    warnings.warn(
-        "Reaction dynamics for s-auto-corrected are a work in progress.",
-        UserWarning,
-        stacklevel=2,
-    )
     old_depth = old_depths[0]
     return [{"X": old_depth.get("X", 0) + 1, "Z": old_depth.get("Z", 0) + 1}]
-
-
-def _s_non_auto_corrected_reaction_dynamic(_old_depths: ReactionDepthState) -> ReactionDepthState:
-    """Raise until non-auto-corrected S reaction dynamics are specified.
-
-    Args:
-        _old_depths: Reaction-depth state before the S correction.
-
-    Raises:
-        NotImplementedError: Always, because this factory dynamic is still a skeleton.
-    """
-    raise NotImplementedError("Reaction dynamics for s-non-auto-corrected are not implemented.")
 
 
 def _ccz_auto_corrected_reaction_dynamic(_old_depths: ReactionDepthState) -> ReactionDepthState:
@@ -175,15 +152,17 @@ def _ccz_auto_corrected_reaction_dynamic(_old_depths: ReactionDepthState) -> Rea
 
 
 def _ccz_non_auto_corrected_reaction_dynamic(_old_depths: ReactionDepthState) -> ReactionDepthState:
-    """Raise until non-auto-corrected CCZ reaction dynamics are specified.
+    """Return reaction-depth updates for non-auto-corrected CCZ factories.
 
     Args:
-        _old_depths: Reaction-depth state before the CCZ correction.
+        _old_depths: Three-qubit reaction-depth state ordered as control1,
+            control2, target.
 
-    Raises:
-        NotImplementedError: Always, because this factory dynamic is still a skeleton.
+    Returns:
+        Three positional qubit updates applying `newX = oldX + 1` and
+        `newZ = oldZ + 1` to each participating qubit.
     """
-    raise NotImplementedError("Reaction dynamics for ccz-non-auto-corrected are not implemented.")
+    return [{"X": depths.get("X", 0) + 1, "Z": depths.get("Z", 0) + 1} for depths in _old_depths]
 
 
 T_AUTO_CORRECTED_CORRECTION_POLICY = CorrectionPolicy(
@@ -194,13 +173,9 @@ T_NON_AUTO_CORRECTED_CORRECTION_POLICY = CorrectionPolicy(
     name="t-non-auto-corrected",
     reaction_dynamic=_t_non_auto_corrected_reaction_dynamic,
 )
-S_AUTO_CORRECTED_CORRECTION_POLICY = CorrectionPolicy(
-    name="s-auto-corrected",
-    reaction_dynamic=_s_auto_corrected_reaction_dynamic,
-)
-S_NON_AUTO_CORRECTED_CORRECTION_POLICY = CorrectionPolicy(
-    name="s-non-auto-corrected",
-    reaction_dynamic=_s_non_auto_corrected_reaction_dynamic,
+S_CORRECTION_POLICY = CorrectionPolicy(
+    name="s",
+    reaction_dynamic=_s_reaction_dynamic,
 )
 CCZ_AUTO_CORRECTED_CORRECTION_POLICY = CorrectionPolicy(
     name="ccz-auto-corrected",
@@ -223,17 +198,11 @@ T_NON_AUTO_CORRECTED_FACTORY_SPEC = FactorySpec(
     produced_gate=cirq.T,
     correction_policy=T_NON_AUTO_CORRECTED_CORRECTION_POLICY,
 )
-S_AUTO_CORRECTED_FACTORY_SPEC = FactorySpec(
-    name="s-auto-corrected",
+S_FACTORY_SPEC = FactorySpec(
+    name="s",
     ftype="s",
     produced_gate=cirq.S,
-    correction_policy=S_AUTO_CORRECTED_CORRECTION_POLICY,
-)
-S_NON_AUTO_CORRECTED_FACTORY_SPEC = FactorySpec(
-    name="s-non-auto-corrected",
-    ftype="s",
-    produced_gate=cirq.S,
-    correction_policy=S_NON_AUTO_CORRECTED_CORRECTION_POLICY,
+    correction_policy=S_CORRECTION_POLICY,
 )
 CCZ_AUTO_CORRECTED_FACTORY_SPEC = FactorySpec(
     name="ccz-auto-corrected",
@@ -253,7 +222,7 @@ def default_factory_specs(
     num_t_factories: int,
     num_s_factories: int,
 ) -> dict[FactoryType, FactorySpec]:
-    """Return auto-corrected factory specs for factory types present in a layout.
+    """Return default factory specs for factory types present in a layout.
 
     Args:
         num_t_factories: Number of T factory patches requested or generated by
@@ -264,13 +233,13 @@ def default_factory_specs(
     Returns:
         A new dictionary keyed by factory `ftype`. The dictionary contains the
         auto-corrected T spec when `num_t_factories` is positive and the
-        auto-corrected S spec when `num_s_factories` is positive.
+        standard S spec when `num_s_factories` is positive.
     """
     specs: dict[FactoryType, FactorySpec] = {}
     if num_t_factories > 0:
         specs["t"] = T_AUTO_CORRECTED_FACTORY_SPEC
     if num_s_factories > 0:
-        specs["s"] = S_AUTO_CORRECTED_FACTORY_SPEC
+        specs["s"] = S_FACTORY_SPEC
     return specs
 
 
@@ -286,10 +255,8 @@ __all__ = [
     "ReactionDepth",
     "ReactionDepthState",
     "ReactionDynamic",
-    "S_AUTO_CORRECTED_CORRECTION_POLICY",
-    "S_AUTO_CORRECTED_FACTORY_SPEC",
-    "S_NON_AUTO_CORRECTED_CORRECTION_POLICY",
-    "S_NON_AUTO_CORRECTED_FACTORY_SPEC",
+    "S_CORRECTION_POLICY",
+    "S_FACTORY_SPEC",
     "T_AUTO_CORRECTED_CORRECTION_POLICY",
     "T_AUTO_CORRECTED_FACTORY_SPEC",
     "T_NON_AUTO_CORRECTED_CORRECTION_POLICY",

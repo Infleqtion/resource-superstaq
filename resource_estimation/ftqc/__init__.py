@@ -30,11 +30,6 @@ from resource_estimation.ftqc.compile_ftqc import (
     teleport_T,
     validate_ops,
 )
-from resource_estimation.ftqc.compile_metrics import (
-    FTCompileMetricCollector,
-    FTCompileResult,
-    ReactionDepthMetricCollector,
-)
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.layout import (
     Column,
@@ -75,8 +70,6 @@ __all__ = [
     "EndpointPatch",
     "ErrorCorrect",
     "FactorySandwich",
-    "FTCompileMetricCollector",
-    "FTCompileResult",
     "IntermediatePatch",
     "Layout",
     "Merge",
@@ -84,7 +77,6 @@ __all__ = [
     "MovementLayout",
     "Move",
     "ResourceEstimator",
-    "ReactionDepthMetricCollector",
     "RotatedCodePatch",
     "Split",
     "Superconductor",

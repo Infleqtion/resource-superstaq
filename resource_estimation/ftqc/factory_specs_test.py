@@ -58,12 +58,6 @@ def test_factory_type_for_gate_matches_layout_ftype_strings():
             cirq.T,
         ),
         (
-            factory_specs.S_AUTO_CORRECTED_FACTORY_SPEC,
-            factory_specs.S_NON_AUTO_CORRECTED_FACTORY_SPEC,
-            "s",
-            cirq.S,
-        ),
-        (
             factory_specs.CCZ_AUTO_CORRECTED_FACTORY_SPEC,
             factory_specs.CCZ_NON_AUTO_CORRECTED_FACTORY_SPEC,
             "ccz",
@@ -71,7 +65,9 @@ def test_factory_type_for_gate_matches_layout_ftype_strings():
         ),
     ],
 )
-def test_standard_factory_specs(auto_corrected_spec, non_auto_corrected_spec, ftype, produced_gate):
+def test_paired_standard_factory_specs(
+    auto_corrected_spec, non_auto_corrected_spec, ftype, produced_gate
+):
     assert auto_corrected_spec is not non_auto_corrected_spec
     assert auto_corrected_spec.correction_policy is not non_auto_corrected_spec.correction_policy
 
@@ -86,17 +82,37 @@ def test_standard_factory_specs(auto_corrected_spec, non_auto_corrected_spec, ft
     assert non_auto_corrected_spec.correction_policy.name == f"{ftype}-non-auto-corrected"
 
 
+def test_standard_s_factory_spec():
+    assert factory_specs.S_FACTORY_SPEC.name == "s"
+    assert factory_specs.S_FACTORY_SPEC.ftype == "s"
+    assert factory_specs.S_FACTORY_SPEC.produced_gate == cirq.S
+    assert factory_specs.S_FACTORY_SPEC.correction_policy is factory_specs.S_CORRECTION_POLICY
+    assert factory_specs.S_FACTORY_SPEC.correction_policy.name == "s"
+
+
 @pytest.mark.parametrize(
     "correction_policy",
     [
         factory_specs.T_NON_AUTO_CORRECTED_CORRECTION_POLICY,
-        factory_specs.S_NON_AUTO_CORRECTED_CORRECTION_POLICY,
-        factory_specs.CCZ_NON_AUTO_CORRECTED_CORRECTION_POLICY,
+        factory_specs.S_CORRECTION_POLICY,
     ],
 )
-def test_unimplemented_standard_reaction_dynamics_are_skeletons(correction_policy):
-    with pytest.raises(NotImplementedError, match=correction_policy.name):
-        correction_policy.reaction_dynamic([{"X": 0, "Z": 0}])
+def test_single_qubit_increment_both_reaction_dynamics(correction_policy):
+    assert correction_policy.reaction_dynamic([{"X": 2, "Z": 5}]) == [{"X": 3, "Z": 6}]
+
+
+def test_ccz_non_auto_corrected_reaction_dynamic_increments_each_qubit():
+    old_depths = [
+        {"X": 0, "Z": 0},
+        {"X": 4, "Z": 5},
+        {"X": 7, "Z": 1},
+    ]
+
+    assert factory_specs.CCZ_NON_AUTO_CORRECTED_CORRECTION_POLICY.reaction_dynamic(old_depths) == [
+        {"X": 1, "Z": 1},
+        {"X": 5, "Z": 6},
+        {"X": 8, "Z": 2},
+    ]
 
 
 @pytest.mark.parametrize(
@@ -113,11 +129,10 @@ def test_t_auto_corrected_reaction_dynamic_updates_single_qubit(old_depth, expec
     ]
 
 
-def test_s_auto_corrected_reaction_dynamic_increments_both_bases_with_warning():
-    with pytest.warns(UserWarning, match="work in progress"):
-        assert factory_specs.S_AUTO_CORRECTED_CORRECTION_POLICY.reaction_dynamic(
-            [{"X": 2, "Z": 5}]
-        ) == [{"X": 3, "Z": 6}]
+def test_s_reaction_dynamic_increments_both_bases():
+    assert factory_specs.S_CORRECTION_POLICY.reaction_dynamic([{"X": 2, "Z": 5}]) == [
+        {"X": 3, "Z": 6}
+    ]
 
 
 @pytest.mark.parametrize(
@@ -186,7 +201,7 @@ def test_ccz_auto_corrected_reaction_dynamic_updates_controls_and_target(
         pytest.param(
             0,
             1,
-            {"s": factory_specs.S_AUTO_CORRECTED_FACTORY_SPEC},
+            {"s": factory_specs.S_FACTORY_SPEC},
             id="s_factories_only",
         ),
         pytest.param(
@@ -194,7 +209,7 @@ def test_ccz_auto_corrected_reaction_dynamic_updates_controls_and_target(
             3,
             {
                 "t": factory_specs.T_AUTO_CORRECTED_FACTORY_SPEC,
-                "s": factory_specs.S_AUTO_CORRECTED_FACTORY_SPEC,
+                "s": factory_specs.S_FACTORY_SPEC,
             },
             id="t_and_s_factories",
         ),

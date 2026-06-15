@@ -30,7 +30,6 @@ from tqdm import tqdm
 
 from . import architecture as arch
 from . import lattice_surgery_primitives as lsp
-from .compile_metrics import FTCompileMetricCollector, FTCompileResult
 from .layout import Layout
 
 # IMPORTANT NOTES
@@ -39,19 +38,6 @@ from .layout import Layout
 #   If you requested T, I assume you measure 1 and have to do S
 # ABC -- Always be Cultivating
 # Only Applicable to Clifford + T currently
-
-
-def _notify_metric_collectors(
-    metric_calculators: dict[str, FTCompileMetricCollector] | None,
-    hook_name: str,
-    *args,
-) -> None:
-    if metric_calculators is None:
-        return
-    for collector in metric_calculators.values():
-        hook = getattr(collector, hook_name, None)
-        if hook is not None:
-            hook(*args)
 
 
 # This function is only visual and is extremely finicky, so it is not tested
@@ -173,8 +159,6 @@ def handle_idling(
     with_barriers: bool,
     rounds: int,
     verbose=0,
-    arc: arch.Architecture | None = None,
-    metric_calculators: dict[str, FTCompileMetricCollector] | None = None,
 ) -> cirq.Circuit:
     """
     Helper function for the compiler that handles idling. This way we can experiment with different kinds of idling or even turn it off entirely.
@@ -220,17 +204,7 @@ def handle_idling(
 
         idling_qubits = non_ancillas - moment.qubits
 
-        idling_ops = se.on_each(*idling_qubits)
-        moment = cirq.Moment(*moment, *idling_ops, _flatten_contents=False)
-        if idling_ops and arc is not None:
-            _notify_metric_collectors(
-                metric_calculators,
-                "on_idling",
-                moment_idx,
-                idling_ops,
-                layout,
-                arc,
-            )
+        moment = cirq.Moment(*moment, *se.on_each(*idling_qubits), _flatten_contents=False)
 
         if with_barriers:
             return [moment, cirq.Moment(barrier(*circuit.all_qubits()))]
@@ -248,9 +222,6 @@ def post_op_syndrome_extraction(
     movement: bool,
     rounds: int,
     verbose: int = 0,
-    layout: Layout | None = None,
-    arc: arch.Architecture | None = None,
-    metric_calculators: dict[str, FTCompileMetricCollector] | None = None,
 ) -> cirq.Circuit:
     """
     For movement, it has been suggested that we just do syndrome extraction (for a single round) right after a logical operations.
@@ -284,9 +255,7 @@ def post_op_syndrome_extraction(
 
         yield op
 
-        added_ops = []
         if with_barriers and not isinstance(op.gate, Barrier):
-            added_ops.append(barrier)
             yield barrier
 
         qubits_to_correct = [
@@ -296,22 +265,10 @@ def post_op_syndrome_extraction(
         ]
         if qubits_to_correct:
             correction_ops = syndrom_extract.on_each(*qubits_to_correct)
-            added_ops.extend(correction_ops)
             yield from correction_ops
 
             if with_barriers:
-                added_ops.append(barrier)
                 yield barrier
-
-            if added_ops and layout is not None and arc is not None:
-                _notify_metric_collectors(
-                    metric_calculators,
-                    "on_post_op_correction",
-                    op,
-                    added_ops,
-                    layout,
-                    arc,
-                )
 
     return cirq.map_operations_and_unroll(circuit, _map_func, raise_if_add_qubits=False)
 
@@ -347,33 +304,14 @@ def _decompose_to_primitives(
     circuit: cirq.Circuit,
     layout: Layout,
     arc: arch.Architecture,
-    metric_calculators: dict[str, FTCompileMetricCollector] | None = None,
 ) -> cirq.Circuit:
     primitives = cirq.Gateset(
         *(cirq.GateFamily(g._gate, ignore_global_phase=False) for g in arc.primitives.gates)
     )
     transversal_cnot = cirq.CX in primitives
 
-    for op in circuit.all_operations():
-        _notify_metric_collectors(
-            metric_calculators,
-            "on_logical_operation",
-            op,
-            layout,
-            arc,
-        )
-
     def _map_fn(op: cirq.Operation) -> list[cirq.Operation]:
-        replacement_ops = replace_cirq_op(op=op, layout=layout, transversal_cnot=transversal_cnot)
-        _notify_metric_collectors(
-            metric_calculators,
-            "on_replacement",
-            op,
-            replacement_ops,
-            layout,
-            arc,
-        )
-        return replacement_ops
+        return replace_cirq_op(op=op, layout=layout, transversal_cnot=transversal_cnot)
 
     # TODO: can we turn layout into a decomposition_context?
     ops = cirq.decompose(
@@ -389,9 +327,6 @@ def add_moves(
     zone_ops: cirq.Gateset,
     alley_ops: cirq.Gateset,
     verbose: int = 0,
-    layout: Layout | None = None,
-    arc: arch.Architecture | None = None,
-    metric_calculators: dict[str, FTCompileMetricCollector] | None = None,
 ) -> cirq.Circuit:
     """
     Handles replacement moves for both alley movement and interaction zone movement
@@ -419,23 +354,9 @@ def add_moves(
                 if zone_type is None
                 else partial(lsp.Move(zone=zone_type).on_each)
             )
-            forward_moves = move_op(*op_qubits)
-            backward_moves = move_op(*op_qubits[::-1])
-            move_ops = list(cirq.flatten_to_ops(forward_moves)) + list(
-                cirq.flatten_to_ops(backward_moves)
-            )
-            if move_ops and layout is not None and arc is not None:
-                _notify_metric_collectors(
-                    metric_calculators,
-                    "on_moves",
-                    op,
-                    move_ops,
-                    layout,
-                    arc,
-                )
-            yield forward_moves
+            yield move_op(*op_qubits)
             yield op
-            yield backward_moves
+            yield move_op(*op_qubits[::-1])
 
     return cirq.map_operations_and_unroll(circuit, map_func)
 
@@ -447,7 +368,6 @@ def ft_compile(
     with_barriers: bool = False,
     num_threads: int = 1,
     skip_validation: bool = False,
-    metric_calculators: dict[str, FTCompileMetricCollector] | None = None,
 ):
     """
     Basic read/replace compiler that converts a cirq Circuit over the Clifford + T gateset to a cirq circuit of primitives.
@@ -455,7 +375,6 @@ def ft_compile(
     The architecture input contains information about what primtives are accessible to the compiler and which extra passes should be added to the primitive circuit.
     The passes available are post op correction and idling.
     The architecture is also the source of information for how many rounds of syndrome extraction should be performed when syndrome extraction is called for.
-    Metric calculators observe compiler pass events and produce final metric values.
     """
     # TODO: Aligning left results in circuits that have are more expensive in terms of circuit time than not aligning left. This is probably the result of requesting a layer of parallel cultivations but realigning so the expensive cultivation operations become spread out over multiple moments. It is currently unclear if aligning left is correct or not in general, but the specific tests for ft_compile very much rely on it...
     layout = copy.deepcopy(layout)
@@ -474,7 +393,6 @@ def ft_compile(
         circuit=circuit,
         layout=layout,
         arc=arc,
-        metric_calculators=metric_calculators,
     )
     if verbose > 1:
         verbose_list = [list(moment.operations) for moment in circuit.moments]
@@ -482,15 +400,7 @@ def ft_compile(
     # Handling State Prep
     # In a more optimized world this could happen the moment before the first logical operation
     logical_qubits = [node for node in G.nodes if G.nodes[node]["patch_type"] == "data"]
-    state_prep_ops = lsp.SyndromeExtract(1, rounds=arc.rounds).on_each(*logical_qubits)
-    _notify_metric_collectors(
-        metric_calculators,
-        "on_state_prep",
-        state_prep_ops,
-        layout,
-        arc,
-    )
-    state_prep = cirq.Circuit(state_prep_ops)
+    state_prep = cirq.Circuit(lsp.SyndromeExtract(1, rounds=arc.rounds).on_each(*logical_qubits))
     if with_barriers:
         state_prep += css.barrier(*sorted(circuit.all_qubits()))
     circuit = state_prep + circuit
@@ -502,9 +412,6 @@ def ft_compile(
             with_barriers=with_barriers,
             rounds=arc.rounds,
             verbose=verbose,
-            layout=layout,
-            arc=arc,
-            metric_calculators=metric_calculators,
         )
 
     if arc.idling:
@@ -515,8 +422,6 @@ def ft_compile(
                 with_barriers=with_barriers,
                 rounds=arc.rounds,
                 verbose=verbose,
-                arc=arc,
-                metric_calculators=metric_calculators,
             )
         else:  # pragma: no cover
             warn("Parallelization is untested. Use at your own peril")
@@ -533,24 +438,10 @@ def ft_compile(
         zone_ops = arc.zone_ops if arc.zone_ops is not None else cirq.Gateset()
         alley_ops = arc.alley_ops if arc.alley_ops is not None else cirq.Gateset()
         circuit = add_moves(
-            circuit=circuit,
-            verbose=verbose,
-            zone_ops=zone_ops,
-            alley_ops=alley_ops,
-            layout=layout,
-            arc=arc,
-            metric_calculators=metric_calculators,
+            circuit=circuit, verbose=verbose, zone_ops=zone_ops, alley_ops=alley_ops
         )
 
-    metrics = {}
-    if metric_calculators is not None:
-        metrics = {
-            metric_name: calculator.finalize(circuit, layout, arc)
-            for metric_name, calculator in metric_calculators.items()
-        }
-    result = FTCompileResult(circuit=circuit, metrics=metrics)
-
     if verbose > 1:
-        return (verbose_list, result)
+        return (verbose_list, circuit)
 
-    return result
+    return circuit

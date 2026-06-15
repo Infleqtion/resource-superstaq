@@ -56,8 +56,7 @@ arch = res.ftqc.DefaultMovement(d=11)
 layout = res.ftqc.MovementLayout(input_circuit=cliff_t_circuit, num_t_factories=5)
 
 # FT Compile
-compile_result = res.ftqc.ft_compile(layout=layout, arc=arch, verbose=True)
-primitive_circuit = compile_result.circuit
+primitive_circuit = res.ftqc.ft_compile(layout=layout, arc=arch, verbose=True)
 
 # Estimate Resources
 estimator = res.ftqc.ResourceEstimator(arc=arch)

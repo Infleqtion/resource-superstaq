@@ -38,7 +38,7 @@ class Layout(abc.ABC):
         num_t_factories: Number of T factory patches requested for the layout.
         num_s_factories: Number of S factory patches requested for the layout.
         factory_specs: Static factory metadata keyed by `ftype`. When omitted
-            at construction time, layouts use auto-corrected defaults for the
+            at construction time, layouts use default specs for the
             factory types they contain. Explicit dictionaries replace defaults.
         mapped_circuit: Input circuit after qubits are mapped to layout
             `GridQubit`s by `_generate`.
@@ -69,9 +69,9 @@ class Layout(abc.ABC):
             num_t_factories: Number of T factory patches requested up front.
             num_s_factories: Number of S factory patches requested up front.
             factory_specs: Optional full factory spec map. When omitted, the
-                layout uses auto-corrected defaults for the factory types it
-                contains. When provided, the dictionary replaces those defaults
-                and is copied before storage.
+                layout uses default specs for the factory types it contains.
+                When provided, the dictionary replaces those defaults and is
+                copied before storage.
         """
         self.input_circuit = input_circuit
         self.num_t_factories = num_t_factories
@@ -297,8 +297,9 @@ class Column(Layout):
     """
     Lattice surgery Layout based on having two columns of logical qubits.
 
-    When `factory_specs` is omitted, it defaults to auto-corrected T and S
-    factory specs because the column layout contains both factory types.
+    When `factory_specs` is omitted, it defaults to the auto-corrected T spec
+    and the standard S spec because the column layout contains both factory
+    types.
 
     S | a | q | a | q | a | S
     T | a | a | a | a | a | T
@@ -318,8 +319,8 @@ class Column(Layout):
         Args:
             input_circuit: Logical input circuit to map onto the column layout.
             factory_specs: Optional full factory spec map. When omitted, the
-                layout uses auto-corrected T and S specs. When provided, it
-                replaces defaults.
+                layout uses the auto-corrected T spec and standard S spec.
+                When provided, it replaces defaults.
         """
         rows = ceil(len(input_circuit.all_qubits()) / 2)
         num_s_factories = 2 * rows
@@ -469,8 +470,8 @@ class Embedded(Layout):
         Args:
             input_circuit: Logical input circuit to map onto the embedded layout.
             factory_specs: Optional full factory spec map. When omitted, the
-                layout uses auto-corrected defaults for the generated factory
-                types. When provided, it replaces defaults.
+                layout uses default specs for the generated factory types.
+                When provided, it replaces defaults.
         """
         # TODO: Find the formula for this
         super().__init__(

@@ -19,10 +19,9 @@ import cirq
 import pytest
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.compile_ftqc as comp
-import resource_estimation.ftqc.factory_specs as factory_specs
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from cirq_superstaq import Barrier
-from resource_estimation.ftqc import Column, Embedded, MovementLayout, ReactionDepthMetricCollector
+from resource_estimation.ftqc import Column, Embedded, MovementLayout
 
 
 @pytest.fixture
@@ -48,97 +47,6 @@ def random_circ() -> Circuit:
         gate_domain={cirq.H: 1, cirq.CNOT: 2, cirq.T: 1, cirq.S: 1},
         random_state=73,
     )
-
-
-class _RecordingCollector(comp.FTCompileMetricCollector):
-    def __init__(self):
-        self.logical_gates = []
-        self.replacement_gates = []
-        self.replacement_ops = 0
-        self.state_prep_ops = 0
-        self.post_op_events = 0
-        self.post_op_ops = 0
-        self.idling_events = 0
-        self.idling_ops = 0
-        self.move_events = 0
-        self.move_ops = 0
-
-    def on_logical_operation(
-        self,
-        input_op: cirq.Operation,
-        layout: MovementLayout,
-        arc: arch.Architecture,
-    ) -> None:
-        self.logical_gates.append(input_op.gate)
-
-    def on_replacement(
-        self,
-        input_op: cirq.Operation,
-        replacement_ops: list[cirq.Operation],
-        layout: MovementLayout,
-        arc: arch.Architecture,
-    ) -> None:
-        self.replacement_gates.append(input_op.gate)
-        self.replacement_ops += len(replacement_ops)
-
-    def on_state_prep(
-        self,
-        ops: list[cirq.Operation],
-        layout: MovementLayout,
-        arc: arch.Architecture,
-    ) -> None:
-        self.state_prep_ops += len(ops)
-
-    def on_post_op_correction(
-        self,
-        input_op: cirq.Operation,
-        correction_ops: list[cirq.Operation],
-        layout: MovementLayout,
-        arc: arch.Architecture,
-    ) -> None:
-        self.post_op_events += 1
-        self.post_op_ops += len(correction_ops)
-
-    def on_idling(
-        self,
-        moment_idx: int,
-        idling_ops: list[cirq.Operation],
-        layout: MovementLayout,
-        arc: arch.Architecture,
-    ) -> None:
-        self.idling_events += 1
-        self.idling_ops += len(idling_ops)
-
-    def on_moves(
-        self,
-        input_op: cirq.Operation,
-        move_ops: list[cirq.Operation],
-        layout: MovementLayout,
-        arc: arch.Architecture,
-    ) -> None:
-        self.move_events += 1
-        self.move_ops += len(move_ops)
-
-    def finalize(
-        self,
-        circuit: cirq.Circuit,
-        layout: MovementLayout,
-        arc: arch.Architecture,
-    ) -> dict[str, object]:
-        return {
-            "logical_gates": self.logical_gates,
-            "logical_ops": len(self.logical_gates),
-            "replacement_gates": self.replacement_gates,
-            "replacement_ops": self.replacement_ops,
-            "state_prep_ops": self.state_prep_ops,
-            "post_op_events": self.post_op_events,
-            "post_op_ops": self.post_op_ops,
-            "idling_events": self.idling_events,
-            "idling_ops": self.idling_ops,
-            "move_events": self.move_events,
-            "move_ops": self.move_ops,
-            "final_ops": len(list(circuit.all_operations())),
-        }
 
 
 @pytest.mark.parametrize(
@@ -177,7 +85,7 @@ def test_end2end(with_barriers) -> None:
             test_layout = Column(
                 input_circuit=circuit,
             )
-        compiled = comp.ft_compile(test_layout, arc, with_barriers=with_barriers).circuit
+        compiled = comp.ft_compile(test_layout, arc, with_barriers=with_barriers)
         for op in compiled.all_operations():
             is_primitive = False
             if arc.primitives.validate(op) or op in cirq.GateFamily(Barrier):
@@ -326,7 +234,7 @@ def test_different_rounds() -> None:
             cultivation_repetition=1,
             syndrome_rounds=k,
         )
-        compiled_circuit = comp.ft_compile(layout=layout, arc=architecture).circuit
+        compiled_circuit = comp.ft_compile(layout=layout, arc=architecture)
         for op in compiled_circuit.all_operations():
             if op in cirq.GateFamily(lsp.SyndromeExtract):
                 op.gate.rounds == k
@@ -336,8 +244,8 @@ def test_deterministic_compilation(random_circ) -> None:
     circuit = random_circ
     lay = Column(circuit)
     arc = arch.DefaultLattice()
-    compiled1 = comp.ft_compile(lay, arc).circuit
-    compiled2 = comp.ft_compile(lay, arc).circuit
+    compiled1 = comp.ft_compile(lay, arc)
+    compiled2 = comp.ft_compile(lay, arc)
     cirq.testing.assert_has_diagram(compiled1, str(compiled2))
 
 
@@ -346,7 +254,7 @@ def test_other_passes(random_circ) -> None:
     circuit = random_circ
     lay = Column(circuit)
     arc = arch.DefaultLattice(idling=True, post_op_correction=True)
-    compiled_circuit = comp.ft_compile(lay, arc).circuit
+    compiled_circuit = comp.ft_compile(lay, arc)
     idling_corrected_resources = dict(
         Counter(
             str(op.gate) if op not in cirq.GateFamily(cirq.MeasurementGate) else "Measure"
@@ -354,7 +262,7 @@ def test_other_passes(random_circ) -> None:
         )
     )
     arc = arch.DefaultLattice(idling=False, post_op_correction=True)
-    compiled_circuit = comp.ft_compile(lay, arc).circuit
+    compiled_circuit = comp.ft_compile(lay, arc)
     corrected_resources = dict(
         Counter(
             str(op.gate) if op not in cirq.GateFamily(cirq.MeasurementGate) else "Measure"
@@ -362,7 +270,7 @@ def test_other_passes(random_circ) -> None:
         )
     )
     arc = arch.DefaultLattice(idling=False, post_op_correction=False)
-    compiled_circuit = comp.ft_compile(lay, arc).circuit
+    compiled_circuit = comp.ft_compile(lay, arc)
     uncorrected_resources = dict(
         Counter(
             str(op.gate) if op not in cirq.GateFamily(cirq.MeasurementGate) else "Measure"
@@ -413,14 +321,14 @@ def test_verbosity(random_circ) -> None:
     circuit = random_circ
     lay = Column(circuit)
     arc = arch.DefaultLattice()
-    ops, compiled_result = comp.ft_compile(lay, arc, verbose=2)
-    assert isinstance(compiled_result, comp.FTCompileResult)
+    ops, compiled_circuit = comp.ft_compile(lay, arc, verbose=2)
+    assert isinstance(compiled_circuit, cirq.Circuit)
     for moment_ops in ops:
         for op in moment_ops:
-            assert op in compiled_result.circuit.all_operations()
+            assert op in compiled_circuit.all_operations()
 
 
-def test_ft_compile_result_defaults(bell_circuit):
+def test_ft_compile_returns_circuit(bell_circuit):
     layout = MovementLayout(bell_circuit)
     architecture = arch.MeasureZonesOnly(
         d=7,
@@ -432,136 +340,7 @@ def test_ft_compile_result_defaults(bell_circuit):
 
     result = comp.ft_compile(layout=layout, arc=architecture)
 
-    assert isinstance(result, comp.FTCompileResult)
-    assert isinstance(result.circuit, cirq.Circuit)
-    assert result.metrics == {}
-
-
-def test_ft_compile_replacement_metrics():
-    q0, q1 = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
-    lattice_circuit = cirq.Circuit(cirq.CNOT(q0, q1), cirq.T(q0), cirq.S(q1))
-    replacement_collector = _RecordingCollector()
-
-    result = comp.ft_compile(
-        layout=Column(lattice_circuit),
-        arc=arch.DefaultLattice(idling=False, post_op_correction=False),
-        metric_calculators={"recording": replacement_collector},
-    )
-    metrics = result.metrics["recording"]
-
-    assert metrics["logical_gates"] == [cirq.CNOT, cirq.T, cirq.S]
-    assert cirq.CNOT in metrics["replacement_gates"]
-    assert cirq.T in metrics["replacement_gates"]
-    assert cirq.S in metrics["replacement_gates"]
-    assert metrics["replacement_ops"] > 0
-    assert metrics["state_prep_ops"] > 0
-    assert metrics["post_op_events"] == 0
-    assert metrics["idling_events"] == 0
-    assert metrics["move_events"] == 0
-    assert metrics["final_ops"] == len(list(result.circuit.all_operations()))
-
-
-def test_ft_compile_splits_logical_operation_and_replacement_metric_hooks():
-    qubit = cirq.LineQubit(0)
-    circuit = cirq.Circuit(cirq.T(qubit), cirq.H(qubit))
-    collector = _RecordingCollector()
-
-    comp.ft_compile(
-        layout=MovementLayout(circuit, num_t_factories=1),
-        arc=arch.DefaultMovement(idling=False, post_op_correction=False),
-        verbose=False,
-        metric_calculators={"recording": collector},
-    )
-
-    assert collector.logical_gates == [cirq.T, cirq.H]
-    assert collector.replacement_gates == [cirq.T]
-
-
-def test_ft_compile_reaction_depth_metric_uses_layout_default_factory_specs(t_circuit):
-    result = comp.ft_compile(
-        layout=MovementLayout(t_circuit, num_t_factories=1),
-        arc=arch.DefaultMovement(idling=False, post_op_correction=False),
-        verbose=False,
-        metric_calculators={"reaction_depth": ReactionDepthMetricCollector()},
-    )
-
-    assert result.metrics["reaction_depth"] == {cirq.GridQubit(0, 1): {"X": 0, "Z": 1}}
-
-
-def test_ft_compile_reaction_depth_metric_observes_kept_primitive_cliffords():
-    qubit = cirq.LineQubit(0)
-    circuit = cirq.Circuit(cirq.T(qubit), cirq.H(qubit))
-
-    result = comp.ft_compile(
-        layout=MovementLayout(circuit, num_t_factories=1),
-        arc=arch.DefaultMovement(idling=False, post_op_correction=False),
-        verbose=False,
-        metric_calculators={"reaction_depth": ReactionDepthMetricCollector()},
-    )
-
-    assert result.metrics["reaction_depth"] == {cirq.GridQubit(0, 0): {"X": 1, "Z": 0}}
-
-
-def test_ft_compile_reaction_depth_metric_applies_factory_dynamic_once():
-    qubit = cirq.LineQubit(0)
-    calls = 0
-
-    def reaction_dynamic(
-        old_depths: factory_specs.ReactionDepthState,
-    ) -> factory_specs.ReactionDepthState:
-        nonlocal calls
-        calls += 1
-        old_depth = old_depths[0]
-        return [{"Z": old_depth.get("Z", 0) + 1}]
-
-    factory_spec = factory_specs.FactorySpec(
-        name="counting-t",
-        ftype="t",
-        produced_gate=cirq.T,
-        correction_policy=factory_specs.CorrectionPolicy(
-            name="counting-correction",
-            reaction_dynamic=reaction_dynamic,
-        ),
-    )
-
-    result = comp.ft_compile(
-        layout=MovementLayout(
-            cirq.Circuit(cirq.T(qubit)),
-            num_t_factories=1,
-            factory_specs={"t": factory_spec},
-        ),
-        arc=arch.DefaultMovement(idling=False, post_op_correction=False),
-        verbose=False,
-        metric_calculators={"reaction_depth": ReactionDepthMetricCollector()},
-    )
-
-    assert calls == 1
-    assert result.metrics["reaction_depth"] == {cirq.GridQubit(0, 0): {"X": 0, "Z": 1}}
-
-
-def test_ft_compile_pass_metrics(bell_circuit):
-    pass_collector = _RecordingCollector()
-    result = comp.ft_compile(
-        layout=MovementLayout(bell_circuit),
-        arc=arch.MeasureZonesOnly(
-            d=7,
-            cultivation_repetition=1,
-            syndrome_rounds=1,
-            idling=True,
-            post_op_correction=True,
-        ),
-        metric_calculators={"recording": pass_collector},
-    )
-    metrics = result.metrics["recording"]
-
-    assert metrics["state_prep_ops"] > 0
-    assert metrics["post_op_events"] > 0
-    assert metrics["post_op_ops"] > 0
-    assert metrics["idling_events"] > 0
-    assert metrics["idling_ops"] > 0
-    assert metrics["move_events"] > 0
-    assert metrics["move_ops"] > 0
-    assert metrics["final_ops"] == len(list(result.circuit.all_operations()))
+    assert isinstance(result, cirq.Circuit)
 
 
 def test_bell_movement_FF(bell_circuit) -> None:
@@ -573,9 +352,7 @@ def test_bell_movement_FF(bell_circuit) -> None:
         idling=False,
         post_op_correction=False,
     )
-    compiled_bell_circuit = comp.ft_compile(
-        layout=movement_layout, arc=movement_architecture
-    ).circuit
+    compiled_bell_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
     # no idling, no post-op correction
     cirq.testing.assert_has_diagram(
         compiled_bell_circuit,
@@ -598,9 +375,7 @@ def test_bell_movement_FT(bell_circuit) -> None:
         idling=False,
         post_op_correction=True,
     )
-    compiled_bell_circuit = comp.ft_compile(
-        layout=movement_layout, arc=movement_architecture
-    ).circuit
+    compiled_bell_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
     # no idling, yes post-op correction
     cirq.testing.assert_has_diagram(
         compiled_bell_circuit,
@@ -625,7 +400,7 @@ def test_bell_movement_TF(bell_circuit) -> None:
     )
     compiled_bell_circuit = comp.ft_compile(
         layout=movement_layout, arc=movement_architecture, with_barriers=False
-    ).circuit
+    )
     # yes idling, no post-op correction
     cirq.testing.assert_has_diagram(
         compiled_bell_circuit,
@@ -648,9 +423,7 @@ def test_bell_movement_TT(bell_circuit) -> None:
         idling=True,
         post_op_correction=True,
     )
-    compiled_bell_circuit = comp.ft_compile(
-        layout=movement_layout, arc=movement_architecture
-    ).circuit
+    compiled_bell_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
 
     # yes idling, yes post-op correction
     cirq.testing.assert_has_diagram(
@@ -675,7 +448,7 @@ def test_bell_lattice_FF(bell_circuit) -> None:
         post_op_correction=False,
     )
     lattice_layout.input_circuit
-    compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture).circuit
+    compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
 
     # no idling, no post-op correction
     cirq.testing.assert_has_diagram(
@@ -701,7 +474,7 @@ def test_bell_lattice_FT(bell_circuit) -> None:
         idling=False,
         post_op_correction=True,
     )
-    compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture).circuit
+    compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
 
     # no idling, yes post-op correction
     # Since all operations are inherently corrected, there is no need for extra syndrome extraction
@@ -728,7 +501,7 @@ def test_bell_lattice_TF(bell_circuit) -> None:
         idling=True,
         post_op_correction=False,
     )
-    compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture).circuit
+    compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
 
     # yes idling, no post-op correction
     # (0, 3) is an ancilla qubit, so it does not get idling in the second moment
@@ -756,7 +529,7 @@ def test_bell_lattice_TT(bell_circuit) -> None:
         idling=True,
         post_op_correction=True,
     )
-    compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture).circuit
+    compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
     compiled_bell_circuit
     # yes idling, yes post-op correction
     # Post-op correction does not add anything in this circuit, so this circuit is the same as the last one
@@ -783,7 +556,7 @@ def test_t_movement_FF(t_circuit) -> None:
         idling=False,
         post_op_correction=False,
     )
-    compiled_t_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture).circuit
+    compiled_t_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
     # no idling, no post-op correction
     compiled_t_circuit = cirq.align_left(compiled_t_circuit)
     cirq.testing.assert_has_diagram(
@@ -811,7 +584,7 @@ def test_t_movement_FT(t_circuit) -> None:
         idling=False,
         post_op_correction=True,
     )
-    compiled_t_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture).circuit
+    compiled_t_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
     compiled_t_circuit = cirq.align_left(compiled_t_circuit)
     # no idling, yes post-op correction
     cirq.testing.assert_has_diagram(
@@ -839,7 +612,7 @@ def test_t_movement_TF(t_circuit) -> None:
         idling=True,
         post_op_correction=False,
     )
-    compiled_t_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture).circuit
+    compiled_t_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
 
     # yes idling, no post-op correction
     compiled_t_circuit = cirq.align_left(compiled_t_circuit)
@@ -869,7 +642,7 @@ def test_t_movement_TT(t_circuit) -> None:
         idling=True,
         post_op_correction=True,
     )
-    compiled_t_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture).circuit
+    compiled_t_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
     # yes idling, yes post-op correction
     compiled_t_circuit = cirq.align_left(compiled_t_circuit)
     # This test was updated both by aligning left and to reflect the change to make cultivation happen later in the circuit,
@@ -902,7 +675,7 @@ def test_t_lattice_FF(t_circuit) -> None:
         post_op_correction=False,
     )
     lattice_layout.input_circuit
-    compiled_t_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture).circuit
+    compiled_t_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
     # no idling, no post-op correction
     compiled_t_circuit = cirq.align_left(compiled_t_circuit)
     cirq.testing.assert_has_diagram(
@@ -940,7 +713,7 @@ def test_t_lattice_FT(t_circuit) -> None:
         idling=False,
         post_op_correction=True,
     )
-    compiled_t_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture).circuit
+    compiled_t_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
     # no idling, yes post-op correction
     # Only measurement gates need to be corrected
     compiled_t_circuit = cirq.align_left(compiled_t_circuit)
