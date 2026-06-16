@@ -17,6 +17,7 @@ try:
     from typing import Self
 except ImportError:  # pragma: no cover
     from typing_extensions import Self
+from collections.abc import Callable
 import json
 import shutil
 from dataclasses import dataclass, asdict, field
@@ -206,7 +207,7 @@ def error_estimate(
     t_fit_param: float = 4.8,  # fit parameter from synthesis plot for T
     c_fit_param: float = 7.8,  # fit parameter from synthesis plot for H, S
     hw_noise: float = 0.001,
-) -> float | npt.NDArray[np.float64]:
+) -> npt.NDArray[np.float64]:
     # Recast for vectorized operations
     code_distance = np.asarray(code_distance, dtype=np.int_)
     error_per_rz = np.asarray(error_per_rz, dtype=np.float64)
@@ -287,7 +288,7 @@ class Report:
     total_time: float = np.inf
 
     @property
-    def info_dict(self) -> dict[str, dict[str, str | float | int | bool]]:
+    def info_dict(self) -> dict[str, dict[str, str | float | bool]]:
         # This dictionary will be useful for generating organized reports about the data
         return {
             "Inputs": {
@@ -376,7 +377,7 @@ class Report:
     def time_line(self, name: str, seconds: float) -> str:
         return f"{C.OKGREEN}Generated {name} in {C.END}{C.YELLOW}{seconds:.3e}{C.END}{C.OKGREEN} seconds{C.END}"
 
-    def line(self, name: str, value: Any[float, int, str, bool], sep: int = 29) -> str:
+    def line(self, name: str, value: float | str | bool, sep: int = 29) -> str:
         if isinstance(value, bool):
             c, v = "", str(value)
         elif isinstance(value, int):
