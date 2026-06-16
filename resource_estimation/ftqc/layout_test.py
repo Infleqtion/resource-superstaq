@@ -29,7 +29,7 @@ def circuit5() -> cirq.Circuit:
         cirq.LineQubit.range(5),
         10,
         0.6,
-        {cirq.T: 1, cirq.S: 1, cirq.CNOT: 2, cirq.H: 1},
+        {cirq.T: 1, cirq.S: 1, cirq.CNOT: 2, cirq.H: 1, cirq.CCZ: 3},
         42,
     )
     return circuit
@@ -295,10 +295,11 @@ def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
 
 
 def test_distillery(circuit5: cirq.Circuit) -> None:
-    distillery = MovementDistillery(circuit5, num_t_factories=3)
+    distillery = MovementDistillery(circuit5, num_t_factories=3, num_ccz_factories=3)
     distillery.reload_factories(ftype="s")
     distillery.reload_factories(ftype="t")
-
+    distillery.reload_factories(ftype="ccz")
+    
     expected_program_qubits = set(cirq.GridQubit(0, i) for i in range(5))
     realized_program_qubits = set(
         q
