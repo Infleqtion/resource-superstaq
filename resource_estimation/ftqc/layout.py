@@ -556,4 +556,4 @@ class MovementDistillery(MovementLayout):
             if ((G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid))
             or ((G.nodes[q]["patch_type"] == "factory") and (G.nodes[q]["fid"] == fid))
         ]                       # considers a distillation block the factories and the blocks with the same fid
-        return block_qubits + [factory_qubit]
+        return block_qubits
