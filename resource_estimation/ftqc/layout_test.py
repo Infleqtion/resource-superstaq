@@ -29,7 +29,7 @@ def circuit5() -> cirq.Circuit:
         cirq.LineQubit.range(5),
         10,
         0.6,
-        {cirq.T: 1, cirq.S: 1, cirq.CNOT: 2, cirq.H: 1},
+        {cirq.T: 1, cirq.S: 1, cirq.CNOT: 2, cirq.H: 1, cirq.CCZ: 3},
         42,
     )
     return circuit
@@ -295,10 +295,11 @@ def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
 
 
 def test_distillery(circuit5: cirq.Circuit) -> None:
-    distillery = MovementDistillery(circuit5, num_t_factories=3)
+    distillery = MovementDistillery(circuit5, num_t_factories=3, num_ccz_factories=2)
     distillery.reload_factories(ftype="s")
     distillery.reload_factories(ftype="t")
-
+    distillery.reload_factories(ftype="ccz")
+    
     expected_program_qubits = set(cirq.GridQubit(0, i) for i in range(5))
     realized_program_qubits = set(
         q
@@ -307,7 +308,9 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
     )
     assert expected_program_qubits == realized_program_qubits
 
-    expected_factories = {cirq.GridQubit(0, 5), cirq.GridQubit(3, 6), cirq.GridQubit(6, 7)}
+    expected_factories = {cirq.GridQubit(0, 5), cirq.GridQubit(3, 0), cirq.GridQubit(5, 7),
+                          cirq.GridQubit(8, 2), cirq.GridQubit(8, 3), cirq.GridQubit(8, 4),
+                          cirq.GridQubit(10, 1), cirq.GridQubit(10, 2), cirq.GridQubit(10, 3)}
     realized_factories = distillery._all_factories
     assert expected_factories == realized_factories
 
@@ -321,8 +324,18 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
     )
     assert expected_block_qubits == realized_block_qubits
 
+    expected_ccz_block = ({cirq.GridQubit(8, i) for i in range(2, 12)}.union(
+                          {cirq.GridQubit(9, i) for i in range(12)}).union({cirq.GridQubit(10, 0)}))
+    realized_ccz_block = set(distillery.distillation_block(cirq.GridQubit(8, 4)))
+    assert expected_ccz_block == realized_ccz_block
+
     # Check that nearest T factory is as expected and changes when used
     assert distillery.nearest_factory(qubit=cirq.GridQubit(0, 2), ftype="t") == cirq.GridQubit(
         0, 5
     )  # Removes (0, 5) from options
-    assert distillery.nearest_factory(qubit=cirq.GridQubit(2, 2), ftype="t") == cirq.GridQubit(3, 6)
+    assert distillery.nearest_factory(qubit=cirq.GridQubit(0, 3), ftype="t") == cirq.GridQubit(3, 0)
+    # check nearest CCZ factory is as expected and changes when used
+    assert distillery.nearest_factory(qubit=cirq.GridQubit(0, 4), ftype="ccz") == cirq.GridQubit(8, 4)
+    # check that 8, 4 is removed
+    assert distillery.nearest_factory(qubit=cirq.GridQubit(0, 4), ftype="ccz") == cirq.GridQubit(10, 3)
+
