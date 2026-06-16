@@ -12,14 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
+try:
+    from typing import Self
+except ImportError:  # pragma: no cover
     from typing_extensions import Self
-    from typing import Any, Callable
-    from resource_estimation.ftqc import Architecture
-    import numpy.typing as npt
-    from cirq import Circuit, Gate, Operation, Qid
 import json
 import shutil
 from dataclasses import dataclass, asdict, field

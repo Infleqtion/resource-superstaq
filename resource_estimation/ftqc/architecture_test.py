@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+import os
 from collections import Counter
 from math import ceil, pi
-from pathlib import Path
 
 import cirq
 import numpy as np
@@ -24,19 +24,16 @@ from cirq_superstaq import ParallelRGate
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-from resource_estimation.ftqc.architecture import DefaultLattice, DefaultMovement
 from resource_estimation.ftqc.stim_functions import cultivate, load_saved_cost
-
-DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 
 @pytest.fixture
-def lattice_architecture() -> DefaultLattice:
+def lattice_architecture() -> arch.DefaultLattice:
     return arch.DefaultLattice()
 
 
 @pytest.fixture
-def movement_architecture() -> DefaultMovement:
+def movement_architecture() -> arch.DefaultMovement:
     return arch.DefaultMovement()
 
 
@@ -272,6 +269,7 @@ def test_lattice_gate_costs(d) -> None:
     # Check Cultivate
 
     op = lsp.Cultivate(pi / 4).on(qubit_a)
+    cost = arc.gate_cost(op)
     if d < 7:
         with pytest.warns(UserWarning, match="Returning result for d=7"):
             cost = arc.gate_cost(op)
@@ -356,7 +354,10 @@ def test_self_returns(movement_architecture, lattice_architecture) -> None:
 def test_against_cultiv(d) -> None:
     # Test Syndrome Extract
     # Set up memory circuit
-    with open(DATA_DIR / "cultivate_costs.json") as f:
+    data_path = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "data", "cultivate_costs.json")
+    )
+    with open(data_path) as f:
         saved_resources = json.load(f)
 
     d_count = load_saved_cost(dsurface=d, op_key="memory_d_rounds")["serial"]
@@ -489,7 +490,6 @@ def test_lattice_moment_costs(lattice_architecture) -> None:
     # Test that all primitives have correct moment costs
     op = lsp.Cultivate(pi / 4).on(cirq.GridQubit(0, 0))
     cost = lattice_architecture.moment_cost(op=op)
-    pass
 
     op = cirq.H.on(cirq.GridQubit(0, 0))
     cost = lattice_architecture.moment_cost(op)
@@ -649,7 +649,6 @@ def test_classmethods() -> None:
     }
     ls_arc = arch.Architecture.from_dict(lattice_input_dict)
     assert ls_arc.phys_gate_times[cirq.CZ] == 99
-
     ls_arc = arch.Architecture.from_json("data/lattice_test.json")
     assert ls_arc.phys_gate_times[cirq.CZ] == 99
 
@@ -822,9 +821,7 @@ def test_folded_architecture() -> None:
 
 
 def test_convert_globals_to_phasedxz() -> None:
-    """
-    Confirm that the conversion function works as expected
-    """
+    """Confirm that the conversion function works as expected"""
     sc = arch.Superconductor()
     example1 = {
         "gate_cost": {ParallelRGate: 2, cirq.Rz: 3},
