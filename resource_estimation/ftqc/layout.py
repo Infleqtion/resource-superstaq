@@ -85,7 +85,11 @@ class Layout(abc.ABC):
             raise ValueError(f"{ftype} is not a valid factory type")
         # Update graph to reflect the new status
         for node in self.layout_graph.nodes:
-            if node in self.available_s_factories or node in self._available_t_factories or node in self._available_ccz_factories:
+            if (
+                node in self.available_s_factories
+                or node in self._available_t_factories
+                or node in self._available_ccz_factories
+            ):
                 self.layout_graph.nodes[node]["used"] = False
 
     def _generate(self) -> None:
@@ -146,15 +150,17 @@ class Layout(abc.ABC):
     def available_ccz_factories(self) -> deque[cirq.GridQubit]:
         return self._available_ccz_factories
 
-    def nearest_factory(self, qubit: cirq.GridQubit, ftype: Literal["s", "t", "ccz"]) -> cirq.GridQubit:
+    def nearest_factory(
+        self, qubit: cirq.GridQubit, ftype: Literal["s", "t", "ccz"]
+    ) -> cirq.GridQubit:
         """Finds the closest factory of desired type according to the Manhattan distance using the GridQubit indices of the factory qubits that do not have the `used` status
         Removes the returned factory from the available options and sets its status to `used`
         """
-        if ftype == 's':
+        if ftype == "s":
             available_factories = self.available_s_factories
-        elif ftype == 't':
+        elif ftype == "t":
             available_factories = self.available_t_factories
-        elif ftype == 'ccz':
+        elif ftype == "ccz":
             available_factories = self.available_ccz_factories
         else:
             raise ValueError("ftype must be s, t, or ccz.")
@@ -164,25 +170,27 @@ class Layout(abc.ABC):
         # Closest factory according to the L1 distance
         factory = min(available_factories, key=lambda fact: abs(fact.row - r) + abs(fact.col - c))
         # Note for ccz this returns a single qubit of the three
-        if ftype == 'ccz':
-            fid = self.layout_graph.nodes[factory]['fid']
+        if ftype == "ccz":
+            fid = self.layout_graph.nodes[factory]["fid"]
             whole_factory = []
             for q in self.layout_graph.nodes:
                 try:
-                    if ((self.layout_graph.nodes[q]['fid'] == fid) and (self.layout_graph.nodes[q]['patch_type'] == 'factory')):
+                    if (self.layout_graph.nodes[q]["fid"] == fid) and (
+                        self.layout_graph.nodes[q]["patch_type"] == "factory"
+                    ):
                         whole_factory.append(q)
                 except KeyError:
                     continue
             # Factory now used must be removed
-            for fac in whole_factory: # remove all three qubits of the factory
+            for fac in whole_factory:  # remove all three qubits of the factory
                 self.layout_graph.nodes[fac]["used"] = True
                 available_factories.remove(fac)
         else:
             self.layout_graph.nodes[factory]["used"] = True
             available_factories.remove(factory)
-        if ftype == 's':
+        if ftype == "s":
             self._available_s_factories = available_factories
-        elif ftype == 't':
+        elif ftype == "t":
             self._available_t_factories = available_factories
         else:
             self._available_ccz_factories = available_factories
@@ -246,12 +254,15 @@ class MovementLayout(Layout):
     """
 
     # TODO: build this implementation
-    def __init__(self,
-                 input_circuit: cirq.Circuit,
-                 num_t_factories: int = 1,
-                 ) -> None:
+    def __init__(
+        self,
+        input_circuit: cirq.Circuit,
+        num_t_factories: int = 1,
+    ) -> None:
         super().__init__(
-            input_circuit=input_circuit, num_t_factories=num_t_factories, num_s_factories=0,
+            input_circuit=input_circuit,
+            num_t_factories=num_t_factories,
+            num_s_factories=0,
         )
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit):
@@ -486,11 +497,9 @@ class MovementDistillery(MovementLayout):
     Layout for distilling magic states using movement.  Currently handles
     T and CCZ distillation layouts.
     """
+
     def __init__(
-            self,
-            input_circuit: cirq.Circuit,
-            num_t_factories: int = 0,
-            num_ccz_factories: int = 0
+        self, input_circuit: cirq.Circuit, num_t_factories: int = 0, num_ccz_factories: int = 0
     ) -> None:
         self.distil = True
         self.num_ccz_factories = num_ccz_factories
@@ -501,8 +510,7 @@ class MovementDistillery(MovementLayout):
 
     def _generate(self) -> None:
         program_qubits = len(self.input_circuit.all_qubits())
-        distillation_qubits = (23 * self.num_ccz_factories +
-                               31 * self.num_t_factories)
+        distillation_qubits = 23 * self.num_ccz_factories + 31 * self.num_t_factories
         total_qubits = program_qubits + distillation_qubits
         side_length = ceil(sqrt(total_qubits))
 
@@ -529,19 +537,40 @@ class MovementDistillery(MovementLayout):
                 [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
             )
         data_plus_t = program_qubits + (31 * self.num_t_factories)
-        for factory_index in range(self.num_ccz_factories): # just builds on to the T factories
+        for factory_index in range(self.num_ccz_factories):  # just builds on to the T factories
             qubit_index = factory_index * 23 + data_plus_t + 0
             output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
-            G.add_node(output_qubit, patch_type="factory", ftype="ccz", fid=(self.num_t_factories + factory_index), used=True)
+            G.add_node(
+                output_qubit,
+                patch_type="factory",
+                ftype="ccz",
+                fid=(self.num_t_factories + factory_index),
+                used=True,
+            )
             qubit_index = factory_index * 23 + data_plus_t + 1
             output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
-            G.add_node(output_qubit, patch_type="factory", ftype="ccz", fid=(self.num_t_factories + factory_index), used=True)
+            G.add_node(
+                output_qubit,
+                patch_type="factory",
+                ftype="ccz",
+                fid=(self.num_t_factories + factory_index),
+                used=True,
+            )
             qubit_index = factory_index * 23 + data_plus_t + 2
             output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
-            G.add_node(output_qubit, patch_type="factory", ftype="ccz", fid=(self.num_t_factories + factory_index), used=True)
+            G.add_node(
+                output_qubit,
+                patch_type="factory",
+                ftype="ccz",
+                fid=(self.num_t_factories + factory_index),
+                used=True,
+            )
             block_qubits = [cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, 21)]
             G.add_nodes_from(
-                [(q, dict(patch_type="block", fid=(self.num_t_factories + factory_index))) for q in block_qubits]
+                [
+                    (q, dict(patch_type="block", fid=(self.num_t_factories + factory_index)))
+                    for q in block_qubits
+                ]
             )
         # Movement layouts assume all-to-all connectivity; avoid storing O(n^2) edges explicitly.
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
@@ -555,5 +584,5 @@ class MovementDistillery(MovementLayout):
             for q in G.nodes
             if ((G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid))
             or ((G.nodes[q]["patch_type"] == "factory") and (G.nodes[q]["fid"] == fid))
-        ]                       # considers a distillation block the factories and the blocks with the same fid
+        ]  # considers a distillation block the factories and the blocks with the same fid
         return block_qubits
