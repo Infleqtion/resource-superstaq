@@ -287,7 +287,7 @@ class Report:
     total_time: float = np.inf
 
     @property
-    def info_dict(self) -> dict[str, dict[str, Any[str, float, int, bool]]]:
+    def info_dict(self) -> dict[str, dict[str, str | float | int | bool]]:
         # This dictionary will be useful for generating organized reports about the data
         return {
             "Inputs": {
