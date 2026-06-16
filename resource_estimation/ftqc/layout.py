@@ -529,7 +529,7 @@ class MovementDistillery(MovementLayout):
                 [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
             )
         data_plus_t = program_qubits + (31 * self.num_t_factories)
-        for factory_index in range(self.num_ccz_factories):
+        for factory_index in range(self.num_ccz_factories): # just builds on to the T factories
             qubit_index = factory_index * 23 + data_plus_t + 0
             output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
             G.add_node(output_qubit, patch_type="factory", ftype="ccz", fid=(self.num_t_factories + factory_index), used=True)
@@ -555,5 +555,5 @@ class MovementDistillery(MovementLayout):
             for q in G.nodes
             if ((G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid))
             or ((G.nodes[q]["patch_type"] == "factory") and (G.nodes[q]["fid"] == fid))
-        ]
+        ]                       # considers a distillation block the factories and the blocks with the same fid
         return block_qubits + [factory_qubit]
