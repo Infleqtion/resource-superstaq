@@ -324,6 +324,11 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
     )
     assert expected_block_qubits == realized_block_qubits
 
+    expected_ccz_block = ({cirq.GridQubit(8, i) for i in range(2, 12)}.union(
+                          {cirq.GridQubit(9, i) for i in range(12)}).union({cirq.GridQubit(10, 0)}))
+    realized_ccz_block = set(distillery.distillation_block(cirq.GridQubit(8, 4)))
+    assert expected_ccz_block == realized_ccz_block
+
     # Check that nearest T factory is as expected and changes when used
     assert distillery.nearest_factory(qubit=cirq.GridQubit(0, 2), ftype="t") == cirq.GridQubit(
         0, 5

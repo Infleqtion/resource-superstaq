@@ -163,23 +163,20 @@ class Layout(abc.ABC):
         r, c = qubit.row, qubit.col
         # Closest factory according to the L1 distance
         factory = min(available_factories, key=lambda fact: abs(fact.row - r) + abs(fact.col - c))
-        # print(factory)
-        # fid = self.layout_graph.nodes[factory]['fid']
-        # print(fid)
+        # Note for ccz this returns a single qubit of the three
         if ftype == 'ccz':
             fid = self.layout_graph.nodes[factory]['fid']
             whole_factory = []
             for q in self.layout_graph.nodes:
                 try:
-                    if self.layout_graph.nodes[q]['fid'] == fid:
+                    if ((self.layout_graph.nodes[q]['fid'] == fid) and (self.layout_graph.nodes[q]['patch_type'] == 'factory')):
                         whole_factory.append(q)
                 except KeyError:
                     continue
-            print(whole_factory)
             # Factory now used must be removed
-            for factory in whole_factory:
-                self.layout_graph.nodes[factory]["used"] = True
-                available_factories.remove(factory)
+            for fac in whole_factory: # remove all three qubits of the factory
+                self.layout_graph.nodes[fac]["used"] = True
+                available_factories.remove(fac)
         else:
             self.layout_graph.nodes[factory]["used"] = True
             available_factories.remove(factory)
@@ -544,7 +541,7 @@ class MovementDistillery(MovementLayout):
             G.add_node(output_qubit, patch_type="factory", ftype="ccz", fid=(self.num_t_factories + factory_index), used=True)
             block_qubits = [cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, 21)]
             G.add_nodes_from(
-                [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
+                [(q, dict(patch_type="block", fid=(self.num_t_factories + factory_index))) for q in block_qubits]
             )
         # Movement layouts assume all-to-all connectivity; avoid storing O(n^2) edges explicitly.
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
@@ -556,6 +553,7 @@ class MovementDistillery(MovementLayout):
         block_qubits = [
             q
             for q in G.nodes
-            if (G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid)
+            if ((G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid))
+            or ((G.nodes[q]["patch_type"] == "factory") and (G.nodes[q]["fid"] == fid))
         ]
         return block_qubits + [factory_qubit]
