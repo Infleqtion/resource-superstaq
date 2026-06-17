@@ -75,6 +75,17 @@ def knock_off_tqdm(
     )
 
 
+def requires_resource(op: cirq.Operation, transversal_cnot: True) -> bool:
+    """Checks if performing an operation requires a resource state. S is assumed to need a resource state when transversal CNOT is unavailable."""
+    if op in cirq.GateFamily(cirq.S) and not transversal_cnot:
+        return True
+    if op in cirq.GateFamily(cirq.T):
+        return True
+    if op in cirq.GateFamily(cirq.TOFFOLI):
+        return True
+    return False
+
+
 def replace_cirq_op(
     op: cirq.Operation,
     layout: Layout,
@@ -87,10 +98,6 @@ def replace_cirq_op(
     primitives: cirq gates that are allowed in the underlying architecture
     verbose: flag to print more information
     """
-    if op.gate == cirq.T:
-        return teleport_T(op, layout)
-    if op.gate == cirq.S:
-        return teleport_S(op, layout)
     if op.gate == cirq.CNOT and not transversal_cnot:
         path_patches = layout.route_cnot(*op.qubits)
         num_qubits = len(path_patches)
@@ -102,60 +109,57 @@ def replace_cirq_op(
             lsp.Merge(num_qubits=num_qubits - 1, smooth=False).on(*path_patches[1:]),
             lsp.Split(partitions=[1] * (len(path_patches[1:])), smooth=False).on(*path_patches[1:]),
         ]
+    if requires_resource(op, transversal_cnot):
+        return teleport_resource(op, layout)
     raise ValueError(
         f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} CNOT: {op.gate}"
     )
 
 
-def teleport_T(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
-    if hasattr(layout, "distil"):
-        distil = True
+def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
+    # Double check that these don't suffer from overlap!
+    distil = hasattr(layout, "distil")
+    if op in cirq.GateFamily(cirq.T):
+        ftype = "t"
+        prep_gate = lsp.Distil("T") if distil else lsp.Cultivate(pi / 4)
+        correction = cirq.S
+    elif op in cirq.GateFamily(cirq.S):
+        ftype = "s"
+        prep_gate = lsp.Cultivate(pi / 2)
+        correction = cirq.Z
+    elif op in cirq.GateFamily(cirq.TOFFOLI):
+        ftype = "toff"
+        prep_gate = lsp.Distil("Toffoli")
+        # TODO: What are the corrections here?
+        correction = lsp.ErrorCorrect(3)
     else:
-        distil = False
-    available_t_factories = layout.available_t_factories
-    all_t_factories = [
-        factory
-        for factory in layout._all_factories
-        if layout.layout_graph.nodes[factory]["ftype"] == "t"
-    ]
+        raise ValueError(f"Invalid resource encountered: {op.gate}")
+    available_factories = layout.available_factories(ftype)
+    # What IS a "factory"?
+    # A factory is a set of qubits that is responsible for producing a resource state
+    # Therefore `all_factories` could be a list of tuples of qubits
+    all_factories = layout.all_factories(ftype)
     operations = []
-    if not available_t_factories:
+    if not available_factories:
         if distil:
             operations += [
-                lsp.Distil().on(*layout.distillation_block(factory)) for factory in all_t_factories
+                prep_gate.on(*layout.distillation_block(factory)) for factory in all_factories
             ]
         else:
-            operations += [lsp.Cultivate(pi / 4).on(factory) for factory in all_t_factories]
-        layout.reload_factories("t")
-    data_qubit = op.qubits[0]
-    factory_qubit = layout.nearest_factory(data_qubit, ftype="t")
+            operations += [prep_gate.on(*factory) for factory in all_factories]
+        layout.reload_factories(ftype=ftype)
+    # These should be tuples of qubits
+    routed_factory = layout.nearest_factory(op.qubits, ftype=ftype)
+    cnots, measurements, resets = [], [], []
+    corrections = [correction.on(*op.qubits)]
+    for factory_qubit, program_qubit in zip(routed_factory, op.qubits):
+        cnots.append(cirq.CNOT.on(factory_qubit, program_qubit))
+        measurements.append(cirq.MeasurementGate(1, key="").on(factory_qubit))
+        resets.append(cirq.ResetChannel().on(factory_qubit))
     operations += [
-        cirq.CNOT.on(factory_qubit, data_qubit),
-        cirq.MeasurementGate(1, key="").on(factory_qubit),
-        cirq.S.on(data_qubit),
-        cirq.ResetChannel().on(factory_qubit),
-    ]
-    return operations
-
-
-def teleport_S(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
-    available_s_factories = layout.available_s_factories
-    all_s_factories = [
-        factory
-        for factory in layout._all_factories
-        if layout.layout_graph.nodes[factory]["ftype"] == "s"
-    ]
-    operations = []
-    if not available_s_factories:
-        operations += [lsp.Cultivate(pi / 2).on(factory) for factory in all_s_factories]
-        layout.reload_factories("s")
-    data_qubit = op.qubits[0]
-    factory_qubit = layout.nearest_factory(data_qubit, ftype="s")
-    operations += [
-        cirq.CNOT.on(factory_qubit, data_qubit),
-        cirq.MeasurementGate(1, key="").on(factory_qubit),
-        cirq.Z.on(data_qubit),
-        cirq.ResetChannel().on(factory_qubit),
+        cirq.Moment(cnots),
+        cirq.Moment(measurements),
+        cirq.Moment(resets + corrections),
     ]
     return operations
 
@@ -271,7 +275,7 @@ def post_op_syndrome_extraction(
 
 
 def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
-    """Checks that the given circuit is in the Clifford+T gateset."""
+    """Checks that the given circuit is in the Clifford+T gateset. Toffolis are also allowed"""
     # TODO: This function probably belongs in some utilities file, since it is not particularly integral to compiling.
     valid_gates = (
         cirq.T,
@@ -281,6 +285,7 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
         cirq.H,
         cirq.I,
         cirq.CNOT,
+        cirq.TOFFOLI,
     )
     valid_types = (
         cirq.MeasurementGate,

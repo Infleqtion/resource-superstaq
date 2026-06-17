@@ -26,8 +26,7 @@ from resource_estimation.ftqc.compile_ftqc import (
     handle_idling,
     post_op_syndrome_extraction,
     replace_cirq_op,
-    teleport_S,
-    teleport_T,
+    teleport_resource,
     validate_ops,
 )
 from resource_estimation.ftqc.estimate import ResourceEstimator
@@ -93,8 +92,7 @@ __all__ = [
     "load_saved_cost",
     "post_op_syndrome_extraction",
     "replace_cirq_op",
-    "teleport_S",
-    "teleport_T",
+    "teleport_resource",
     "validate_ops",
     "distil_15_to_1",
 ]
