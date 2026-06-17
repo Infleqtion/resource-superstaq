@@ -89,7 +89,7 @@ def test_all_primitives(estimator) -> None:
     if arc.movement:
         circuit += [cirq.CNOT.on(dummy_qubits[i], dummy_qubits[i + 1]) for i in range(8)]
         circuit += [cirq.S.on(q) for q in dummy_qubits]
-        circuit += [lsp.DistilT().on(*factory_block)]
+        circuit += [lsp.Distil("T").on(*factory_block)]
     else:
         circuit += [
             lsp.Merge(2, smooth=True).on(*dummy_qubits[:2]),

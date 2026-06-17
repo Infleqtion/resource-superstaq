@@ -121,7 +121,7 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     distil = hasattr(layout, "distil")
     if op in cirq.GateFamily(cirq.T):
         ftype = "t"
-        prep_gate = lsp.DistilT() if distil else lsp.Cultivate(pi / 4)
+        prep_gate = lsp.Distil("T") if distil else lsp.Cultivate(pi / 4)
         correction = cirq.S
     elif op in cirq.GateFamily(cirq.S):
         ftype = "s"
@@ -129,7 +129,7 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
         correction = cirq.Z
     elif op in cirq.GateFamily(cirq.TOFFOLI):
         ftype = "toff"
-        prep_gate = lsp.DistilToff()
+        prep_gate = lsp.Distil("Toffoli")
         # TODO: What are the corrections here?
         correction = lsp.ErrorCorrect(3)
     else:

@@ -34,10 +34,8 @@ def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
         return ErrorCorrect
     if cirq_type == "lsp.Move":
         return Move
-    if cirq_type == "lsp.DistilT":
-        return DistilT
-    if cirq_type == "lsp.DistilToff":
-        return DistilToff
+    if cirq_type == "lsp.Distil":
+        return Distil
 
 
 @cirq.value_equality
@@ -236,63 +234,38 @@ class Cultivate(cirq.Gate):
 
 
 @cirq.value_equality
-class DistilT(cirq.Gate):
-    """Subclassed cirq gate to represent the distillation of a single T state using 16 code patches.
+class Distil(cirq.Gate):
+    """Subclassed cirq gate to represent the distillation of a resource state.
+    T leads to a single T state using 16 code patches.
     The underlying implementation is assumed to be the one in https://arxiv.org/abs/quant-ph/0403025.
     Noisy T gates are assumed to come from cultivation, resulting in 15 additional logical patches.
-
-
     Distil|0^31> --> (|0> + e^(1j*pi/4)|1>)/√2 |0^30>
 
+    Toffoli leads to a CCZ state
     """
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, resource: Literal["T", "Toffoli"]) -> None:
+        self._resource = resource
+        self._num_qubits = 23 if resource == "Toffoli" else 31
 
     def num_qubits(self) -> int:
-        return 31
+        return self._num_qubits
 
     def __str__(self) -> str:
-        return "DISTIL_T"
+        return f"DISTIL({self._resource})"
 
     def _json_dict_(self) -> dict[str, object]:
-        return {}
+        return {"resource": self._resource}
 
     def __repr__(self) -> str:
-        return "lsp.DistilT()"
+        return f"lsp.Distil({self._resource})"
 
     @classmethod
     def _json_namespace_(cls) -> str:
         return "lsp"
 
-    def _value_equality_values_(self) -> tuple[()]:
-        return ()
-
-
-@cirq.value_equality
-class DistilToff(cirq.Gate):
-    # TODO: Docstring
-    def __init__(self) -> None:
-        pass
-
-    def num_qubits(self) -> int:
-        return 23
-
-    def __str__(self) -> str:
-        return "DISTIL_TOFF"
-
-    def _json_dict_(self) -> dict[str, object]:
-        return {}
-
-    def __repr__(self) -> str:
-        return "lsp.DistilToff()"
-
-    @classmethod
-    def _json_namespace_(cls) -> str:
-        return "lsp"
-
-    def _value_equality_values_(self) -> tuple[()]:
-        return ()
+    def _value_equality_values_(self) -> str:
+        return self._resource
 
 
 @cirq.value_equality

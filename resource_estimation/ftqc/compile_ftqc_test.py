@@ -26,7 +26,6 @@ from resource_estimation.ftqc.layout import (
     Column,
     Embedded,
     MovementDistillery,
-    # MovementToffDistillery,
     MovementLayout,
 )
 
@@ -141,7 +140,7 @@ def test_direct_substitution() -> None:
     for op_to_replace in [
         cirq.CNOT.on(*dummy_qubits[:2]),
         cirq.S.on(dummy_qubits[0]),
-        lsp.DistilT().on(*cirq.LineQubit.range(31)),
+        lsp.Distil("T").on(*cirq.LineQubit.range(31)),
     ]:
         replacement = comp._decompose_to_primitives(
             circuit=cirq.Circuit(op_to_replace),
@@ -937,8 +936,8 @@ def test_replace_cirq_op_distil_t(bell_circuit) -> None:
     )
     ops_flattened = returned_ops[:2] + [op for moment in returned_ops[2:] for op in moment]
     expected_types = [
-        lsp.DistilT,
-        lsp.DistilT,
+        lsp.Distil("T"),
+        lsp.Distil("T"),
         cirq.CNOT,
         cirq.MeasurementGate,
         cirq.ResetChannel,
@@ -962,8 +961,8 @@ def test_replace_cirq_op_distil_toff(random_circ) -> None:
     # We flatten them here to be explicit about the order the operations should be in
     ops_flattened = returned_ops[:2] + [op for moment in returned_ops[2:] for op in moment]
     expected_types = [
-        lsp.DistilToff,
-        lsp.DistilToff,
+        lsp.Distil("Toffoli"),
+        lsp.Distil("Toffoli"),
         cirq.CNOT,
         cirq.CNOT,
         cirq.CNOT,

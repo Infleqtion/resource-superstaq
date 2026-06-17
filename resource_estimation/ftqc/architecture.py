@@ -597,8 +597,7 @@ class DefaultMovement(Architecture):
         self._primitives = cirq.Gateset(
             *[
                 lsp.Cultivate,
-                lsp.DistilT,
-                lsp.DistilToff,
+                lsp.Distil,
                 lsp.SyndromeExtract,
                 lsp.ErrorCorrect,
                 lsp.Move,
@@ -750,8 +749,12 @@ class DefaultMovement(Architecture):
         new_time = self.total_time(new_moment_cost)
         return {"op_time": new_time, "gate_cost": new_gate_cost, "moment_cost": new_moment_cost}
 
-    def distil_t_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
-        return self._distil_t_cost
+    def distil_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
+        if op.gate._resource == "T":
+            return self._distil_t_cost
+        # not covering before full resource cost is implemented
+        if op.gate._resource == "Toffoli":  # pragma: no cover
+            raise NotImplementedError("This functionality is not yet available")
 
     @cached_property
     def _distil_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
@@ -780,7 +783,7 @@ class DefaultMovement(Architecture):
         self.op_cost[type(cirq.CNOT)] = self.cnot_cost
         self.op_cost[type(cirq.S)] = self.s_cost
         self.op_cost[lsp.Move] = self.move_cost
-        self.op_cost[lsp.DistilT] = self.distil_t_cost
+        self.op_cost[lsp.Distil] = self.distil_cost
 
     @property
     def __name__(self) -> str:
