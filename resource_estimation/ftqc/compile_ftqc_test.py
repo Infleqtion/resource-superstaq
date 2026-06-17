@@ -18,12 +18,17 @@ from math import pi
 import cirq
 import pytest
 from cirq_superstaq import Barrier
-from pprint import pprint
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.compile_ftqc as comp
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-from resource_estimation.ftqc.layout import Column, Embedded, MovementTDistillery, MovementToffDistillery, MovementLayout
+from resource_estimation.ftqc.layout import (
+    Column,
+    Embedded,
+    MovementTDistillery,
+    MovementToffDistillery,
+    MovementLayout,
+)
 
 
 @pytest.fixture
@@ -947,7 +952,9 @@ def test_replace_cirq_op_distil_t(bell_circuit) -> None:
 def test_replace_cirq_op_distil_toff(random_circ) -> None:
     distillery_layout = MovementToffDistillery(random_circ, num_toff_factories=2)
 
-    op_to_replace = cirq.TOFFOLI.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
+    op_to_replace = cirq.TOFFOLI.on(
+        cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
+    )
     returned_ops = comp.replace_cirq_op(
         op=op_to_replace, layout=distillery_layout, transversal_cnot=True
     )
@@ -972,6 +979,7 @@ def test_replace_cirq_op_distil_toff(random_circ) -> None:
     for op, expected_type in zip(ops_flattened, expected_types):
         assert op in cirq.GateFamily(expected_type)
 
+
 def test_different_rounds_distil() -> None:
     circuit = cirq.Circuit(cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)))
     layout = MovementTDistillery(input_circuit=circuit)
@@ -988,6 +996,7 @@ def test_different_rounds_distil() -> None:
             if op in cirq.GateFamily(lsp.SyndromeExtract):
                 assert op.gate.rounds == k
 
+
 # def test_toffoli_circuit():
 #     arc = arch.DualSpeciesMovement(post_op_correction=False)
 #     q1, q2, q3 = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
@@ -998,6 +1007,7 @@ def test_different_rounds_distil() -> None:
 #     print(result[1:])
 #     # print(cirq.synchronize_terminal_measurements(cirq.align_left(cirq.defer_measurements(result[1:]))))
 #     # raise ValueError()
+
 
 def test_teleport_resource_invalid():
     invalid_resource = cirq.CCZ.on(*cirq.LineQubit.range(3))

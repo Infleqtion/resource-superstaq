@@ -328,7 +328,9 @@ def test_t_distillery(circuit5: cirq.Circuit) -> None:
     assert distillery.nearest_factory(qubits=cirq.GridQubit(0, 2), ftype="t") == cirq.GridQubit(
         0, 5
     )  # Removes (0, 5) from options
-    assert distillery.nearest_factory(qubits=cirq.GridQubit(2, 2), ftype="t") == cirq.GridQubit(3, 6)
+    assert distillery.nearest_factory(qubits=cirq.GridQubit(2, 2), ftype="t") == cirq.GridQubit(
+        3, 6
+    )
 
 
 def test_toff_distillery(circuit5: cirq.Circuit) -> None:
@@ -344,15 +346,15 @@ def test_toff_distillery(circuit5: cirq.Circuit) -> None:
     assert expected_program_qubits == realized_program_qubits
 
     expected_factories = {
-        cirq.GridQubit(0, 5), 
-        cirq.GridQubit(0, 6), 
-        cirq.GridQubit(0, 7), 
-        cirq.GridQubit(3, 1), 
-        cirq.GridQubit(3, 2), 
-        cirq.GridQubit(3, 3), 
-        cirq.GridQubit(5, 6), 
-        cirq.GridQubit(5, 7), 
-        cirq.GridQubit(5, 8)
+        cirq.GridQubit(0, 5),
+        cirq.GridQubit(0, 6),
+        cirq.GridQubit(0, 7),
+        cirq.GridQubit(3, 1),
+        cirq.GridQubit(3, 2),
+        cirq.GridQubit(3, 3),
+        cirq.GridQubit(5, 6),
+        cirq.GridQubit(5, 7),
+        cirq.GridQubit(5, 8),
     }
     realized_factories = distillery._all_factories
     assert expected_factories == realized_factories
@@ -376,4 +378,4 @@ def test_toff_distillery(circuit5: cirq.Circuit) -> None:
     # Check that nearest factory changes with previous factory spent
     next_nearest_factory = set(distillery.nearest_factory(target_qubits, ftype="toff"))
     expected_factory = set([cirq.GridQubit(3, 1), cirq.GridQubit(3, 2), cirq.GridQubit(3, 3)])
-    assert next_nearest_factory ==expected_factory
+    assert next_nearest_factory == expected_factory

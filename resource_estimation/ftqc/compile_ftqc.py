@@ -139,26 +139,17 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     # A factory is a set of qubits that is responsible for producing a resource state
     # Therefore `all_factories` could be a list of tuples of qubits
     all_factories = layout.all_factories(ftype)
-    print(all_factories)
-
     operations = []
     if not available_factories:
         if distil:
-            print(prep_gate, cirq.num_qubits(prep_gate))
-            print(all_factories)
-            # print(layout.distillation_block(all_factories))
             operations += [
                 prep_gate.on(*layout.distillation_block(factory)) for factory in all_factories
             ]
-            print(operations)
         else:
             operations += [prep_gate.on(*factory) for factory in all_factories]
         layout.reload_factories(ftype=ftype)
     # These should be tuples of qubits
     routed_factory = layout.nearest_factory(op.qubits, ftype=ftype)
-    print("This is the closest factory! It should be a tuple of qubits")
-    print(routed_factory)
-    print(op.qubits)
     cnots, measurements, resets = [], [], []
     corrections = [correction.on(*op.qubits)]
     for factory_qubit, program_qubit in zip(routed_factory, op.qubits):
@@ -170,7 +161,6 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
         cirq.Moment(measurements),
         cirq.Moment(resets + corrections),
     ]
-    # print(cirq.Circuit(operations))
     return operations
 
 

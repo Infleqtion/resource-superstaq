@@ -268,6 +268,7 @@ class DistilT(cirq.Gate):
     def _value_equality_values_(self) -> tuple[()]:
         return ()
 
+
 @cirq.value_equality
 class DistilToff(cirq.Gate):
     # TODO: Docstring

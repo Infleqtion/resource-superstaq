@@ -226,7 +226,7 @@ def test_serialization() -> None:
             lsp.Move(zone=None).on(qubit_a, qubit_b),
             lsp.Move(zone="measure").on(qubit_a),
             lsp.DistilT().on(*factory_block),
-            lsp.DistilToff().on(*factory_block[:23])
+            lsp.DistilToff().on(*factory_block[:23]),
         ]
     )
     json_str = cirq.to_json(circuit)
