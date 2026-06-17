@@ -997,18 +997,6 @@ def test_different_rounds_distil() -> None:
                 assert op.gate.rounds == k
 
 
-# def test_toffoli_circuit():
-#     arc = arch.DualSpeciesMovement(post_op_correction=False)
-#     q1, q2, q3 = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
-#     circuit = cirq.Circuit(cirq.TOFFOLI.on(q1, q2, q3))
-#     layout = MovementToffDistillery(circuit, num_toff_factories=1)
-#     print(circuit)
-#     result = comp.ft_compile(layout=layout, arc=arc)
-#     print(result[1:])
-#     # print(cirq.synchronize_terminal_measurements(cirq.align_left(cirq.defer_measurements(result[1:]))))
-#     # raise ValueError()
-
-
 def test_teleport_resource_invalid():
     invalid_resource = cirq.CCZ.on(*cirq.LineQubit.range(3))
     layout = MovementLayout(cirq.Circuit())
