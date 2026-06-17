@@ -25,8 +25,8 @@ import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.layout import (
     Column,
     Embedded,
-    MovementTDistillery,
-    MovementToffDistillery,
+    MovementDistillery,
+    # MovementToffDistillery,
     MovementLayout,
 )
 
@@ -929,7 +929,7 @@ def test_hm_moves() -> None:
 
 
 def test_replace_cirq_op_distil_t(bell_circuit) -> None:
-    distillery_layout = MovementTDistillery(bell_circuit, num_t_factories=2)
+    distillery_layout = MovementDistillery(bell_circuit, num_t_factories=2, num_toff_factories=0)
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
     returned_ops = comp.replace_cirq_op(
@@ -950,7 +950,7 @@ def test_replace_cirq_op_distil_t(bell_circuit) -> None:
 
 
 def test_replace_cirq_op_distil_toff(random_circ) -> None:
-    distillery_layout = MovementToffDistillery(random_circ, num_toff_factories=2)
+    distillery_layout = MovementDistillery(random_circ, num_toff_factories=2, num_t_factories=0)
 
     op_to_replace = cirq.TOFFOLI.on(
         cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
@@ -982,7 +982,7 @@ def test_replace_cirq_op_distil_toff(random_circ) -> None:
 
 def test_different_rounds_distil() -> None:
     circuit = cirq.Circuit(cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)))
-    layout = MovementTDistillery(input_circuit=circuit)
+    layout = MovementDistillery(input_circuit=circuit)
     for k in [1, 5, 7]:
         architecture = arch.DefaultMovement(
             idling=False,

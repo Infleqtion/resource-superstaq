@@ -217,6 +217,7 @@ class Layout(abc.ABC):
             "data": "green",
             "ancilla": "blue",
             "block": "pink",
+            "ccz": "orange",
         }
         G = self.layout_graph
         node_color = []
@@ -491,109 +492,94 @@ class Embedded(Layout):
         self.num_t_factories = len(t_factories)
 
 
-class MovementTDistillery(MovementLayout):
+class MovementDistillery(MovementLayout):
+    """
+    Layout for distilling magic states using movement.  Currently handles
+    T and CCZ distillation layouts.
+    """
+
     def __init__(
-        self,
-        input_circuit: cirq.Circuit,
-        num_t_factories: int = 0,
+        self, input_circuit: cirq.Circuit, num_t_factories: int = 0, num_toff_factories: int = 0
     ) -> None:
+        self.distil = True
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
+            num_toff_factories=num_toff_factories,
         )
-        self.distil = True
 
     def _generate(self) -> None:
+        # Establish Important Variables
         program_qubits = len(self.input_circuit.all_qubits())
-        distillation_qubits = 31 * self.num_t_factories
+        qubits_per_t_distil = 31
+        qubits_per_toff_distil = 23
+        num_output_qubits = 3
+        distillation_qubits = (
+            qubits_per_toff_distil * self.num_toff_factories
+            + qubits_per_t_distil * self.num_t_factories
+        )
         total_qubits = program_qubits + distillation_qubits
         side_length = ceil(sqrt(total_qubits))
 
+        # Maps linear indices to left-r>ight + up->down grid filling
         def idx_to_xy(idx: int) -> tuple[int, int]:
             x = idx // side_length
             y = idx % side_length
             return x, y
 
+        # Map Program Qubits to GridQubits
         qubit_map = {
             qid: cirq.GridQubit(*idx_to_xy(idx))
             for idx, qid in enumerate(sorted(self.input_circuit.all_qubits()))
         }
         self.set_map_circuit(qubit_map=qubit_map)
+
+        # Generate Layout Graph
         G = nx.Graph()
         G.add_nodes_from(
             [(q, dict(patch_type="data")) for q in qubit_map.values()],
         )
+        # Add T Distillation Factories to Graph
         for factory_index in range(self.num_t_factories):
-            qubit_index = factory_index * 31 + program_qubits
+            qubit_index = factory_index * qubits_per_t_distil + program_qubits
             output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
             G.add_node(output_qubit, patch_type="factory", ftype="t", fid=factory_index, used=True)
-            block_qubits = [cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, 31)]
+            block_qubits = [
+                cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, qubits_per_t_distil)
+            ]
             G.add_nodes_from(
                 [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
             )
-        # Movement layouts assume all-to-all connectivity; avoid storing O(n^2) edges explicitly.
-        self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
-        self.layout_graph = G
-
-    def distillation_block(self, factory: tuple[cirq.GridQubit]) -> list[cirq.GridQubit]:
-        G = self.layout_graph
-        fid = G.nodes[factory[0]]["fid"]
-        block_qubits = [
-            q
-            for q in G.nodes
-            if (G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid)
-        ]
-        return block_qubits + list(factory)
-
-
-class MovementToffDistillery(MovementLayout):
-    def __init__(
-        self,
-        input_circuit: cirq.Circuit,
-        num_toff_factories: int = 0,
-    ) -> None:
-        super().__init__(input_circuit=input_circuit, num_toff_factories=num_toff_factories)
-        self.distil = True
-
-    def _generate(self) -> None:
-        program_qubits = len(self.input_circuit.all_qubits())
-        num_qubits_per_toffoli_block = 23
-        num_output_qubits = 3
-        num_distillation_qubits = num_qubits_per_toffoli_block * self.num_toff_factories
-        total_qubits = program_qubits + num_distillation_qubits
-        side_length = ceil(sqrt(total_qubits))
-
-        def idx_to_xy(idx: int) -> tuple[int, int]:
-            x = idx // side_length
-            y = idx % side_length
-            return x, y
-
-        qubit_map = {
-            qid: cirq.GridQubit(*idx_to_xy(idx))
-            for idx, qid in enumerate(sorted(self.input_circuit.all_qubits()))
-        }
-        self.set_map_circuit(qubit_map=qubit_map)
-        G = nx.Graph()
-        G.add_nodes_from(
-            [(q, dict(patch_type="data")) for q in qubit_map.values()],
-        )
-        for factory_index in range(self.num_toff_factories):
-            qubit_index = factory_index * num_qubits_per_toffoli_block + program_qubits
+        # Add Toffoli Distillation Factories to Graph
+        data_plus_t = program_qubits + (qubits_per_t_distil * self.num_t_factories)
+        for factory_index in range(self.num_toff_factories):  # just builds on to the T factories
+            qubit_index = factory_index * qubits_per_toff_distil + data_plus_t
             output_qubits = [
                 cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(num_output_qubits)
             ]
             G.add_nodes_from(
                 [
-                    (q, dict(patch_type="factory", ftype="toff", fid=factory_index, used=True))
+                    (
+                        q,
+                        dict(
+                            patch_type="factory",
+                            ftype="toff",
+                            fid=self.num_t_factories + factory_index,
+                            used=True,
+                        ),
+                    )
                     for q in output_qubits
                 ]
             )
             block_qubits = [
                 cirq.GridQubit(*idx_to_xy(qubit_index + i))
-                for i in range(num_output_qubits, num_qubits_per_toffoli_block)
-            ]  # Replaced 31 with 23
+                for i in range(num_output_qubits, qubits_per_toff_distil)
+            ]
             G.add_nodes_from(
-                [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
+                [
+                    (q, dict(patch_type="block", fid=(self.num_t_factories + factory_index)))
+                    for q in block_qubits
+                ]
             )
         # Movement layouts assume all-to-all connectivity; avoid storing O(n^2) edges explicitly.
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
@@ -608,3 +594,67 @@ class MovementToffDistillery(MovementLayout):
             if (G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid)
         ]
         return block_qubits + list(factory)
+
+
+# class MovementToffDistillery(MovementLayout):
+#     def __init__(
+#         self,
+#         input_circuit: cirq.Circuit,
+#         num_toff_factories: int = 0,
+#     ) -> None:
+#         super().__init__(input_circuit=input_circuit, num_toff_factories=num_toff_factories)
+#         self.distil = True
+
+#     def _generate(self) -> None:
+#         program_qubits = len(self.input_circuit.all_qubits())
+#         num_qubits_per_toffoli_block = 23
+#         num_output_qubits = 3
+#         num_distillation_qubits = num_qubits_per_toffoli_block * self.num_toff_factories
+#         total_qubits = program_qubits + num_distillation_qubits
+#         side_length = ceil(sqrt(total_qubits))
+
+#         def idx_to_xy(idx: int) -> tuple[int, int]:
+#             x = idx // side_length
+#             y = idx % side_length
+#             return x, y
+
+#         qubit_map = {
+#             qid: cirq.GridQubit(*idx_to_xy(idx))
+#             for idx, qid in enumerate(sorted(self.input_circuit.all_qubits()))
+#         }
+#         self.set_map_circuit(qubit_map=qubit_map)
+#         G = nx.Graph()
+#         G.add_nodes_from(
+#             [(q, dict(patch_type="data")) for q in qubit_map.values()],
+#         )
+#         for factory_index in range(self.num_toff_factories):
+#             qubit_index = factory_index * num_qubits_per_toffoli_block + program_qubits
+#             output_qubits = [
+#                 cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(num_output_qubits)
+#             ]
+#             G.add_nodes_from(
+#                 [
+#                     (q, dict(patch_type="factory", ftype="toff", fid=factory_index, used=True))
+#                     for q in output_qubits
+#                 ]
+#             )
+#             block_qubits = [
+#                 cirq.GridQubit(*idx_to_xy(qubit_index + i))
+#                 for i in range(num_output_qubits, num_qubits_per_toffoli_block)
+#             ]  # Replaced 31 with 23
+#             G.add_nodes_from(
+#                 [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
+#             )
+#         # Movement layouts assume all-to-all connectivity; avoid storing O(n^2) edges explicitly.
+#         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
+#         self.layout_graph = G
+
+#     def distillation_block(self, factory: tuple[cirq.GridQubit]) -> list[cirq.GridQubit]:
+#         G = self.layout_graph
+#         fid = G.nodes[factory[0]]["fid"]
+#         block_qubits = [
+#             q
+#             for q in G.nodes
+#             if (G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid)
+#         ]
+#         return block_qubits + list(factory)

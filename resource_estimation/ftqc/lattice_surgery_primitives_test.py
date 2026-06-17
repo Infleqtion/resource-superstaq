@@ -77,6 +77,13 @@ def test_move() -> None:
     assert str(measure_move) == "MOVE_MZ(q(0, 1))"
 
 
+def test_distil() -> None:
+    gate = lsp.DistilT()
+    assert str(gate) == "DISTIL_T"
+    gate = lsp.DistilToff()
+    assert str(gate) == "DISTIL_TOFF"
+
+
 def test_rotated_code_patch() -> None:
     with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
         lsp.RotatedCodePatch(4)
@@ -284,12 +291,17 @@ def test_repr() -> None:
     cult = lsp.Cultivate(7).on(qa)
     assert repr(cult) == "lsp.Cultivate(theta=7).on(cirq.LineQubit(0))"
 
-    dist = lsp.DistilT().on(*factory_block)
+    dist_t = lsp.DistilT().on(*factory_block)
     assert (
-        repr(dist)
+        repr(dist_t)
         == "lsp.DistilT()(cirq.LineQubit(0), cirq.LineQubit(1), cirq.LineQubit(2), cirq.LineQubit(3), cirq.LineQubit(4), cirq.LineQubit(5), cirq.LineQubit(6), cirq.LineQubit(7), cirq.LineQubit(8), cirq.LineQubit(9), cirq.LineQubit(10), cirq.LineQubit(11), cirq.LineQubit(12), cirq.LineQubit(13), cirq.LineQubit(14), cirq.LineQubit(15), cirq.LineQubit(16), cirq.LineQubit(17), cirq.LineQubit(18), cirq.LineQubit(19), cirq.LineQubit(20), cirq.LineQubit(21), cirq.LineQubit(22), cirq.LineQubit(23), cirq.LineQubit(24), cirq.LineQubit(25), cirq.LineQubit(26), cirq.LineQubit(27), cirq.LineQubit(28), cirq.LineQubit(29), cirq.LineQubit(30))"
     )
 
+    dist_toff = lsp.DistilToff().on(*factory_block[:23])
+    assert (
+        repr(dist_toff)
+        == "lsp.DistilToff()(cirq.LineQubit(0), cirq.LineQubit(1), cirq.LineQubit(2), cirq.LineQubit(3), cirq.LineQubit(4), cirq.LineQubit(5), cirq.LineQubit(6), cirq.LineQubit(7), cirq.LineQubit(8), cirq.LineQubit(9), cirq.LineQubit(10), cirq.LineQubit(11), cirq.LineQubit(12), cirq.LineQubit(13), cirq.LineQubit(14), cirq.LineQubit(15), cirq.LineQubit(16), cirq.LineQubit(17), cirq.LineQubit(18), cirq.LineQubit(19), cirq.LineQubit(20), cirq.LineQubit(21), cirq.LineQubit(22))"
+    )
     move = lsp.Move(zone="interact").on_each(qa, qb)
     assert (
         repr(move)
