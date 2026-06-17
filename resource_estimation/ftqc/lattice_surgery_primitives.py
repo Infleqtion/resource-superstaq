@@ -34,8 +34,10 @@ def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
         return ErrorCorrect
     if cirq_type == "lsp.Move":
         return Move
-    if cirq_type == "lsp.Distil":
-        return Distil
+    if cirq_type == "lsp.DistilT":
+        return DistilT
+    if cirq_type == "lsp.DistilToff":
+        return DistilToff
 
 
 @cirq.value_equality
@@ -234,7 +236,7 @@ class Cultivate(cirq.Gate):
 
 
 @cirq.value_equality
-class Distil(cirq.Gate):
+class DistilT(cirq.Gate):
     """Subclassed cirq gate to represent the distillation of a single T state using 16 code patches.
     The underlying implementation is assumed to be the one in https://arxiv.org/abs/quant-ph/0403025.
     Noisy T gates are assumed to come from cultivation, resulting in 15 additional logical patches.
@@ -251,13 +253,38 @@ class Distil(cirq.Gate):
         return 31
 
     def __str__(self) -> str:
-        return "DISTIL"
+        return "DISTIL_T"
 
     def _json_dict_(self) -> dict[str, object]:
         return {}
 
     def __repr__(self) -> str:
-        return "lsp.Distil()"
+        return "lsp.DistilT()"
+
+    @classmethod
+    def _json_namespace_(cls) -> str:
+        return "lsp"
+
+    def _value_equality_values_(self) -> tuple[()]:
+        return ()
+
+@cirq.value_equality
+class DistilToff(cirq.Gate):
+    # TODO: Docstring
+    def __init__(self) -> None:
+        pass
+
+    def num_qubits(self) -> int:
+        return 23
+
+    def __str__(self) -> str:
+        return "DISTIL_TOFF"
+
+    def _json_dict_(self) -> dict[str, object]:
+        return {}
+
+    def __repr__(self) -> str:
+        return "lsp.DistilToff()"
 
     @classmethod
     def _json_namespace_(cls) -> str:

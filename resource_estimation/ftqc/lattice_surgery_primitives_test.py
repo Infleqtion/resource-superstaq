@@ -225,6 +225,8 @@ def test_serialization() -> None:
             lsp.Move(zone="interact").on_each(qubit_a, qubit_b),
             lsp.Move(zone=None).on(qubit_a, qubit_b),
             lsp.Move(zone="measure").on(qubit_a),
+            lsp.DistilT().on(*factory_block),
+            lsp.DistilToff().on(*factory_block[:23])
         ]
     )
     json_str = cirq.to_json(circuit)
@@ -241,7 +243,8 @@ def test_serialization() -> None:
             lsp.Split([1, 1], True).on(qubit_a, qubit_b),
             lsp.SyndromeExtract(1, 1).on(qubit_a),
             lsp.ErrorCorrect(1).on(qubit_b),
-            lsp.Distil().on(*factory_block),
+            lsp.DistilT().on(*factory_block),
+            lsp.DistilToff().on(*factory_block[:23]),
             lsp.Move(zone="interact").on_each(qubit_a, qubit_b),
             lsp.Move(zone=None).on(qubit_a, qubit_b),
             lsp.Move(zone="measure").on(qubit_a),
@@ -251,8 +254,7 @@ def test_serialization() -> None:
     new_circuit = cirq.read_json(
         json_text=json_str, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
     )
-    print(new_circuit)
-    print(new_circuit == circuit)
+    assert new_circuit == circuit
     cirq.testing.assert_json_roundtrip_works(
         circuit, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
     )
@@ -282,10 +284,10 @@ def test_repr() -> None:
     cult = lsp.Cultivate(7).on(qa)
     assert repr(cult) == "lsp.Cultivate(theta=7).on(cirq.LineQubit(0))"
 
-    dist = lsp.Distil().on(*factory_block)
+    dist = lsp.DistilT().on(*factory_block)
     assert (
         repr(dist)
-        == "lsp.Distil()(cirq.LineQubit(0), cirq.LineQubit(1), cirq.LineQubit(2), cirq.LineQubit(3), cirq.LineQubit(4), cirq.LineQubit(5), cirq.LineQubit(6), cirq.LineQubit(7), cirq.LineQubit(8), cirq.LineQubit(9), cirq.LineQubit(10), cirq.LineQubit(11), cirq.LineQubit(12), cirq.LineQubit(13), cirq.LineQubit(14), cirq.LineQubit(15), cirq.LineQubit(16), cirq.LineQubit(17), cirq.LineQubit(18), cirq.LineQubit(19), cirq.LineQubit(20), cirq.LineQubit(21), cirq.LineQubit(22), cirq.LineQubit(23), cirq.LineQubit(24), cirq.LineQubit(25), cirq.LineQubit(26), cirq.LineQubit(27), cirq.LineQubit(28), cirq.LineQubit(29), cirq.LineQubit(30))"
+        == "lsp.DistilT()(cirq.LineQubit(0), cirq.LineQubit(1), cirq.LineQubit(2), cirq.LineQubit(3), cirq.LineQubit(4), cirq.LineQubit(5), cirq.LineQubit(6), cirq.LineQubit(7), cirq.LineQubit(8), cirq.LineQubit(9), cirq.LineQubit(10), cirq.LineQubit(11), cirq.LineQubit(12), cirq.LineQubit(13), cirq.LineQubit(14), cirq.LineQubit(15), cirq.LineQubit(16), cirq.LineQubit(17), cirq.LineQubit(18), cirq.LineQubit(19), cirq.LineQubit(20), cirq.LineQubit(21), cirq.LineQubit(22), cirq.LineQubit(23), cirq.LineQubit(24), cirq.LineQubit(25), cirq.LineQubit(26), cirq.LineQubit(27), cirq.LineQubit(28), cirq.LineQubit(29), cirq.LineQubit(30))"
     )
 
     move = lsp.Move(zone="interact").on_each(qa, qb)

@@ -597,7 +597,8 @@ class DefaultMovement(Architecture):
         self._primitives = cirq.Gateset(
             *[
                 lsp.Cultivate,
-                lsp.Distil,
+                lsp.DistilT,
+                lsp.DistilToff,
                 lsp.SyndromeExtract,
                 lsp.ErrorCorrect,
                 lsp.Move,
@@ -779,7 +780,7 @@ class DefaultMovement(Architecture):
         self.op_cost[type(cirq.CNOT)] = self.cnot_cost
         self.op_cost[type(cirq.S)] = self.s_cost
         self.op_cost[lsp.Move] = self.move_cost
-        self.op_cost[lsp.Distil] = self.distil_t_cost
+        self.op_cost[lsp.DistilT] = self.distil_t_cost
 
     @property
     def __name__(self) -> str:

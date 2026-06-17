@@ -121,7 +121,7 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     distil = hasattr(layout, "distil")
     if op in cirq.GateFamily(cirq.T):
         ftype = "t"
-        prep_gate = lsp.Distil() if distil else lsp.Cultivate(pi / 4)
+        prep_gate = lsp.DistilT() if distil else lsp.Cultivate(pi / 4)
         correction = cirq.S
     elif op in cirq.GateFamily(cirq.S):
         ftype = "s"
@@ -129,33 +129,48 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
         correction = cirq.Z
     elif op in cirq.GateFamily(cirq.TOFFOLI):
         ftype = "toff"
-        prep_gate = lsp.Distil("Toffoli")
-        correction = cirq.CZ  # Probably needs to be a bit more complicated
+        prep_gate = lsp.DistilToff()
+        # TODO: What are the corrections here?
+        correction = lsp.ErrorCorrect(3)
     else:
         raise ValueError(f"Invalid resource encountered: {op.gate}")
     available_factories = layout.available_factories(ftype)
+    # What IS a "factory"?
+    # A factory is a set of qubits that is responsible for producing a resource state
+    # Therefore `all_factories` could be a list of tuples of qubits
     all_factories = layout.all_factories(ftype)
+    print(all_factories)
 
     operations = []
     if not available_factories:
         if distil:
+            print(prep_gate, cirq.num_qubits(prep_gate))
+            print(all_factories)
+            # print(layout.distillation_block(all_factories))
             operations += [
                 prep_gate.on(*layout.distillation_block(factory)) for factory in all_factories
             ]
+            print(operations)
         else:
-            operations += [prep_gate.on(factory) for factory in all_factories]
+            operations += [prep_gate.on(*factory) for factory in all_factories]
         layout.reload_factories(ftype=ftype)
-    routed_factories = [
-        layout.nearest_factory(program_qubit, ftype=ftype) for program_qubit in op.qubits
+    # These should be tuples of qubits
+    routed_factory = layout.nearest_factory(op.qubits, ftype=ftype)
+    print("This is the closest factory! It should be a tuple of qubits")
+    print(routed_factory)
+    print(op.qubits)
+    cnots, measurements, resets = [], [], []
+    corrections = [correction.on(*op.qubits)]
+    for factory_qubit, program_qubit in zip(routed_factory, op.qubits):
+        cnots.append(cirq.CNOT.on(factory_qubit, program_qubit))
+        measurements.append(cirq.MeasurementGate(1, key="").on(factory_qubit))
+        resets.append(cirq.ResetChannel().on(factory_qubit))
+    operations += [
+        cirq.Moment(cnots),
+        cirq.Moment(measurements),
+        cirq.Moment(resets + corrections),
     ]
-    for factory_qubit, program_qubit in zip(routed_factories, op.qubits):
-        operations += [
-            cirq.CNOT.on(factory_qubit, program_qubit),
-            cirq.MeasurementGate(1, key="").on(factory_qubit),
-            cirq.ResetChannel().on(factory_qubit),
-        ]
-    qubit_sets = [op.qubits[:1] if len(op.qubits) == 1 else op.qubits[:2]]
-    operations += [correction.on(*qubits) for qubits in qubit_sets]
+    # print(cirq.Circuit(operations))
     return operations
 
 
@@ -270,7 +285,7 @@ def post_op_syndrome_extraction(
 
 
 def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
-    """Checks that the given circuit is in the Clifford+T gateset."""
+    """Checks that the given circuit is in the Clifford+T gateset. Toffolis are also allowed"""
     # TODO: This function probably belongs in some utilities file, since it is not particularly integral to compiling.
     valid_gates = (
         cirq.T,
@@ -280,6 +295,7 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
         cirq.H,
         cirq.I,
         cirq.CNOT,
+        cirq.TOFFOLI,
     )
     valid_types = (
         cirq.MeasurementGate,
