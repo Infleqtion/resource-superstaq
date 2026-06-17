@@ -142,6 +142,3 @@ def ccz_8_to_1() -> cirq.Circuit:
     cir.append(cirq.measure(qubits[i], key="m" + str(i)) for i in range(3, 15))
 
     return cir
-
-
-print(ccz_8_to_1())
