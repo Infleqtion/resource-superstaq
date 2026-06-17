@@ -296,52 +296,13 @@ def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
     )
 
 
-# def test_distillery(circuit5: cirq.Circuit) -> None:
-#     distillery = MovementDistillery(circuit5, num_t_factories=3, num_toff_factories=2)
-#     distillery.reload_factories(ftype="s")
-#     distillery.reload_factories(ftype="t")
-#     distillery.reload_factories(ftype="toff")
-
-#     expected_program_qubits = set(cirq.GridQubit(0, i) for i in range(5))
-#     realized_program_qubits = set(
-#         q
-#         for q in distillery.layout_graph.nodes
-#         if distillery.layout_graph.nodes[q]["patch_type"] == "data"
-#     )
-#     assert expected_program_qubits == realized_program_qubits
-
-#     expected_factories = {cirq.GridQubit(0, 5), cirq.GridQubit(3, 0), cirq.GridQubit(5, 7),
-#                           cirq.GridQubit(8, 2), cirq.GridQubit(8, 3), cirq.GridQubit(8, 4),
-#                           cirq.GridQubit(10, 1), cirq.GridQubit(10, 2), cirq.GridQubit(10, 3)}
-#     realized_factories = distillery._all_factories
-#     assert expected_factories == realized_factories
-
-#     expected_block_qubits = set(q for q in distillery.layout_graph.nodes) - (
-#         expected_program_qubits.union(expected_factories)
-#     )
-#     realized_block_qubits = set(
-#         q
-#         for q in distillery.layout_graph.nodes
-#         if distillery.layout_graph.nodes[q]["patch_type"] == "block"
-#     )
-#     assert expected_block_qubits == realized_block_qubits
-
-#     expected_ccz_block = ({cirq.GridQubit(8, i) for i in range(2, 12)}.union(
-#                           {cirq.GridQubit(9, i) for i in range(12)}).union({cirq.GridQubit(10, 0)}))
-#     realized_ccz_block = set(distillery.distillation_block(cirq.GridQubit(8, 4)))
-#     assert expected_ccz_block == realized_ccz_block
-
-#     # Check that nearest T factory is as expected and changes when used
-#     assert distillery.nearest_factory(qubits=cirq.GridQubit(0, 2), ftype="t") == cirq.GridQubit(
-#         0, 5
-#     )  # Removes (0, 5) from options
-#     assert distillery.nearest_factory(qubits=cirq.GridQubit(2, 2), ftype="t") == cirq.GridQubit(
-#         3, 6
-#     )
-
-
-def test_toff_distillery(circuit5: cirq.Circuit) -> None:
-    distillery = MovementDistillery(circuit5, num_toff_factories=3, num_t_factories=0)
+def test_distillery(circuit5: cirq.Circuit) -> None:
+    """
+    Test that the distillery works with both T and Toffoli Distillation
+    """
+    distillery = MovementDistillery(circuit5, num_t_factories=3, num_toff_factories=2)
+    distillery.reload_factories(ftype="s")
+    distillery.reload_factories(ftype="t")
     distillery.reload_factories(ftype="toff")
 
     expected_program_qubits = set(cirq.GridQubit(0, i) for i in range(5))
@@ -354,14 +315,14 @@ def test_toff_distillery(circuit5: cirq.Circuit) -> None:
 
     expected_factories = {
         cirq.GridQubit(0, 5),
-        cirq.GridQubit(0, 6),
-        cirq.GridQubit(0, 7),
-        cirq.GridQubit(3, 1),
-        cirq.GridQubit(3, 2),
-        cirq.GridQubit(3, 3),
-        cirq.GridQubit(5, 6),
+        cirq.GridQubit(3, 0),
         cirq.GridQubit(5, 7),
-        cirq.GridQubit(5, 8),
+        cirq.GridQubit(8, 2),
+        cirq.GridQubit(8, 3),
+        cirq.GridQubit(8, 4),
+        cirq.GridQubit(10, 1),
+        cirq.GridQubit(10, 2),
+        cirq.GridQubit(10, 3),
     }
     realized_factories = distillery._all_factories
     assert expected_factories == realized_factories
@@ -376,13 +337,74 @@ def test_toff_distillery(circuit5: cirq.Circuit) -> None:
     )
     assert expected_block_qubits == realized_block_qubits
 
-    # Check that nearest toff factory is as expected and changes when used
-    target_qubits = (cirq.GridQubit(0, 2), cirq.GridQubit(0, 3), cirq.GridQubit(0, 4))
-    nearest_factory = set(distillery.nearest_factory(target_qubits, ftype="toff"))
-    expected_factory = set([cirq.GridQubit(0, 5), cirq.GridQubit(0, 6), cirq.GridQubit(0, 7)])
-    assert nearest_factory == expected_factory
+    toff_factory = (cirq.GridQubit(8, 2), cirq.GridQubit(8, 3), cirq.GridQubit(8, 4))
+    expected_toff_block = set([cirq.GridQubit(10, 0)])
+    for idx in range(2, 12):
+        expected_toff_block.add(cirq.GridQubit(8, idx))
+    for idx in range(12):
+        expected_toff_block.add(cirq.GridQubit(9, idx))
+    realized_toff_block = set(distillery.distillation_block(toff_factory))
+    assert expected_toff_block == realized_toff_block
 
-    # Check that nearest factory changes with previous factory spent
-    next_nearest_factory = set(distillery.nearest_factory(target_qubits, ftype="toff"))
-    expected_factory = set([cirq.GridQubit(3, 1), cirq.GridQubit(3, 2), cirq.GridQubit(3, 3)])
-    assert next_nearest_factory == expected_factory
+    # Check that nearest T factory is as expected and changes when used
+    t_target = cirq.GridQubit(0, 0)
+    expected_t_factory = cirq.GridQubit(3, 0)
+    assert distillery.nearest_factory(qubits=t_target, ftype="t") == expected_t_factory
+    expected_t_factory = cirq.GridQubit(0, 5)
+    assert distillery.nearest_factory(qubits=t_target, ftype="t") == expected_t_factory
+
+    # Check that the nearest Toff factory is as expected and changes when used
+    toff_target = (cirq.GridQubit(0, 2), cirq.GridQubit(0, 3), cirq.GridQubit(0, 4))
+    expected_toff_factory = (cirq.GridQubit(8, 2), cirq.GridQubit(8, 3), cirq.GridQubit(8, 4))
+    assert distillery.nearest_factory(toff_target, ftype="toff") == expected_toff_factory
+
+    expected_toff_factory = (cirq.GridQubit(10, 1), cirq.GridQubit(10, 2), cirq.GridQubit(10, 3))
+    assert distillery.nearest_factory(toff_target, ftype="toff") == expected_toff_factory
+
+
+# def test_toff_distillery(circuit5: cirq.Circuit) -> None:
+#     distillery = MovementDistillery(circuit5, num_toff_factories=3, num_t_factories=0)
+#     distillery.reload_factories(ftype="toff")
+
+#     expected_program_qubits = set(cirq.GridQubit(0, i) for i in range(5))
+#     realized_program_qubits = set(
+#         q
+#         for q in distillery.layout_graph.nodes
+#         if distillery.layout_graph.nodes[q]["patch_type"] == "data"
+#     )
+#     assert expected_program_qubits == realized_program_qubits
+
+#     expected_factories = {
+#         cirq.GridQubit(0, 5),
+#         cirq.GridQubit(0, 6),
+#         cirq.GridQubit(0, 7),
+#         cirq.GridQubit(3, 1),
+#         cirq.GridQubit(3, 2),
+#         cirq.GridQubit(3, 3),
+#         cirq.GridQubit(5, 6),
+#         cirq.GridQubit(5, 7),
+#         cirq.GridQubit(5, 8),
+#     }
+#     realized_factories = distillery._all_factories
+#     assert expected_factories == realized_factories
+
+#     expected_block_qubits = set(q for q in distillery.layout_graph.nodes) - (
+#         expected_program_qubits.union(expected_factories)
+#     )
+#     realized_block_qubits = set(
+#         q
+#         for q in distillery.layout_graph.nodes
+#         if distillery.layout_graph.nodes[q]["patch_type"] == "block"
+#     )
+#     assert expected_block_qubits == realized_block_qubits
+
+#     # Check that nearest toff factory is as expected and changes when used
+#     target_qubits = (cirq.GridQubit(0, 2), cirq.GridQubit(0, 3), cirq.GridQubit(0, 4))
+#     nearest_factory = set(distillery.nearest_factory(target_qubits, ftype="toff"))
+#     expected_factory = set([cirq.GridQubit(0, 5), cirq.GridQubit(0, 6), cirq.GridQubit(0, 7)])
+#     assert nearest_factory == expected_factory
+
+#     # Check that nearest factory changes with previous factory spent
+#     next_nearest_factory = set(distillery.nearest_factory(target_qubits, ftype="toff"))
+#     expected_factory = set([cirq.GridQubit(3, 1), cirq.GridQubit(3, 2), cirq.GridQubit(3, 3)])
+#     assert next_nearest_factory == expected_factory
