@@ -24,7 +24,7 @@ import numpy as np
 from cirq_superstaq.ops.qubit_gates import ParallelRGate
 
 from resource_estimation.ftqc.compile_ftqc import add_moves
-from resource_estimation.ftqc.distil import distil_15_to_1
+from resource_estimation.ftqc.distil import distil_15_to_1, ccz_8_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.stim_functions import cultivate
 
@@ -754,7 +754,8 @@ class DefaultMovement(Architecture):
             return self._distil_t_cost
         # not covering before full resource cost is implemented
         if op.gate._resource == "Toffoli":  # pragma: no cover
-            raise NotImplementedError("This functionality is not yet available")
+            return self._distil_ccz_cost
+            # raise NotImplementedError("This functionality is not yet available")
 
     @cached_property
     def _distil_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
@@ -778,6 +779,28 @@ class DefaultMovement(Architecture):
         )
         return {"op_time": op_time, "moment_cost": moment_cost, "gate_cost": gate_cost}
 
+    @cached_property
+    def _distil_ccz_cost(self) -> dict[str, dict[type[Gate], int] | float]:
+        """Cost to get a CCZ state using eight T states"""
+        mapped_circuit = ccz_8_to_1()
+        with_moves = add_moves(
+            mapped_circuit,
+            zone_ops=self.zone_ops if self.zone_ops is not None else cirq.Gateset(),
+            alley_ops=self.alley_ops if self.alley_ops is not None else cirq.Gateset(),
+        )
+        estimator = ResourceEstimator(self)
+        rep_time = estimator.parallel_circuit_time(with_moves)
+        rep_moments = estimator.parallel_circuit_cost(with_moves)
+        rep_gates = estimator.serial_circuit_cost(with_moves)
+        op_time = rep_time * self.distillation_repetition
+        moment_cost = Counter(
+            {key: val * self.distillation_repetition for key, val in rep_moments.items()}
+        )
+        gate_cost = Counter(
+            {key: val * self.distillation_repetition for key, val in rep_gates.items()}
+        )
+        return {"op_time": op_time, "moment_cost": moment_cost, "gate_cost": gate_cost}
+    
     def __post_init__(self) -> None:
         super().__post_init__()
         self.op_cost[type(cirq.CNOT)] = self.cnot_cost

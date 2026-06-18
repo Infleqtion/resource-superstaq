@@ -103,29 +103,26 @@ def distil_15_to_1() -> cirq.Circuit:
 # not covering until implementation of distil cost within architecture
 def ccz_8_to_1() -> cirq.Circuit:  # pragma: no cover
     """Function to perform a 8-to-1 CCZ magic state distillation.
-=       Takes eight Ts to make one CCZ
-        Reference: http://arxiv.org/abs/1812.01238 page 7 figure 5.
+       Takes eight Ts to make one CCZ
+       Reference: http://arxiv.org/abs/1812.01238 page 7 figure 5.
+       Q11 Q12 Q13 Q14
+       C0  Q3  Q7  C4
+       C1  Q4  Q8  C5
+       C2  Q5  Q9  C6
+       C3  Q6  Q10 C7
+       Q0  Q1  Q2  __ <- three out qubits
 
     Returns:
         The magic state distillation circuit.
     """
     cir = cirq.Circuit()
     qubits = cirq.LineQubit.range(15)
-    # cults = [cirq.NamedQubit(f"C{i}") for i in range(8)]
     cults = cirq.LineQubit.range(8)
     
-    # exp.append(cirq.CNOT.on(ctrl, trgt) for ctrl, trgt in zip(qubits[3:11], cults))
-    # exp.append(cirq.Moment(cirq.measure_each(*cults)))
-    # cirq.Moment(
-    #     cirq.S.on_each(*qubits[:-1])  # Technically should be based on the measurement outcome
-    # )
-
     for q in qubits:
         cir.append([cirq.reset(q)])
-    cir.append(css.Barrier(15).on(*qubits))
 
     cir.append(cirq.H(qubits[i]) for i in range(11, 15))
-    # cir.append(css.Barrier(15).on(*qubits))
 
     idx11 = [0, 3, 4, 5, 6]
     idx12 = list(range(3, 11))
@@ -136,32 +133,21 @@ def ccz_8_to_1() -> cirq.Circuit:  # pragma: no cover
     cir.append(cirq.CNOT(qubits[13], qubits[i]) for i in idx13)
     cir.append(cirq.CNOT(qubits[14], qubits[i]) for i in idx14)
 
-    # cir.append(
-    #     cirq.H(qubits[i]) for i in range(11, 15)
-    # )
-    cir.append(css.Barrier(15).on(*qubits))
-
     cir.append(cirq.CNOT.on(ctrl, trgt) for ctrl, trgt in zip(qubits[3:11], cults))
-    # cir.append(cirq.T(qubits[i]) for i in range(3, 11))
-    # cir.append(css.Barrier(15).on(*qubits))
-
-    # cir.append(css.Barrier(15).on(*qubits))
 
     cir.append(cirq.Moment(cirq.measure_each(*cults)))
     cir.append(cirq.Moment(cirq.S.on_each(*qubits[3:11])))  # Technically should be based on the measurement outcome
     cir.append(cirq.Moment(cirq.H.on_each(*qubits[3:15])))
     cir.append(cirq.Moment(cirq.measure_each(*qubits[3:15])))
-    # cir.append(cirq.measure(qubits[i], key="m" + str(i)) for i in range(3, 15))
 
     # Remap circuit to a logical grid
+    # the out qubits
     qmap = {qubits[0]: cirq.GridQubit(5, 0), qubits[1]: cirq.GridQubit(5, 1), qubits[2]: cirq.GridQubit(5, 2)}
-
     # bottom four qubits
     qmap[qubits[11]] = cirq.GridQubit(0, 0)
     qmap[qubits[12]] = cirq.GridQubit(0, 1)
     qmap[qubits[13]] = cirq.GridQubit(0, 2)
     qmap[qubits[14]] = cirq.GridQubit(0, 3)
-
     # qubits 3-6 where Ts act on
     qmap[qubits[3]] = cirq.GridQubit(1, 1)
     qmap[qubits[4]] = cirq.GridQubit(2, 1)
@@ -181,20 +167,8 @@ def ccz_8_to_1() -> cirq.Circuit:  # pragma: no cover
     qmap[cults[5]] =  cirq.GridQubit(2, 3)
     qmap[cults[6]] =  cirq.GridQubit(3, 3)
     qmap[cults[7]] =  cirq.GridQubit(4, 3)
-
-    qmap[qubits[0]] =  cirq.GridQubit(5, 2)
-    qmap[qubits[1]] =  cirq.GridQubit(5, 2)
-    qmap[qubits[2]] =  cirq.GridQubit(5, 2)
     
-    
-
-    for idx, (q, f) in enumerate(zip(qubits, cults)):
-        row = idx if idx < 8 else idx - 8
-        col1 = 1 if idx < 8 else 2
-        col2 = 0 if idx < 8 else 3
-        qmap[q] = cirq.GridQubit(row, col1)
-        qmap[f] = cirq.GridQubit(row, col2)
-    mapped_circuit = cirq.Circuit(moment.transform_qubits(qmap) for moment in exp)
+    mapped_circuit = cirq.Circuit(moment.transform_qubits(qmap) for moment in cir)
     return mapped_circuit
 
     # return cir
