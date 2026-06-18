@@ -116,11 +116,10 @@ def ccz_8_to_1() -> cirq.Circuit:  # pragma: no cover
     """
     cir = cirq.Circuit()
     qubits = cirq.LineQubit.range(15)
-    cults = cirq.LineQubit.range(8)
+    cults = [cirq.NamedQubit(f"C{i}") for i in range(8)]
 
-    for q in qubits:
-        cir.append([cirq.reset(q)])
-
+    for q in [*qubits, *cults]:
+        cir.append(cirq.reset(q))
     cir.append(cirq.H(qubits[i]) for i in range(11, 15))
 
     idx11 = [0, 3, 4, 5, 6]
