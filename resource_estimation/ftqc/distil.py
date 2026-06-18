@@ -30,7 +30,7 @@ def distil_15_to_1() -> cirq.Circuit:
     C4  Q4  Q12  C12
     C5  Q5  Q13  C13
     C6  Q6  Q14  C14
-    C7  Q7  Q15   F  <- Output Factory Qubit
+    C7  Q7    F  <- Output Factory Qubit
     """
     qubits = cirq.LineQubit.range(15) + [cirq.NamedQubit("F")]
     cults = [cirq.NamedQubit(f"C{i}") for i in range(15)]
