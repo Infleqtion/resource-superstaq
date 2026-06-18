@@ -170,10 +170,3 @@ def ccz_8_to_1() -> cirq.Circuit:  # pragma: no cover
     
     mapped_circuit = cirq.Circuit(moment.transform_qubits(qmap) for moment in cir)
     return mapped_circuit
-
-    # return cir
-
-if __name__ == '__main__':
-    x = ccz_8_to_1()
-    # x = distil_15_to_1()
-    print(x)
