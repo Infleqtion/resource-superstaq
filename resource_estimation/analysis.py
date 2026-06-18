@@ -24,26 +24,21 @@ from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from functools import partial
 from tqdm import tqdm
-from resource_estimation.ftqc.architecture import (
-    DefaultMovement,
-    DefaultLattice,
-    DualSpeciesMovement,
-    MeasureZonesOnly,
-    Superconductor,
-)
+import resource_estimation.ftqc.architecture as arch
 from resource_estimation.visualizations import C, boxed_header
 import cirq
 from collections import Counter
 import numpy as np
+import numpy.typing as npt
 import warnings
 
 
-STR2ARCH: dict[str, Callable[..., Architecture]] = {
-    "ssm": partial(DefaultMovement, idling=False, post_op_correction=True),
-    "dsnm": partial(DefaultLattice, idling=False, post_op_correction=True),
-    "dsm": partial(DualSpeciesMovement, idling=False, post_op_correction=True),
-    "mzo": partial(MeasureZonesOnly, idling=False, post_op_correction=True),
-    "sc": partial(Superconductor, idling=False, post_op_correction=True),
+STR2ARCH: dict[str, Callable[..., arch.Architecture]] = {
+    "ssm": partial(arch.DefaultMovement, idling=False, post_op_correction=True),
+    "dsnm": partial(arch.DefaultLattice, idling=False, post_op_correction=True),
+    "dsm": partial(arch.DualSpeciesMovement, idling=False, post_op_correction=True),
+    "mzo": partial(arch.MeasureZonesOnly, idling=False, post_op_correction=True),
+    "sc": partial(arch.Superconductor, idling=False, post_op_correction=True),
 }
 
 try:
@@ -91,13 +86,15 @@ def surface_code_fidelity(
     return 1 - A_arr * (p / pth) ** ((d_arr + 1) // 2)
 
 
-def get_t_path(circuit: Circuit, verbose: bool = True) -> list[Operation]:
+def get_t_path(circuit: cirq.Circuit, verbose: bool = True) -> list[cirq.Operation]:
     """
     Get the T Path of a logical circuit
     Good for comparing with cost model resource estimations
     """
-    qubit_paths: dict[Qid, list[Operation]] = {qubit: [] for qubit in circuit.all_qubits()}
-    qubit_times: dict[Qid, float] = {qubit: 0 for qubit in circuit.all_qubits()}
+    qubit_paths: dict[cirq.Qid, list[cirq.Operation]] = {
+        qubit: [] for qubit in circuit.all_qubits()
+    }
+    qubit_times: dict[cirq.Qid, float] = {qubit: 0 for qubit in circuit.all_qubits()}
     for op in tqdm(list(circuit.all_operations()), disable=not verbose, colour="cyan"):
         op_qubits = op.qubits
         big_qubit = max(op_qubits, key=lambda qubit: qubit_times[qubit])
@@ -117,10 +114,10 @@ def get_t_path(circuit: Circuit, verbose: bool = True) -> list[Operation]:
 
 
 def get_important_information(
-    clifford_t_circuit: Circuit,
+    clifford_t_circuit: cirq.Circuit,
     fold_cultiv: bool,
     pfid: float = 0.99,
-) -> tuple[int, int, Counter[Gate | None], float, int]:
+) -> tuple[int, int, Counter[cirq.Gate | None], float, int]:
     """
     Get information used to set certain error-correction assumptions.
 
@@ -183,7 +180,7 @@ def get_important_information(
     return cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance
 
 
-def break_up_ops(cliff_rz_circuit: Circuit) -> tuple[int, int]:
+def break_up_ops(cliff_rz_circuit: cirq.Circuit) -> tuple[int, int]:
     """
     Counts operations in Clifford + Rz circuit according to Rz Gates (continuous angle rotations) and Cliffords
     """
@@ -339,7 +336,7 @@ class Report:
         }
 
     @property
-    def arch(self) -> Architecture:
+    def arch(self) -> arch.Architecture:
         if self.fold_cultiv:
             return STR2ARCH[self.arch_name](
                 d=self.distance,
