@@ -14,7 +14,6 @@
 from math import pi
 
 import cirq
-import cirq_superstaq as css
 from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
 
 
@@ -118,7 +117,7 @@ def ccz_8_to_1() -> cirq.Circuit:  # pragma: no cover
     cir = cirq.Circuit()
     qubits = cirq.LineQubit.range(15)
     cults = cirq.LineQubit.range(8)
-    
+
     for q in qubits:
         cir.append([cirq.reset(q)])
 
@@ -136,13 +135,19 @@ def ccz_8_to_1() -> cirq.Circuit:  # pragma: no cover
     cir.append(cirq.CNOT.on(ctrl, trgt) for ctrl, trgt in zip(qubits[3:11], cults))
 
     cir.append(cirq.Moment(cirq.measure_each(*cults)))
-    cir.append(cirq.Moment(cirq.S.on_each(*qubits[3:11])))  # Technically should be based on the measurement outcome
+    cir.append(
+        cirq.Moment(cirq.S.on_each(*qubits[3:11]))
+    )  # Technically should be based on the measurement outcome
     cir.append(cirq.Moment(cirq.H.on_each(*qubits[3:15])))
     cir.append(cirq.Moment(cirq.measure_each(*qubits[3:15])))
 
     # Remap circuit to a logical grid
     # the out qubits
-    qmap = {qubits[0]: cirq.GridQubit(5, 0), qubits[1]: cirq.GridQubit(5, 1), qubits[2]: cirq.GridQubit(5, 2)}
+    qmap = {
+        qubits[0]: cirq.GridQubit(5, 0),
+        qubits[1]: cirq.GridQubit(5, 1),
+        qubits[2]: cirq.GridQubit(5, 2),
+    }
     # bottom four qubits
     qmap[qubits[11]] = cirq.GridQubit(0, 0)
     qmap[qubits[12]] = cirq.GridQubit(0, 1)
@@ -154,19 +159,19 @@ def ccz_8_to_1() -> cirq.Circuit:  # pragma: no cover
     qmap[qubits[5]] = cirq.GridQubit(3, 1)
     qmap[qubits[6]] = cirq.GridQubit(4, 1)
     # qubits 7-10 where Ts act on
-    qmap[qubits[7]] =  cirq.GridQubit(1, 2)
-    qmap[qubits[8]] =  cirq.GridQubit(2, 2)
-    qmap[qubits[9]] =  cirq.GridQubit(3, 2)
+    qmap[qubits[7]] = cirq.GridQubit(1, 2)
+    qmap[qubits[8]] = cirq.GridQubit(2, 2)
+    qmap[qubits[9]] = cirq.GridQubit(3, 2)
     qmap[qubits[10]] = cirq.GridQubit(4, 2)
     # cultivation qubits next to those that need them
-    qmap[cults[0]] =  cirq.GridQubit(1, 0)
-    qmap[cults[1]] =  cirq.GridQubit(2, 0)
-    qmap[cults[2]] =  cirq.GridQubit(3, 0)
-    qmap[cults[3]] =  cirq.GridQubit(4, 0)
-    qmap[cults[4]] =  cirq.GridQubit(1, 3)
-    qmap[cults[5]] =  cirq.GridQubit(2, 3)
-    qmap[cults[6]] =  cirq.GridQubit(3, 3)
-    qmap[cults[7]] =  cirq.GridQubit(4, 3)
-    
+    qmap[cults[0]] = cirq.GridQubit(1, 0)
+    qmap[cults[1]] = cirq.GridQubit(2, 0)
+    qmap[cults[2]] = cirq.GridQubit(3, 0)
+    qmap[cults[3]] = cirq.GridQubit(4, 0)
+    qmap[cults[4]] = cirq.GridQubit(1, 3)
+    qmap[cults[5]] = cirq.GridQubit(2, 3)
+    qmap[cults[6]] = cirq.GridQubit(3, 3)
+    qmap[cults[7]] = cirq.GridQubit(4, 3)
+
     mapped_circuit = cirq.Circuit(moment.transform_qubits(qmap) for moment in cir)
     return mapped_circuit

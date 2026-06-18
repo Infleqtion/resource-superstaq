@@ -800,7 +800,7 @@ class DefaultMovement(Architecture):
             {key: val * self.distillation_repetition for key, val in rep_gates.items()}
         )
         return {"op_time": op_time, "moment_cost": moment_cost, "gate_cost": gate_cost}
-    
+
     def __post_init__(self) -> None:
         super().__post_init__()
         self.op_cost[type(cirq.CNOT)] = self.cnot_cost
