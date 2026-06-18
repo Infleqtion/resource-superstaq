@@ -102,11 +102,11 @@ def test_all_primitives(estimator) -> None:
 
     # At least verify that there is no randomness in these estimates
     # Still TODO: Make this test better
-    # with pytest.warns(UserWarning, match="Returning result for d=7"):
-    c1 = estimator.serial_circuit_cost(circuit)
-    t1 = estimator.serial_circuit_time(circuit)
-    c2 = estimator.serial_circuit_cost(circuit)
-    t2 = estimator.serial_circuit_time(circuit)
+    with pytest.warns(UserWarning, match="Returning result for d=7"):
+        c1 = estimator.serial_circuit_cost(circuit)
+        t1 = estimator.serial_circuit_time(circuit)
+        c2 = estimator.serial_circuit_cost(circuit)
+        t2 = estimator.serial_circuit_time(circuit)
     for key in c1.keys():
         assert c1[key] == c2[key]
     assert isclose(t1, t2, atol=0.00001)

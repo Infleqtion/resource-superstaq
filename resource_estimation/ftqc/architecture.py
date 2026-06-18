@@ -750,11 +750,11 @@ class DefaultMovement(Architecture):
         return {"op_time": new_time, "gate_cost": new_gate_cost, "moment_cost": new_moment_cost}
 
     def distil_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
-        return self._distil_cost(op)
+        return self._distil_cost(op.gate._resource)
 
     @cache
-    def _distil_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
-        if op.gate._resource == "T":
+    def _distil_cost(self, resource) -> dict[str, dict[type[Gate], int] | float]:
+        if resource == "T":
             mapped_circuit = distil_15_to_1()
         else:
             mapped_circuit = ccz_8_to_1()
