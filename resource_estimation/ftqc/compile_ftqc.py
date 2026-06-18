@@ -75,7 +75,7 @@ def knock_off_tqdm(
     )
 
 
-def requires_resource(op: cirq.Operation, transversal_cnot: True) -> bool:
+def requires_resource(op: cirq.Operation, transversal_cnot: bool) -> bool:
     """Checks if performing an operation requires a resource state. S is assumed to need a resource state when transversal CNOT is unavailable."""
     if op in cirq.GateFamily(cirq.S) and not transversal_cnot:
         return True

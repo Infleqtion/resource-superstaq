@@ -139,7 +139,12 @@ class Layout(abc.ABC):
         )
         has_fid = lambda node, fid: "fid" in G.nodes[node] and G.nodes[node]["fid"] == fid
         return [
-            tuple(q for q in self._all_factories if has_fid(q, fid) and is_ftype_factory(q))
+            tuple(
+                sorted(
+                    (q for q in self._all_factories if has_fid(q, fid) and is_ftype_factory(q)),
+                    key=lambda q: (q.row, q.col),
+                )
+            )
             for fid in unique_fids
         ]
 
