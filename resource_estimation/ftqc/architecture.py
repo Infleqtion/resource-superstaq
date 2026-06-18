@@ -15,7 +15,7 @@ from __future__ import annotations
 import abc
 import json
 from collections import Counter
-from functools import cached_property, lru_cache
+from functools import cached_property, lru_cache, cache
 from math import ceil
 from pathlib import Path
 
@@ -750,39 +750,14 @@ class DefaultMovement(Architecture):
         return {"op_time": new_time, "gate_cost": new_gate_cost, "moment_cost": new_moment_cost}
 
     def distil_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
+        return self._distil_cost(op)
+
+    @cache
+    def _distil_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         if op.gate._resource == "T":
-            return self._distil_t_cost
-        # not covering before full resource cost is implemented
-        if op.gate._resource == "Toffoli":  # pragma: no cover
-            return self._distil_ccz_cost
-            # raise NotImplementedError("This functionality is not yet available")
-
-    @cached_property
-    def _distil_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
-        """Cost to get a T state using 15-to-1 distillation"""
-        mapped_circuit = distil_15_to_1()
-        with_moves = add_moves(
-            mapped_circuit,
-            zone_ops=self.zone_ops if self.zone_ops is not None else cirq.Gateset(),
-            alley_ops=self.alley_ops if self.alley_ops is not None else cirq.Gateset(),
-        )
-        estimator = ResourceEstimator(self)
-        rep_time = estimator.parallel_circuit_time(with_moves)
-        rep_moments = estimator.parallel_circuit_cost(with_moves)
-        rep_gates = estimator.serial_circuit_cost(with_moves)
-        op_time = rep_time * self.distillation_repetition
-        moment_cost = Counter(
-            {key: val * self.distillation_repetition for key, val in rep_moments.items()}
-        )
-        gate_cost = Counter(
-            {key: val * self.distillation_repetition for key, val in rep_gates.items()}
-        )
-        return {"op_time": op_time, "moment_cost": moment_cost, "gate_cost": gate_cost}
-
-    @cached_property
-    def _distil_ccz_cost(self) -> dict[str, dict[type[Gate], int] | float]:
-        """Cost to get a CCZ state using eight T states"""
-        mapped_circuit = ccz_8_to_1()
+            mapped_circuit = distil_15_to_1()
+        else:
+            mapped_circuit = ccz_8_to_1()
         with_moves = add_moves(
             mapped_circuit,
             zone_ops=self.zone_ops if self.zone_ops is not None else cirq.Gateset(),
