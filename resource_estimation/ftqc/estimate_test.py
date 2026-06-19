@@ -11,14 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from resource_estimation.ftqc.estimate import ResourceEstimator
+from resource_estimation.ftqc import ResourceEstimator
 from math import pi
+
 import cirq
 import pytest
+from numpy import isclose
+
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-from numpy import isclose
 
 
 @pytest.fixture
@@ -42,6 +44,7 @@ def movement_estimator() -> ResourceEstimator:
             idling=True,
             post_op_correction=1,
             cultivation_repetition=1,
+            distillation_repetition=1,
             syndrome_rounds=None,
         )
     )
@@ -56,6 +59,7 @@ def movement_estimator() -> ResourceEstimator:
                 idling=True,
                 post_op_correction=1,
                 cultivation_repetition=1,
+                distillation_repetition=1,
                 syndrome_rounds=None,
             )
         ),
@@ -72,6 +76,7 @@ def movement_estimator() -> ResourceEstimator:
 )
 def test_all_primitives(estimator) -> None:
     dummy_qubits = [cirq.GridQubit(i, j) for i in range(3) for j in range(3)]
+    factory_block = [cirq.GridQubit(4, i) for i in range(31)]
     circuit = cirq.Circuit()
     circuit += [cirq.I.on(q) for q in dummy_qubits]
     circuit += [cirq.Z.on(q) for q in dummy_qubits]
@@ -84,6 +89,7 @@ def test_all_primitives(estimator) -> None:
     if arc.movement:
         circuit += [cirq.CNOT.on(dummy_qubits[i], dummy_qubits[i + 1]) for i in range(8)]
         circuit += [cirq.S.on(q) for q in dummy_qubits]
+        circuit += [lsp.Distil().on(*factory_block)]
     else:
         circuit += [
             lsp.Merge(2, smooth=True).on(*dummy_qubits[:2]),
