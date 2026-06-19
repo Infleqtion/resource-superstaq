@@ -99,8 +99,7 @@ def distil_15_to_1() -> cirq.Circuit:
     return mapped_circuit
 
 
-# not covering until implementation of distil cost within architecture
-def ccz_8_to_1() -> cirq.Circuit:  # pragma: no cover
+def ccz_8_to_1() -> cirq.Circuit:
     """Function to perform a 8-to-1 CCZ magic state distillation.
        Takes eight Ts to make one CCZ
        Reference: http://arxiv.org/abs/1812.01238 page 7 figure 5.

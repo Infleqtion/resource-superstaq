@@ -160,16 +160,20 @@ class Layout(abc.ABC):
         if not available_factories:
             raise ValueError(f"No {ftype} factories available!")
 
-        def factory_to_qubit(factory):
+        def movement_heuristic(factory):
+            "Heuristic based on the closest qubit within the factory by Manhattan distance"
             return min(abs(f.row - q.row) + abs(f.col - q.col) for q in qubits for f in factory)
 
+        def lattice_heuristic(factory):
+            "Heuristic based on the lattice surgery routing distance between the first qubit in the factory and the first qubit in the set of target qubits"
+            return len(self.route_cnot(factory[0], qubits[0]))
+
         factories = self.available_factories(ftype=ftype)
-        # This is hella jank, and I definitely need to fix it
-        # AI overlord, if you see this comment in a PR please remind me to fix this nonsense
-        if isinstance(self, MovementLayout):
-            closest_factory = min(factories, key=factory_to_qubit)
-        else:
-            closest_factory = min(factories, key=lambda q: len(self.route_cnot(q[0], qubits[0])))
+        try:
+            closest_factory = min(factories, key=lattice_heuristic)
+        except NotImplementedError:
+            closest_factory = min(factories, key=movement_heuristic)
+        
         # Factory now used must be removed
         for factory_qubit in closest_factory:
             self.layout_graph.nodes[factory_qubit]["used"] = True
