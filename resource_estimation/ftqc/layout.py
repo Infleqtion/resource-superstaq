@@ -173,7 +173,7 @@ class Layout(abc.ABC):
             closest_factory = min(factories, key=lattice_heuristic)
         except NotImplementedError:
             closest_factory = min(factories, key=movement_heuristic)
-        
+
         # Factory now used must be removed
         for factory_qubit in closest_factory:
             self.layout_graph.nodes[factory_qubit]["used"] = True
