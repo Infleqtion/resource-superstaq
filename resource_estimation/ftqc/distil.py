@@ -81,8 +81,10 @@ def distil_15_to_1() -> cirq.Circuit:
     )
     exp.append(cirq.CNOT.on(ctrl, trgt) for ctrl, trgt in zip(cults, qubits[:-1]))
     exp.append(cirq.Moment(cirq.measure_each(*cults)))
-    cirq.Moment(
-        cirq.S.on_each(*qubits[:-1])  # Technically should be based on the measurement outcome
+    exp.append(
+        cirq.Moment(
+            cirq.S.on_each(*qubits[:-1])  # Technically should be based on the measurement outcome
+        )
     )
     exp.append(cirq.Moment(cirq.H.on_each(*qubits[:-1])))
     exp.append(cirq.Moment(cirq.measure_each(*qubits[:-1])))
@@ -117,8 +119,9 @@ def ccz_8_to_1() -> cirq.Circuit:
     qubits = cirq.LineQubit.range(15)
     cults = [cirq.NamedQubit(f"C{i}") for i in range(8)]
 
-    for q in [*qubits, *cults]:
+    for q in qubits:
         cir.append(cirq.reset(q))
+    cir.append(Cultivate(pi / 4).on_each(*cults))
     cir.append(cirq.H(qubits[i]) for i in range(11, 15))
 
     idx11 = [0, 3, 4, 5, 6]

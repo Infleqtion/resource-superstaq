@@ -291,6 +291,12 @@ class Architecture(abc.ABC):
         raise NotImplementedError
 
     @cached_property
+    def _distil_cost(self):
+        raise NotImplementedError(
+            "Distillation is currently reserved to distillation movement architectures only"
+        )
+
+    @cached_property
     def _cultivate_y_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         """Cost estimate for measuring a surface code patch in the Y basis. Measuring in the Y basis facilitates gate teleportation the same way that cultivating T does.
         The procedure is based on [Inplace access to the Surface Code Y Basis](https://arxiv.org/pdf/2302.07395v2).

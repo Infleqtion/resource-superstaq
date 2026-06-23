@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from resource_estimation.ftqc import ResourceEstimator
+from resource_estimation.ftqc import ResourceEstimator, distil_15_to_1, ccz_8_to_1
 from math import pi
 
 import cirq
@@ -247,6 +247,17 @@ def test_critical_path() -> None:
     assert estim.parallel_circuit_time(circuit=circuit) == estim.parallel_circuit_time(
         circuit=cirq.Circuit(expected)
     )
+
+    # Test that critical path for distillation circuits are as expected
+    # Critical paths are currently the same for both distillation circuits
+    t_15_to_1 = distil_15_to_1()
+    toff_8_to_1 = ccz_8_to_1()
+    expected_types = [lsp.Cultivate, cirq.CNOT, cirq.S, cirq.H, cirq.MeasurementGate]
+    with pytest.warns(UserWarning, match="very expensive"):
+        path1 = estim.critical_path(t_15_to_1)
+        path2 = estim.critical_path(toff_8_to_1)
+        assert all(op in cirq.GateFamily(expected) for op, expected in zip(path1, expected_types))
+        assert all(op in cirq.GateFamily(expected) for op, expected in zip(path2, expected_types))
 
 
 def test_physical_qubit_count(lattice_estimator) -> None:

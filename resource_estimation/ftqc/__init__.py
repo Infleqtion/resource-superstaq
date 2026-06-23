@@ -56,7 +56,7 @@ from resource_estimation.ftqc.stim_functions import (
     cultivate,
     load_saved_cost,
 )
-from resource_estimation.ftqc.distil import distil_15_to_1
+from resource_estimation.ftqc.distil import distil_15_to_1, ccz_8_to_1
 
 __all__ = [
     "Architecture",
@@ -95,4 +95,5 @@ __all__ = [
     "teleport_resource",
     "validate_ops",
     "distil_15_to_1",
+    "ccz_8_to_1",
 ]

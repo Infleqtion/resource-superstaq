@@ -865,3 +865,26 @@ def test_y_cult_on_movement() -> None:
     cost2 = mzo.cultivate_cost(lsp.Cultivate(np.pi / 2).on(cirq.GridQubit(0, 0)))
     cost3 = dsm.cultivate_cost(lsp.Cultivate(np.pi / 2).on(cirq.GridQubit(0, 0)))
     assert cost3["op_time"] < cost2["op_time"] < cost1["op_time"]
+
+
+def test_distillation_cases(lattice_architecture, movement_architecture) -> None:
+    # Confirm that distil is only available to movement archs
+    with pytest.raises(NotImplementedError, match="movement architectures only"):
+        _ = lattice_architecture._distil_cost
+    assert lsp.Distil in movement_architecture.op_cost
+
+    # Make sure that distillation repetition parameter behaves as expected
+    distil_once = arch.DefaultMovement(distillation_repetition=1)
+    distil_thrice = arch.DefaultMovement(distillation_repetition=3)
+    t_once = distil_once._distil_cost("T")["op_time"]
+    toff_once = distil_once._distil_cost("Toff")["op_time"]
+    t_thrice = distil_thrice._distil_cost("T")["op_time"]
+    toff_thrice = distil_thrice._distil_cost("Toff")["op_time"]
+
+    assert t_thrice == 3 * t_once
+    assert toff_thrice == 3 * toff_once
+
+    # Distil T and Toff have the same critical path, so should have the same circuit time for ssm
+    # Cultivation is a subcomponent, so it should be faster than the Distillation implimentations
+    single_cult = distil_once._cultivate_t_cost["op_time"]
+    assert single_cult < toff_once == t_once
