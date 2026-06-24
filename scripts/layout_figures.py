@@ -67,7 +67,7 @@ def layout_to_array(layout, str2num=None):
         "s": "S Factory",
         "block": "Distillation",
         "CNOT": "CNOT",
-        "toff": "Toff Factory"
+        "toff": "Toff Factory",
     }
     for node in G.nodes:
         node_dict = G.nodes[node]
@@ -128,8 +128,7 @@ def make_layout_colormap(
 
 
 def make_legend_patches(str2num=None, cmap=None):
-    """Create legend patches for the categorical colormap.
-    """
+    """Create legend patches for the categorical colormap."""
     if str2num is None:
         str2num = DEFAULT_STR2NUM
     if cmap is None:
@@ -202,8 +201,7 @@ def pad_array_to_shape(A, target_shape, fill_value=0, align="center"):
 
 
 def normalize_transpose_arg(transpose, n):
-    """Allow transpose to be either a single bool or a list of bools.
-    """
+    """Allow transpose to be either a single bool or a list of bools."""
     if isinstance(transpose, bool):
         return [transpose] * n
 
@@ -214,8 +212,7 @@ def normalize_transpose_arg(transpose, n):
 
 
 def add_pixel_grid(ax, shape, linewidth=0.5, color="black"):
-    """Add borders around each displayed pixel/cell.
-    """
+    """Add borders around each displayed pixel/cell."""
     nrows, ncols = shape
 
     ax.set_xticks(np.arange(-0.5, ncols, 1), minor=True)
@@ -225,8 +222,7 @@ def add_pixel_grid(ax, shape, linewidth=0.5, color="black"):
 
 
 def style_axes(ax, border_linewidth=2):
-    """Remove major ticks and add a black border around the axes.
-    """
+    """Remove major ticks and add a black border around the axes."""
     ax.set_xticks([])
     ax.set_yticks([])
 
