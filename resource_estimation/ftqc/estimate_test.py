@@ -273,7 +273,7 @@ def test_reaction_depth_uses_default_s_factory() -> None:
     reaction_depth_estimator = est.ReactionDepthEstimator()
 
     assert reaction_depth_estimator.reaction_depth(cirq.Circuit(cirq.S(qubit))) == {
-        qubit: {"X": 1, "Z": 1}
+        qubit: {"X": 0, "Z": 1}
     }
 
 

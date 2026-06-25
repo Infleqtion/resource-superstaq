@@ -201,11 +201,10 @@ class ReactionDepthEstimator:
                 correction.
 
         Returns:
-            Single-qubit update applying `newX = oldX + 1` and
-            `newZ = oldZ + 1`.
+            Single-qubit update applying `newZ = max(oldZ, oldX + 1)`.
         """
         old_depth = old_depths[0]
-        return [{"X": old_depth.get("X", 0) + 1, "Z": old_depth.get("Z", 0) + 1}]
+        return [{"Z": max(old_depth.get("X", 0) + 1, old_depth.get("Z", 0))}]
 
     _FACTORY_REACTION_DYNAMICS: ClassVar[dict[tuple[cirq.Gate, bool], _ReactionDynamic]] = {
         (cirq.T, True): partial(_t_reaction_dynamic.__func__, auto_corrected=True),
