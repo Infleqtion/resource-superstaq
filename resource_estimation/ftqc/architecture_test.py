@@ -877,14 +877,13 @@ def test_distillation_cases(lattice_architecture, movement_architecture) -> None
     distil_once = arch.DefaultMovement(distillation_repetition=1)
     distil_thrice = arch.DefaultMovement(distillation_repetition=3)
     t_once = distil_once._distil_cost("T")["op_time"]
-    toff_once = distil_once._distil_cost("Toff")["op_time"]
+    toff_once = distil_once._distil_cost("Toffoli")["op_time"]
     t_thrice = distil_thrice._distil_cost("T")["op_time"]
-    toff_thrice = distil_thrice._distil_cost("Toff")["op_time"]
-
+    toff_thrice = distil_thrice._distil_cost("Toffoli")["op_time"]
     assert t_thrice == 3 * t_once
     assert toff_thrice == 3 * toff_once
 
-    # Distil T and Toff have the same critical path, so should have the same circuit time for ssm
-    # Cultivation is a subcomponent, so it should be faster than the Distillation implimentations
+    # Distil T and Toffoli have the same critical path, so should have the same circuit time for ssm
+    # Cultivation is a subcomponent, so it should be faster than the Distillation implementations
     single_cult = distil_once._cultivate_t_cost["op_time"]
     assert single_cult < toff_once == t_once

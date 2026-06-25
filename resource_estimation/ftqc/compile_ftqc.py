@@ -75,7 +75,7 @@ def knock_off_tqdm(
     )
 
 
-def requires_resource(op: cirq.Operation, transversal_cnot: bool) -> bool:
+def _requires_resource(op: cirq.Operation, transversal_cnot: bool) -> bool:
     """Checks if performing an operation requires a resource state. S is assumed to need a resource state when transversal CNOT is unavailable."""
     if op in cirq.GateFamily(cirq.S) and not transversal_cnot:
         return True
@@ -128,6 +128,10 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
         prep_gate = lsp.Cultivate(pi / 2)
         correction = cirq.Z
     elif op in cirq.GateFamily(cirq.TOFFOLI):
+        if not distil:
+            raise NotImplementedError(
+                "Toffoli teleportation currently requires a distillation layout with Toffoli factories."
+            )
         ftype = "toff"
         prep_gate = lsp.Distil("Toffoli")
         # TODO: What are the corrections here?
