@@ -762,8 +762,10 @@ class DefaultMovement(Architecture):
     def _distil_cost(self, resource) -> dict[str, dict[type[Gate], int] | float]:
         if resource == "T":
             mapped_circuit = distil_15_to_1()
-        else:
+        elif resource == "Toffoli":
             mapped_circuit = ccz_8_to_1()
+        else:
+            raise ValueError(f"Unknown distillation resource: {resource!r}")
         with_moves = add_moves(
             mapped_circuit,
             zone_ops=self.zone_ops if self.zone_ops is not None else cirq.Gateset(),

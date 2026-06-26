@@ -245,6 +245,8 @@ class Distil(cirq.Gate):
     """
 
     def __init__(self, resource: Literal["T", "Toffoli"]) -> None:
+        if resource not in ("T", "Toffoli"):
+            raise ValueError(f"Invalid resource for Distil gate: {resource!r}")
         self._resource = resource
         self._num_qubits = 23 if resource == "Toffoli" else 31
 
