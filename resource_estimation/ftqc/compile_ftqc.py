@@ -41,6 +41,7 @@ from .layout import Layout
 #   If you requested T, I assume you measure 1 and have to do S
 # ABC -- Always be Cultivating
 
+
 # This function is only visual and is extremely finicky, so it is not tested
 def knock_off_tqdm(
     moment_idx: int, total: int, tstart: float, message: str
@@ -116,7 +117,7 @@ def replace_cirq_op(
 
 def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
     # Double check that these don't suffer from overlap!
-    distil = hasattr(layout, "distil")
+    distil = layout.distil
     if op in cirq.GateFamily(cirq.T):
         ftype = "t"
         prep_gate = lsp.Distil("T") if distil else lsp.Cultivate(pi / 4)

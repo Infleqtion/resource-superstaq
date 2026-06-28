@@ -32,6 +32,7 @@ class Layout(abc.ABC):
     num_t_factories: int = 0
     num_s_factories: int = 0
     num_toff_factories: int = 0
+    distil: bool = False
 
     def __post_init__(self) -> None:
         self.mapped_circuit = None
@@ -514,12 +515,12 @@ class MovementDistillery(MovementLayout):
     def __init__(
         self, input_circuit: cirq.Circuit, num_t_factories: int = 0, num_toff_factories: int = 0
     ) -> None:
-        self.distil = True
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
             num_toff_factories=num_toff_factories,
         )
+        self.distil = True
 
     def _generate(self) -> None:
         # Establish Important Variables
