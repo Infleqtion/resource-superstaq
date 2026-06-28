@@ -40,8 +40,6 @@ from .layout import Layout
 #   If you requested S, I assume you measure 1 and have to do Z
 #   If you requested T, I assume you measure 1 and have to do S
 # ABC -- Always be Cultivating
-# Only Applicable to Clifford + T currently
-
 
 # This function is only visual and is extremely finicky, so it is not tested
 def knock_off_tqdm(
@@ -284,7 +282,6 @@ def post_op_syndrome_extraction(
 
 def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
     """Checks that the given circuit is in the Clifford+T gateset. Toffolis are also allowed"""
-    # TODO: This function probably belongs in some utilities file, since it is not particularly integral to compiling.
     valid_gates = (
         cirq.T,
         cirq.X,
@@ -304,7 +301,7 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
         op.gate in valid_gates or isinstance(op.gate, valid_types)
         for op in tqdm(circuit.all_operations(), total=total_ops, disable=not verbose)
     ):
-        raise ValueError("This compiler only handles Clifford + T circuits")
+        raise ValueError("This compiler only handles Clifford + T + Toffoli circuits")
 
 
 def _decompose_to_primitives(
@@ -374,7 +371,7 @@ def ft_compile(
     num_threads: int = 1,
     skip_validation: bool = False,
 ) -> cirq.Circuit:
-    """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T gateset to a cirq circuit of primitives.
+    """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T + Toffoli gateset to a cirq circuit of primitives.
     The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
     The architecture input contains information about what primtives are accessible to the compiler and which extra passes should be added to the primitive circuit.
     The passes available are post op correction and idling.
