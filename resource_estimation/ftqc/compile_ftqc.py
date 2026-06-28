@@ -116,21 +116,23 @@ def replace_cirq_op(
 
 
 def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
-    # Double check that these don't suffer from overlap!
-    distil = layout.distil
-    if op in cirq.GateFamily(cirq.T):
+    distil_t = layout.distil and op in cirq.GateFamily(cirq.T)
+    distil_toff = layout.distil and op in cirq.GateFamily(cirq.TOFFOLI)
+    cultivate_t = (not layout.distil) and op in cirq.GateFamily(cirq.T)
+    cultivate_s = op in cirq.GateFamily(cirq.S)
+    if distil_t:
         ftype = "t"
-        prep_gate = lsp.Distil("T") if distil else lsp.Cultivate(pi / 4)
+        prep_gate = lsp.Distil("T")
         correction = cirq.S
-    elif op in cirq.GateFamily(cirq.S):
+    elif cultivate_t:
+        ftype = "t"
+        prep_gate = lsp.Cultivate(pi / 4)
+        correction = cirq.S
+    elif cultivate_s:
         ftype = "s"
         prep_gate = lsp.Cultivate(pi / 2)
         correction = cirq.Z
-    elif op in cirq.GateFamily(cirq.TOFFOLI):
-        if not distil:
-            raise NotImplementedError(
-                "Toffoli teleportation currently requires a distillation layout with Toffoli factories."
-            )
+    elif distil_toff:
         ftype = "toff"
         prep_gate = lsp.Distil("Toffoli")
         # TODO: What are the corrections here?
@@ -144,7 +146,7 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     all_factories = layout.all_factories(ftype)
     operations = []
     if not available_factories:
-        if distil:
+        if distil_t or distil_toff:
             operations += [
                 prep_gate.on(*layout.distillation_block(factory)) for factory in all_factories
             ]

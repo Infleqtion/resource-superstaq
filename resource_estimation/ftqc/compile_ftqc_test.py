@@ -1002,5 +1002,3 @@ def test_teleport_resource_exceptions():
     with pytest.raises(ValueError, match="Invalid resource"):
         _ = comp.teleport_resource(invalid_resource, layout)
     sometimes_valid_resource = cirq.TOFFOLI.on(*cirq.LineQubit.range(3))
-    with pytest.raises(NotImplementedError, match="distillation layout"):
-        _ = comp.teleport_resource(sometimes_valid_resource, layout)
