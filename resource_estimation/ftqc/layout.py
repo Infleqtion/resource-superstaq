@@ -122,7 +122,9 @@ class Layout(abc.ABC):
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
 
-def available_factories(self, ftype: Literal["t", "s", "toff"]) -> deque[tuple[cirq.GridQubit, ...]]:
+    def available_factories(
+        self, ftype: Literal["t", "s", "toff"]
+    ) -> deque[tuple[cirq.GridQubit, ...]]:
         if ftype == "t":
             return self._available_t_factories
         elif ftype == "s":
@@ -148,11 +150,11 @@ def available_factories(self, ftype: Literal["t", "s", "toff"]) -> deque[tuple[c
             for fid in unique_fids
         ]
 
-def nearest_factory(
-    self,
-    qubits: tuple[cirq.GridQubit, ...] | cirq.GridQubit,
-    ftype: Literal["s", "t", "toff"],
-) -> cirq.GridQubit | tuple[cirq.GridQubit, ...]:
+    def nearest_factory(
+        self,
+        qubits: tuple[cirq.GridQubit, ...] | cirq.GridQubit,
+        ftype: Literal["s", "t", "toff"],
+    ) -> cirq.GridQubit | tuple[cirq.GridQubit, ...]:
         """Finds the closest factory of desired type according to the Manhattan distance using the GridQubit indices of the factory qubits that do not have the `used` status
         Removes the returned factory from the available options and sets its status to `used`
         """

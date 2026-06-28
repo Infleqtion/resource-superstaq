@@ -109,7 +109,7 @@ def replace_cirq_op(
             lsp.Merge(num_qubits=num_qubits - 1, smooth=False).on(*path_patches[1:]),
             lsp.Split(partitions=[1] * (len(path_patches[1:])), smooth=False).on(*path_patches[1:]),
         ]
-    if requires_resource(op, transversal_cnot):
+    if _requires_resource(op, transversal_cnot):
         return teleport_resource(op, layout)
     raise ValueError(
         f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} CNOT: {op.gate}"

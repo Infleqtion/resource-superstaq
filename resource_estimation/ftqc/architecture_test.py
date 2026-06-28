@@ -873,6 +873,10 @@ def test_distillation_cases(lattice_architecture, movement_architecture) -> None
         _ = lattice_architecture._distil_cost
     assert lsp.Distil in movement_architecture.op_cost
 
+    # Confirm distillation cost errors for invalid resource
+    with pytest.raises(ValueError, match="Unknown distillation resource"):
+        _ = movement_architecture._distil_cost("CCZ")
+
     # Make sure that distillation repetition parameter behaves as expected
     distil_once = arch.DefaultMovement(distillation_repetition=1)
     distil_thrice = arch.DefaultMovement(distillation_repetition=3)

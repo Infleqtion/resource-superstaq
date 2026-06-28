@@ -82,6 +82,8 @@ def test_distil() -> None:
     assert str(gate) == "DISTIL(T)"
     gate = lsp.Distil("Toffoli")
     assert str(gate) == "DISTIL(Toffoli)"
+    with pytest.raises(ValueError, match="Invalid resource"):
+        _ = lsp.Distil("CCZ")
 
 
 def test_rotated_code_patch() -> None:

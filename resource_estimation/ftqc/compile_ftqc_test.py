@@ -996,8 +996,11 @@ def test_different_rounds_distil() -> None:
                 assert op.gate.rounds == k
 
 
-def test_teleport_resource_invalid():
+def test_teleport_resource_exceptions():
     invalid_resource = cirq.CCZ.on(*cirq.LineQubit.range(3))
     layout = MovementLayout(cirq.Circuit())
     with pytest.raises(ValueError, match="Invalid resource"):
         _ = comp.teleport_resource(invalid_resource, layout)
+    sometimes_valid_resource = cirq.TOFFOLI.on(*cirq.LineQubit.range(3))
+    with pytest.raises(NotImplementedError, match="distillation layout"):
+        _ = comp.teleport_resource(sometimes_valid_resource, layout)
