@@ -112,7 +112,7 @@ def replace_cirq_op(
     if _requires_resource(op, transversal_cnot):
         return teleport_resource(op, layout)
     raise ValueError(
-        f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} CNOT: {op.gate}"
+        f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} gate: {op.gate}"
     )
 
 
@@ -169,7 +169,11 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
 
 
 def handle_idling(
-    circuit: cirq.Circuit, layout: Layout, with_barriers: bool, rounds: int, verbose: int = 0
+    circuit: cirq.Circuit,
+    layout: Layout,
+    with_barriers: bool,
+    rounds: int,
+    verbose=0,
 ) -> cirq.Circuit:
     """Helper function for the compiler that handles idling. This way we can experiment with different kinds of idling or even turn it off entirely.
     This function is still a work in progress, but it is likely to take the form of various compiler passes.
@@ -326,7 +330,10 @@ def _decompose_to_primitives(
 
 
 def add_moves(
-    circuit: cirq.Circuit, zone_ops: cirq.Gateset, alley_ops: cirq.Gateset, verbose: int = 0
+    circuit: cirq.Circuit,
+    zone_ops: cirq.Gateset,
+    alley_ops: cirq.Gateset,
+    verbose: int = 0,
 ) -> cirq.Circuit:
     """Handles replacement moves for both alley movement and interaction zone movement"""
     total = len(circuit)

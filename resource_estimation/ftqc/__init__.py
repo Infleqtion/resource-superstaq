@@ -29,14 +29,8 @@ from resource_estimation.ftqc.compile_ftqc import (
     teleport_resource,
     validate_ops,
 )
-from resource_estimation.ftqc.estimate import ResourceEstimator
-from resource_estimation.ftqc.layout import (
-    Column,
-    Embedded,
-    FactorySandwich,
-    Layout,
-    MovementLayout,
-)
+from resource_estimation.ftqc.distil import distil_15_to_1
+from resource_estimation.ftqc.estimate import ReactionDepthEstimator, ResourceEstimator
 from resource_estimation.ftqc.lattice_surgery_primitives import (
     BufferCodePatch,
     Cultivate,
@@ -49,6 +43,13 @@ from resource_estimation.ftqc.lattice_surgery_primitives import (
     Split,
     SyndromeExtract,
     custom_resolver,
+)
+from resource_estimation.ftqc.layout import (
+    Column,
+    Embedded,
+    FactorySandwich,
+    Layout,
+    MovementLayout,
 )
 from resource_estimation.ftqc.stim_functions import (
     STR2GATE,
@@ -76,6 +77,7 @@ __all__ = [
     "MeasureZonesOnly",
     "MovementLayout",
     "Move",
+    "ReactionDepthEstimator",
     "ResourceEstimator",
     "RotatedCodePatch",
     "Split",

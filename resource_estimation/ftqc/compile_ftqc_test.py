@@ -150,7 +150,7 @@ def test_direct_substitution() -> None:
         assert replacement == cirq.Circuit(op_to_replace)
 
     # Test unrecognized gate
-    with pytest.raises(ValueError, match="Invalid Op for non-transversal CNOT: Rx"):
+    with pytest.raises(ValueError, match="Invalid Op for non-transversal gate: Rx"):
         _ = comp.replace_cirq_op(
             op=cirq.Rx(rads=pi / 2).on(dummy_qubits[0]),
             layout=layout,
