@@ -14,7 +14,6 @@
 from __future__ import annotations
 
 from itertools import chain
-
 import cirq
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
@@ -268,7 +267,7 @@ def animate_layout_moment(
         nx.draw(G, pos=diction, node_color=colors, edge_color=edge_colors, with_labels=True)
 
     fig, ax = plt.subplots()
-    anim = FuncAnimation(
+    anim = animation.FuncAnimation(
         fig,
         animate,
         frames=len(moment_paths_flat),

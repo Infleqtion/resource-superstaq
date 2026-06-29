@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import cirq
-import openfermion
 import numpy as np
-from openfermion.circuits import simulate_trotter
+import openfermion
 from openfermion.ops import FermionOperator
+
 
 
 def fermi_hubbard(n, verbose=0):
@@ -198,7 +199,7 @@ def kanamori(n_bath, verbose=0):
     qubits = cirq.LineQubit.range(n_qubits)
 
     circuit = cirq.Circuit(
-        simulate_trotter(qubits=qubits, hamiltonian=kanamori_interaction_hamiltonian, time=1)
+        openfermion.circuits.simulate_trotter(qubits=qubits, hamiltonian=kanamori_interaction_hamiltonian, time=1)
     )
 
     circuit = cirq.drop_negligible_operations(circuit)

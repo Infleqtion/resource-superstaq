@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from cirq.ops.raw_types import Operation
-from cirq.ops.pauli_string import SingleQubitPauliStringGateOperation
+
 import cirq
 import cirq_superstaq as css
 import numpy as np
+
+from cirq.ops.raw_types import Operation
+from cirq.ops.pauli_string import SingleQubitPauliStringGateOperation
+
 
 # warnings.filterwarnings(category=FutureWarning, action="ignore")
 

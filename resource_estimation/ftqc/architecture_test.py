@@ -19,7 +19,7 @@ from math import ceil, pi
 import cirq
 import numpy as np
 import pytest
-from cirq_superstaq import ParallelRGate
+import cirq_superstaq as css
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
@@ -824,9 +824,9 @@ def test_convert_globals_to_phasedxz() -> None:
     """Confirm that the conversion function works as expected"""
     sc = arch.Superconductor()
     example1 = {
-        "gate_cost": {ParallelRGate: 2, cirq.Rz: 3},
+        "gate_cost": {css.ParallelRGate: 2, cirq.Rz: 3},
         "moment_cost": {
-            ParallelRGate: 13,
+            css.ParallelRGate: 13,
         },
     }
     expected = {"gate_cost": {cirq.PhasedXZGate: 3}, "moment_cost": {}, "op_time": 0.0}
@@ -835,7 +835,7 @@ def test_convert_globals_to_phasedxz() -> None:
 
     example2 = {
         "gate_cost": {cirq.MeasurementGate: 5},
-        "moment_cost": {cirq.Rz: 5, ParallelRGate: 9},
+        "moment_cost": {cirq.Rz: 5, css.ParallelRGate: 9},
     }
     expected = {
         "gate_cost": {cirq.MeasurementGate: 5},

@@ -24,13 +24,15 @@ from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from functools import partial
 from tqdm import tqdm
-import resource_estimation.ftqc.architecture as arch
-from resource_estimation.visualizations import C, boxed_header
 import cirq
 from collections import Counter
 import numpy as np
 import numpy.typing as npt
 import warnings
+
+import resource_estimation.ftqc.architecture as arch
+from resource_estimation.visualizations import C, boxed_header
+
 
 
 STR2ARCH: dict[str, Callable[..., arch.Architecture]] = {

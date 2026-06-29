@@ -15,37 +15,39 @@ from stim import Circuit
 from cirq.circuits.circuit import Circuit
 import cirq
 import pytest
-from cultiv import make_end2end_cultivation_circuit, make_cirq_circuits
+import cultiv
+import stim
+
 from resource_estimation.ftqc.stim_functions import (
     count_stim_resources,
     cultivate,
     load_saved_cost,
 )
-import stim
+
 
 
 @pytest.fixture
 def gidney3() -> Circuit:
-    return make_end2end_cultivation_circuit(
+    return cultiv.make_end2end_cultivation_circuit(
         dsurface=7, dcolor=3, basis="Y", r_growing=1, r_end=7, inject_style="unitary"
     )
 
 
 @pytest.fixture
 def gidney5() -> Circuit:
-    return make_end2end_cultivation_circuit(
+    return cultiv.make_end2end_cultivation_circuit(
         dsurface=11, dcolor=5, basis="Y", r_growing=1, r_end=11, inject_style="unitary"
     )
 
 
 @pytest.fixture
 def yale3() -> Circuit:
-    return make_cirq_circuits.make_cirq_circuit(code_distance=7, fault_distance=3)
+    return cultiv.make_cirq_circuits.make_cirq_circuit(code_distance=7, fault_distance=3)
 
 
 @pytest.fixture
 def yale5() -> Circuit:
-    return make_cirq_circuits.make_cirq_circuit(code_distance=11, fault_distance=5)
+    return cultiv.make_cirq_circuits.make_cirq_circuit(code_distance=11, fault_distance=5)
 
 
 def test_known_gidney(gidney3) -> None:

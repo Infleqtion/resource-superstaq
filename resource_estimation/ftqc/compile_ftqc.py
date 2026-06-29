@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from resource_estimation.ftqc.architecture import Architecture
+    
 import copy
 import os
 import sys
@@ -29,7 +30,6 @@ from warnings import warn
 
 import cirq
 import cirq_superstaq as css
-from cirq_superstaq import Barrier, barrier
 from tqdm import tqdm
 
 from . import lattice_surgery_primitives as lsp
@@ -199,7 +199,7 @@ def handle_idling(
     def _map_func(moment, moment_idx):
         if verbose > 0:
             knock_off_tqdm(moment_idx=moment_idx, total=total, tstart=tstart, message="Idling:")
-        if all(isinstance(gate.gate, (Barrier, lsp.Split)) for gate in moment):
+        if all(isinstance(gate.gate, (css.Barrier, lsp.Split)) for gate in moment):
             return moment
         if moment_idx == 0 or sum(
             isinstance(gate.gate, lsp.SyndromeExtract) for gate in moment
@@ -212,7 +212,7 @@ def handle_idling(
         moment = cirq.Moment(*moment, *se.on_each(*idling_qubits), _flatten_contents=False)
 
         if with_barriers:
-            return [moment, cirq.Moment(barrier(*circuit.all_qubits()))]
+            return [moment, cirq.Moment(css.barrier(*circuit.all_qubits()))]
 
         return moment
 
@@ -257,7 +257,7 @@ def post_op_syndrome_extraction(
 
         yield op
 
-        if with_barriers and not isinstance(op.gate, Barrier):
+        if with_barriers and not isinstance(op.gate, css.Barrier):
             yield barrier
 
         qubits_to_correct = [

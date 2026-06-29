@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from resource_estimation.analysis import Report
+
 import cirq
 import math
 import pytest
@@ -22,7 +22,7 @@ import resource_estimation.ftqc.architecture as arc
 
 
 @pytest.fixture
-def report() -> Report:
+def report() -> analysis.Report:
     return analysis.Report(
         filename="dummy_file.json",
         program_fidelity=0.99,
