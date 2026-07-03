@@ -158,7 +158,7 @@ ReactionDepth = dict[PauliBasis, int]
 
 ReactionTreeKey = tuple[cirq.Qid, PauliBasis]
 ReactionTreeVertex = tuple[PauliBasis, cirq.Qid, int]
-ReactionTreeEdge = tuple[ReactionTreeVertex, ReactionTreeVertex]
+ReactionTreeEdge = tuple[ReactionTreeVertex, ReactionTreeVertex, int]
 
 
 @dataclass
@@ -171,7 +171,7 @@ class ReactionTree:
             was produced by `operations[t - 1]`.
         vertices: All `(pauli, qubit, time)` Pauli vertices in the sparse
             reaction tree.
-        edges: `(source, target)` dependency edges between vertices.
+        edges: `(source, target, weight)` dependency edges between vertices.
         frontier: Final sparse frontier vertices keyed by `(qubit, pauli)`.
         depths: Longest dependency path depth for each vertex.
     """
@@ -202,23 +202,23 @@ class ReactionTree:
 
     def update_frontier(
         self,
-        dependencies: Sequence[tuple[ReactionTreeKey, ReactionTreeKey]],
+        dependencies: Sequence[tuple[ReactionTreeKey, ReactionTreeKey, int]],
         time: int,
     ) -> None:
         """Apply one circuit operation's reaction-tree dependencies.
 
         Args:
-            dependencies: `(source_key, target_key)` dependencies for one
+            dependencies: `(source_key, target_key, weight)` dependencies for one
                 circuit operation.
             time: Reaction-tree time for all target vertices created from
                 `dependencies`.
         """
         new_vertices: dict[ReactionTreeKey, ReactionTreeVertex] = {}
-        for source_node, target_node in dependencies:
+        for source_node, target_node, weight in dependencies:
             source = self[source_node]
             target = new_vertices.setdefault(target_node, (target_node[1], target_node[0], time))
-            self.edges.append((source, target))
-            self.depths[target] = max(self.depths.get(target, 0), self.depths[source] + 1)
+            self.edges.append((source, target, weight))
+            self.depths[target] = max(self.depths.get(target, 0), self.depths[source] + weight)
 
         for key, vertex in new_vertices.items():
             self.frontier[key] = vertex
@@ -459,7 +459,7 @@ class ReactionDepthEstimator:
         tree = ReactionTree(operations=operations)
 
         for time, input_op in enumerate(operations, start=1):
-            dependencies: list[tuple[ReactionTreeKey, ReactionTreeKey]] = []
+            dependencies: list[tuple[ReactionTreeKey, ReactionTreeKey, int]] = []
             if input_op.gate in self.factories:
                 reaction_dynamic = self._reaction_dynamics[
                     (input_op.gate, self.factories[input_op.gate])
@@ -469,6 +469,7 @@ class ReactionDepthEstimator:
                         (
                             (input_op.qubits[term.source_qubit_index], term.source_pauli),
                             (input_op.qubits[term.target_qubit_index], term.target_pauli),
+                            term.weight,
                         )
                     )
             else:
@@ -485,6 +486,7 @@ class ReactionDepthEstimator:
                                 (
                                     (source_qid, source_basis),
                                     target_node,
+                                    0,
                                 )
                             )
 
