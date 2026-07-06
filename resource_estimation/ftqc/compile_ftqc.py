@@ -32,7 +32,7 @@ import cirq_superstaq as css
 from cirq_superstaq import Barrier, barrier
 from tqdm import tqdm
 
-from . import lattice_surgery_primitives as lsp
+from . import ftqc_gates as lsp
 from .layout import Layout
 
 # IMPORTANT NOTES

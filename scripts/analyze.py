@@ -158,7 +158,7 @@ def main(args=None) -> int:
 
     clifford_t_circuit = res.compile_gateset.compile_gateset(
         rz_circuit,
-        gateset=res.compile_gateset.clifford_t_gateset(atol=eps),
+        gateset=res.compile_gateset.gridsynth_compiler_gateset(atol=eps),
         verbose=verbose,
     )
     clifford_t_circuit = clifford_t_circuit.transform_qubits(

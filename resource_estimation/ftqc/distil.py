@@ -15,7 +15,7 @@ from math import pi
 
 import cirq
 
-from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
+from resource_estimation.ftqc.ftqc_gates import Cultivate
 
 
 def distil_15_to_1() -> cirq.Circuit:
