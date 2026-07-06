@@ -16,7 +16,7 @@ from __future__ import annotations
 import cirq
 
 from resource_estimation.compile_gateset.cliff_rz import CliffRzGateset
-from resource_estimation.compile_gateset.clifford_t import compile_cirq_to_clifford_t
+from resource_estimation.compile_gateset.gridsynth_compiler import compile_cirq_to_clifford_t
 
 _CLIFFORD_T_REQUIRED_GATES = (cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.T)
 _CLIFFORD_T_OPTIONAL_GATES = (cirq.I, cirq.MeasurementGate, cirq.ResetChannel)

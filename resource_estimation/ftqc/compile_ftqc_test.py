@@ -21,7 +21,7 @@ from cirq_superstaq import Barrier
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.compile_ftqc as comp
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.ftqc_gates as lsp
 from resource_estimation.ftqc.layout import Column, Embedded, MovementDistillery, MovementLayout
 
 

@@ -23,7 +23,7 @@ from cirq_superstaq import ParallelRGate
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.ftqc_gates as lsp
 from resource_estimation.ftqc.stim_functions import cultivate, load_saved_cost
 
 

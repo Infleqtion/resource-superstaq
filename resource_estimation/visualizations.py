@@ -20,7 +20,7 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import networkx as nx
 
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.ftqc_gates as lsp
 
 from .ftqc.layout import Layout
 

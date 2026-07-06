@@ -17,7 +17,7 @@ from resource_estimation.compile_gateset.cliff_rz import (
     phx_to_zhzhz,
     zpow_to_rz,
 )
-from resource_estimation.compile_gateset.clifford_t import (
+from resource_estimation.compile_gateset.gridsynth_compiler import (
     approx_rz,
     cin_cliffs,
     compile_cirq_to_clifford_t,

@@ -48,7 +48,7 @@ cliff_rz_circuit = res.compile_gateset.compile_gateset(
 )
 cliff_t_circuit = res.compile_gateset.compile_gateset(
     cliff_rz_circuit,
-    gateset=res.compile_gateset.clifford_t_gateset(atol=.001),
+    gateset=res.compile_gateset.gridsynth_compiler_gateset(atol=.001),
 )
 
 # Prepare Architecture and Layout
