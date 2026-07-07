@@ -163,67 +163,21 @@ ReactionTreeEdge = tuple[ReactionTreeVertex, ReactionTreeVertex, int]
 
 @dataclass
 class ReactionTree:
-    """Mutable sparse DAG describing reaction-depth dependencies.
+    """DAG describing reaction-depth dependencies.
 
     Attributes:
         operations: Circuit operations ordered by reaction-tree time. A vertex
             with `time=0` is a root and has no operation; a vertex with `time=t`
             was produced by `operations[t - 1]`.
-        vertices: All `(pauli, qubit, time)` Pauli vertices in the sparse
-            reaction tree.
+        vertices: All `(pauli, qubit, time)` Pauli vertices in the reaction tree.
         edges: `(source, target, weight)` dependency edges between vertices.
-        frontier: Final sparse frontier vertices keyed by `(qubit, pauli)`.
         depths: Longest dependency path depth for each vertex.
     """
 
     operations: tuple[cirq.Operation, ...] = ()
     vertices: set[ReactionTreeVertex] = field(default_factory=set)
     edges: list[ReactionTreeEdge] = field(default_factory=list)
-    frontier: dict[ReactionTreeKey, ReactionTreeVertex] = field(default_factory=dict)
     depths: dict[ReactionTreeVertex, int] = field(default_factory=dict)
-
-    def __getitem__(self, key: ReactionTreeKey) -> ReactionTreeVertex:
-        """Return the current frontier vertex for a qubit and Pauli basis.
-
-        Args:
-            key: `(qubit, pauli)` pair for the requested frontier vertex.
-
-        Returns:
-            Existing frontier vertex for `key`, or a newly created `time=0`
-            root vertex when the key has not been tracked yet.
-        """
-        qubit, pauli = key
-        if key not in self.frontier:
-            vertex = (pauli, qubit, 0)
-            self.frontier[key] = vertex
-            self.vertices.add(vertex)
-            self.depths[vertex] = 0
-        return self.frontier[key]
-
-    def update_frontier(
-        self,
-        dependencies: Sequence[tuple[ReactionTreeKey, ReactionTreeKey, int]],
-        time: int,
-    ) -> None:
-        """Apply one circuit operation's reaction-tree dependencies.
-
-        Args:
-            dependencies: `(source_key, target_key, weight)` dependencies for one
-                circuit operation.
-            time: Reaction-tree time for all target vertices created from
-                `dependencies`.
-        """
-        new_vertices: dict[ReactionTreeKey, ReactionTreeVertex] = {}
-        for source_node, target_node, weight in dependencies:
-            source = self[source_node]
-            target = new_vertices.setdefault(target_node, (target_node[1], target_node[0], time))
-            self.edges.append((source, target, weight))
-            self.depths[target] = max(self.depths.get(target, 0), self.depths[source] + weight)
-
-        for key, vertex in new_vertices.items():
-            self.frontier[key] = vertex
-            self.vertices.add(vertex)
-            self.depths.setdefault(vertex, 0)
 
 
 @dataclass(frozen=True)
@@ -443,20 +397,28 @@ class ReactionDepthEstimator:
         return {qubit: dict(depth) for qubit, depth in reaction_depth.items()}
 
     def reaction_tree(self, circuit: cirq.Circuit) -> ReactionTree:
-        """Build a sparse DAG for reaction-depth dependencies.
+        """Build a DAG for reaction-depth dependencies.
         Tree depth is the longest path from `time=0` root vertices
-        to the final frontier vertices.
+        to the final time-layer vertices.
 
         Args:
             circuit: Logical circuit whose factory-backed operations and
                 Clifford propagation should be tracked.
 
         Returns:
-            Sparse reaction tree with vertices, edges, final frontier
-            vertices, operation metadata, and per-vertex longest-path depths.
+            Reaction tree with vertices, edges, final time-layer vertices,
+            operation metadata, and per-vertex longest-path depths.
         """
         operations = tuple(circuit.all_operations())
         tree = ReactionTree(operations=operations)
+        tracked_nodes = tuple(
+            (qubit, basis) for qubit in sorted(circuit.all_qubits()) for basis in ("X", "Z")
+        )
+        for time in range(len(operations) + 1):
+            for qubit, basis in tracked_nodes:
+                vertex = (basis, qubit, time)
+                tree.vertices.add(vertex)
+                tree.depths[vertex] = 0
 
         for time, input_op in enumerate(operations, start=1):
             dependencies: list[tuple[ReactionTreeKey, ReactionTreeKey, int]] = []
@@ -490,6 +452,14 @@ class ReactionDepthEstimator:
                                 )
                             )
 
-            tree.update_frontier(dependencies, time)
+            target_nodes = {target_node for _, target_node, _ in dependencies}
+            dependencies.extend(
+                (node, node, 0) for node in tracked_nodes if node not in target_nodes
+            )
+            for source_node, target_node, weight in dependencies:
+                source = (source_node[1], source_node[0], time - 1)
+                target = (target_node[1], target_node[0], time)
+                tree.edges.append((source, target, weight))
+                tree.depths[target] = max(tree.depths[target], tree.depths[source] + weight)
 
         return tree

@@ -341,53 +341,6 @@ def test_reaction_depth_custom_dynamics_override_is_instance_local() -> None:
     }
 
 
-def test_reaction_tree_index_creates_root_vertex() -> None:
-    qubit = cirq.LineQubit(0)
-    reaction_tree = est.ReactionTree()
-
-    vertex = reaction_tree[qubit, "X"]
-
-    assert vertex == ("X", qubit, 0)
-    assert reaction_tree.frontier[(qubit, "X")] == vertex
-    assert reaction_tree.vertices == {vertex}
-    assert reaction_tree.depths[vertex] == 0
-    assert reaction_tree[qubit, "X"] == vertex
-
-
-def test_reaction_tree_update_frontier_stages_operation_vertices() -> None:
-    qubit = cirq.LineQubit(0)
-    reaction_tree = est.ReactionTree()
-
-    reaction_tree.update_frontier(
-        [
-            ((qubit, "X"), (qubit, "Z"), 1),
-            ((qubit, "Z"), (qubit, "Z"), 0),
-        ],
-        time=1,
-    )
-
-    source_x = ("X", qubit, 0)
-    source_z = ("Z", qubit, 0)
-    target_z = ("Z", qubit, 1)
-
-    assert reaction_tree.edges == [(source_x, target_z, 1), (source_z, target_z, 0)]
-    assert reaction_tree.frontier[(qubit, "Z")] == target_z
-    assert reaction_tree.depths[target_z] == 1
-
-    reaction_tree.update_frontier(
-        [
-            ((qubit, "Z"), (qubit, "X"), 1),
-        ],
-        time=2,
-    )
-
-    target_x = ("X", qubit, 2)
-
-    assert reaction_tree.edges[-1] == (target_z, target_x, 1)
-    assert reaction_tree.frontier[(qubit, "X")] == target_x
-    assert reaction_tree.depths[target_x] == 2
-
-
 @pytest.mark.parametrize(
     "circuit",
     [
@@ -405,19 +358,45 @@ def test_reaction_tree_update_frontier_stages_operation_vertices() -> None:
         ),
     ],
 )
-def test_reaction_tree_frontier_tracks_reaction_depth_qubits(circuit: cirq.Circuit) -> None:
+def test_reaction_tree_final_vertices_track_reaction_depth_qubits(
+    circuit: cirq.Circuit,
+) -> None:
     reaction_depth_estimator = est.ReactionDepthEstimator()
     reaction_depth = reaction_depth_estimator.reaction_depth(circuit)
     reaction_tree = reaction_depth_estimator.reaction_tree(circuit)
+    final_time = len(reaction_tree.operations)
 
     assert reaction_tree.operations == tuple(circuit.all_operations())
     for qubit in reaction_depth:
-        assert (qubit, "X") in reaction_tree.frontier
-        assert (qubit, "Z") in reaction_tree.frontier
+        assert ("X", qubit, final_time) in reaction_tree.vertices
+        assert ("Z", qubit, final_time) in reaction_tree.vertices
         assert {
-            basis: reaction_tree.depths[reaction_tree.frontier[(qubit, basis)]]
-            for basis in ("X", "Z")
+            basis: reaction_tree.depths[(basis, qubit, final_time)] for basis in ("X", "Z")
         } == reaction_depth[qubit]
+
+
+def test_reaction_tree_adds_zero_weight_edges_for_unchanged_nodes() -> None:
+    q0, q1 = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(cirq.T(q0), cirq.T(q1))
+
+    reaction_tree = est.ReactionDepthEstimator().reaction_tree(circuit)
+    final_time = len(reaction_tree.operations)
+
+    assert len(reaction_tree.vertices) == 2 * len(circuit.all_qubits()) * (
+        len(tuple(circuit.all_operations())) + 1
+    )
+    assert all(
+        (basis, qubit, final_time) in reaction_tree.vertices
+        for qubit in (q0, q1)
+        for basis in ("X", "Z")
+    )
+    assert {
+        (("X", q0, 0), ("X", q0, 1), 0),
+        (("X", q1, 0), ("X", q1, 1), 0),
+        (("Z", q1, 0), ("Z", q1, 1), 0),
+        (("Z", q0, 1), ("Z", q0, 2), 0),
+        (("X", q1, 1), ("X", q1, 2), 0),
+    }.issubset(reaction_tree.edges)
 
 
 def test_reaction_tree_rejects_non_factory_non_clifford() -> None:
@@ -459,14 +438,19 @@ def test_reaction_tree_tracks_pauli_product_factory_regression() -> None:
     assert reaction_tree.operations == tuple(circuit.all_operations())
     assert reaction_tree.operations[2] == cirq.T(q0)
     assert reaction_tree.operations[5] == pauli_product
+    final_time = len(reaction_tree.operations)
     assert {
-        qubit: {
-            basis: reaction_tree.depths[reaction_tree.frontier[(qubit, basis)]]
-            for basis in ("X", "Z")
-        }
+        qubit: {basis: reaction_tree.depths[(basis, qubit, final_time)] for basis in ("X", "Z")}
         for qubit in reaction_depth
     } == reaction_depth
-    assert max(reaction_tree.depths[vertex] for vertex in reaction_tree.frontier.values()) == 2
+    assert (
+        max(
+            reaction_tree.depths[(basis, qubit, final_time)]
+            for qubit in reaction_depth
+            for basis in ("X", "Z")
+        )
+        == 2
+    )
     assert {
         (
             ("X", q0, 0),
