@@ -14,6 +14,7 @@
 from __future__ import annotations
 from functools import cached_property
 from typing import Literal, Optional
+from itertools import combinations
 
 import cirq
 

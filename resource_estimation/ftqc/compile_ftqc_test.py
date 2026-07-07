@@ -99,6 +99,17 @@ def test_end2end(with_barriers) -> None:
             assert is_primitive
 
 
+def test_end2end_distillery():
+    q1, q2, q3 = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
+    circuit = cirq.Circuit(
+        [cirq.CNOT.on(q1, q2), cirq.TOFFOLI.on(q1, q2, q3), cirq.T.on_each(q1, q2, q3)]
+    )
+    layout = MovementDistillery(input_circuit=circuit, num_t_factories=1, num_toff_factories=1)
+    arc = arch.DefaultMovement(post_op_correction=False, idling=False)
+    compiled = comp.ft_compile(layout, arc, with_barriers=False)
+    assert all(arc.primitives.validate(op) for op in compiled.all_operations())
+
+
 def test_direct_substitution() -> None:
     dummy_qubits = [cirq.GridQubit(i, j) for i in range(3) for j in range(3)]
     nothing_circuit = cirq.Circuit(cirq.I.on_each(dummy_qubits))
@@ -165,7 +176,9 @@ def test_replace_cirq_op_movement(bell_circuit) -> None:
     returned_ops = comp.replace_cirq_op(
         op=op_to_replace, layout=movement_layout, transversal_cnot=True
     )
-    ops_flattened = returned_ops[:2] + [op for moment in returned_ops[2:] for op in moment]
+    ops_flattened = (
+        returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
+    )
     expected_types = [
         lsp.Cultivate,
         lsp.Cultivate,
@@ -188,7 +201,11 @@ def test_replace_cirq_op_lattice(op_type, bell_circuit) -> None:
     if op_type == cirq.CNOT:
         ops_flattened = returned_ops  # Already flat
     else:
-        ops_flattened = returned_ops[:2] + [op for moment in returned_ops[2:] for op in moment]
+        ops_flattened = (
+            returned_ops[:2]
+            + [op for moment in returned_ops[2:5] for op in moment]
+            + returned_ops[5:]
+        )
     if op_type == cirq.S:
         expected_types = [
             lsp.Cultivate,
@@ -934,7 +951,9 @@ def test_replace_cirq_op_distil_t(bell_circuit) -> None:
     returned_ops = comp.replace_cirq_op(
         op=op_to_replace, layout=distillery_layout, transversal_cnot=True
     )
-    ops_flattened = returned_ops[:2] + [op for moment in returned_ops[2:] for op in moment]
+    ops_flattened = (
+        returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
+    )
     expected_types = [
         lsp.Distil("T"),
         lsp.Distil("T"),
@@ -957,22 +976,20 @@ def test_replace_cirq_op_distil_toff(random_circ) -> None:
     returned_ops = comp.replace_cirq_op(
         op=op_to_replace, layout=distillery_layout, transversal_cnot=True
     )
-    # The first two elements are Distil operations, while the rest are moments in order to be nicely aligned
+    print(returned_ops)
     # We flatten them here to be explicit about the order the operations should be in
-    ops_flattened = returned_ops[:2] + [op for moment in returned_ops[2:] for op in moment]
+    ops_flattened = (
+        returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
+    )
     expected_types = [
-        lsp.Distil("Toffoli"),
-        lsp.Distil("Toffoli"),
-        cirq.CNOT,
-        cirq.CNOT,
-        cirq.CNOT,
-        cirq.MeasurementGate,
-        cirq.MeasurementGate,
-        cirq.MeasurementGate,
-        cirq.ResetChannel,
-        cirq.ResetChannel,
-        cirq.ResetChannel,
-        lsp.ErrorCorrect,
+        *([lsp.Distil("Toffoli")] * 2),
+        *([cirq.CNOT] * 3),
+        *([cirq.MeasurementGate] * 3),
+        *([cirq.ResetChannel] * 3),
+        *([cirq.H] * 3),
+        *([cirq.X] * 3),
+        *([cirq.CNOT] * 3),
+        *([cirq.H] * 3),
     ]
     assert len(expected_types) == len(ops_flattened)
     for op, expected_type in zip(ops_flattened, expected_types):

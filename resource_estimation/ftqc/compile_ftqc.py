@@ -22,6 +22,7 @@ import copy
 import os
 import sys
 from collections.abc import Iterator
+from itertools import combinations
 from functools import partial
 from math import pi
 from time import time
@@ -135,14 +136,15 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     elif distil_toff:
         ftype = "toff"
         prep_gate = lsp.Distil("Toffoli")
-        # TODO: What are the corrections here?
-        correction = lsp.ErrorCorrect(3)
+        correction = [
+            *cirq.H.on_each(*op.qubits),
+            *cirq.X.on_each(*op.qubits),
+            *cirq.CNOT.on_each(*combinations(op.qubits, 2)),
+            *cirq.H.on_each(*op.qubits),
+        ]
     else:
         raise ValueError(f"Invalid resource encountered: {op.gate}")
     available_factories = layout.available_factories(ftype)
-    # What IS a "factory"?
-    # A factory is a set of qubits that is responsible for producing a resource state
-    # Therefore `all_factories` could be a list of tuples of qubits
     all_factories = layout.all_factories(ftype)
     operations = []
     if not available_factories:
@@ -156,7 +158,7 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     # These should be tuples of qubits
     routed_factory = layout.nearest_factory(op.qubits, ftype=ftype)
     cnots, measurements, resets = [], [], []
-    corrections = [correction.on(*op.qubits)]
+    corrections = correction if isinstance(correction, list) else [correction.on(*op.qubits)]
     for factory_qubit, program_qubit in zip(routed_factory, op.qubits):
         cnots.append(cirq.CNOT.on(factory_qubit, program_qubit))
         measurements.append(cirq.MeasurementGate(1, key="").on(factory_qubit))
@@ -164,7 +166,8 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     operations += [
         cirq.Moment(cnots),
         cirq.Moment(measurements),
-        cirq.Moment(resets + corrections),
+        cirq.Moment(resets),
+        *corrections,
     ]
     return operations
 
