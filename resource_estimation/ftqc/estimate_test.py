@@ -19,7 +19,7 @@ from numpy import isclose
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.ftqc_primitives as lsp
 
 
 @pytest.fixture
