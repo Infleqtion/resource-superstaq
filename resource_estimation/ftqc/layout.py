@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
+
 import abc
 from collections import deque
 from dataclasses import dataclass
@@ -213,7 +214,9 @@ class MovementLayout(Layout):
     # TODO: build this implementation
     def __init__(self, input_circuit: cirq.Circuit, num_t_factories: int = 1) -> None:
         super().__init__(
-            input_circuit=input_circuit, num_t_factories=num_t_factories, num_s_factories=0
+            input_circuit=input_circuit,
+            num_t_factories=num_t_factories,
+            num_s_factories=0,
         )
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit):
@@ -258,7 +261,7 @@ class Column(Layout):
             if row % 2 == 0:
                 s_factories.extend([cirq.GridQubit(row, 0), cirq.GridQubit(row, 6)])
                 ancillas.extend(
-                    [cirq.GridQubit(row, 1), cirq.GridQubit(row, 3), cirq.GridQubit(row, 5)]
+                    [cirq.GridQubit(row, 1), cirq.GridQubit(row, 3), cirq.GridQubit(row, 5)],
                 )
             else:
                 t_factories.extend([cirq.GridQubit(row, 0), cirq.GridQubit(row, 6)])
@@ -338,7 +341,7 @@ class FactorySandwich(Layout):
                 (n1, n2)
                 for n1, n2 in combinations(G.nodes, 2)
                 if abs(n1.row - n2.row) + abs(n1.col - n2.col) == 1
-            ]
+            ],
         )
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
@@ -435,7 +438,7 @@ class Embedded(Layout):
                 (n1, n2)
                 for n1, n2 in combinations(G.nodes, 2)
                 if abs(n1.row - n2.row) + abs(n1.col - n2.col) == 1
-            ]
+            ],
         )
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
@@ -481,7 +484,7 @@ class MovementDistillery(MovementLayout):
             G.add_node(output_qubit, patch_type="factory", ftype="t", fid=factory_index, used=True)
             block_qubits = [cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, 31)]
             G.add_nodes_from(
-                [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
+                [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits],
             )
         # Movement layouts assume all-to-all connectivity; avoid storing O(n^2) edges explicitly.
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}

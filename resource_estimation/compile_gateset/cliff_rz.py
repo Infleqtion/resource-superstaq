@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from cirq.ops.raw_types import Operation
-from cirq.ops.pauli_string import SingleQubitPauliStringGateOperation
+
 import cirq
 import cirq_superstaq as css
 import numpy as np
+from cirq.ops.pauli_string import SingleQubitPauliStringGateOperation
+from cirq.ops.raw_types import Operation
 
 # warnings.filterwarnings(category=FutureWarning, action="ignore")
 
@@ -28,7 +29,7 @@ def eject_z(
     atol: float = 1e-8,
 ) -> cirq.Circuit:
     """Pushes Z gates towards the end of the circuit"""
-    backlog = {q: 0.0 for q in circuit.all_qubits()}
+    backlog = dict.fromkeys(circuit.all_qubits(), 0.0)
 
     def _map_fn(op):
         if isinstance(op.gate, cirq.ZPowGate):
@@ -114,13 +115,15 @@ def phx_to_zhzhz(
 
 @cirq.transformer
 def zpow_to_rz(
-    circuit: cirq.Circuit, context: cirq.TransformerContext | None = None
+    circuit: cirq.Circuit,
+    context: cirq.TransformerContext | None = None,
 ) -> cirq.Circuit:
     """Converts ZPOW gates to Rz gates minding special angle cases and including the angle factor"""
 
     # Maybe this should be a transformer or something?
     def _map_fn(
-        op: cirq.Operation, _: int
+        op: cirq.Operation,
+        _: int,
     ) -> (
         Operation
         | SingleQubitPauliStringGateOperation
@@ -163,7 +166,9 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
         )
 
     def _decompose_two_qubit_operation(
-        self, op: cirq.Operation, moment_idx: int = -1
+        self,
+        op: cirq.Operation,
+        moment_idx: int = -1,
     ) -> cirq.OP_TREE:
         if op in self:  # Had to re-add this line because CXPowGate made its way in here
             return op
@@ -173,7 +178,11 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
             return [cirq.H.on(q1), cirq.CNOT.on(q0, q1), cirq.H.on(q1)]
         mat = cirq.unitary(op)
         return cirq.two_qubit_matrix_to_cz_operations(
-            q0, q1, mat, allow_partial_czs=False, atol=self._atol
+            q0,
+            q1,
+            mat,
+            allow_partial_czs=False,
+            atol=self._atol,
         )
 
     @property

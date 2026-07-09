@@ -11,14 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from resource_estimation.analysis import Report
-import cirq
 import math
-import pytest
+
+import cirq
 import numpy as np
+import pytest
 
 import resource_estimation.analysis as analysis
 import resource_estimation.ftqc.architecture as arc
+from resource_estimation.analysis import Report
 
 
 @pytest.fixture
@@ -157,7 +158,10 @@ def test_surface_code_fidelity() -> None:
 def test_break_up_ops() -> None:
     q = cirq.LineQubit(0)
     circuit = cirq.Circuit(
-        cirq.Rz(rads=0.1).on(q), cirq.X.on(q), cirq.H.on(q), cirq.Rz(rads=0.2).on(q)
+        cirq.Rz(rads=0.1).on(q),
+        cirq.X.on(q),
+        cirq.H.on(q),
+        cirq.Rz(rads=0.2).on(q),
     )
 
     assert analysis.break_up_ops(circuit) == (2, 2)
@@ -287,14 +291,16 @@ def test_t_path() -> None:
 
     circuit1 = cirq.Circuit(cirq.H.on(qubits[0]), cirq.T.on(qubits[0]), cirq.H.on(qubits[0]))
     circuit2 = cirq.Circuit(
-        cirq.CNOT.on(qubits[0], qubits[1]), cirq.T.on(qubits[0]), cirq.CNOT.on(qubits[0], qubits[1])
+        cirq.CNOT.on(qubits[0], qubits[1]),
+        cirq.T.on(qubits[0]),
+        cirq.CNOT.on(qubits[0], qubits[1]),
     )
     path1 = analysis.get_t_path(circuit1)
     path2 = analysis.get_t_path(circuit2)
     assert len(path1) == len(path2)
 
     circuit = cirq.Circuit(
-        [cirq.H.on(qubits[0])] * 8 + [cirq.CNOT.on(qubits[0], qubits[1]), cirq.T.on(qubits[2])]
+        [cirq.H.on(qubits[0])] * 8 + [cirq.CNOT.on(qubits[0], qubits[1]), cirq.T.on(qubits[2])],
     )
     expectation = [cirq.H.on(qubits[0])] * 8 + [cirq.CNOT.on(qubits[0], qubits[1])]
     result = analysis.get_t_path(circuit)

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
+
 import abc
 import json
 from collections import Counter
@@ -23,12 +24,11 @@ import cirq
 import numpy as np
 from cirq_superstaq.ops.qubit_gates import ParallelRGate
 
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.compile_ftqc import add_moves
 from resource_estimation.ftqc.distil import distil_15_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.stim_functions import cultivate
-
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 
 NEUTRAL_GATES = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.CZ: 0.27,
@@ -306,12 +306,12 @@ class Architecture(abc.ABC):
                 cirq.CZ: cz_moments,
                 cirq.MeasurementGate: measure_moments,
                 cirq.ResetChannel: reset_moments,
-            }
+            },
         )
         se_moment_cost = Counter(
             _syndrome_extract_cost(rounds=ceil(self.d / 2), num_logical_qubits=1, d=self.d)[
                 "moment_cost"
-            ]
+            ],
         )
 
         # TODO: Perhaps cannonical cost includes SE before and afer for a total of two more units of SE
@@ -322,7 +322,7 @@ class Architecture(abc.ABC):
         se_gate_cost = Counter(
             _syndrome_extract_cost(rounds=ceil(self.d / 2), num_logical_qubits=1, d=self.d)[
                 "gate_cost"
-            ]
+            ],
         )
         Y_gate_cost = se_gate_cost.copy()
         Y_gate_cost[cirq.CZ] += self.d - 1
@@ -398,7 +398,9 @@ class Architecture(abc.ABC):
 
     def syndrome_extract_cost(self, op: cirq.Operation) -> dict:
         cost_dict = _syndrome_extract_cost(
-            rounds=self.rounds, num_logical_qubits=len(op.qubits), d=self.d
+            rounds=self.rounds,
+            num_logical_qubits=len(op.qubits),
+            d=self.d,
         )
         cost_dict["op_time"] = self.total_time(moment_cost_dict=cost_dict["moment_cost"])
         return cost_dict
@@ -492,7 +494,7 @@ class DefaultLattice(Architecture):
                 cirq.Z,
                 cirq.MeasurementGate,
                 cirq.ResetChannel,
-            ]
+            ],
         )
         self._phys_gate_times = NEUTRAL_GATES.copy()
         del self._phys_gate_times[cirq.QubitPermutationGate]  # Remove PermutationGate
@@ -523,7 +525,7 @@ class DefaultLattice(Architecture):
                 {
                     cirq.MeasurementGate: self.patch.num_physical_qubits,
                     cirq.ResetChannel: self.patch.num_physical_qubits,
-                }
+                },
             )
         )
         # One Hadamard (GR, Rz, GR), two Merges, two patch-wide Measure/Reset moments
@@ -532,7 +534,7 @@ class DefaultLattice(Architecture):
             Counter({cirq.PhasedXZGate: 1})
             + Counter(_merge_cost(d=self.d, k=2, smooth=True)["moment_cost"])
             + Counter(_merge_cost(d=self.d, k=2, smooth=True)["moment_cost"])
-            + Counter({cirq.MeasurementGate: 2, cirq.ResetChannel: 2})
+            + Counter({cirq.MeasurementGate: 2, cirq.ResetChannel: 2}),
         )
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
@@ -541,7 +543,9 @@ class DefaultLattice(Architecture):
     def _cultivate_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         # fold should always be false here
         base_cultivation_cost = cultivate(
-            dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
+            dsurface=self.d,
+            fold=self.fold_cultiv,
+            fault_distance=self.cultivation_fault_distance,
         ).copy()
 
         # No penalties to any base gates
@@ -609,7 +613,7 @@ class DefaultMovement(Architecture):
                 cirq.H,
                 cirq.MeasurementGate,
                 cirq.ResetChannel,
-            ]
+            ],
         )
         self._phys_gate_times = NEUTRAL_GATES.copy()
         self.__post_init__()
@@ -714,7 +718,9 @@ class DefaultMovement(Architecture):
     @cached_property
     def _cultivate_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         base_cultivation_cost = cultivate(
-            dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
+            dsurface=self.d,
+            fold=self.fold_cultiv,
+            fault_distance=self.cultivation_fault_distance,
         ).copy()
         # Penalize all Measure and CZ moments with QubitPermutationGates
         # Each penalized moment gets penalized with two Moves
@@ -767,10 +773,10 @@ class DefaultMovement(Architecture):
         rep_gates = estimator.serial_circuit_cost(with_moves)
         op_time = rep_time * self.distillation_repetition
         moment_cost = Counter(
-            {key: val * self.distillation_repetition for key, val in rep_moments.items()}
+            {key: val * self.distillation_repetition for key, val in rep_moments.items()},
         )
         gate_cost = Counter(
-            {key: val * self.distillation_repetition for key, val in rep_gates.items()}
+            {key: val * self.distillation_repetition for key, val in rep_gates.items()},
         )
         return {"op_time": op_time, "moment_cost": moment_cost, "gate_cost": gate_cost}
 
@@ -805,7 +811,9 @@ class DualSpeciesMovement(DefaultMovement):
     def syndrome_extract_cost(self, op: cirq.Operation) -> dict:
         # Get the syndrome extraction cost without the atom shuttling
         cost_dict = _syndrome_extract_cost(
-            rounds=self.rounds, num_logical_qubits=len(op.qubits), d=self.d
+            rounds=self.rounds,
+            num_logical_qubits=len(op.qubits),
+            d=self.d,
         )
         cost_dict["op_time"] = self.total_time(cost_dict["moment_cost"])
         return cost_dict
@@ -817,7 +825,9 @@ class DualSpeciesMovement(DefaultMovement):
         Values are multiplied by the repeat factor for the architecture instance
         """
         base_cultivation_cost = cultivate(
-            dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
+            dsurface=self.d,
+            fold=self.fold_cultiv,
+            fault_distance=self.cultivation_fault_distance,
         ).copy()
         gate_cost = base_cultivation_cost["serial"]
         moment_cost = base_cultivation_cost["parallel"]
@@ -873,7 +883,9 @@ class MeasureZonesOnly(DefaultMovement):
         Since this class is a Movement architecture, its rounds should be low, in accordance with the promise of correlated decoding.
         """
         base_cost = _syndrome_extract_cost(
-            rounds=self.rounds, num_logical_qubits=len(op.qubits), d=self.d
+            rounds=self.rounds,
+            num_logical_qubits=len(op.qubits),
+            d=self.d,
         )
         moment_cost = base_cost["moment_cost"]
         gate_cost = base_cost["gate_cost"]
@@ -885,7 +897,9 @@ class MeasureZonesOnly(DefaultMovement):
     @cached_property
     def _cultivate_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         base_cultivation_cost = cultivate(
-            dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
+            dsurface=self.d,
+            fold=self.fold_cultiv,
+            fault_distance=self.cultivation_fault_distance,
         ).copy()
         gate_cost = base_cultivation_cost["serial"]
         moment_cost = base_cultivation_cost["parallel"]
@@ -962,7 +976,7 @@ class Superconductor(DefaultLattice):
                 cirq.Z,
                 cirq.MeasurementGate,
                 cirq.ResetChannel,
-            ]
+            ],
         )
         self._phys_gate_times = SUPERCOND_GATES.copy()
         self.__post_init__()

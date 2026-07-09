@@ -48,7 +48,10 @@ class ResourceEstimator:
             raise ValueError(error_message)
 
     def serial_circuit_cost(
-        self, circuit: cirq.Circuit, verbose: int = 0, pretty: bool = False
+        self,
+        circuit: cirq.Circuit,
+        verbose: int = 0,
+        pretty: bool = False,
     ) -> dict[cirq.Gate | str, int]:
         """Counts up the total physical gates from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
@@ -71,15 +74,18 @@ class ResourceEstimator:
         """Adds up the total physical time from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
         return sum(
-            map(lambda x: self.arc.total_time(self.arc.gate_cost(x)), circuit.all_operations())
+            map(lambda x: self.arc.total_time(self.arc.gate_cost(x)), circuit.all_operations()),
         )
 
     def parallel_circuit_time(self, circuit: cirq.Circuit, verbose: int = 0) -> float:
         """Estimation of the critical path in the input circuit according to the most expensive operation per moment"""
-        qubit_times = {qubit: 0 for qubit in circuit.all_qubits()}
+        qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
-            circuit.all_operations(), disable=not verbose, total=total_ops, colour="cyan"
+            circuit.all_operations(),
+            disable=not verbose,
+            total=total_ops,
+            colour="cyan",
         ):
             big_time = max(qubit_times[q] for q in op.qubits)
             big_time += self.arc.op_time(op)
@@ -92,10 +98,10 @@ class ResourceEstimator:
         Is very slow and expensive
         """
         warnings.warn(
-            "This function can be very expensive.\nIf you just want the physical operations or circuit time, use `critical_path_ops` or `parallel_circuit_time` instead."
+            "This function can be very expensive.\nIf you just want the physical operations or circuit time, use `critical_path_ops` or `parallel_circuit_time` instead.",
         )
         qubit_paths = {qubit: [] for qubit in circuit.all_qubits()}
-        qubit_times = {qubit: 0 for qubit in circuit.all_qubits()}
+        qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
             circuit.all_operations(),
@@ -118,14 +124,20 @@ class ResourceEstimator:
         return critical_path
 
     def parallel_circuit_cost(
-        self, circuit: cirq.Circuit, verbose: int = 0, pretty: bool = False
+        self,
+        circuit: cirq.Circuit,
+        verbose: int = 0,
+        pretty: bool = False,
     ) -> dict[cirq.Gate | str, int]:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
         qubit_paths = {qubit: Counter() for qubit in circuit.all_qubits()}
-        qubit_times = {qubit: 0 for qubit in circuit.all_qubits()}
+        qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
-            circuit.all_operations(), disable=not verbose, total=total_ops, colour="cyan"
+            circuit.all_operations(),
+            disable=not verbose,
+            total=total_ops,
+            colour="cyan",
         ):
             op_qubits = op.qubits
             # This qubit currently has the longest path
@@ -243,7 +255,7 @@ class ReactionDepthEstimator:
                 "No reaction-depth factory dynamic is defined for: "
                 + ", ".join(
                     f"({gate!r}, {auto_corrected!r})" for gate, auto_corrected in unsupported_pairs
-                )
+                ),
             )
 
     def reaction_depth(self, circuit: cirq.Circuit) -> dict[cirq.Qid, ReactionDepth]:
@@ -272,7 +284,7 @@ class ReactionDepthEstimator:
             if len(new_depths) != len(input_op.qubits):
                 raise ValueError(
                     "Reaction dynamic returned "
-                    f"{len(new_depths)} updates for {len(input_op.qubits)} qubits."
+                    f"{len(new_depths)} updates for {len(input_op.qubits)} qubits.",
                 )
             for qubit, new_depth in zip(input_op.qubits, new_depths, strict=True):
                 reaction_depth[qubit].update(new_depth)
@@ -313,7 +325,7 @@ class ReactionDepthEstimator:
         for source_qubit, source_depth in old_depths.items():
             for source_basis, depth in source_depth.items():
                 source_pauli = cirq.PauliString(
-                    cirq.X(source_qubit) if source_basis == "X" else cirq.Z(source_qubit)
+                    cirq.X(source_qubit) if source_basis == "X" else cirq.Z(source_qubit),
                 )
                 try:
                     propagated_pauli = source_pauli.conjugated_by(input_op)

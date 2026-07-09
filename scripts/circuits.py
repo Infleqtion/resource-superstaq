@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import cirq
-import openfermion
 import numpy as np
+import openfermion
 from openfermion.circuits import simulate_trotter
 from openfermion.ops import FermionOperator
 
@@ -27,17 +27,25 @@ def fermi_hubbard(n, verbose=0):
     time = 1
     final_rank = 1
     hubbard_fermion_hamiltonian = openfermion.fermi_hubbard(
-        n, n, tunneling=-J, coulomb=U, periodic=False
+        n,
+        n,
+        tunneling=-J,
+        coulomb=U,
+        periodic=False,
     )
     hubbard_interaction_hamiltonian = openfermion.get_interaction_operator(
-        hubbard_fermion_hamiltonian
+        hubbard_fermion_hamiltonian,
     )
     n_qubits = openfermion.count_qubits(hubbard_interaction_hamiltonian)
     qubits = cirq.LineQubit.range(n_qubits)
     if verbose > 0:
         print("Creating circuit")
     ham_circuit = cirq.Circuit(
-        openfermion.circuits.trotter.simulate_trotter(qubits, hubbard_interaction_hamiltonian, time)
+        openfermion.circuits.trotter.simulate_trotter(
+            qubits,
+            hubbard_interaction_hamiltonian,
+            time,
+        ),
     )
     ham_circuit = cirq.drop_negligible_operations(ham_circuit)
     if verbose > 0:
@@ -82,7 +90,9 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
 
     # Map orbitals to tensor indices
     impurity_sites, bath_sites, all_sites, spins, orbital_map = map_orbitals(
-        n_imp=n_imp, n_b=n_bath, method="paired"
+        n_imp=n_imp,
+        n_b=n_bath,
+        method="paired",
     )
 
     # Diagonal and degenerate impurity energies. For 5-site case, e.g., SrMnO3, will need to include CF splitting
@@ -137,7 +147,7 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
                 index_4 = orbital_map[f"I{jj}_" + spin]
                 h_sf += FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex)
                 h_sf += openfermion.hermitian_conjugated(
-                    FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex)
+                    FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex),
                 )
 
     # Pair-hopping term
@@ -160,7 +170,7 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
                 index_4 = orbital_map[f"I{jj}_" + spin]
                 h_ph += FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex)
                 h_ph += openfermion.hermitian_conjugated(
-                    FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex)
+                    FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex),
                 )
 
     # Diagonal bath
@@ -180,7 +190,7 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
                 index_2 = orbital_map[f"B{jj}_" + spin]
                 h_hyb += FermionOperator(f"{index_1}^ {index_2}", v[ii, jj])
                 h_hyb += openfermion.hermitian_conjugated(
-                    FermionOperator(f"{index_1}^ {index_2}", v[ii, jj])
+                    FermionOperator(f"{index_1}^ {index_2}", v[ii, jj]),
                 )
 
     full_hamiltonian = h_0 + h_u + h_u2j + h_u3j + h_ph + h_b0 + h_hyb  # Excludes spin-flip
@@ -198,7 +208,7 @@ def kanamori(n_bath, verbose=0):
     qubits = cirq.LineQubit.range(n_qubits)
 
     circuit = cirq.Circuit(
-        simulate_trotter(qubits=qubits, hamiltonian=kanamori_interaction_hamiltonian, time=1)
+        simulate_trotter(qubits=qubits, hamiltonian=kanamori_interaction_hamiltonian, time=1),
     )
 
     circuit = cirq.drop_negligible_operations(circuit)

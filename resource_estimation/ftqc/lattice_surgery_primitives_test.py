@@ -225,14 +225,16 @@ def test_serialization() -> None:
             lsp.Move(zone="interact").on_each(qubit_a, qubit_b),
             lsp.Move(zone=None).on(qubit_a, qubit_b),
             lsp.Move(zone="measure").on(qubit_a),
-        ]
+        ],
     )
     json_str = cirq.to_json(circuit)
     new_circuit = cirq.read_json(
-        json_text=json_str, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
+        json_text=json_str,
+        resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS],
     )
     cirq.testing.assert_json_roundtrip_works(
-        circuit, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
+        circuit,
+        resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS],
     )
 
     circuit = cirq.Circuit(
@@ -245,16 +247,18 @@ def test_serialization() -> None:
             lsp.Move(zone="interact").on_each(qubit_a, qubit_b),
             lsp.Move(zone=None).on(qubit_a, qubit_b),
             lsp.Move(zone="measure").on(qubit_a),
-        ]
+        ],
     )
     json_str = cirq.to_json(circuit)
     new_circuit = cirq.read_json(
-        json_text=json_str, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
+        json_text=json_str,
+        resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS],
     )
     print(new_circuit)
     print(new_circuit == circuit)
     cirq.testing.assert_json_roundtrip_works(
-        circuit, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
+        circuit,
+        resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS],
     )
 
 

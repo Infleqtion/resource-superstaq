@@ -26,7 +26,9 @@ from .ftqc.layout import Layout
 
 
 def visualize_layout_moment(
-    G: nx.Graph, moment_paths: list[list[str]], column_layout: Layout
+    G: nx.Graph,
+    moment_paths: list[list[str]],
+    column_layout: Layout,
 ) -> None:  # pragma: no cover
     """
     This probably does not work anymore without a significant amount of changes.
@@ -168,13 +170,19 @@ def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout) -> None: 
 
     fig, ax = plt.subplots()
     anim = animation.FuncAnimation(
-        fig, animate, frames=len(ops), interval=1000, blit=False, repeat=False
+        fig,
+        animate,
+        frames=len(ops),
+        interval=1000,
+        blit=False,
+        repeat=False,
     )
     plt.show()
 
 
 def display_lattice_moments(
-    ops: list[list[cirq.Operation]], lay: Layout
+    ops: list[list[cirq.Operation]],
+    lay: Layout,
 ) -> None:  # pragma: no cover
     """
     Little animation for tracking factory usage in the (slow) lattice surgery layout. The new fast
@@ -227,13 +235,20 @@ def display_lattice_moments(
 
     fig, ax = plt.subplots()
     anim = animation.FuncAnimation(
-        fig, animate, frames=len(ops), interval=1000, blit=False, repeat=False
+        fig,
+        animate,
+        frames=len(ops),
+        interval=1000,
+        blit=False,
+        repeat=False,
     )
     plt.show()
 
 
 def animate_layout_moment(
-    G: nx.Graph, moment_paths: list[list[str]], column_layout: Layout
+    G: nx.Graph,
+    moment_paths: list[list[str]],
+    column_layout: Layout,
 ) -> None:  # pragma: no cover
     """
     Not sure if this visualization works anymore, hard to get the moment_paths

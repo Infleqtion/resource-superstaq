@@ -70,7 +70,7 @@ def test_end2end(with_barriers) -> None:
             cirq.S.on(q1),
             cirq.I.on_each(q0, q1),
             cirq.MeasurementGate(2, key="end").on(q0, q1),
-        ]
+        ],
     )
     for arc in [
         arch.DefaultLattice(idling=False, post_op_correction=True),
@@ -158,7 +158,9 @@ def test_replace_cirq_op_movement(bell_circuit) -> None:
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
     returned_ops = comp.replace_cirq_op(
-        op=op_to_replace, layout=movement_layout, transversal_cnot=True
+        op=op_to_replace,
+        layout=movement_layout,
+        transversal_cnot=True,
     )
     expected_types = [
         lsp.Cultivate,
@@ -259,7 +261,7 @@ def test_other_passes(random_circ) -> None:
         Counter(
             str(op.gate) if op not in cirq.GateFamily(cirq.MeasurementGate) else "Measure"
             for op in compiled_circuit.all_operations()
-        )
+        ),
     )
     arc = arch.DefaultLattice(idling=False, post_op_correction=True)
     compiled_circuit = comp.ft_compile(lay, arc)
@@ -267,7 +269,7 @@ def test_other_passes(random_circ) -> None:
         Counter(
             str(op.gate) if op not in cirq.GateFamily(cirq.MeasurementGate) else "Measure"
             for op in compiled_circuit.all_operations()
-        )
+        ),
     )
     arc = arch.DefaultLattice(idling=False, post_op_correction=False)
     compiled_circuit = comp.ft_compile(lay, arc)
@@ -275,7 +277,7 @@ def test_other_passes(random_circ) -> None:
         Counter(
             str(op.gate) if op not in cirq.GateFamily(cirq.MeasurementGate) else "Measure"
             for op in compiled_circuit.all_operations()
-        )
+        ),
     )
     assert (
         idling_corrected_resources["MERGE"]
@@ -345,7 +347,7 @@ def test_bell_movement_FF(bell_circuit) -> None:
                 (0, 0): ───SE(1)───H───MOVE───@───#2─────
                                        │      │   │
                 (0, 1): ───SE(1)───────#2─────X───MOVE───
-            """
+            """,
         ),
     )
 
@@ -368,7 +370,7 @@ def test_bell_movement_FT(bell_circuit) -> None:
                 (0, 0): ───SE(1)───H───SE(1)───MOVE───@───#2─────SE(1)───
                                                │      │   │
                 (0, 1): ───SE(1)───────────────#2─────X───MOVE───SE(1)───
-            """
+            """,
         ),
     )
 
@@ -383,7 +385,9 @@ def test_bell_movement_TF(bell_circuit) -> None:
         post_op_correction=False,
     )
     compiled_bell_circuit = comp.ft_compile(
-        layout=movement_layout, arc=movement_architecture, with_barriers=False
+        layout=movement_layout,
+        arc=movement_architecture,
+        with_barriers=False,
     )
     # yes idling, no post-op correction
     cirq.testing.assert_has_diagram(
@@ -393,7 +397,7 @@ def test_bell_movement_TF(bell_circuit) -> None:
                 (0, 0): ───SE(1)───H───────MOVE───@───#2─────
                                            │      │   │
                 (0, 1): ───SE(1)───SE(1)───#2─────X───MOVE───
-            """
+            """,
         ),
     )
 
@@ -417,7 +421,7 @@ def test_bell_movement_TT(bell_circuit) -> None:
                 (0, 0): ───SE(1)───H───────SE(1)───MOVE───@───#2─────SE(1)───
                                                    │      │   │
                 (0, 1): ───SE(1)───SE(1)───SE(1)───#2─────X───MOVE───SE(1)───
-            """
+            """,
         ),
     )
 
@@ -444,7 +448,7 @@ def test_bell_lattice_FF(bell_circuit) -> None:
                 (0, 3): ───────────────#2──────#2──────MERGE───SPLIT───
                                                        │       │
                 (0, 4): ───SE(1)───────────────────────#2──────#2──────
-            """
+            """,
         ),
     )
 
@@ -471,7 +475,7 @@ def test_bell_lattice_FT(bell_circuit) -> None:
                 (0, 3): ───────────────#2──────#2──────MERGE───SPLIT───
                                                        │       │
                 (0, 4): ───SE(1)───────────────────────#2──────#2──────
-            """
+            """,
         ),
     )
 
@@ -499,7 +503,7 @@ def test_bell_lattice_TF(bell_circuit) -> None:
                 (0, 3): ───────────────────#2──────#2──────MERGE───SPLIT───
                                                            │       │
                 (0, 4): ───SE(1)───SE(1)───SE(1)───────────#2──────#2──────
-            """
+            """,
         ),
     )
 
@@ -526,7 +530,7 @@ def test_bell_lattice_TT(bell_circuit) -> None:
                 (0, 3): ───────────────────#2──────#2──────MERGE───SPLIT───
                                                            │       │
                 (0, 4): ───SE(1)───SE(1)───SE(1)───────────#2──────#2──────
-            """
+            """,
         ),
     )
 
@@ -554,7 +558,7 @@ def test_t_movement_FF(t_circuit) -> None:
             (1, 0): ───CULT(0.785)─────────────────────────┼──────┼───┼──────────────────────────────────────
                                                            │      │   │
             (1, 1): ───CULT(0.785)─────────────────────────MOVE───@───#2─────MOVE_MZ───M('')───MOVE_MZ───R───
-            """
+            """,
         ),
     )
 
@@ -582,7 +586,7 @@ def test_t_movement_FT(t_circuit) -> None:
             (1, 0): ───CULT(0.785)─────────────────────────────────────────┼──────┼───┼──────────────────────────────────────────────────────
                                                                            │      │   │
             (1, 1): ───CULT(0.785)─────────────────────────────────────────MOVE───@───#2─────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
-            """
+            """,
         ),
     )
 
@@ -612,7 +616,7 @@ def test_t_movement_TF(t_circuit) -> None:
                                                                      │       │       │
             (1, 1): ───CULT(0.785)───SE(1)───────────────────────────MOVE────@───────#2──────MOVE_MZ───M('')───MOVE_MZ───R───
 
-            """
+            """,
         ),
     )
 
@@ -644,7 +648,7 @@ def test_t_movement_TT(t_circuit) -> None:
                                                                                       │              │             │
             (1, 1): ───CULT(0.785)───SE(1)───SE(1)───SE(1)────────────────────────────MOVE───────────@─────────────#2──────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
                                                                                      └──────────┘   └──────────┘
-            """
+            """,
         ),
     )
 
@@ -683,7 +687,7 @@ def test_t_lattice_FF(t_circuit) -> None:
                 (1, 5): ─────────────────#2──────#2──────────────────────────────MERGE───SPLIT───────────────────────────────────────
                                          │       │
                 (1, 6): ───CULT(0.785)───MERGE───SPLIT───M('')───R───────────────────────────────────────────────────────────────────
-            """
+            """,
         ),
     )
 
@@ -722,7 +726,7 @@ def test_t_lattice_FT(t_circuit) -> None:
                 (1, 5): ─────────────────#2──────#2──────────────────────────────MERGE───SPLIT───────────────────────────────────────
                                          │       │
                 (1, 6): ───CULT(0.785)───MERGE───SPLIT───M('')───SE(1)───R───────────────────────────────────────────────────────────
-            """
+            """,
         ),
     )
 
@@ -921,7 +925,9 @@ def test_replace_cirq_op_distil(bell_circuit) -> None:
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
     returned_ops = comp.replace_cirq_op(
-        op=op_to_replace, layout=distillery_layout, transversal_cnot=True
+        op=op_to_replace,
+        layout=distillery_layout,
+        transversal_cnot=True,
     )
     expected_types = [
         lsp.Distil,

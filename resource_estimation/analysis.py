@@ -17,21 +17,22 @@ try:
     from typing import Self
 except ImportError:  # pragma: no cover
     from typing_extensions import Self
-from collections.abc import Callable
 import json
 import shutil
-from dataclasses import dataclass, asdict, field
-from pathlib import Path
-from functools import partial
-from tqdm import tqdm
-import resource_estimation.ftqc.architecture as arch
-from resource_estimation.visualizations import C, boxed_header
-import cirq
+import warnings
 from collections import Counter
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
+from functools import partial
+from pathlib import Path
+
+import cirq
 import numpy as np
 import numpy.typing as npt
-import warnings
+from tqdm import tqdm
 
+import resource_estimation.ftqc.architecture as arch
+from resource_estimation.visualizations import C, boxed_header
 
 STR2ARCH: dict[str, Callable[..., arch.Architecture]] = {
     "ssm": partial(arch.DefaultMovement, idling=False, post_op_correction=True),
@@ -48,7 +49,8 @@ except OSError:  # pragma: no cover
 
 
 def get_eps(
-    cliff_rz_circuit: cirq.Circuit, approximation_fidelity: float
+    cliff_rz_circuit: cirq.Circuit,
+    approximation_fidelity: float,
 ) -> tuple[float, int, int]:
     """
     Gets the per-angle rotation approximation parameter epsilon such that the
@@ -94,7 +96,7 @@ def get_t_path(circuit: cirq.Circuit, verbose: bool = True) -> list[cirq.Operati
     qubit_paths: dict[cirq.Qid, list[cirq.Operation]] = {
         qubit: [] for qubit in circuit.all_qubits()
     }
-    qubit_times: dict[cirq.Qid, float] = {qubit: 0 for qubit in circuit.all_qubits()}
+    qubit_times: dict[cirq.Qid, float] = dict.fromkeys(circuit.all_qubits(), 0)
     for op in tqdm(list(circuit.all_operations()), disable=not verbose, colour="cyan"):
         op_qubits = op.qubits
         big_qubit = max(op_qubits, key=lambda qubit: qubit_times[qubit])
@@ -161,7 +163,7 @@ def get_important_information(
         cultivation_repetition = strong_cultivation_repetition
         cultivation_fault_distance = 5
         warnings.warn(
-            f"Cultivation Error Options of 1e-6 and 1e-9 are not sufficient for desired program fidelity of {pfid}.\nUsing 1e-9 numbers."
+            f"Cultivation Error Options of 1e-6 and 1e-9 are not sufficient for desired program fidelity of {pfid}.\nUsing 1e-9 numbers.",
         )
         over_budget = True
     if over_budget:
@@ -344,7 +346,8 @@ class Report:
                 fold_cultiv=self.fold_cultiv,
             )
         return STR2ARCH[self.arch_name](
-            d=self.distance, cultivation_repetition=self.cultivation_repetition
+            d=self.distance,
+            cultivation_repetition=self.cultivation_repetition,
         )
 
     def save(self, savedir: Path = Path("")) -> Path:

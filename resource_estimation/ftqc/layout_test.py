@@ -159,7 +159,8 @@ def test_sandwich(circuit5: cirq.Circuit) -> None:
     assert sandwich.route_cnot(ctrl=ctrl, trgt=trgt) == expected_path
 
     sandwich.route_cnot(
-        ctrl=cirq.GridQubit(2, 1), trgt=cirq.GridQubit(2, 2)
+        ctrl=cirq.GridQubit(2, 1),
+        trgt=cirq.GridQubit(2, 2),
     )  # Hopefully this covers 116?
 
 
@@ -261,7 +262,7 @@ def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
             column.layout_graph.nodes[node]["used"]
             for node in column.layout_graph.nodes
             if column.layout_graph.nodes[node]["patch_type"] == "factory"
-        ]
+        ],
     )
     # Reloading S should reload all S factories
     column.reload_factories("s")
@@ -271,7 +272,7 @@ def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
             for node in column.layout_graph.nodes
             if column.layout_graph.nodes[node]["patch_type"] == "factory"
             and column.layout_graph.nodes[node]["ftype"] == "s"
-        ]
+        ],
     )
     # Reloading T should reload all T factories
     column.reload_factories("t")
@@ -281,7 +282,7 @@ def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
             for node in column.layout_graph.nodes
             if column.layout_graph.nodes[node]["patch_type"] == "factory"
             and column.layout_graph.nodes[node]["ftype"] == "t"
-        ]
+        ],
     )
     # Resetting should unload all factories
     column.reset_graph()
@@ -290,7 +291,7 @@ def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
             column.layout_graph.nodes[node]["used"]
             for node in column.layout_graph.nodes
             if column.layout_graph.nodes[node]["patch_type"] == "factory"
-        ]
+        ],
     )
 
 
@@ -323,6 +324,7 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
 
     # Check that nearest T factory is as expected and changes when used
     assert distillery.nearest_factory(qubit=cirq.GridQubit(0, 2), ftype="t") == cirq.GridQubit(
-        0, 5
+        0,
+        5,
     )  # Removes (0, 5) from options
     assert distillery.nearest_factory(qubit=cirq.GridQubit(2, 2), ftype="t") == cirq.GridQubit(3, 6)

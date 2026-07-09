@@ -11,30 +11,41 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from stim import Circuit
-from cirq.circuits.circuit import Circuit
 import cirq
 import pytest
-from cultiv import make_end2end_cultivation_circuit, make_cirq_circuits
+import stim
+from cirq.circuits.circuit import Circuit
+from cultiv import make_cirq_circuits, make_end2end_cultivation_circuit
+from stim import Circuit
+
 from resource_estimation.ftqc.stim_functions import (
     count_stim_resources,
     cultivate,
     load_saved_cost,
 )
-import stim
 
 
 @pytest.fixture
 def gidney3() -> Circuit:
     return make_end2end_cultivation_circuit(
-        dsurface=7, dcolor=3, basis="Y", r_growing=1, r_end=7, inject_style="unitary"
+        dsurface=7,
+        dcolor=3,
+        basis="Y",
+        r_growing=1,
+        r_end=7,
+        inject_style="unitary",
     )
 
 
 @pytest.fixture
 def gidney5() -> Circuit:
     return make_end2end_cultivation_circuit(
-        dsurface=11, dcolor=5, basis="Y", r_growing=1, r_end=11, inject_style="unitary"
+        dsurface=11,
+        dcolor=5,
+        basis="Y",
+        r_growing=1,
+        r_end=11,
+        inject_style="unitary",
     )
 
 
@@ -71,10 +82,16 @@ def test_saved_gidney(gidney3, gidney5, fault_distance) -> None:
     example_gidney = gidney3 if fault_distance == 3 else gidney5
     dsurface = 2 * fault_distance + 1
     saved_cost = load_saved_cost(
-        dsurface=dsurface, op_key="cultivate", style="gidney", fault_distance=fault_distance
+        dsurface=dsurface,
+        op_key="cultivate",
+        style="gidney",
+        fault_distance=fault_distance,
     )
     cultivate_cost = cultivate(
-        dsurface=dsurface, fold=False, for_test=True, fault_distance=fault_distance
+        dsurface=dsurface,
+        fold=False,
+        for_test=True,
+        fault_distance=fault_distance,
     )
     counted_cost = count_stim_resources(stim_circuit=example_gidney)
     assert saved_cost == counted_cost
@@ -91,7 +108,10 @@ def test_saved_yale(yale3, yale5, fault_distance) -> None:
         fault_distance=fault_distance,
     )
     cultivate_cost = cultivate(
-        dsurface=2 * fault_distance + 1, fold=True, for_test=True, fault_distance=fault_distance
+        dsurface=2 * fault_distance + 1,
+        fold=True,
+        for_test=True,
+        fault_distance=fault_distance,
     )
     assert saved_cost == cultivate_cost
 

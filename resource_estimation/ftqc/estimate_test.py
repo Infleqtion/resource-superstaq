@@ -31,7 +31,7 @@ def lattice_estimator() -> est.ResourceEstimator:
             post_op_correction=1,
             cultivation_repetition=1,
             syndrome_rounds=None,
-        )
+        ),
     )
 
 
@@ -45,7 +45,7 @@ def movement_estimator() -> est.ResourceEstimator:
             cultivation_repetition=1,
             distillation_repetition=1,
             syndrome_rounds=None,
-        )
+        ),
     )
 
 
@@ -60,7 +60,7 @@ def movement_estimator() -> est.ResourceEstimator:
                 cultivation_repetition=1,
                 distillation_repetition=1,
                 syndrome_rounds=None,
-            )
+            ),
         ),
         est.ResourceEstimator(
             arc=arch.DefaultLattice(
@@ -69,7 +69,7 @@ def movement_estimator() -> est.ResourceEstimator:
                 post_op_correction=1,
                 cultivation_repetition=1,
                 syndrome_rounds=None,
-            )
+            ),
         ),
     ],
 )
@@ -134,7 +134,7 @@ def test_parallel_circuit_cost(lattice_estimator, movement_estimator) -> None:
     )
     estimated_moment_cost = lattice_estimator.parallel_circuit_cost(circuit=circuit)
     expected_moment_cost = lattice_estimator.arc.moment_cost(
-        lsp.SyndromeExtract(1, lattice_estimator.arc.d).on(qubit_a)
+        lsp.SyndromeExtract(1, lattice_estimator.arc.d).on(qubit_a),
     )
     assert estimated_moment_cost == expected_moment_cost
 
@@ -155,7 +155,7 @@ def test_self_returns(movement_estimator, lattice_estimator) -> None:
     # TODO: There are no self-returns anymore so this function is not well named
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit(
-        [lsp.ErrorCorrect(2).on(qubit_a, qubit_b), cirq.ResetChannel().on(qubit_a)]
+        [lsp.ErrorCorrect(2).on(qubit_a, qubit_b), cirq.ResetChannel().on(qubit_a)],
     )
     cost = movement_estimator.serial_circuit_cost(circuit=circuit, pretty=True)
     assert cost == {
@@ -166,7 +166,7 @@ def test_self_returns(movement_estimator, lattice_estimator) -> None:
         [
             lsp.ErrorCorrect(1).on_each(qubit_a, qubit_b),
             cirq.ResetChannel().on_each(qubit_a, qubit_b),
-        ]
+        ],
     )
     cost = lattice_estimator.serial_circuit_cost(circuit=circuit, pretty=True)
     assert cost == {
@@ -187,7 +187,7 @@ def test_error_handling(lattice_estimator, movement_estimator) -> None:
             cirq.S.on(qubit_a),
             cirq.Rx(rads=1 / 3).on(qubit_b),
             cirq.CNOT.on(qubit_a, qubit_b),
-        ]
+        ],
     )
     with pytest.raises(ValueError, match="incompatible"):
         _ = movement_estimator.serial_circuit_cost(bad_circuit)
@@ -225,7 +225,7 @@ def test_critical_path() -> None:
             cirq.S.on(qb),
             cirq.H.on(qb),
             cirq.H.on(qb),
-        ]
+        ],
     )
     with pytest.warns(UserWarning, match="very expensive"):
         cp = estim.critical_path(circuit)
@@ -243,7 +243,7 @@ def test_critical_path() -> None:
     ]
     assert cp == expected
     assert estim.parallel_circuit_time(circuit=circuit) == estim.parallel_circuit_time(
-        circuit=cirq.Circuit(expected)
+        circuit=cirq.Circuit(expected),
     )
 
 
@@ -252,7 +252,7 @@ def test_physical_qubit_count(lattice_estimator) -> None:
         [
             cirq.I.on(cirq.GridQubit(0, 0)),
             lsp.SyndromeExtract(1, rounds=7).on(cirq.GridQubit(1, 0)),
-        ]
+        ],
     )
     expected_num_physical_qubits = 98  # 2 * (2 * d**2 - 1)
     num_physical_qubits = lattice_estimator.physical_qubits(test_circuit)
@@ -264,7 +264,7 @@ def test_reaction_depth_uses_default_auto_corrected_t_factory() -> None:
     reaction_depth_estimator = est.ReactionDepthEstimator()
 
     assert reaction_depth_estimator.reaction_depth(cirq.Circuit(cirq.T(qubit))) == {
-        qubit: {"X": 0, "Z": 1}
+        qubit: {"X": 0, "Z": 1},
     }
 
 
@@ -273,7 +273,7 @@ def test_reaction_depth_uses_default_s_factory() -> None:
     reaction_depth_estimator = est.ReactionDepthEstimator()
 
     assert reaction_depth_estimator.reaction_depth(cirq.Circuit(cirq.S(qubit))) == {
-        qubit: {"X": 0, "Z": 1}
+        qubit: {"X": 0, "Z": 1},
     }
 
 
@@ -284,7 +284,7 @@ def test_reaction_depth_uses_explicit_non_auto_corrected_t_factory() -> None:
     )
 
     assert reaction_depth_estimator.reaction_depth(cirq.Circuit(cirq.T(qubit))) == {
-        qubit: {"X": 1, "Z": 1}
+        qubit: {"X": 1, "Z": 1},
     }
 
 
@@ -324,7 +324,7 @@ def test_reaction_depth_propagates_kept_primitive_cliffords() -> None:
     reaction_depth_estimator = est.ReactionDepthEstimator()
 
     assert reaction_depth_estimator.reaction_depth(cirq.Circuit(cirq.T(qubit), cirq.H(qubit))) == {
-        qubit: {"X": 1, "Z": 0}
+        qubit: {"X": 1, "Z": 0},
     }
 
 
@@ -333,7 +333,7 @@ def test_reaction_depth_splits_y_from_s_clifford() -> None:
     reaction_depth_estimator = est.ReactionDepthEstimator(factories={cirq.T: True})
 
     assert reaction_depth_estimator.reaction_depth(
-        cirq.Circuit(cirq.T(qubit), cirq.H(qubit), cirq.S(qubit))
+        cirq.Circuit(cirq.T(qubit), cirq.H(qubit), cirq.S(qubit)),
     ) == {qubit: {"X": 1, "Z": 1}}
 
 
@@ -347,7 +347,7 @@ def test_reaction_depth_propagates_cnot_clifford_products() -> None:
             cirq.T(target),
             cirq.H(control),
             cirq.CNOT(control, target),
-        )
+        ),
     ) == {
         control: {"X": 1, "Z": 1},
         target: {"X": 1, "Z": 1},
