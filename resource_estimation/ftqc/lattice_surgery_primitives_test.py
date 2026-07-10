@@ -170,6 +170,55 @@ def test_code_patch_from_qldpc_factory() -> None:
     assert patch.patch_label == "memory"
 
 
+def test_farm_empty() -> None:
+    farm = lsp.Farm()
+
+    assert farm.code_patches == []
+    assert farm.num_physical_qubits == 0
+    assert farm.num_logical_qubits == 0
+    assert farm.num_code_patches == 0
+
+
+def test_farm_sums_cultivation_patches() -> None:
+    patch_a = lsp.CodePatch(patch_label="cultivate")
+    patch_b = lsp.CodePatch("custom", d=3, n=15, k=2, patch_label="cultivate")
+
+    farm = lsp.Farm([patch_a])
+    farm.add_patch(patch_b)
+
+    assert farm.code_patches == [patch_a, patch_b]
+    assert farm.num_physical_qubits == 64
+    assert farm.num_logical_qubits == 3
+    assert farm.num_code_patches == 2
+
+
+def test_farm_initializes_default_cultivation_patches() -> None:
+    farm = lsp.Farm(3)
+
+    assert farm.num_physical_qubits == 147
+    assert farm.num_logical_qubits == 3
+    assert farm.num_code_patches == 3
+    assert [patch.code_type for patch in farm.code_patches] == ["surface"] * 3
+    assert [patch.patch_label for patch in farm.code_patches] == ["cultivate"] * 3
+    assert [patch.code_params for patch in farm.code_patches] == [(49, 1, 7)] * 3
+
+
+def test_farm_rejects_non_cultivation_patches() -> None:
+    patch = lsp.CodePatch()
+
+    with pytest.raises(ValueError, match="patch_label='cultivate'"):
+        lsp.Farm([patch])
+
+    farm = lsp.Farm()
+    with pytest.raises(ValueError, match="patch_label='cultivate'"):
+        farm.add_patch(patch)
+
+
+def test_farm_rejects_negative_patch_count() -> None:
+    with pytest.raises(ValueError, match="patch count must be nonnegative"):
+        lsp.Farm(-1)
+
+
 def test_rotated_code_patch() -> None:
     with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
         lsp.RotatedCodePatch(4)

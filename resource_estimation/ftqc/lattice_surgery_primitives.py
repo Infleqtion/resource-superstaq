@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
 from functools import cached_property
 from typing import Any, Literal, Optional, cast
 
@@ -694,6 +694,40 @@ class CodePatch:
             f"patch_label={self.patch_label!r}",
         ]
         return f"lsp.CodePatch({', '.join(args)})"
+
+
+class Farm:
+    """Container for cultivation code patches."""
+
+    def __init__(self, code_patches: int | Iterable[CodePatch] = ()) -> None:
+        self.code_patches: list[CodePatch] = []
+        if isinstance(code_patches, int):
+            if code_patches < 0:
+                raise ValueError("Farm patch count must be nonnegative.")
+            for _ in range(code_patches):
+                self.add_patch(CodePatch(code_type="surface", patch_label="cultivate"))
+            return
+        for patch in code_patches:
+            self.add_patch(patch)
+
+    @property
+    def num_physical_qubits(self) -> int:
+        return sum(patch.n for patch in self.code_patches)
+
+    @property
+    def num_logical_qubits(self) -> int:
+        return sum(patch.k for patch in self.code_patches)
+
+    @property
+    def num_code_patches(self) -> int:
+        return len(self.code_patches)
+
+    def add_patch(self, patch: CodePatch) -> None:
+        if patch.patch_label != "cultivate":
+            raise ValueError(
+                "Farm can only contain CodePatch objects with patch_label='cultivate'."
+            )
+        self.code_patches.append(patch)
 
 
 class RotatedCodePatch:
