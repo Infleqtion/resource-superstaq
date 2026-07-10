@@ -136,6 +136,7 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     elif distil_ccz:
         ftype = "ccz"
         prep_gate = lsp.Distil("CCZ")
+        # Since CNOT is the logical primitve, we use conjugation here
         correction = [
             *cirq.H.on_each(*op.qubits),
             *cirq.X.on_each(*op.qubits),
