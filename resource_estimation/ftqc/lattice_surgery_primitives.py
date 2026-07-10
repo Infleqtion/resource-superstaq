@@ -905,6 +905,85 @@ class Vault:
         self.code_patches.append(patch)
 
 
+class Bank:
+    """Container for at most one vault of each resource-state type."""
+
+    def __init__(
+        self,
+        *,
+        t_cultivated: bool = False,
+        t_distilled: bool = False,
+        ccz_distilled: bool = False,
+    ) -> None:
+        self.t_cultivated_vault: Vault | None = None
+        self.t_distilled_vault: Vault | None = None
+        self.ccz_distilled_vault: Vault | None = None
+
+        if t_cultivated:
+            self.add_t_cultivated_vault(Vault("T:cultivated", 1))
+        if t_distilled:
+            self.add_t_distilled_vault(Vault("T:distilled", 1))
+        if ccz_distilled:
+            self.add_ccz_distilled_vault(Vault("CCZ:distilled", 1))
+
+    @property
+    def has_t_cultivated_vault(self) -> bool:
+        return self.t_cultivated_vault is not None
+
+    @property
+    def has_t_distilled_vault(self) -> bool:
+        return self.t_distilled_vault is not None
+
+    @property
+    def has_ccz_distilled_vault(self) -> bool:
+        return self.ccz_distilled_vault is not None
+
+    @property
+    def num_vaults(self) -> int:
+        return len(self._vaults())
+
+    @property
+    def num_code_patches(self) -> int:
+        return sum(vault.num_code_patches for vault in self._vaults())
+
+    @property
+    def num_physical_qubits(self) -> int:
+        return sum(vault.num_physical_qubits for vault in self._vaults())
+
+    @property
+    def num_logical_qubits(self) -> int:
+        return sum(vault.num_logical_qubits for vault in self._vaults())
+
+    def add_t_cultivated_vault(self, vault: Vault) -> None:
+        self._add_vault(vault, "T:cultivated", "t_cultivated_vault")
+
+    def add_t_distilled_vault(self, vault: Vault) -> None:
+        self._add_vault(vault, "T:distilled", "t_distilled_vault")
+
+    def add_ccz_distilled_vault(self, vault: Vault) -> None:
+        self._add_vault(vault, "CCZ:distilled", "ccz_distilled_vault")
+
+    def _vaults(self) -> tuple[Vault, ...]:
+        return tuple(
+            vault
+            for vault in (
+                self.t_cultivated_vault,
+                self.t_distilled_vault,
+                self.ccz_distilled_vault,
+            )
+            if vault is not None
+        )
+
+    def _add_vault(self, vault: Vault, label: VaultLabel, attribute: str) -> None:
+        if not isinstance(vault, Vault):
+            raise TypeError("Bank can only contain Vault objects.")
+        if vault.label != label:
+            raise ValueError(f"Expected a {label} Vault, not {vault.label!r}.")
+        if getattr(self, attribute) is not None:
+            raise ValueError(f"Bank already has a {label} Vault.")
+        setattr(self, attribute, vault)
+
+
 class RotatedCodePatch:
     """Extremely rough implementation of the rotated surface code.
     Assumed to be square patches.

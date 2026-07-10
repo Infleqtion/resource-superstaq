@@ -412,6 +412,94 @@ def test_vault_rejects_negative_patch_count() -> None:
         lsp.Vault("T:cultivated", -1)
 
 
+def test_bank_empty() -> None:
+    bank = lsp.Bank()
+
+    assert bank.t_cultivated_vault is None
+    assert bank.t_distilled_vault is None
+    assert bank.ccz_distilled_vault is None
+    assert not bank.has_t_cultivated_vault
+    assert not bank.has_t_distilled_vault
+    assert not bank.has_ccz_distilled_vault
+    assert bank.num_vaults == 0
+    assert bank.num_code_patches == 0
+    assert bank.num_physical_qubits == 0
+    assert bank.num_logical_qubits == 0
+
+
+def test_bank_initializes_default_vaults() -> None:
+    pytest.importorskip("qldpc")
+
+    with pytest.warns(RuntimeWarning, match="Computing qLDPC code distance"):
+        bank = lsp.Bank(t_cultivated=True, t_distilled=True, ccz_distilled=True)
+
+    assert bank.has_t_cultivated_vault
+    assert bank.has_t_distilled_vault
+    assert bank.has_ccz_distilled_vault
+    assert bank.t_cultivated_vault is not None
+    assert bank.t_distilled_vault is not None
+    assert bank.ccz_distilled_vault is not None
+    assert bank.t_cultivated_vault.label == "T:cultivated"
+    assert bank.t_distilled_vault.label == "T:distilled"
+    assert bank.ccz_distilled_vault.label == "CCZ:distilled"
+    assert bank.num_vaults == 3
+    assert bank.num_code_patches == 3
+    assert bank.num_physical_qubits == 147
+    assert bank.num_logical_qubits == 27
+
+
+def test_bank_adds_vaults() -> None:
+    patch_a = lsp.CodePatch("custom", d=3, n=15, k=2, patch_label="memory")
+    patch_b = lsp.CodePatch("custom", d=5, n=25, k=3, patch_label="memory")
+    patch_c = lsp.CodePatch("custom", d=7, n=35, k=4, patch_label="memory")
+    t_cultivated_vault = lsp.Vault("T:cultivated", [patch_a])
+    t_distilled_vault = lsp.Vault("T:distilled", [patch_b])
+    ccz_distilled_vault = lsp.Vault("CCZ:distilled", [patch_c])
+    bank = lsp.Bank()
+
+    bank.add_t_cultivated_vault(t_cultivated_vault)
+    bank.add_t_distilled_vault(t_distilled_vault)
+    bank.add_ccz_distilled_vault(ccz_distilled_vault)
+
+    assert bank.t_cultivated_vault == t_cultivated_vault
+    assert bank.t_distilled_vault == t_distilled_vault
+    assert bank.ccz_distilled_vault == ccz_distilled_vault
+    assert bank.num_vaults == 3
+    assert bank.num_code_patches == 3
+    assert bank.num_physical_qubits == 75
+    assert bank.num_logical_qubits == 9
+
+
+def test_bank_rejects_non_vault_objects() -> None:
+    bank = lsp.Bank()
+
+    with pytest.raises(TypeError, match="Bank can only contain Vault objects"):
+        bank.add_t_cultivated_vault(object())  # type: ignore[arg-type]
+
+
+def test_bank_rejects_label_mismatches() -> None:
+    patch = lsp.CodePatch("custom", d=3, n=15, k=2, patch_label="memory")
+    bank = lsp.Bank()
+
+    with pytest.raises(ValueError, match="Expected a T:cultivated Vault"):
+        bank.add_t_cultivated_vault(lsp.Vault("T:distilled", [patch]))
+    with pytest.raises(ValueError, match="Expected a T:distilled Vault"):
+        bank.add_t_distilled_vault(lsp.Vault("CCZ:distilled", [patch]))
+    with pytest.raises(ValueError, match="Expected a CCZ:distilled Vault"):
+        bank.add_ccz_distilled_vault(lsp.Vault("T:cultivated", [patch]))
+
+
+def test_bank_rejects_duplicate_vaults() -> None:
+    patch_a = lsp.CodePatch("custom", d=3, n=15, k=2, patch_label="memory")
+    patch_b = lsp.CodePatch("custom", d=5, n=25, k=3, patch_label="memory")
+    bank = lsp.Bank()
+
+    bank.add_t_cultivated_vault(lsp.Vault("T:cultivated", [patch_a]))
+
+    with pytest.raises(ValueError, match="already has a T:cultivated Vault"):
+        bank.add_t_cultivated_vault(lsp.Vault("T:cultivated", [patch_b]))
+
+
 def test_rotated_code_patch() -> None:
     with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
         lsp.RotatedCodePatch(4)
