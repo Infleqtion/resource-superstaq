@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections.abc import Callable, Collection, Iterable, Mapping
 from functools import cached_property
 from typing import Any, Literal, Optional, cast
+import warnings
 
 import cirq
 
@@ -332,6 +333,8 @@ _QLDPC_FAMILY_ALIASES = {
     "hgps": "HGPCode",
     "hypergraph_product": "HGPCode",
     "hypergraph_product_code": "HGPCode",
+    "shyps": "SHYPSCode",
+    "shyps_code": "SHYPSCode",
 }
 
 _QLDPC_DISTANCE_FAMILIES = {"SurfaceCode", "ToricCode"}
@@ -341,6 +344,9 @@ _PATCH_LABELS = {"memory", "compute", "cultivate", "distil"}
 DistilleryLabel = Literal["CCZ", "T"]
 _DISTILLERY_LABELS = {"CCZ", "T"}
 _DISTILLERY_PATCH_COUNTS: dict[DistilleryLabel, int] = {"CCZ": 9, "T": 11}
+VaultLabel = Literal["T:cultivated", "T:distilled", "CCZ:distilled"]
+_VAULT_LABELS = {"T:cultivated", "T:distilled", "CCZ:distilled"}
+_VAULT_SHYPS_R = 3
 
 
 def _normalize_code_type(code_type: str) -> str:
@@ -394,6 +400,20 @@ def _validate_distillery_label(label: str) -> DistilleryLabel:
             f"Distillery label must be one of {sorted(_DISTILLERY_LABELS)}, not {label!r}"
         )
     return cast(DistilleryLabel, label)
+
+
+def _validate_vault_label(label: str) -> VaultLabel:
+    if label not in _VAULT_LABELS:
+        raise ValueError(f"Vault label must be one of {sorted(_VAULT_LABELS)}, not {label!r}")
+    return cast(VaultLabel, label)
+
+
+def _default_vault_code_patch() -> CodePatch:
+    return CodePatch.from_qldpc_family(
+        "shyps",
+        _VAULT_SHYPS_R,
+        patch_label="memory",
+    )
 
 
 class CodePatch:
@@ -670,11 +690,21 @@ class CodePatch:
         elif known_distance is not None:
             code_distance = known_distance
         elif distance_bound is not None:
+            warnings.warn(
+                "Computing qLDPC code distance because it is not known. This may be expensive.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
             code_distance = qldpc_code.get_distance(
                 bound=distance_bound, **dict(distance_kwargs or {})
             )
         else:
-            code_distance = None
+            warnings.warn(
+                "Computing qLDPC code distance because it is not known. This may be expensive.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            code_distance = qldpc_code.get_distance(**dict(distance_kwargs or {}))
 
         return {
             "n": n,
@@ -832,6 +862,47 @@ class Factory:
             self.ccz_distilleries.append(distillery)
         else:
             self.t_distilleries.append(distillery)
+
+
+class Vault:
+    """Container for memory patches that store resource states."""
+
+    def __init__(
+        self,
+        label: VaultLabel,
+        code_patches: int | Iterable[CodePatch] = (),
+    ) -> None:
+        self.label = _validate_vault_label(label)
+        self.code_patches: list[CodePatch] = []
+        if isinstance(code_patches, int):
+            if code_patches < 0:
+                raise ValueError("Vault patch count must be nonnegative.")
+            for _ in range(code_patches):
+                self.add_patch(_default_vault_code_patch())
+            return
+        for patch in code_patches:
+            self.add_patch(patch)
+
+    @property
+    def num_physical_qubits(self) -> int:
+        return sum(patch.n for patch in self.code_patches)
+
+    @property
+    def num_logical_qubits(self) -> int:
+        return sum(patch.k for patch in self.code_patches)
+
+    @property
+    def num_code_patches(self) -> int:
+        return len(self.code_patches)
+
+    def add_patch(self, patch: CodePatch) -> None:
+        if not isinstance(patch, CodePatch):
+            raise TypeError("Vault can only contain CodePatch objects.")
+        if patch.patch_label != "memory":
+            raise ValueError(
+                "Vault can only contain CodePatch objects with patch_label='memory'."
+            )
+        self.code_patches.append(patch)
 
 
 class RotatedCodePatch:

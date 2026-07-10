@@ -47,6 +47,7 @@ from resource_estimation.ftqc.lattice_surgery_primitives import (
     RotatedCodePatch,
     Split,
     SyndromeExtract,
+    Vault,
     custom_resolver,
 )
 from resource_estimation.ftqc.layout import (
@@ -91,6 +92,7 @@ __all__ = [
     "Split",
     "Superconductor",
     "SyndromeExtract",
+    "Vault",
     "STR2GATE",
     "add_moves",
     "convert_globals_to_phasedxz",

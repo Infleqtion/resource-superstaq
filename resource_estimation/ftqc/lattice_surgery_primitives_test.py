@@ -340,6 +340,78 @@ def test_factory_rejects_label_mismatches() -> None:
         factory.add_t_distillery(lsp.Distillery("CCZ"))
 
 
+@pytest.mark.parametrize("label", ["T:cultivated", "T:distilled", "CCZ:distilled"])
+def test_vault_empty(label: lsp.VaultLabel) -> None:
+    vault = lsp.Vault(label)
+
+    assert vault.label == label
+    assert vault.code_patches == []
+    assert vault.num_physical_qubits == 0
+    assert vault.num_logical_qubits == 0
+    assert vault.num_code_patches == 0
+
+
+def test_vault_initializes_default_shyps_memory_patches() -> None:
+    pytest.importorskip("qldpc")
+
+    with pytest.warns(RuntimeWarning, match="Computing qLDPC code distance"):
+        vault = lsp.Vault("T:distilled", 2)
+
+    assert vault.label == "T:distilled"
+    assert vault.num_physical_qubits == 98
+    assert vault.num_logical_qubits == 18
+    assert vault.num_code_patches == 2
+    assert [patch.code_type for patch in vault.code_patches] == ["shyps"] * 2
+    assert [patch.qldpc_family for patch in vault.code_patches] == ["SHYPSCode"] * 2
+    assert [patch.qldpc_args for patch in vault.code_patches] == [(3,)] * 2
+    assert [patch.patch_label for patch in vault.code_patches] == ["memory"] * 2
+    assert [patch.code_params for patch in vault.code_patches] == [(49, 9, 4)] * 2
+    assert all(patch.is_qldpc_backed for patch in vault.code_patches)
+
+
+def test_vault_sums_memory_patches() -> None:
+    patch_a = lsp.CodePatch("custom", d=3, n=15, k=2, patch_label="memory")
+    patch_b = lsp.CodePatch(patch_label="memory")
+
+    vault = lsp.Vault("CCZ:distilled", [patch_a])
+    vault.add_patch(patch_b)
+
+    assert vault.code_patches == [patch_a, patch_b]
+    assert vault.num_physical_qubits == 64
+    assert vault.num_logical_qubits == 3
+    assert vault.num_code_patches == 2
+
+
+def test_vault_rejects_invalid_label() -> None:
+    with pytest.raises(ValueError, match="Vault label must be one of"):
+        lsp.Vault("bad")  # type: ignore[arg-type]
+
+
+def test_vault_rejects_non_memory_patches() -> None:
+    patch = lsp.CodePatch()
+
+    with pytest.raises(ValueError, match="patch_label='memory'"):
+        lsp.Vault("T:cultivated", [patch])
+
+    vault = lsp.Vault("T:cultivated")
+    with pytest.raises(ValueError, match="patch_label='memory'"):
+        vault.add_patch(patch)
+
+
+def test_vault_rejects_non_code_patch_objects() -> None:
+    with pytest.raises(TypeError, match="Vault can only contain CodePatch objects"):
+        lsp.Vault("T:cultivated", [object()])  # type: ignore[list-item]
+
+    vault = lsp.Vault("T:cultivated")
+    with pytest.raises(TypeError, match="Vault can only contain CodePatch objects"):
+        vault.add_patch(object())  # type: ignore[arg-type]
+
+
+def test_vault_rejects_negative_patch_count() -> None:
+    with pytest.raises(ValueError, match="patch count must be nonnegative"):
+        lsp.Vault("T:cultivated", -1)
+
+
 def test_rotated_code_patch() -> None:
     with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
         lsp.RotatedCodePatch(4)
