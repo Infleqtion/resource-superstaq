@@ -102,7 +102,7 @@ def test_end2end(with_barriers) -> None:
 def test_end2end_distillery():
     q1, q2, q3 = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
     circuit = cirq.Circuit(
-        [cirq.CNOT.on(q1, q2), cirq.TOFFOLI.on(q1, q2, q3), cirq.T.on_each(q1, q2, q3)]
+        [cirq.CNOT.on(q1, q2), cirq.CCZ.on(q1, q2, q3), cirq.T.on_each(q1, q2, q3)]
     )
     layout = MovementDistillery(input_circuit=circuit, num_t_factories=1, num_ccz_factories=1)
     arc = arch.DefaultMovement(post_op_correction=False, idling=False)
@@ -970,9 +970,7 @@ def test_replace_cirq_op_distil_t(bell_circuit) -> None:
 def test_replace_cirq_op_distil_ccz(random_circ) -> None:
     distillery_layout = MovementDistillery(random_circ, num_ccz_factories=2, num_t_factories=0)
 
-    op_to_replace = cirq.TOFFOLI.on(
-        cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
-    )
+    op_to_replace = cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
     returned_ops = comp.replace_cirq_op(
         op=op_to_replace, layout=distillery_layout, transversal_cnot=True
     )
