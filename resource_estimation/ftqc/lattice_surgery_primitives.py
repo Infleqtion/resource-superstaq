@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
+from collections.abc import Callable, Collection, Mapping
 from functools import cached_property
-from typing import Literal, Optional
+from typing import Any, Literal, Optional, cast
 
 import cirq
 
@@ -303,6 +304,396 @@ class Move(cirq.Gate):
 
     def _value_equality_values_(self) -> tuple[int, str | None]:
         return (self._num_qubits, self._zone)
+
+
+_SURFACE_CODE_TYPES = {
+    "surface",
+    "surface_code",
+    "rotated_surface",
+    "rotated_surface_code",
+}
+
+_QLDPC_FAMILY_ALIASES = {
+    "surface": "SurfaceCode",
+    "surface_code": "SurfaceCode",
+    "rotated_surface": "SurfaceCode",
+    "rotated_surface_code": "SurfaceCode",
+    "toric": "ToricCode",
+    "toric_code": "ToricCode",
+    "five_qubit": "FiveQubitCode",
+    "five_qubit_code": "FiveQubitCode",
+    "steane": "SteaneCode",
+    "steane_code": "SteaneCode",
+    "bb": "BBCode",
+    "bb_code": "BBCode",
+    "bivariate_bicycle": "BBCode",
+    "bivariate_bicycle_code": "BBCode",
+    "hgp": "HGPCode",
+    "hgps": "HGPCode",
+    "hypergraph_product": "HGPCode",
+    "hypergraph_product_code": "HGPCode",
+}
+
+_QLDPC_DISTANCE_FAMILIES = {"SurfaceCode", "ToricCode"}
+
+PatchLabel = Literal["memory", "compute", "cultivate", "distil"]
+_PATCH_LABELS = {"memory", "compute", "cultivate", "distil"}
+
+
+def _normalize_code_type(code_type: str) -> str:
+    return code_type.lower().replace("-", "_").replace(" ", "_")
+
+
+def _import_qldpc() -> tuple[Any, Any, Any]:
+    try:
+        from qldpc import circuits, codes
+        from qldpc.objects import Pauli
+    except ImportError as ex:  # pragma: no cover - exercised only when qLDPC is absent
+        raise ImportError(
+            "qLDPC-backed CodePatch objects require the optional `qldpc` package."
+        ) from ex
+    return circuits, codes, Pauli
+
+
+def _resolve_qldpc_family_name(code_type: str, codes_module: Any) -> str:
+    normalized = _normalize_code_type(code_type)
+    if normalized in _QLDPC_FAMILY_ALIASES:
+        return _QLDPC_FAMILY_ALIASES[normalized]
+    if hasattr(codes_module, code_type):
+        return code_type
+    for name in getattr(codes_module, "__all__", ()):
+        if _normalize_code_type(name) == normalized:
+            return name
+    raise ValueError(f"qLDPC code family not found for code_type={code_type!r}")
+
+
+def _run_without_external_prompt(function: Callable[[], Any]) -> Any:
+    """Run qLDPC code that may otherwise request manual GAP/MAGMA input."""
+    import builtins
+
+    original_input = builtins.input
+    builtins.input = lambda prompt="": "n"
+    try:
+        return function()
+    finally:
+        builtins.input = original_input
+
+
+def _validate_patch_label(patch_label: str) -> PatchLabel:
+    if patch_label not in _PATCH_LABELS:
+        raise ValueError(f"Patch label must be one of {sorted(_PATCH_LABELS)}, not {patch_label!r}")
+    return cast(PatchLabel, patch_label)
+
+
+class CodePatch:
+    """Metadata for a logical code patch.
+
+    A CodePatch represents a code block together with the resource-estimation metadata needed to
+    reason about its size and intended use. qLDPC-backed patches retain the qLDPC code object so
+    callers can request logical operators and transversal operations when needed. The patch label
+    indicates whether the patch is intended for memory, computation, cultivation, or distillation.
+    """
+
+    def __init__(
+        self,
+        code_type: str = "surface",
+        d: int | None = 7,
+        *,
+        n: int | None = None,
+        k: int | None = None,
+        num_data_qubits: int | None = None,
+        num_measure_qubits: int | None = None,
+        patch_label: PatchLabel = "compute",
+        qldpc_code: Any | None = None,
+        qldpc_family: str | None = None,
+        qldpc_args: tuple[object, ...] | None = None,
+        qldpc_kwargs: Mapping[str, object] | None = None,
+        distance_bound: int | bool | None = None,
+        distance_kwargs: Mapping[str, object] | None = None,
+    ) -> None:
+        self.code_type = code_type
+        self.patch_label = _validate_patch_label(patch_label)
+        self.qldpc_family = qldpc_family
+        self.qldpc_args = tuple(qldpc_args or ())
+        self.qldpc_kwargs = dict(qldpc_kwargs or {})
+        self._qldpc_code = qldpc_code
+
+        if qldpc_code is not None:
+            metadata = self._metadata_from_qldpc_code(
+                qldpc_code,
+                d=d,
+                distance_bound=distance_bound,
+                distance_kwargs=distance_kwargs,
+            )
+            n = n if n is not None else metadata["n"]
+            k = k if k is not None else metadata["k"]
+            d = d if d is not None else metadata["d"]
+            num_data_qubits = (
+                num_data_qubits
+                if num_data_qubits is not None
+                else metadata["num_data_qubits"]
+            )
+            num_measure_qubits = (
+                num_measure_qubits
+                if num_measure_qubits is not None
+                else metadata["num_measure_qubits"]
+            )
+
+        if n is None and num_data_qubits is not None:
+            n = num_data_qubits
+
+        if n is None and _normalize_code_type(code_type) in _SURFACE_CODE_TYPES and d is not None:
+            n = d**2
+            k = 1 if k is None else k
+            num_data_qubits = n if num_data_qubits is None else num_data_qubits
+            num_measure_qubits = d**2 - 1 if num_measure_qubits is None else num_measure_qubits
+
+        if n is None:
+            raise ValueError(
+                "CodePatch requires a qLDPC code/family, an implemented built-in code type, "
+                "or explicit n/num_data_qubits metadata."
+            )
+
+        if k is None:
+            k = 1
+        if num_data_qubits is None:
+            num_data_qubits = n
+        if num_measure_qubits is None:
+            num_measure_qubits = 0
+
+        self.d = d
+        self.n = n
+        self.k = k
+        self.num_data_qubits = num_data_qubits
+        self.num_measure_qubits = num_measure_qubits
+
+    @classmethod
+    def from_qldpc_code(
+        cls,
+        qldpc_code: Any,
+        *,
+        code_type: str | None = None,
+        d: int | None = None,
+        patch_label: PatchLabel = "compute",
+        qldpc_family: str | None = None,
+        qldpc_args: tuple[object, ...] | None = None,
+        qldpc_kwargs: Mapping[str, object] | None = None,
+        distance_bound: int | bool | None = None,
+        distance_kwargs: Mapping[str, object] | None = None,
+    ) -> CodePatch:
+        """Build a CodePatch from an already constructed qLDPC code."""
+        if code_type is None:
+            code_type = type(qldpc_code).__name__
+        return cls(
+            code_type=code_type,
+            d=d,
+            patch_label=patch_label,
+            qldpc_code=qldpc_code,
+            qldpc_family=qldpc_family,
+            qldpc_args=qldpc_args,
+            qldpc_kwargs=qldpc_kwargs,
+            distance_bound=distance_bound,
+            distance_kwargs=distance_kwargs,
+        )
+
+    @classmethod
+    def from_qldpc_family(
+        cls,
+        code_type: str | Callable[..., object],
+        *code_args: object,
+        d: int | None = None,
+        patch_label: PatchLabel = "compute",
+        distance_bound: int | bool | None = None,
+        distance_kwargs: Mapping[str, object] | None = None,
+        **code_kwargs: object,
+    ) -> CodePatch:
+        """Build a CodePatch from a qLDPC code family and family-specific constructor data."""
+        _, codes, _ = _import_qldpc()
+
+        if callable(code_type):
+            qldpc_family = getattr(code_type, "__name__", repr(code_type))
+            code_factory = code_type
+            patch_code_type = qldpc_family
+        else:
+            qldpc_family = _resolve_qldpc_family_name(code_type, codes)
+            code_factory = getattr(codes, qldpc_family)
+            patch_code_type = code_type
+
+        qldpc_args = tuple(code_args)
+        if not qldpc_args and d is not None and qldpc_family in _QLDPC_DISTANCE_FAMILIES:
+            qldpc_args = (d,)
+
+        qldpc_code = code_factory(*qldpc_args, **code_kwargs)
+        return cls.from_qldpc_code(
+            qldpc_code,
+            code_type=patch_code_type,
+            d=d,
+            patch_label=patch_label,
+            qldpc_family=qldpc_family,
+            qldpc_args=qldpc_args,
+            qldpc_kwargs=code_kwargs,
+            distance_bound=distance_bound,
+            distance_kwargs=distance_kwargs,
+        )
+
+    @classmethod
+    def from_qldpc_factory(
+        cls,
+        code_type: str,
+        code_factory: Callable[..., object],
+        *code_args: object,
+        d: int | None = None,
+        patch_label: PatchLabel = "compute",
+        distance_bound: int | bool | None = None,
+        distance_kwargs: Mapping[str, object] | None = None,
+        **code_kwargs: object,
+    ) -> CodePatch:
+        """Build a CodePatch from a caller-provided qLDPC code factory."""
+        qldpc_code = code_factory(*code_args, **code_kwargs)
+        return cls.from_qldpc_code(
+            qldpc_code,
+            code_type=code_type,
+            d=d,
+            patch_label=patch_label,
+            qldpc_family=getattr(code_factory, "__name__", repr(code_factory)),
+            qldpc_args=tuple(code_args),
+            qldpc_kwargs=code_kwargs,
+            distance_bound=distance_bound,
+            distance_kwargs=distance_kwargs,
+        )
+
+    @property
+    def code_params(self) -> tuple[int, int, int | float | None]:
+        """The patch's [n, k, d] code parameters."""
+        return self.n, self.k, self.d
+
+    @property
+    def is_qldpc_backed(self) -> bool:
+        return self._qldpc_code is not None
+
+    @property
+    def qldpc_code(self) -> Any:
+        if self._qldpc_code is None:
+            raise ValueError("This CodePatch is not backed by a qLDPC code object.")
+        return self._qldpc_code
+
+    def logical_ops(self, pauli: str | object | None = None, *, recompute: bool = False) -> Any:
+        """Return qLDPC logical Pauli operators for this patch."""
+        _, _, Pauli = _import_qldpc()
+        if isinstance(pauli, str):
+            pauli = Pauli.from_string(pauli.upper())
+        return self.qldpc_code.get_logical_ops(pauli, recompute=recompute)
+
+    def transversal_ops(
+        self,
+        local_gates: Collection[str] = ("S", "H", "SWAP"),
+        *,
+        deform_code: bool = False,
+        remove_redundancies: bool = True,
+        with_magma: bool = False,
+        allow_external_prompt: bool = False,
+    ) -> list[Any]:
+        """Return qLDPC logical tableaus and physical circuits for transversal operations."""
+        circuits, _, _ = _import_qldpc()
+
+        def _call() -> list[Any]:
+            return circuits.get_transversal_ops(
+                self.qldpc_code,
+                local_gates,
+                deform_code=deform_code,
+                remove_redundancies=remove_redundancies,
+                with_magma=with_magma,
+            )
+
+        if allow_external_prompt:
+            return _call()
+        return _run_without_external_prompt(_call)
+
+    def transversal_circuit(
+        self,
+        logical_circuit_or_tableau: Any,
+        local_gates: Collection[str] = ("S", "H", "SWAP"),
+        *,
+        deform_code: bool = False,
+        with_magma: bool = False,
+        allow_external_prompt: bool = False,
+    ) -> Any | None:
+        """Find a qLDPC transversal physical circuit for a logical Clifford operation."""
+        circuits, _, _ = _import_qldpc()
+
+        def _call() -> Any | None:
+            return circuits.get_transversal_circuit(
+                self.qldpc_code,
+                logical_circuit_or_tableau,
+                local_gates,
+                deform_code=deform_code,
+                with_magma=with_magma,
+            )
+
+        if allow_external_prompt:
+            return _call()
+        return _run_without_external_prompt(_call)
+
+    @staticmethod
+    def _metadata_from_qldpc_code(
+        qldpc_code: Any,
+        *,
+        d: int | None,
+        distance_bound: int | bool | None,
+        distance_kwargs: Mapping[str, object] | None,
+    ) -> dict[str, Any]:
+        n = int(len(qldpc_code))
+        k = int(qldpc_code.dimension)
+        num_measure_qubits = int(getattr(qldpc_code, "num_checks", 0))
+        known_distance = CodePatch._known_qldpc_distance(qldpc_code)
+
+        if d is not None and known_distance is not None and known_distance != d:
+            raise ValueError(
+                f"Provided distance d={d} does not match qLDPC code distance "
+                f"{known_distance}."
+            )
+
+        code_distance: int | float | None
+        if d is not None:
+            code_distance = d
+        elif known_distance is not None:
+            code_distance = known_distance
+        elif distance_bound is not None:
+            code_distance = qldpc_code.get_distance(
+                bound=distance_bound, **dict(distance_kwargs or {})
+            )
+        else:
+            code_distance = None
+
+        return {
+            "n": n,
+            "k": k,
+            "d": code_distance,
+            "num_data_qubits": n,
+            "num_measure_qubits": num_measure_qubits,
+        }
+
+    @staticmethod
+    def _known_qldpc_distance(qldpc_code: Any) -> int | float | None:
+        try:
+            known_distance = qldpc_code.get_distance_if_known()
+        except AttributeError:
+            return None
+        if known_distance is None or known_distance != known_distance:
+            return None
+        if isinstance(known_distance, float) and known_distance.is_integer():
+            return int(known_distance)
+        return known_distance
+
+    def __repr__(self) -> str:
+        args = [
+            f"code_type={self.code_type!r}",
+            f"d={self.d!r}",
+            f"n={self.n!r}",
+            f"k={self.k!r}",
+            f"patch_label={self.patch_label!r}",
+        ]
+        return f"lsp.CodePatch({', '.join(args)})"
 
 
 class RotatedCodePatch:

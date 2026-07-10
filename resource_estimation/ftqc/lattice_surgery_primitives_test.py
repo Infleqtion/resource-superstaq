@@ -77,6 +77,99 @@ def test_move() -> None:
     assert str(measure_move) == "MOVE_MZ(q(0, 1))"
 
 
+def test_code_patch_surface_metadata() -> None:
+    patch = lsp.CodePatch()
+
+    assert patch.code_type == "surface"
+    assert patch.code_params == (49, 1, 7)
+    assert patch.num_data_qubits == 49
+    assert patch.num_measure_qubits == 48
+    assert patch.patch_label == "compute"
+    assert not patch.is_qldpc_backed
+    assert (
+        repr(patch)
+        == "lsp.CodePatch(code_type='surface', d=7, n=49, k=1, patch_label='compute')"
+    )
+
+    patch = lsp.CodePatch("surface", d=5, patch_label="cultivate")
+
+    assert patch.code_params == (25, 1, 5)
+    assert patch.num_data_qubits == 25
+    assert patch.num_measure_qubits == 24
+    assert patch.patch_label == "cultivate"
+    assert not patch.is_qldpc_backed
+    assert (
+        repr(patch)
+        == "lsp.CodePatch(code_type='surface', d=5, n=25, k=1, patch_label='cultivate')"
+    )
+
+
+def test_code_patch_explicit_metadata() -> None:
+    patch = lsp.CodePatch(
+        "custom",
+        d=3,
+        n=15,
+        k=1,
+        num_measure_qubits=10,
+        patch_label="memory",
+    )
+
+    assert patch.code_params == (15, 1, 3)
+    assert patch.n == 15
+    assert patch.patch_label == "memory"
+
+    with pytest.raises(ValueError, match="requires a qLDPC code"):
+        lsp.CodePatch("color", d=3)
+
+    with pytest.raises(ValueError, match="Patch label must be one of"):
+        lsp.CodePatch(patch_label="bad")  # type: ignore[arg-type]
+
+
+def test_code_patch_from_qldpc_code() -> None:
+    qldpc = pytest.importorskip("qldpc")
+    from qldpc import codes
+
+    patch = lsp.CodePatch.from_qldpc_code(codes.FiveQubitCode(), patch_label="distil")
+
+    assert qldpc.__version__
+    assert patch.code_type == "FiveQubitCode"
+    assert patch.code_params == (5, 1, 3)
+    assert patch.num_data_qubits == 5
+    assert patch.num_measure_qubits == 4
+    assert patch.is_qldpc_backed
+    assert patch.patch_label == "distil"
+    assert len(patch.logical_ops("X")) == 1
+    assert len(patch.transversal_ops()) == 2
+
+
+def test_code_patch_from_qldpc_family() -> None:
+    pytest.importorskip("qldpc")
+
+    patch = lsp.CodePatch.from_qldpc_family("toric", d=2)
+
+    assert patch.code_type == "toric"
+    assert patch.qldpc_family == "ToricCode"
+    assert patch.qldpc_args == (2,)
+    assert patch.qldpc_kwargs == {}
+    assert patch.code_params == (4, 2, 2)
+    assert patch.patch_label == "compute"
+
+
+def test_code_patch_from_qldpc_factory() -> None:
+    pytest.importorskip("qldpc")
+    from qldpc import codes
+
+    patch = lsp.CodePatch.from_qldpc_factory(
+        "custom_five", codes.FiveQubitCode, patch_label="memory"
+    )
+
+    assert patch.code_type == "custom_five"
+    assert patch.qldpc_family == "FiveQubitCode"
+    assert patch.qldpc_args == ()
+    assert patch.code_params == (5, 1, 3)
+    assert patch.patch_label == "memory"
+
+
 def test_rotated_code_patch() -> None:
     with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
         lsp.RotatedCodePatch(4)
