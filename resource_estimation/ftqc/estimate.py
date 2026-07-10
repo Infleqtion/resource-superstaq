@@ -16,10 +16,11 @@ from __future__ import annotations
 import warnings
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Literal, NoReturn
 
 import cirq
+import networkx as nx
 from tqdm import tqdm
 
 if TYPE_CHECKING:
@@ -158,26 +159,7 @@ ReactionDepth = dict[PauliBasis, int]
 
 ReactionTreeKey = tuple[cirq.Qid, PauliBasis]
 ReactionTreeVertex = tuple[PauliBasis, cirq.Qid, int]
-ReactionTreeEdge = tuple[ReactionTreeVertex, ReactionTreeVertex, int]
-
-
-@dataclass
-class ReactionTree:
-    """DAG describing reaction-depth dependencies.
-
-    Attributes:
-        operations: Circuit operations ordered by reaction-tree time. A vertex
-            with `time=0` is a root and has no operation; a vertex with `time=t`
-            was produced by `operations[t - 1]`.
-        vertices: All `(pauli, qubit, time)` Pauli vertices in the reaction tree.
-        edges: `(source, target, weight)` dependency edges between vertices.
-        depths: Longest dependency path depth for each vertex.
-    """
-
-    operations: tuple[cirq.Operation, ...] = ()
-    vertices: set[ReactionTreeVertex] = field(default_factory=set)
-    edges: list[ReactionTreeEdge] = field(default_factory=list)
-    depths: dict[ReactionTreeVertex, int] = field(default_factory=dict)
+ReactionTree = nx.DiGraph
 
 
 @dataclass(frozen=True)
@@ -406,19 +388,19 @@ class ReactionDepthEstimator:
                 Clifford propagation should be tracked.
 
         Returns:
-            Reaction tree with vertices, edges, final time-layer vertices,
-            operation metadata, and per-vertex longest-path depths.
+            NetworkX directed graph with `(pauli, qubit, time)` nodes, weighted
+            dependency edges, operation metadata in `graph["operations"]`, and
+            per-node longest-path depths in node attribute `"depth"`.
         """
         operations = tuple(circuit.all_operations())
-        tree = ReactionTree(operations=operations)
+        tree = nx.DiGraph(operations=operations)
         tracked_nodes = tuple(
             (qubit, basis) for qubit in sorted(circuit.all_qubits()) for basis in ("X", "Z")
         )
         for time in range(len(operations) + 1):
             for qubit, basis in tracked_nodes:
                 vertex = (basis, qubit, time)
-                tree.vertices.add(vertex)
-                tree.depths[vertex] = 0
+                tree.add_node(vertex, depth=0)
 
         for time, input_op in enumerate(operations, start=1):
             dependencies: list[tuple[ReactionTreeKey, ReactionTreeKey, int]] = []
@@ -459,7 +441,10 @@ class ReactionDepthEstimator:
             for source_node, target_node, weight in dependencies:
                 source = (source_node[1], source_node[0], time - 1)
                 target = (target_node[1], target_node[0], time)
-                tree.edges.append((source, target, weight))
-                tree.depths[target] = max(tree.depths[target], tree.depths[source] + weight)
+                tree.add_edge(source, target, weight=weight)
+                tree.nodes[target]["depth"] = max(
+                    tree.nodes[target]["depth"],
+                    tree.nodes[source]["depth"] + weight,
+                )
 
         return tree

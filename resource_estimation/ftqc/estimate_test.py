@@ -14,6 +14,7 @@
 from math import pi
 
 import cirq
+import networkx as nx
 import pytest
 from numpy import isclose
 
@@ -364,14 +365,15 @@ def test_reaction_tree_final_vertices_track_reaction_depth_qubits(
     reaction_depth_estimator = est.ReactionDepthEstimator()
     reaction_depth = reaction_depth_estimator.reaction_depth(circuit)
     reaction_tree = reaction_depth_estimator.reaction_tree(circuit)
-    final_time = len(reaction_tree.operations)
+    final_time = len(reaction_tree.graph["operations"])
 
-    assert reaction_tree.operations == tuple(circuit.all_operations())
+    assert isinstance(reaction_tree, nx.DiGraph)
+    assert reaction_tree.graph["operations"] == tuple(circuit.all_operations())
     for qubit in reaction_depth:
-        assert ("X", qubit, final_time) in reaction_tree.vertices
-        assert ("Z", qubit, final_time) in reaction_tree.vertices
+        assert ("X", qubit, final_time) in reaction_tree.nodes
+        assert ("Z", qubit, final_time) in reaction_tree.nodes
         assert {
-            basis: reaction_tree.depths[(basis, qubit, final_time)] for basis in ("X", "Z")
+            basis: reaction_tree.nodes[(basis, qubit, final_time)]["depth"] for basis in ("X", "Z")
         } == reaction_depth[qubit]
 
 
@@ -380,13 +382,13 @@ def test_reaction_tree_adds_zero_weight_edges_for_unchanged_nodes() -> None:
     circuit = cirq.Circuit(cirq.T(q0), cirq.T(q1))
 
     reaction_tree = est.ReactionDepthEstimator().reaction_tree(circuit)
-    final_time = len(reaction_tree.operations)
+    final_time = len(reaction_tree.graph["operations"])
 
-    assert len(reaction_tree.vertices) == 2 * len(circuit.all_qubits()) * (
+    assert reaction_tree.number_of_nodes() == 2 * len(circuit.all_qubits()) * (
         len(tuple(circuit.all_operations())) + 1
     )
     assert all(
-        (basis, qubit, final_time) in reaction_tree.vertices
+        (basis, qubit, final_time) in reaction_tree.nodes
         for qubit in (q0, q1)
         for basis in ("X", "Z")
     )
@@ -396,7 +398,9 @@ def test_reaction_tree_adds_zero_weight_edges_for_unchanged_nodes() -> None:
         (("Z", q1, 0), ("Z", q1, 1), 0),
         (("Z", q0, 1), ("Z", q0, 2), 0),
         (("X", q1, 1), ("X", q1, 2), 0),
-    }.issubset(reaction_tree.edges)
+    }.issubset(
+        (source, target, data["weight"]) for source, target, data in reaction_tree.edges(data=True)
+    )
 
 
 def test_reaction_tree_rejects_non_factory_non_clifford() -> None:
@@ -435,17 +439,19 @@ def test_reaction_tree_tracks_pauli_product_factory_regression() -> None:
     reaction_depth = reaction_depth_estimator.reaction_depth(circuit)
     reaction_tree = reaction_depth_estimator.reaction_tree(circuit)
 
-    assert reaction_tree.operations == tuple(circuit.all_operations())
-    assert reaction_tree.operations[2] == cirq.T(q0)
-    assert reaction_tree.operations[5] == pauli_product
-    final_time = len(reaction_tree.operations)
+    assert reaction_tree.graph["operations"] == tuple(circuit.all_operations())
+    assert reaction_tree.graph["operations"][2] == cirq.T(q0)
+    assert reaction_tree.graph["operations"][5] == pauli_product
+    final_time = len(reaction_tree.graph["operations"])
     assert {
-        qubit: {basis: reaction_tree.depths[(basis, qubit, final_time)] for basis in ("X", "Z")}
+        qubit: {
+            basis: reaction_tree.nodes[(basis, qubit, final_time)]["depth"] for basis in ("X", "Z")
+        }
         for qubit in reaction_depth
     } == reaction_depth
     assert (
         max(
-            reaction_tree.depths[(basis, qubit, final_time)]
+            reaction_tree.nodes[(basis, qubit, final_time)]["depth"]
             for qubit in reaction_depth
             for basis in ("X", "Z")
         )
@@ -477,7 +483,9 @@ def test_reaction_tree_tracks_pauli_product_factory_regression() -> None:
             ("Z", q1, 6),
             1,
         ),
-    }.issubset(reaction_tree.edges)
+    }.issubset(
+        (source, target, data["weight"]) for source, target, data in reaction_tree.edges(data=True)
+    )
 
 
 def test_reaction_depth_propagates_kept_primitive_cliffords() -> None:
