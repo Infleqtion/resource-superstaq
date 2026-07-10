@@ -26,8 +26,7 @@ from resource_estimation.ftqc.compile_ftqc import (
     handle_idling,
     post_op_syndrome_extraction,
     replace_cirq_op,
-    teleport_S,
-    teleport_T,
+    teleport_resource,
     validate_ops,
 )
 from resource_estimation.ftqc.distil import distil_15_to_1
@@ -64,6 +63,7 @@ from resource_estimation.ftqc.stim_functions import (
     cultivate,
     load_saved_cost,
 )
+from resource_estimation.ftqc.distil import distil_15_to_1, ccz_8_to_1
 
 __all__ = [
     "Architecture",
@@ -106,8 +106,8 @@ __all__ = [
     "load_saved_cost",
     "post_op_syndrome_extraction",
     "replace_cirq_op",
-    "teleport_S",
-    "teleport_T",
+    "teleport_resource",
     "validate_ops",
     "distil_15_to_1",
+    "ccz_8_to_1",
 ]

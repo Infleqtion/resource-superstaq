@@ -31,12 +31,14 @@ class Layout(abc.ABC):
     input_circuit: cirq.Circuit
     num_t_factories: int = 0
     num_s_factories: int = 0
+    num_toff_factories: int = 0
 
     def __post_init__(self) -> None:
         self.mapped_circuit = None
         self.layout_graph = None
         self._available_t_factories = deque()
         self._available_s_factories = deque()
+        self._available_toff_factories = deque()
         self._all_factories = set()
         self._generate()
 
@@ -56,27 +58,22 @@ class Layout(abc.ABC):
         # Resets the available factories
         self._available_t_factories = deque()
         self._available_s_factories = deque()
+        self._available_toff_factories = deque()
 
-    def reload_factories(self, ftype: Literal["t", "s"]) -> None:
-        if ftype == "t":
-            all_t_factories = [
-                factory
-                for factory in self._all_factories
-                if self.layout_graph.nodes[factory]["ftype"] == "t"
-            ]
-            self._available_t_factories = deque(all_t_factories)
-        elif ftype == "s":
-            all_s_factories = [
-                factory
-                for factory in self._all_factories
-                if self.layout_graph.nodes[factory]["ftype"] == "s"
-            ]
-            self._available_s_factories = deque(all_s_factories)
-        else:
+    def reload_factories(self, ftype: Literal["t", "s", "toff"]) -> None:
+        if ftype not in ["t", "s", "toff"]:
             raise ValueError(f"{ftype} is not a valid factory type")
+
+        factories = self.all_factories(ftype=ftype)
+        if ftype == "t":
+            self._available_t_factories = deque(factories)
+        elif ftype == "s":
+            self._available_s_factories = deque(factories)
+        elif ftype == "toff":
+            self._available_toff_factories = deque(factories)
         # Update graph to reflect the new status
-        for node in self.layout_graph.nodes:
-            if node in self.available_s_factories or node in self._available_t_factories:
+        for factory in factories:
+            for node in factory:
                 self.layout_graph.nodes[node]["used"] = False
 
     def _generate(self) -> None:
@@ -107,7 +104,7 @@ class Layout(abc.ABC):
             [
                 (
                     cirq.GridQubit(*idx_to_xy(idx + len(G.nodes))),
-                    dict(patch_type="factory", ftype="t", used=True),
+                    dict(patch_type="factory", ftype="t", fid=idx, used=True),
                 )
                 for idx in range(self.num_t_factories)
             ],
@@ -116,7 +113,7 @@ class Layout(abc.ABC):
             [
                 (
                     cirq.GridQubit(*idx_to_xy(idx + len(G.nodes))),
-                    dict(patch_type="factory", ftype="s", used=True),
+                    dict(patch_type="factory", ftype="s", fid=idx, used=True),
                 )
                 for idx in range(self.num_s_factories)
             ],
@@ -125,34 +122,74 @@ class Layout(abc.ABC):
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
 
-    @property
-    def available_t_factories(self) -> deque[cirq.GridQubit]:
-        return self._available_t_factories
+    def available_factories(
+        self, ftype: Literal["t", "s", "toff"]
+    ) -> deque[tuple[cirq.GridQubit, ...]]:
+        if ftype == "t":
+            return self._available_t_factories
+        elif ftype == "s":
+            return self._available_s_factories
+        elif ftype == "toff":
+            return self._available_toff_factories
+        raise ValueError(f"No factories available with type {ftype}")
 
-    @property
-    def available_s_factories(self) -> deque[cirq.GridQubit]:
-        return self._available_s_factories
+    def all_factories(self, ftype: Literal["t", "s", "toff"]):
+        G = self.layout_graph
+        is_ftype_factory = lambda node: "ftype" in G.nodes[node] and G.nodes[node]["ftype"] == ftype
+        unique_fids = np.unique(
+            [G.nodes[node]["fid"] for node in G.nodes if is_ftype_factory(node)]
+        )
+        has_fid = lambda node, fid: "fid" in G.nodes[node] and G.nodes[node]["fid"] == fid
+        return [
+            tuple(
+                sorted(
+                    (q for q in self._all_factories if has_fid(q, fid) and is_ftype_factory(q)),
+                    key=lambda q: (q.row, q.col),
+                )
+            )
+            for fid in unique_fids
+        ]
 
-    def nearest_factory(self, qubit: cirq.GridQubit, ftype: Literal["s", "t"]) -> cirq.GridQubit:
+    def nearest_factory(
+        self,
+        qubits: tuple[cirq.GridQubit, ...] | cirq.GridQubit,
+        ftype: Literal["s", "t", "toff"],
+    ) -> cirq.GridQubit | tuple[cirq.GridQubit, ...]:
         """Finds the closest factory of desired type according to the Manhattan distance using the GridQubit indices of the factory qubits that do not have the `used` status
         Removes the returned factory from the available options and sets its status to `used`
         """
-        available_factories = (
-            self.available_s_factories if ftype == "s" else self.available_t_factories
-        )
+        single_qubit = isinstance(qubits, cirq.GridQubit)
+        qubits = (qubits,) if single_qubit else qubits
+        available_factories = self.available_factories(ftype=ftype)
         if not available_factories:
-            raise ValueError(f"No available {ftype} factories available!")
-        r, c = qubit.row, qubit.col
-        # Closest factory according to the L1 distance
-        factory = min(available_factories, key=lambda fact: abs(fact.row - r) + abs(fact.col - c))
+            raise ValueError(f"No {ftype} factories available!")
+
+        def movement_heuristic(factory):
+            "Heuristic based on the closest qubit within the factory by Manhattan distance"
+            return min(abs(f.row - q.row) + abs(f.col - q.col) for q in qubits for f in factory)
+
+        def lattice_heuristic(factory):
+            "Heuristic based on the lattice surgery routing distance between the first qubit in the factory and the first qubit in the set of target qubits"
+            return len(self.route_cnot(factory[0], qubits[0]))
+
+        factories = self.available_factories(ftype=ftype)
+        try:
+            closest_factory = min(factories, key=lattice_heuristic)
+        except NotImplementedError:
+            closest_factory = min(factories, key=movement_heuristic)
+
         # Factory now used must be removed
-        self.layout_graph.nodes[factory]["used"] = True
-        available_factories.remove(factory)
+        for factory_qubit in closest_factory:
+            self.layout_graph.nodes[factory_qubit]["used"] = True
+        available_factories.remove(closest_factory)
         if ftype == "s":
             self._available_s_factories = available_factories
-        else:
+        elif ftype == "t":
             self._available_t_factories = available_factories
-        return factory
+        else:
+            self._available_toff_factories = available_factories
+        closest_factory = closest_factory[0] if single_qubit else closest_factory
+        return closest_factory
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit) -> list[cirq.GridQubit]:
         """Finds the patches required to perform a lattice surgery CNOT between two logical qubits
@@ -189,9 +226,11 @@ class Layout(abc.ABC):
         color_dict = {
             "t": "red",
             "s": "yellow",
+            "toff": "black",
             "data": "green",
             "ancilla": "blue",
             "block": "pink",
+            "ccz": "orange",
         }
         G = self.layout_graph
         node_color = []
@@ -211,9 +250,14 @@ class MovementLayout(Layout):
     """
 
     # TODO: build this implementation
-    def __init__(self, input_circuit: cirq.Circuit, num_t_factories: int = 1) -> None:
+    def __init__(
+        self, input_circuit: cirq.Circuit, num_t_factories: int = 1, num_toff_factories: int = 0
+    ) -> None:
         super().__init__(
-            input_circuit=input_circuit, num_t_factories=num_t_factories, num_s_factories=0
+            input_circuit=input_circuit,
+            num_t_factories=num_t_factories,
+            num_toff_factories=num_toff_factories,
+            num_s_factories=0,
         )
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit):
@@ -271,10 +315,16 @@ class Column(Layout):
             [(q, dict(patch_type="data")) for q in qubit_map.values()],
         )
         G.add_nodes_from(
-            [(q, dict(patch_type="factory", ftype="t", used=True)) for q in t_factories],
+            [
+                (q, dict(patch_type="factory", ftype="t", fid=i, used=True))
+                for i, q in enumerate(t_factories)
+            ],
         )
         G.add_nodes_from(
-            [(q, dict(patch_type="factory", ftype="s", used=True)) for q in s_factories],
+            [
+                (q, dict(patch_type="factory", ftype="s", fid=i, used=True))
+                for i, q in enumerate(s_factories)
+            ],
         )
         G.add_nodes_from(
             [(q, dict(patch_type="ancilla")) for q in ancillas],
@@ -325,10 +375,16 @@ class FactorySandwich(Layout):
             [(q, dict(patch_type="data")) for q in qubit_map.values()],
         )
         G.add_nodes_from(
-            [(q, dict(patch_type="factory", ftype="t", used=True)) for q in t_factories],
+            [
+                (q, dict(patch_type="factory", ftype="t", fid=i, used=True))
+                for i, q in enumerate(t_factories)
+            ],
         )
         G.add_nodes_from(
-            [(q, dict(patch_type="factory", ftype="s", used=True)) for q in s_factories],
+            [
+                (q, dict(patch_type="factory", ftype="s", fid=i, used=True))
+                for i, q in enumerate(s_factories)
+            ],
         )
         G.add_nodes_from(
             [(q, dict(patch_type="ancilla")) for q in ancillas],
@@ -422,10 +478,16 @@ class Embedded(Layout):
             [(q, dict(patch_type="data")) for q in qubit_map.values()],
         )
         G.add_nodes_from(
-            [(q, dict(patch_type="factory", ftype="t", used=True)) for q in t_factories],
+            [
+                (q, dict(patch_type="factory", ftype="t", fid=i, used=True))
+                for i, q in enumerate(t_factories)
+            ],
         )
         G.add_nodes_from(
-            [(q, dict(patch_type="factory", ftype="s", used=True)) for q in s_factories],
+            [
+                (q, dict(patch_type="factory", ftype="s", fid=i, used=True))
+                for i, q in enumerate(s_factories)
+            ],
         )
         G.add_nodes_from(
             [(q, dict(patch_type="ancilla")) for q in ancillas],
@@ -444,55 +506,104 @@ class Embedded(Layout):
 
 
 class MovementDistillery(MovementLayout):
+    """
+    Layout for distilling magic states using movement.  Currently handles
+    T and CCZ distillation layouts.
+    """
+
     def __init__(
-        self,
-        input_circuit: cirq.Circuit,
-        num_t_factories: int = 0,
+        self, input_circuit: cirq.Circuit, num_t_factories: int = 0, num_toff_factories: int = 0
     ) -> None:
+        self.distil = True
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
+            num_toff_factories=num_toff_factories,
         )
-        self.distil = True
 
     def _generate(self) -> None:
+        # Establish Important Variables
         program_qubits = len(self.input_circuit.all_qubits())
-        distillation_qubits = 31 * self.num_t_factories
+        qubits_per_t_distil = 31
+        qubits_per_toff_distil = 23
+        num_output_qubits = 3
+        distillation_qubits = (
+            qubits_per_toff_distil * self.num_toff_factories
+            + qubits_per_t_distil * self.num_t_factories
+        )
         total_qubits = program_qubits + distillation_qubits
         side_length = ceil(sqrt(total_qubits))
 
+        # Maps linear indices to left-r>ight + up->down grid filling
         def idx_to_xy(idx: int) -> tuple[int, int]:
             x = idx // side_length
             y = idx % side_length
             return x, y
 
+        # Map Program Qubits to GridQubits
         qubit_map = {
             qid: cirq.GridQubit(*idx_to_xy(idx))
             for idx, qid in enumerate(sorted(self.input_circuit.all_qubits()))
         }
         self.set_map_circuit(qubit_map=qubit_map)
+
+        # Generate Layout Graph
         G = nx.Graph()
         G.add_nodes_from(
             [(q, dict(patch_type="data")) for q in qubit_map.values()],
         )
+        # Add T Distillation Factories to Graph
         for factory_index in range(self.num_t_factories):
-            qubit_index = factory_index * 31 + program_qubits
+            qubit_index = factory_index * qubits_per_t_distil + program_qubits
             output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
             G.add_node(output_qubit, patch_type="factory", ftype="t", fid=factory_index, used=True)
-            block_qubits = [cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, 31)]
+            block_qubits = [
+                cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, qubits_per_t_distil)
+            ]
             G.add_nodes_from(
                 [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
+            )
+        # Add Toffoli Distillation Factories to Graph
+        data_plus_t = program_qubits + (qubits_per_t_distil * self.num_t_factories)
+        for factory_index in range(self.num_toff_factories):  # just builds on to the T factories
+            qubit_index = factory_index * qubits_per_toff_distil + data_plus_t
+            output_qubits = [
+                cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(num_output_qubits)
+            ]
+            G.add_nodes_from(
+                [
+                    (
+                        q,
+                        dict(
+                            patch_type="factory",
+                            ftype="toff",
+                            fid=self.num_t_factories + factory_index,
+                            used=True,
+                        ),
+                    )
+                    for q in output_qubits
+                ]
+            )
+            block_qubits = [
+                cirq.GridQubit(*idx_to_xy(qubit_index + i))
+                for i in range(num_output_qubits, qubits_per_toff_distil)
+            ]
+            G.add_nodes_from(
+                [
+                    (q, dict(patch_type="block", fid=(self.num_t_factories + factory_index)))
+                    for q in block_qubits
+                ]
             )
         # Movement layouts assume all-to-all connectivity; avoid storing O(n^2) edges explicitly.
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
 
-    def distillation_block(self, factory_qubit: cirq.GridQubit) -> list[cirq.GridQubit]:
+    def distillation_block(self, factory: tuple[cirq.GridQubit]) -> list[cirq.GridQubit]:
         G = self.layout_graph
-        fid = G.nodes[factory_qubit]["fid"]
+        fid = G.nodes[factory[0]]["fid"]
         block_qubits = [
             q
             for q in G.nodes
             if (G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid)
         ]
-        return block_qubits + [factory_qubit]
+        return block_qubits + list(factory)
