@@ -338,6 +338,9 @@ _QLDPC_DISTANCE_FAMILIES = {"SurfaceCode", "ToricCode"}
 
 PatchLabel = Literal["memory", "compute", "cultivate", "distil"]
 _PATCH_LABELS = {"memory", "compute", "cultivate", "distil"}
+DistilleryLabel = Literal["CCZ", "T"]
+_DISTILLERY_LABELS = {"CCZ", "T"}
+_DISTILLERY_PATCH_COUNTS: dict[DistilleryLabel, int] = {"CCZ": 9, "T": 11}
 
 
 def _normalize_code_type(code_type: str) -> str:
@@ -383,6 +386,14 @@ def _validate_patch_label(patch_label: str) -> PatchLabel:
     if patch_label not in _PATCH_LABELS:
         raise ValueError(f"Patch label must be one of {sorted(_PATCH_LABELS)}, not {patch_label!r}")
     return cast(PatchLabel, patch_label)
+
+
+def _validate_distillery_label(label: str) -> DistilleryLabel:
+    if label not in _DISTILLERY_LABELS:
+        raise ValueError(
+            f"Distillery label must be one of {sorted(_DISTILLERY_LABELS)}, not {label!r}"
+        )
+    return cast(DistilleryLabel, label)
 
 
 class CodePatch:
@@ -728,6 +739,99 @@ class Farm:
                 "Farm can only contain CodePatch objects with patch_label='cultivate'."
             )
         self.code_patches.append(patch)
+
+
+class Distillery:
+    """Container for distillation code patches."""
+
+    def __init__(self, label: DistilleryLabel) -> None:
+        self.label = _validate_distillery_label(label)
+        self.code_patches = [
+            CodePatch(code_type="surface", patch_label="distil")
+            for _ in range(_DISTILLERY_PATCH_COUNTS[self.label])
+        ]
+
+    @property
+    def num_physical_qubits(self) -> int:
+        return sum(patch.n for patch in self.code_patches)
+
+    @property
+    def num_logical_qubits(self) -> int:
+        return sum(patch.k for patch in self.code_patches)
+
+    @property
+    def num_code_patches(self) -> int:
+        return len(self.code_patches)
+
+
+class Factory:
+    """Container for CCZ and T distilleries."""
+
+    def __init__(
+        self,
+        ccz_distilleries: int | Iterable[Distillery] = 0,
+        t_distilleries: int | Iterable[Distillery] = 0,
+    ) -> None:
+        self.ccz_distilleries: list[Distillery] = []
+        self.t_distilleries: list[Distillery] = []
+        self._add_distilleries(ccz_distilleries, "CCZ")
+        self._add_distilleries(t_distilleries, "T")
+
+    @property
+    def num_ccz_distilleries(self) -> int:
+        return len(self.ccz_distilleries)
+
+    @property
+    def num_t_distilleries(self) -> int:
+        return len(self.t_distilleries)
+
+    @property
+    def num_distilleries(self) -> int:
+        return self.num_ccz_distilleries + self.num_t_distilleries
+
+    @property
+    def num_physical_qubits(self) -> int:
+        return sum(
+            distillery.num_physical_qubits
+            for distillery in self.ccz_distilleries + self.t_distilleries
+        )
+
+    @property
+    def num_logical_qubits(self) -> int:
+        return sum(
+            distillery.num_logical_qubits
+            for distillery in self.ccz_distilleries + self.t_distilleries
+        )
+
+    def add_ccz_distillery(self, distillery: Distillery) -> None:
+        self._add_distillery(distillery, "CCZ")
+
+    def add_t_distillery(self, distillery: Distillery) -> None:
+        self._add_distillery(distillery, "T")
+
+    def _add_distilleries(
+        self,
+        distilleries: int | Iterable[Distillery],
+        label: DistilleryLabel,
+    ) -> None:
+        if isinstance(distilleries, int):
+            if distilleries < 0:
+                raise ValueError("Factory distillery count must be nonnegative.")
+            for _ in range(distilleries):
+                self._add_distillery(Distillery(label), label)
+            return
+        for distillery in distilleries:
+            self._add_distillery(distillery, label)
+
+    def _add_distillery(self, distillery: Distillery, label: DistilleryLabel) -> None:
+        if not isinstance(distillery, Distillery):
+            raise TypeError("Factory can only contain Distillery objects.")
+        if distillery.label != label:
+            raise ValueError(f"Expected a {label} Distillery, not {distillery.label!r}.")
+        if label == "CCZ":
+            self.ccz_distilleries.append(distillery)
+        else:
+            self.t_distilleries.append(distillery)
 
 
 class RotatedCodePatch:

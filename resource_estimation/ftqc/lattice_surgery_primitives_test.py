@@ -219,6 +219,127 @@ def test_farm_rejects_negative_patch_count() -> None:
         lsp.Farm(-1)
 
 
+@pytest.mark.parametrize(("label", "num_code_patches"), [("CCZ", 9), ("T", 11)])
+def test_distillery_initializes_default_distil_patches(
+    label: lsp.DistilleryLabel, num_code_patches: int
+) -> None:
+    distillery = lsp.Distillery(label)
+
+    assert distillery.label == label
+    assert distillery.num_physical_qubits == 49 * num_code_patches
+    assert distillery.num_logical_qubits == num_code_patches
+    assert distillery.num_code_patches == num_code_patches
+    assert [patch.code_type for patch in distillery.code_patches] == [
+        "surface"
+    ] * num_code_patches
+    assert [patch.patch_label for patch in distillery.code_patches] == [
+        "distil"
+    ] * num_code_patches
+    assert [patch.code_params for patch in distillery.code_patches] == [
+        (49, 1, 7)
+    ] * num_code_patches
+
+
+def test_distillery_rejects_invalid_label() -> None:
+    with pytest.raises(ValueError, match="Distillery label must be one of"):
+        lsp.Distillery("bad")  # type: ignore[arg-type]
+
+
+def test_factory_empty() -> None:
+    factory = lsp.Factory()
+
+    assert factory.ccz_distilleries == []
+    assert factory.t_distilleries == []
+    assert factory.num_ccz_distilleries == 0
+    assert factory.num_t_distilleries == 0
+    assert factory.num_distilleries == 0
+    assert factory.num_physical_qubits == 0
+    assert factory.num_logical_qubits == 0
+
+
+def test_factory_initializes_distilleries_from_counts() -> None:
+    factory = lsp.Factory(2, 3)
+
+    assert [distillery.label for distillery in factory.ccz_distilleries] == ["CCZ"] * 2
+    assert [distillery.label for distillery in factory.t_distilleries] == ["T"] * 3
+    assert factory.num_ccz_distilleries == 2
+    assert factory.num_t_distilleries == 3
+    assert factory.num_distilleries == 5
+    assert factory.num_physical_qubits == 49 * (2 * 9 + 3 * 11)
+    assert factory.num_logical_qubits == 2 * 9 + 3 * 11
+
+
+def test_factory_initializes_distilleries_from_iterables() -> None:
+    ccz_distillery = lsp.Distillery("CCZ")
+    t_distilleries = [lsp.Distillery("T"), lsp.Distillery("T")]
+
+    factory = lsp.Factory([ccz_distillery], t_distilleries)
+
+    assert factory.ccz_distilleries == [ccz_distillery]
+    assert factory.t_distilleries == t_distilleries
+    assert factory.num_ccz_distilleries == 1
+    assert factory.num_t_distilleries == 2
+    assert factory.num_distilleries == 3
+    assert factory.num_physical_qubits == 49 * (9 + 2 * 11)
+    assert factory.num_logical_qubits == 9 + 2 * 11
+
+
+def test_factory_initializes_distilleries_from_mixed_inputs() -> None:
+    t_distillery = lsp.Distillery("T")
+
+    factory = lsp.Factory(1, [t_distillery])
+
+    assert factory.num_ccz_distilleries == 1
+    assert factory.t_distilleries == [t_distillery]
+    assert factory.num_distilleries == 2
+    assert factory.num_physical_qubits == 49 * (9 + 11)
+    assert factory.num_logical_qubits == 9 + 11
+
+
+def test_factory_adds_distilleries() -> None:
+    ccz_distillery = lsp.Distillery("CCZ")
+    t_distillery = lsp.Distillery("T")
+    factory = lsp.Factory()
+
+    factory.add_ccz_distillery(ccz_distillery)
+    factory.add_t_distillery(t_distillery)
+
+    assert factory.ccz_distilleries == [ccz_distillery]
+    assert factory.t_distilleries == [t_distillery]
+    assert factory.num_distilleries == 2
+    assert factory.num_physical_qubits == 49 * (9 + 11)
+    assert factory.num_logical_qubits == 9 + 11
+
+
+def test_factory_rejects_negative_distillery_counts() -> None:
+    with pytest.raises(ValueError, match="distillery count must be nonnegative"):
+        lsp.Factory(-1)
+    with pytest.raises(ValueError, match="distillery count must be nonnegative"):
+        lsp.Factory(0, -1)
+
+
+def test_factory_rejects_non_distillery_objects() -> None:
+    with pytest.raises(TypeError, match="Factory can only contain Distillery objects"):
+        lsp.Factory([object()])  # type: ignore[list-item]
+
+    factory = lsp.Factory()
+    with pytest.raises(TypeError, match="Factory can only contain Distillery objects"):
+        factory.add_ccz_distillery(object())  # type: ignore[arg-type]
+
+
+def test_factory_rejects_label_mismatches() -> None:
+    with pytest.raises(ValueError, match="Expected a CCZ Distillery"):
+        lsp.Factory([lsp.Distillery("T")])
+    with pytest.raises(ValueError, match="Expected a T Distillery"):
+        lsp.Factory(0, [lsp.Distillery("CCZ")])
+
+    factory = lsp.Factory()
+    with pytest.raises(ValueError, match="Expected a CCZ Distillery"):
+        factory.add_ccz_distillery(lsp.Distillery("T"))
+    with pytest.raises(ValueError, match="Expected a T Distillery"):
+        factory.add_t_distillery(lsp.Distillery("CCZ"))
+
+
 def test_rotated_code_patch() -> None:
     with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
         lsp.RotatedCodePatch(4)
