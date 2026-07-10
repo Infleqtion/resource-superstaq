@@ -252,7 +252,7 @@ def test_general_exceptions(circuit5: cirq.Circuit) -> None:
         movement.reset_graph()
         _ = movement.nearest_factory(cirq.GridQubit(0, 2), "t")
     with pytest.raises(ValueError, match="No factories available"):
-        _ = movement.available_factories(ftype="ccz")
+        _ = movement.available_factories(ftype="toffoli")
 
 
 def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
@@ -298,12 +298,12 @@ def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
 
 def test_distillery(circuit5: cirq.Circuit) -> None:
     """
-    Test that the distillery works with both T and Toffoli Distillation
+    Test that the distillery works with both T and CCZ Distillation
     """
-    distillery = MovementDistillery(circuit5, num_t_factories=3, num_toff_factories=2)
+    distillery = MovementDistillery(circuit5, num_t_factories=3, num_ccz_factories=2)
     distillery.reload_factories(ftype="s")
     distillery.reload_factories(ftype="t")
-    distillery.reload_factories(ftype="toff")
+    distillery.reload_factories(ftype="ccz")
 
     expected_program_qubits = set(cirq.GridQubit(0, i) for i in range(5))
     realized_program_qubits = set(
@@ -337,14 +337,14 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
     )
     assert expected_block_qubits == realized_block_qubits
 
-    toff_factory = (cirq.GridQubit(8, 2), cirq.GridQubit(8, 3), cirq.GridQubit(8, 4))
-    expected_toff_block = set([cirq.GridQubit(10, 0)])
+    ccz_factory = (cirq.GridQubit(8, 2), cirq.GridQubit(8, 3), cirq.GridQubit(8, 4))
+    expected_ccz_block = set([cirq.GridQubit(10, 0)])
     for idx in range(2, 12):
-        expected_toff_block.add(cirq.GridQubit(8, idx))
+        expected_ccz_block.add(cirq.GridQubit(8, idx))
     for idx in range(12):
-        expected_toff_block.add(cirq.GridQubit(9, idx))
-    realized_toff_block = set(distillery.distillation_block(toff_factory))
-    assert expected_toff_block == realized_toff_block
+        expected_ccz_block.add(cirq.GridQubit(9, idx))
+    realized_ccz_block = set(distillery.distillation_block(ccz_factory))
+    assert expected_ccz_block == realized_ccz_block
 
     # Check that nearest T factory is as expected and changes when used
     t_target = cirq.GridQubit(0, 0)
@@ -354,9 +354,9 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
     assert distillery.nearest_factory(qubits=t_target, ftype="t") == expected_t_factory
 
     # Check that the nearest Toff factory is as expected and changes when used
-    toff_target = (cirq.GridQubit(0, 2), cirq.GridQubit(0, 3), cirq.GridQubit(0, 4))
-    expected_toff_factory = (cirq.GridQubit(8, 2), cirq.GridQubit(8, 3), cirq.GridQubit(8, 4))
-    assert distillery.nearest_factory(toff_target, ftype="toff") == expected_toff_factory
+    ccz_target = (cirq.GridQubit(0, 2), cirq.GridQubit(0, 3), cirq.GridQubit(0, 4))
+    expected_ccz_factory = (cirq.GridQubit(8, 2), cirq.GridQubit(8, 3), cirq.GridQubit(8, 4))
+    assert distillery.nearest_factory(ccz_target, ftype="ccz") == expected_ccz_factory
 
-    expected_toff_factory = (cirq.GridQubit(10, 1), cirq.GridQubit(10, 2), cirq.GridQubit(10, 3))
-    assert distillery.nearest_factory(toff_target, ftype="toff") == expected_toff_factory
+    expected_ccz_factory = (cirq.GridQubit(10, 1), cirq.GridQubit(10, 2), cirq.GridQubit(10, 3))
+    assert distillery.nearest_factory(ccz_target, ftype="ccz") == expected_ccz_factory

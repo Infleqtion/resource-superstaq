@@ -104,7 +104,7 @@ def test_end2end_distillery():
     circuit = cirq.Circuit(
         [cirq.CNOT.on(q1, q2), cirq.TOFFOLI.on(q1, q2, q3), cirq.T.on_each(q1, q2, q3)]
     )
-    layout = MovementDistillery(input_circuit=circuit, num_t_factories=1, num_toff_factories=1)
+    layout = MovementDistillery(input_circuit=circuit, num_t_factories=1, num_ccz_factories=1)
     arc = arch.DefaultMovement(post_op_correction=False, idling=False)
     compiled = comp.ft_compile(layout, arc, with_barriers=False)
     assert all(arc.primitives.validate(op) for op in compiled.all_operations())
@@ -945,7 +945,7 @@ def test_hm_moves() -> None:
 
 
 def test_replace_cirq_op_distil_t(bell_circuit) -> None:
-    distillery_layout = MovementDistillery(bell_circuit, num_t_factories=2, num_toff_factories=0)
+    distillery_layout = MovementDistillery(bell_circuit, num_t_factories=2, num_ccz_factories=0)
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
     returned_ops = comp.replace_cirq_op(
@@ -967,8 +967,8 @@ def test_replace_cirq_op_distil_t(bell_circuit) -> None:
         assert op in cirq.GateFamily(expected_type)
 
 
-def test_replace_cirq_op_distil_toff(random_circ) -> None:
-    distillery_layout = MovementDistillery(random_circ, num_toff_factories=2, num_t_factories=0)
+def test_replace_cirq_op_distil_ccz(random_circ) -> None:
+    distillery_layout = MovementDistillery(random_circ, num_ccz_factories=2, num_t_factories=0)
 
     op_to_replace = cirq.TOFFOLI.on(
         cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
@@ -982,7 +982,7 @@ def test_replace_cirq_op_distil_toff(random_circ) -> None:
         returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
     )
     expected_types = [
-        *([lsp.Distil("Toffoli")] * 2),
+        *([lsp.Distil("CCZ")] * 2),
         *([cirq.CNOT] * 3),
         *([cirq.MeasurementGate] * 3),
         *([cirq.ResetChannel] * 3),

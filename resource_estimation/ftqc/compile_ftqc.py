@@ -118,7 +118,7 @@ def replace_cirq_op(
 
 def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
     distil_t = layout.distil and op in cirq.GateFamily(cirq.T)
-    distil_toff = layout.distil and op in cirq.GateFamily(cirq.TOFFOLI)
+    distil_ccz = layout.distil and op in cirq.GateFamily(cirq.TOFFOLI)
     cultivate_t = (not layout.distil) and op in cirq.GateFamily(cirq.T)
     cultivate_s = op in cirq.GateFamily(cirq.S)
     if distil_t:
@@ -133,9 +133,9 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
         ftype = "s"
         prep_gate = lsp.Cultivate(pi / 2)
         correction = cirq.Z
-    elif distil_toff:
-        ftype = "toff"
-        prep_gate = lsp.Distil("Toffoli")
+    elif distil_ccz:
+        ftype = "ccz"
+        prep_gate = lsp.Distil("CCZ")
         correction = [
             *cirq.H.on_each(*op.qubits),
             *cirq.X.on_each(*op.qubits),
@@ -148,7 +148,7 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     all_factories = layout.all_factories(ftype)
     operations = []
     if not available_factories:
-        if distil_t or distil_toff:
+        if distil_t or distil_ccz:
             operations += [
                 prep_gate.on(*layout.distillation_block(factory)) for factory in all_factories
             ]
@@ -287,7 +287,7 @@ def post_op_syndrome_extraction(
 
 
 def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
-    """Checks that the given circuit is in the Clifford+T gateset. Toffolis are also allowed"""
+    """Checks that the given circuit is in the Clifford+T gateset. CCZs are also allowed"""
     valid_gates = (
         cirq.T,
         cirq.X,
@@ -307,7 +307,7 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
         op.gate in valid_gates or isinstance(op.gate, valid_types)
         for op in tqdm(circuit.all_operations(), total=total_ops, disable=not verbose)
     ):
-        raise ValueError("This compiler only handles Clifford + T + Toffoli circuits")
+        raise ValueError("This compiler only handles Clifford + T + CCZ circuits")
 
 
 def _decompose_to_primitives(
@@ -377,7 +377,7 @@ def ft_compile(
     num_threads: int = 1,
     skip_validation: bool = False,
 ) -> cirq.Circuit:
-    """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T + Toffoli gateset to a cirq circuit of primitives.
+    """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T + CCZ gateset to a cirq circuit of primitives.
     The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
     The architecture input contains information about what primtives are accessible to the compiler and which extra passes should be added to the primitive circuit.
     The passes available are post op correction and idling.

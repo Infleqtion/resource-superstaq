@@ -241,14 +241,14 @@ class Distil(cirq.Gate):
     Noisy T gates are assumed to come from cultivation, resulting in 15 additional logical patches.
     Distil|0^31> --> (|0> + e^(1j*pi/4)|1>)/√2 |0^30>
 
-    Toffoli leads to a CCZ state
+    CCZ leads to a CCZ state
     """
 
-    def __init__(self, resource: Literal["T", "Toffoli"]) -> None:
-        if resource not in ("T", "Toffoli"):
+    def __init__(self, resource: Literal["T", "CCZ"]) -> None:
+        if resource not in ("T", "CCZ"):
             raise ValueError(f"Invalid resource for Distil gate: {resource!r}")
         self._resource = resource
-        self._num_qubits = 23 if resource == "Toffoli" else 31
+        self._num_qubits = 23 if resource == "CCZ" else 31
 
     def num_qubits(self) -> int:
         return self._num_qubits
