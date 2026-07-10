@@ -157,11 +157,6 @@ PauliBasis = Literal["X", "Z"]
 ReactionDepth = dict[PauliBasis, int]
 
 
-ReactionTreeKey = tuple[cirq.Qid, PauliBasis]
-ReactionTreeVertex = tuple[PauliBasis, cirq.Qid, int]
-ReactionTree = nx.DiGraph
-
-
 @dataclass(frozen=True)
 class ReactionDynamics:
     """Describes the reaction dynamics of a factory-type gate.
@@ -378,7 +373,7 @@ class ReactionDepthEstimator:
 
         return {qubit: dict(depth) for qubit, depth in reaction_depth.items()}
 
-    def reaction_tree(self, circuit: cirq.Circuit) -> ReactionTree:
+    def reaction_tree(self, circuit: cirq.Circuit) -> nx.DiGraph:
         """Build a DAG for reaction-depth dependencies.
         Tree depth is the longest path from `time=0` root vertices
         to the final time-layer vertices.
@@ -403,7 +398,9 @@ class ReactionDepthEstimator:
                 tree.add_node(vertex, depth=0)
 
         for time, input_op in enumerate(operations, start=1):
-            dependencies: list[tuple[ReactionTreeKey, ReactionTreeKey, int]] = []
+            dependencies: list[
+                tuple[tuple[cirq.Qid, PauliBasis], tuple[cirq.Qid, PauliBasis], int]
+            ] = []
             if input_op.gate in self.factories:
                 reaction_dynamic = self._reaction_dynamics[
                     (input_op.gate, self.factories[input_op.gate])
