@@ -81,7 +81,7 @@ def _requires_resource(op: cirq.Operation, transversal_cnot: bool) -> bool:
         return True
     if op in cirq.GateFamily(cirq.T):
         return True
-    if op in cirq.GateFamily(cirq.TOFFOLI):
+    if op in cirq.GateFamily(cirq.CCZ):
         return True
     return False
 
@@ -118,7 +118,7 @@ def replace_cirq_op(
 
 def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
     distil_t = layout.distil and op in cirq.GateFamily(cirq.T)
-    distil_ccz = layout.distil and op in cirq.GateFamily(cirq.TOFFOLI)
+    distil_ccz = layout.distil and op in cirq.GateFamily(cirq.CCZ)
     cultivate_t = (not layout.distil) and op in cirq.GateFamily(cirq.T)
     cultivate_s = op in cirq.GateFamily(cirq.S)
     if distil_t:
@@ -296,7 +296,7 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
         cirq.H,
         cirq.I,
         cirq.CNOT,
-        cirq.TOFFOLI,
+        cirq.CCZ,
     )
     valid_types = (
         cirq.MeasurementGate,
