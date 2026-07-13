@@ -32,6 +32,7 @@ import cirq
 import cirq_superstaq as css
 from cirq_superstaq import Barrier, barrier
 from tqdm import tqdm
+import random
 
 from . import lattice_surgery_primitives as lsp
 from .layout import Layout
@@ -90,6 +91,7 @@ def replace_cirq_op(
     op: cirq.Operation,
     layout: Layout,
     transversal_cnot: bool,
+    dynamic: bool = False,
 ) -> list[cirq.Operation]:
     """Replacement logic similar to decomposition for cirq operations to be converted to primitives.
 
@@ -110,13 +112,15 @@ def replace_cirq_op(
             lsp.Split(partitions=[1] * (len(path_patches[1:])), smooth=False).on(*path_patches[1:]),
         ]
     if _requires_resource(op, transversal_cnot):
-        return teleport_resource(op, layout)
+        return teleport_resource(op, layout, dynamic)
     raise ValueError(
         f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} gate: {op.gate}"
     )
 
 
-def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
+def teleport_resource(
+    op: cirq.Operation, layout: Layout, dyanmic: bool = False
+) -> list[cirq.Operation]:
     distil_t = layout.distil and op in cirq.GateFamily(cirq.T)
     distil_ccz = layout.distil and op in cirq.GateFamily(cirq.CCZ)
     cultivate_t = (not layout.distil) and op in cirq.GateFamily(cirq.T)
@@ -159,7 +163,21 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     # These should be tuples of qubits
     routed_factory = layout.nearest_factory(op.qubits, ftype=ftype)
     cnots, measurements, resets = [], [], []
+    # I think the S gates that are corrections for T gates have to be dynamically compiled here.
+    # If we instead try to just halve the resources taken up by the particular S gate, then this
+    # still uses up an S factory, which will then be difficult to account for in terms of like
+    # routing/factory management, since then a future S gate might cause a factory reset when there
+    # actually was a factory available since we didn't need to perform that S gate and so on. So it
+    # seems like we need to flip a coin here (probably with some sort of dynamic flag that is false
+    # by default) on if we actually add this S gate or not. That way as well, things only need to
+    # change in compile_ftqc, and everything below it in the stack can be left alone
     corrections = correction if isinstance(correction, list) else [correction.on(*op.qubits)]
+    # 50% of the time, it works every time: we don't have to do an S gate correction on a T gate or
+    # a Z gate correction on an S gate (though the Z gate correction is very minimal in resources)
+    if dyanmic and cultivate_t and random.randint(0, 1):
+        corrections = []
+    if dyanmic and cultivate_s and random.randint(0, 1):
+        corrections = []
     for factory_qubit, program_qubit in zip(routed_factory, op.qubits):
         cnots.append(cirq.CNOT.on(factory_qubit, program_qubit))
         measurements.append(cirq.MeasurementGate(1, key="").on(factory_qubit))
@@ -315,6 +333,7 @@ def _decompose_to_primitives(
     circuit: cirq.Circuit,
     layout: Layout,
     arc: Architecture,
+    dynamic: bool = False,
 ) -> tuple[cirq.Circuit, list[cirq.GridQubit]]:
     primitives = cirq.Gateset(
         *(cirq.GateFamily(g._gate, ignore_global_phase=False) for g in arc.primitives.gates)
@@ -322,7 +341,9 @@ def _decompose_to_primitives(
     transversal_cnot = cirq.CX in primitives
 
     def _map_fn(op: cirq.Operation) -> list[cirq.Operation]:
-        return replace_cirq_op(op=op, layout=layout, transversal_cnot=transversal_cnot)
+        return replace_cirq_op(
+            op=op, layout=layout, transversal_cnot=transversal_cnot, dynamic=dynamic
+        )
 
     # TODO: can we turn layout into a decomposition_context?
     ops = cirq.decompose(
@@ -377,6 +398,7 @@ def ft_compile(
     with_barriers: bool = False,
     num_threads: int = 1,
     skip_validation: bool = False,
+    dynamic: bool = False,
 ) -> cirq.Circuit:
     """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T + CCZ gateset to a cirq circuit of primitives.
     The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
@@ -397,7 +419,7 @@ def ft_compile(
     else:
         validate_ops(circuit, verbose=verbose)
 
-    circuit = _decompose_to_primitives(circuit, layout=layout, arc=arc)
+    circuit = _decompose_to_primitives(circuit, layout=layout, arc=arc, dynamic=dynamic)
     if verbose > 1:
         verbose_list = [list(moment.operations) for moment in circuit.moments]
 
