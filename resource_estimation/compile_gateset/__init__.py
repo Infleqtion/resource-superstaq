@@ -13,12 +13,16 @@
 # limitations under the License.
 from resource_estimation.compile_gateset.cliff_rz import (
     CliffRzGateset,
+    CliffPhXZGateset,
+    CliffTDirect,
     eject_z,
     phx_to_zhzhz,
     zpow_to_rz,
+    replace_op_with_pygridsynth,
 )
 from resource_estimation.compile_gateset.clifford_t import (
     approx_rz,
+    approx_phxz,
     cin_cliffs,
     compile_cirq_to_clifford_t,
     process_cirq_str,
@@ -26,15 +30,22 @@ from resource_estimation.compile_gateset.clifford_t import (
 )
 from resource_estimation.compile_gateset.compile_gateset import (
     clifford_rz_gateset,
+    clifford_phxz_gateset,
+    clifford_t_direct_gateset,
     clifford_t_gateset,
     compile_gateset,
 )
 
 __all__ = [
     "CliffRzGateset",
+    "CliffPhXZGateset",
+    "CliffTDirect",
     "approx_rz",
+    "approx_phxz",
     "cin_cliffs",
     "clifford_rz_gateset",
+    "clifford_phxz_gateset",
+    "clifford_t_direct_gateset",
     "clifford_t_gateset",
     "compile_cirq_to_clifford_t",
     "compile_gateset",
@@ -43,4 +54,5 @@ __all__ = [
     "process_cirq_str",
     "toffoli_decompose",
     "zpow_to_rz",
+    "replace_op_with_pygridsynth",
 ]

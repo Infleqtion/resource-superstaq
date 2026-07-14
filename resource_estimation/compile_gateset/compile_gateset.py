@@ -15,8 +15,13 @@ from __future__ import annotations
 
 import cirq
 
-from resource_estimation.compile_gateset.cliff_rz import CliffRzGateset
+from resource_estimation.compile_gateset.cliff_rz import (
+    CliffRzGateset,
+    CliffPhXZGateset,
+    CliffTDirect,
+)
 from resource_estimation.compile_gateset.clifford_t import compile_cirq_to_clifford_t
+import warnings  # Needed to ignore a FutureWarning from cirq
 
 _CLIFFORD_T_REQUIRED_GATES = (cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.T)
 _CLIFFORD_T_OPTIONAL_GATES = (cirq.I, cirq.MeasurementGate, cirq.ResetChannel)
@@ -38,6 +43,31 @@ def clifford_rz_gateset(atol: float = 1e-8) -> cirq.Gateset:
         A Cirq gateset for compiling circuits to Clifford + Rz.
     """
     return CliffRzGateset(atol=atol)
+
+
+def clifford_phxz_gateset(atol: float = 1e-8) -> cirq.Gateset:
+    """Returns the default Clifford + PhasedXZ gateset.
+
+    Args:
+        atol: Absolute tolerance used when decomposing and simplifying operations.
+
+    Returns:
+        A Cirq gateset for compiling circuits to Clifford + PhasedXZ.
+    """
+    return CliffPhXZGateset(atol=atol)
+
+
+def clifford_t_direct_gateset(eps: float, atol: float = 1e-8) -> CliffTDirect:
+    """Returns the CliffTDirect gateset.
+
+    Args:
+        eps: Maximum allowable approximation error for each synthesized gate.
+        atol: Absolute tolerance used when decomposing and simplifying operations.
+
+    Returns:
+        A Cirq gateset for compiling circuits directly to Clifford + T.
+    """
+    return CliffTDirect(epsilon=eps, atol=atol)
 
 
 def clifford_t_gateset(atol: float) -> cirq.Gateset:
@@ -83,9 +113,11 @@ def compile_gateset(
             attribute. Use `clifford_t_gateset(atol=...)` to construct the
             default Clifford + T target.
     """
-    if _is_clifford_t_gateset(gateset):
+    if _is_clifford_t_gateset(gateset) and not isinstance(gateset, CliffTDirect):
         if not hasattr(gateset, "_atol"):
             raise ValueError("Clifford + T gatesets must define an `_atol` attribute.")
         return compile_cirq_to_clifford_t(circuit, eps=gateset._atol, verbose=verbose)
 
-    return cirq.optimize_for_target_gateset(circuit, gateset=gateset)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, module=r"cirq")
+        return cirq.optimize_for_target_gateset(circuit, gateset=gateset)

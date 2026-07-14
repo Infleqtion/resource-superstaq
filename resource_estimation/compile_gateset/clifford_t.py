@@ -18,6 +18,7 @@ import cirq
 import mpmath
 import numpy as np
 import pygridsynth
+from pygridsynth.multi_qubit_unitary_approximation import approximate_one_qubit_unitary
 from tqdm import tqdm
 
 
@@ -63,9 +64,19 @@ def approx_rz(theta: float, epsilon: float) -> str:
     return hst_str
 
 
+def approx_phxz(gate: cirq.Gate, epsilon: float) -> str:
+    # TODO: Include handling for special gates
+    if cirq.num_qubits(gate) != 1:
+        raise ValueError(f"Expected 1-qubit gate, got {cirq.num_qubits(gate)} qubits")
+    unitary = cirq.unitary(gate)
+    decomp, _ = approximate_one_qubit_unitary(unitary=unitary, epsilon=mpmath.mpmathify(epsilon))
+    hst_str = "".join(g.to_simple_str() for g in decomp)
+    return hst_str
+
+
 def process_cirq_str(
-    circ: cirq.Circuit, gates: list[str], q: cirq.GridQubit | cirq.LineQubit | cirq.NamedQubit
-) -> cirq.Operation:
+    circ: cirq.Circuit, gates: str, q: cirq.GridQubit | cirq.LineQubit | cirq.NamedQubit
+) -> None:
     """
     Maps list of strings representing an Rz angle decomposition to a cirq gate
     The list is reversed because gridsynth returns gates in matrix order instead of circuit operation order
@@ -100,7 +111,7 @@ def compile_cirq_to_clifford_t(
     circ: cirq.Circuit, eps: float, verbose: bool = True
 ) -> cirq.Circuit:
     """
-    Synthesizes the Clifford + Rz circuit into a Clifford + T circuit
+    Synthesizes the Clifford + Rz/PhasedXZ circuit into a Clifford + T circuit
     The eps parameter defines the maximum allowable error in the angle of each synthesized Rz gate
     """
     newcirc = cirq.Circuit()
@@ -113,12 +124,15 @@ def compile_cirq_to_clifford_t(
             elif gate in cirq.Gateset(cirq.MeasurementGate, cirq.ResetChannel):
                 newcirc += gate.on(*qubits)
             else:
-                if not isinstance(gate, cirq.Rz):
-                    raise ValueError(f"Non clifford+Rz gate!\n{gate}")
-                else:
-                    theta = gate._rads
+                if isinstance(gate, cirq.Rz):
+                    theta = gate.exponent * np.pi  # gets rads from exponent
                     gates = approx_rz(theta, eps)
                     process_cirq_str(newcirc, gates, qubits[0])
+                elif isinstance(gate, cirq.PhasedXZGate):
+                    gates = approx_phxz(gate=gate, epsilon=eps)
+                    process_cirq_str(newcirc, gates, qubits[0])
+                else:
+                    raise ValueError(f"Gate not recognized:\n{gate}")
     return newcirc
 
 

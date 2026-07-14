@@ -17,8 +17,9 @@ from cirq.ops.pauli_string import SingleQubitPauliStringGateOperation
 import cirq
 import cirq_superstaq as css
 import numpy as np
-
-# warnings.filterwarnings(category=FutureWarning, action="ignore")
+import abc
+import mpmath
+from pygridsynth.multi_qubit_unitary_approximation import approximate_multi_qubit_unitary
 
 
 @cirq.transformer
@@ -145,21 +146,79 @@ def zpow_to_rz(
     )
 
 
-class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
-    """
-    A Gateset for a Clifford + Rz
-    """
+# I hate having so many functions written by AI here... >:(
+def _np_to_mpmath_matrix(u: np.ndarray) -> mpmath.matrix:
+    """Converts a NumPy array to an mpmath matrix for compatibility with pygridsynth."""
+    return mpmath.matrix([[mpmath.mpc(complex(z).real, complex(z).imag) for z in row] for row in u])
 
-    def __init__(self, atol: float = 1e-8) -> None:
+
+def _normalize_to_su(U: mpmath.matrix) -> tuple[mpmath.matrix, mpmath.mpc]:
+    """Applies a global phase to ensure the matrix is in SU(n) for pygridsynth."""
+    n = U.rows
+    detU = mpmath.det(U)
+    phase = detU ** (-mpmath.mpf(1) / n)
+    return phase * U, phase
+
+
+def replace_op_with_pygridsynth(op: cirq.Operation, epsilon: float) -> cirq.Circuit:
+    """Gets pygridsynth replacement gates for cirq Operation up to two qubits"""
+    if len(op.qubits) > 2:
+        raise ValueError("Support for multi-qubit gates not currently available")
+
+    qubit_map = {i: q for i, q in enumerate(op.qubits)}
+    matrix = _np_to_mpmath_matrix(cirq.unitary(op))
+    matrix, _ = _normalize_to_su(matrix)
+    num_qubits = len(op.qubits)
+    approximation, _ = approximate_multi_qubit_unitary(
+        matrix,
+        num_qubits=num_qubits,
+        epsilon=mpmath.mpmathify(epsilon),
+    )
+    replacement = cirq.Circuit()
+    for discrete_gate in approximation[::-1]:
+        name = type(discrete_gate).__name__
+        if name == "WGate":  # Ignore global phase
+            continue
+        elif name == "HGate":
+            op_to_add = cirq.H.on(qubit_map[discrete_gate.target_qubit])
+        elif name == "SGate":
+            op_to_add = cirq.S.on(qubit_map[discrete_gate.target_qubit])
+        elif name == "TGate":
+            op_to_add = cirq.T.on(qubit_map[discrete_gate.target_qubit])
+        elif (
+            name == "SXGate"
+        ):  # See https://github.com/quantum-programming/pygridsynth/blob/main/pygridsynth/quantum_gate.py
+            op_to_add = cirq.X.on(qubit_map[discrete_gate.target_qubit])
+        elif name == "CxGate":
+            op_to_add = cirq.CNOT.on(
+                qubit_map[discrete_gate.control_qubit], qubit_map[discrete_gate.target_qubit]
+            )
+        else:
+            # Coverage is omitted here because this should not run unless something unexpected happens with pygridsynth
+            raise ValueError(f"Unsupported pygridsynth gate: {discrete_gate!r}")  # pragma: no cover
+        replacement += [op_to_add]
+    return replacement
+
+
+class CliffordGateset(cirq.TwoQubitCompilationTargetGateset, abc.ABC):
+    """Base class for Gatesets with large overlap."""
+
+    def __init__(self, *gates, _qubits=None, atol: float = 1e-8) -> None:
         self._atol = atol
+        self._qubits = _qubits
+
         super().__init__(
             cirq.GateFamily(cirq.CX, ignore_global_phase=False),
+            cirq.GateFamily(cirq.S, ignore_global_phase=True),
+            cirq.GateFamily(cirq.H, ignore_global_phase=True),
+            cirq.GateFamily(cirq.X, ignore_global_phase=True),
+            cirq.GateFamily(cirq.Z, ignore_global_phase=True),
             cirq.MeasurementGate,
-            cirq.PhasedXZGate,
             cirq.GlobalPhaseGate,
             css.Barrier,
+            *gates,
             preserve_moment_structure=False,
-            reorder_operations=False,  # Enabling makes a shorter circuit but probably way too slow
+            reorder_operations=False,
         )
 
     def _decompose_two_qubit_operation(
@@ -181,6 +240,20 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
         """List of transformers which should be run before decomposing individual operations."""
         return [cirq.drop_negligible_operations, *super().preprocess_transformers]
 
+
+class CliffRzGateset(CliffordGateset):
+    """
+    A Gateset for a Clifford + Rz
+    """
+
+    def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
+        super().__init__(
+            cirq.PhasedXZGate,
+            cirq.GateFamily(cirq.ZPowGate),
+            _qubits=_qubits,
+            atol=atol,
+        )
+
     @property
     def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
         """List of transformers which should be run after decomposing individual operations."""
@@ -198,4 +271,84 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
             cirq.drop_empty_moments,
         ]
 
-    # TODO: add a special decomposition for toffoli
+
+class CliffPhXZGateset(CliffordGateset):
+    """
+    A Gateset for a Clifford + PhXZ
+    """
+
+    def __init__(self, _qubits=None, *, atol: float = 1e-8) -> None:
+        super().__init__(
+            cirq.PhasedXZGate,
+            _qubits=_qubits,
+            atol=atol,
+        )
+
+    @property
+    def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
+        """List of transformers which should be run after decomposing individual operations."""
+        return [
+            cirq.merge_single_qubit_gates_to_phxz,
+            cirq.create_transformer_with_kwargs(eject_z, atol=self._atol),
+            cirq.create_transformer_with_kwargs(cirq.drop_negligible_operations, atol=self._atol),
+            cirq.drop_empty_moments,
+            cirq.create_transformer_with_kwargs(eject_z, atol=self._atol),
+            cirq.create_transformer_with_kwargs(cirq.drop_negligible_operations, atol=self._atol),
+            cirq.align_left,
+            cirq.synchronize_terminal_measurements,
+            cirq.drop_empty_moments,
+        ]
+
+
+class CliffTDirect(cirq.TwoQubitCompilationTargetGateset):
+    def __init__(self, epsilon: float, _qubits=None, atol: float = 1e-8) -> None:
+        self._atol = atol
+        self._qubits = _qubits
+        self._epsilon = epsilon
+
+        super().__init__(
+            cirq.T,
+            cirq.H,
+            cirq.S,
+            cirq.X,
+            cirq.Y,
+            cirq.Z,
+            cirq.GateFamily(cirq.CX, ignore_global_phase=True),
+            preserve_moment_structure=False,
+            reorder_operations=False,
+        )
+
+    def _decompose_single_qubit_operation(
+        self, op: cirq.Operation, moment_idx: int = -1
+    ) -> cirq.OP_TREE:
+        if op in self:
+            return op
+        return replace_op_with_pygridsynth(op, self._epsilon)
+
+    def _decompose_two_qubit_operation(
+        self, op: cirq.Operation, moment_idx: int = -1
+    ) -> cirq.OP_TREE:
+        if op in self:
+            return op
+        return replace_op_with_pygridsynth(op, self._epsilon)
+
+    @property
+    def preprocess_transformers(self) -> list[cirq.TRANSFORMER]:
+        """List of transformers which should be run before decomposing individual operations."""
+        return [
+            cirq.drop_negligible_operations,
+            *super().preprocess_transformers,
+        ]
+
+    @property
+    def postprocess_transformers(self) -> list[cirq.TRANSFORMER]:
+        """List of transformers which should be run after decomposing individual operations."""
+        return [
+            # cirq.create_transformer_with_kwargs(eject_z, atol=self._atol),  # Some weird behavior comes from this
+            cirq.create_transformer_with_kwargs(cirq.drop_negligible_operations, atol=self._atol),
+            cirq.drop_empty_moments,
+            cirq.create_transformer_with_kwargs(cirq.drop_negligible_operations, atol=self._atol),
+            cirq.align_left,
+            cirq.synchronize_terminal_measurements,
+            cirq.drop_empty_moments,
+        ]
