@@ -55,9 +55,11 @@ def random_circ() -> cirq.Circuit:
         random_state=73,
     )
 
+
 @pytest.fixture()
 def set_random_seed():
     random.seed(73)
+
 
 @pytest.mark.parametrize(
     "with_barriers",
@@ -279,6 +281,7 @@ def test_deterministic_compilation(random_circ) -> None:
     compiled1 = comp.ft_compile(lay, arc)
     compiled2 = comp.ft_compile(lay, arc)
     cirq.testing.assert_has_diagram(compiled1, str(compiled2))
+
 
 def test_nondeterministic_compilation(random_circ, set_random_seed) -> None:
     circuit = random_circ
