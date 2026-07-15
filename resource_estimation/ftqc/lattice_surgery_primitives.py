@@ -349,7 +349,7 @@ _DISTILLERY_LABELS = {"CCZ", "T"}
 _DISTILLERY_PATCH_COUNTS: dict[DistilleryLabel, int] = {"CCZ": 9, "T": 11}
 VaultLabel = Literal["T:cultivated", "T:distilled", "CCZ:distilled"]
 _VAULT_LABELS = {"T:cultivated", "T:distilled", "CCZ:distilled"}
-_VAULT_SHYPS_R = 3
+_VAULT_SIMPLEX_R = 3
 
 
 def _normalize_code_type(code_type: str) -> str:
@@ -412,9 +412,13 @@ def _validate_vault_label(label: str) -> VaultLabel:
 
 
 def _default_vault_code_patch() -> CodePatch:
+    _, codes, _ = _import_qldpc()
+    simplex_code_a = codes.SimplexCode(_VAULT_SIMPLEX_R)
+    simplex_code_b = codes.SimplexCode(_VAULT_SIMPLEX_R)
     return CodePatch.from_qldpc_family(
-        "shyps",
-        _VAULT_SHYPS_R,
+        "hgp",
+        simplex_code_a,
+        simplex_code_b,
         patch_label="memory",
     )
 

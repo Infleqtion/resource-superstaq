@@ -351,21 +351,26 @@ def test_vault_empty(label: lsp.VaultLabel) -> None:
     assert vault.num_code_patches == 0
 
 
-def test_vault_initializes_default_shyps_memory_patches() -> None:
+def test_vault_initializes_default_hgp_simplex_memory_patches() -> None:
     pytest.importorskip("qldpc")
 
     with pytest.warns(RuntimeWarning, match="Computing qLDPC code distance"):
         vault = lsp.Vault("T:distilled", 2)
 
     assert vault.label == "T:distilled"
-    assert vault.num_physical_qubits == 98
-    assert vault.num_logical_qubits == 18
+    assert vault.num_physical_qubits == 196
+    assert vault.num_logical_qubits == 36
     assert vault.num_code_patches == 2
-    assert [patch.code_type for patch in vault.code_patches] == ["shyps"] * 2
-    assert [patch.qldpc_family for patch in vault.code_patches] == ["SHYPSCode"] * 2
-    assert [patch.qldpc_args for patch in vault.code_patches] == [(3,)] * 2
+    assert [patch.code_type for patch in vault.code_patches] == ["hgp"] * 2
+    assert [patch.qldpc_family for patch in vault.code_patches] == ["HGPCode"] * 2
+    assert [
+        [type(code).__name__ for code in patch.qldpc_args] for patch in vault.code_patches
+    ] == [["SimplexCode", "SimplexCode"]] * 2
+    assert [
+        [code.get_code_params() for code in patch.qldpc_args] for patch in vault.code_patches
+    ] == [[(7, 3, 4), (7, 3, 4)]] * 2
     assert [patch.patch_label for patch in vault.code_patches] == ["memory"] * 2
-    assert [patch.code_params for patch in vault.code_patches] == [(49, 9, 4)] * 2
+    assert [patch.code_params for patch in vault.code_patches] == [(98, 18, 4)] * 2
     assert all(patch.is_qldpc_backed for patch in vault.code_patches)
 
 
@@ -444,8 +449,8 @@ def test_bank_initializes_default_vaults() -> None:
     assert bank.ccz_distilled_vault.label == "CCZ:distilled"
     assert bank.num_vaults == 3
     assert bank.num_code_patches == 3
-    assert bank.num_physical_qubits == 147
-    assert bank.num_logical_qubits == 27
+    assert bank.num_physical_qubits == 294
+    assert bank.num_logical_qubits == 54
 
 
 def test_bank_adds_vaults() -> None:
