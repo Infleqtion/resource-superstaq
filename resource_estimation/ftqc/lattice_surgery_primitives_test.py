@@ -84,6 +84,19 @@ def test_code_patch_surface_metadata() -> None:
     assert patch.code_params == (49, 1, 7)
     assert patch.num_data_qubits == 49
     assert patch.num_measure_qubits == 48
+    assert patch.num_physical_qubits == 97
+    assert patch.rows == 13
+    assert patch.cols == 13
+    assert patch.num_x_stabs(full=True) == 18
+    assert patch.num_x_stabs(full=False) == 6
+    assert patch.num_x_stabs(full=None) == 24
+    assert patch.num_z_stabs(full=True) == 18
+    assert patch.num_z_stabs(full=False) == 6
+    assert patch.num_z_stabs(full=None) == 24
+    assert patch.total_num_x_stabs == 24
+    assert patch.total_num_z_stabs == 24
+    assert patch.total_x_syndrome_cnots() == 84
+    assert patch.total_z_syndrome_cnots() == 84
     assert patch.patch_label == "compute"
     assert not patch.is_qldpc_backed
     assert (
@@ -104,6 +117,35 @@ def test_code_patch_surface_metadata() -> None:
     )
 
 
+def test_code_patch_surface_stabilizer_metadata_matches_qldpc() -> None:
+    pytest.importorskip("qldpc")
+    from qldpc import codes
+
+    for d in [3, 5, 7]:
+        patch = lsp.CodePatch("surface", d=d)
+        qldpc_code = codes.SurfaceCode(d)
+
+        assert patch.num_x_stabs(full=None) == qldpc_code.num_checks_x
+        assert patch.num_z_stabs(full=None) == qldpc_code.num_checks_z
+        assert patch.total_num_x_stabs == qldpc_code.num_checks_x
+        assert patch.total_num_z_stabs == qldpc_code.num_checks_z
+        assert patch.total_x_syndrome_cnots() == int((qldpc_code.matrix_x != 0).sum())
+        assert patch.total_z_syndrome_cnots() == int((qldpc_code.matrix_z != 0).sum())
+
+
+def test_code_patch_surface_stabilizer_metadata_rejects_even_distance() -> None:
+    patch = lsp.CodePatch("surface", d=4)
+
+    with pytest.raises(ValueError, match="odd code distance"):
+        patch.num_x_stabs()
+    with pytest.raises(ValueError, match="odd code distance"):
+        patch.num_z_stabs(full=None)
+    with pytest.raises(ValueError, match="odd code distance"):
+        patch.total_x_syndrome_cnots()
+    with pytest.raises(ValueError, match="odd code distance"):
+        _ = patch.rows
+
+
 def test_code_patch_explicit_metadata() -> None:
     patch = lsp.CodePatch(
         "custom",
@@ -117,6 +159,11 @@ def test_code_patch_explicit_metadata() -> None:
     assert patch.code_params == (15, 1, 3)
     assert patch.n == 15
     assert patch.patch_label == "memory"
+
+    with pytest.raises(ValueError, match="X/Z stabilizer counts"):
+        patch.num_x_stabs()
+    with pytest.raises(ValueError, match="X/Z stabilizer counts"):
+        patch.total_z_syndrome_cnots()
 
     with pytest.raises(ValueError, match="requires a qLDPC code"):
         lsp.CodePatch("color", d=3)
@@ -138,8 +185,42 @@ def test_code_patch_from_qldpc_code() -> None:
     assert patch.num_measure_qubits == 4
     assert patch.is_qldpc_backed
     assert patch.patch_label == "distil"
+    with pytest.raises(ValueError, match="X/Z stabilizer counts"):
+        patch.num_x_stabs()
+    with pytest.raises(ValueError, match="X/Z stabilizer counts"):
+        patch.total_x_syndrome_cnots()
     assert len(patch.logical_ops("X")) == 1
     assert len(patch.transversal_ops()) == 2
+
+
+def test_code_patch_qldpc_css_stabilizer_metadata() -> None:
+    pytest.importorskip("qldpc")
+    from qldpc import codes
+
+    simplex = codes.SimplexCode(3)
+    patch = lsp.CodePatch.from_qldpc_code(
+        codes.HGPCode(simplex, simplex),
+        code_type="hgp",
+        d=4,
+    )
+
+    assert patch.num_x_stabs() == 49
+    assert patch.num_x_stabs(full=None) == 49
+    assert patch.num_z_stabs() == 49
+    assert patch.num_z_stabs(full=None) == 49
+    assert patch.total_num_x_stabs == 49
+    assert patch.total_num_z_stabs == 49
+    assert patch.num_physical_qubits == 196
+    assert patch.total_x_syndrome_cnots() == 294
+    assert patch.total_z_syndrome_cnots() == 294
+    with pytest.raises(ValueError, match="Partial stabilizer counts"):
+        patch.num_x_stabs(full=False)
+    with pytest.raises(ValueError, match="Partial stabilizer counts"):
+        patch.num_z_stabs(full=False)
+    with pytest.raises(ValueError, match="Surface-code geometry"):
+        _ = patch.rows
+    with pytest.raises(ValueError, match="Surface-code geometry"):
+        _ = patch.cols
 
 
 def test_code_patch_from_qldpc_family() -> None:
@@ -371,6 +452,10 @@ def test_vault_initializes_default_hgp_simplex_memory_patches() -> None:
     ] == [[(7, 3, 4), (7, 3, 4)]] * 2
     assert [patch.patch_label for patch in vault.code_patches] == ["memory"] * 2
     assert [patch.code_params for patch in vault.code_patches] == [(98, 18, 4)] * 2
+    assert [patch.num_x_stabs() for patch in vault.code_patches] == [49] * 2
+    assert [patch.num_z_stabs() for patch in vault.code_patches] == [49] * 2
+    assert [patch.total_x_syndrome_cnots() for patch in vault.code_patches] == [294] * 2
+    assert [patch.total_z_syndrome_cnots() for patch in vault.code_patches] == [294] * 2
     assert all(patch.is_qldpc_backed for patch in vault.code_patches)
 
 

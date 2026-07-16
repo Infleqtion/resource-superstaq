@@ -606,6 +606,11 @@ class CodePatch:
         return self.n, self.k, self.d
 
     @property
+    def num_physical_qubits(self) -> int:
+        """The total number of data and measurement qubits in the code patch."""
+        return self.num_data_qubits + self.num_measure_qubits
+
+    @property
     def is_qldpc_backed(self) -> bool:
         return self._qldpc_code is not None
 
@@ -614,6 +619,161 @@ class CodePatch:
         if self._qldpc_code is None:
             raise ValueError("This CodePatch is not backed by a qLDPC code object.")
         return self._qldpc_code
+
+    @property
+    def rows(self) -> int:
+        """The number of rows in a rotated surface-code patch."""
+        return 2 * self._surface_code_distance() - 1
+
+    @property
+    def cols(self) -> int:
+        """The number of columns in a rotated surface-code patch."""
+        return 2 * self._surface_code_distance() - 1
+
+    @property
+    def total_num_x_stabs(self) -> int:
+        """The total number of X-type stabilizer checks in the patch."""
+        return self.num_x_stabs(full=None)
+
+    @property
+    def total_num_z_stabs(self) -> int:
+        """The total number of Z-type stabilizer checks in the patch."""
+        return self.num_z_stabs(full=None)
+
+    def num_x_stabs(self, full: bool | None = True) -> int:
+        """Return the number of X-type stabilizer checks.
+
+        For surface-code patches, ``full`` selects full or partial plaquette checks. For CSS
+        qLDPC-backed patches, all X checks are returned unless ``full=False`` is requested.
+        """
+        if self._is_surface_code:
+            if full is None:
+                return self._surface_qldpc_check_count("x")
+            return self._surface_stab_count_formula(full=full)
+        if self.is_qldpc_backed:
+            if full is False:
+                raise ValueError(
+                    "Partial stabilizer counts are only defined for surface CodePatch objects."
+                )
+            return self._qldpc_css_check_count("x")
+        raise self._unsupported_stabilizer_count_error()
+
+    def num_z_stabs(self, full: bool | None = True) -> int:
+        """Return the number of Z-type stabilizer checks.
+
+        For surface-code patches, ``full`` selects full or partial plaquette checks. For CSS
+        qLDPC-backed patches, all Z checks are returned unless ``full=False`` is requested.
+        """
+        if self._is_surface_code:
+            if full is None:
+                return self._surface_qldpc_check_count("z")
+            return self._surface_stab_count_formula(full=full)
+        if self.is_qldpc_backed:
+            if full is False:
+                raise ValueError(
+                    "Partial stabilizer counts are only defined for surface CodePatch objects."
+                )
+            return self._qldpc_css_check_count("z")
+        raise self._unsupported_stabilizer_count_error()
+
+    def total_x_syndrome_cnots(self) -> int:
+        """Return the total data-check interactions for measuring all X stabilizers."""
+        if self._is_surface_code:
+            return self._surface_qldpc_matrix_support_size("x")
+        if self.is_qldpc_backed:
+            return self._qldpc_css_matrix_support_size("x")
+        raise self._unsupported_stabilizer_count_error()
+
+    def total_z_syndrome_cnots(self) -> int:
+        """Return the total data-check interactions for measuring all Z stabilizers."""
+        if self._is_surface_code:
+            return self._surface_qldpc_matrix_support_size("z")
+        if self.is_qldpc_backed:
+            return self._qldpc_css_matrix_support_size("z")
+        raise self._unsupported_stabilizer_count_error()
+
+    @property
+    def _is_surface_code(self) -> bool:
+        return _normalize_code_type(self.code_type) in _SURFACE_CODE_TYPES
+
+    def _surface_code_distance(self) -> int:
+        if not self._is_surface_code:
+            raise ValueError("Surface-code geometry is only available for surface CodePatch objects.")
+        if not isinstance(self.d, int):
+            raise ValueError("Surface-code geometry requires an integer code distance.")
+        if (self.d - 1) % 2:
+            raise ValueError("Surface-code geometry requires an odd code distance.")
+        return self.d
+
+    def _surface_stab_count_formula(self, *, full: bool) -> int:
+        d = self._surface_code_distance()
+        if full:
+            return (d - 1) ** 2 // 2
+        return d - 1
+
+    def _surface_total_syndrome_cnots_formula(self) -> int:
+        return 4 * self._surface_stab_count_formula(full=True) + 2 * self._surface_stab_count_formula(
+            full=False
+        )
+
+    def _surface_qldpc_code(self) -> Any:
+        _, codes, _ = _import_qldpc()
+        return codes.SurfaceCode(self._surface_code_distance())
+
+    def _surface_qldpc_check_count(self, pauli: Literal["x", "z"]) -> int:
+        try:
+            return self._qldpc_css_check_count_for_code(self._surface_qldpc_code(), pauli)
+        except ImportError:
+            return self._surface_stab_count_formula(full=True) + self._surface_stab_count_formula(
+                full=False
+            )
+
+    def _surface_qldpc_matrix_support_size(self, pauli: Literal["x", "z"]) -> int:
+        try:
+            return self._qldpc_css_matrix_support_size_for_code(self._surface_qldpc_code(), pauli)
+        except ImportError:
+            return self._surface_total_syndrome_cnots_formula()
+
+    def _qldpc_css_check_count(self, pauli: Literal["x", "z"]) -> int:
+        return self._qldpc_css_check_count_for_code(self.qldpc_code, pauli)
+
+    @staticmethod
+    def _qldpc_css_check_count_for_code(qldpc_code: Any, pauli: Literal["x", "z"]) -> int:
+        attr = f"num_checks_{pauli}"
+        try:
+            return int(getattr(qldpc_code, attr))
+        except AttributeError:
+            matrix = getattr(qldpc_code, f"matrix_{pauli}", None)
+            if matrix is not None and getattr(matrix, "shape", None) is not None:
+                return int(matrix.shape[0])
+        raise CodePatch._unsupported_stabilizer_count_error()
+
+    def _qldpc_css_matrix_support_size(self, pauli: Literal["x", "z"]) -> int:
+        return self._qldpc_css_matrix_support_size_for_code(self.qldpc_code, pauli)
+
+    @staticmethod
+    def _qldpc_css_matrix_support_size_for_code(qldpc_code: Any, pauli: Literal["x", "z"]) -> int:
+        try:
+            matrix = getattr(qldpc_code, f"matrix_{pauli}")
+        except AttributeError:
+            raise CodePatch._unsupported_stabilizer_count_error()
+        return CodePatch._matrix_support_size(matrix)
+
+    @staticmethod
+    def _matrix_support_size(matrix: Any) -> int:
+        if hasattr(matrix, "nnz"):
+            return int(matrix.nnz)
+        nonzero = matrix != 0
+        if hasattr(nonzero, "sum"):
+            return int(nonzero.sum())
+        return sum(1 for row in matrix for value in row if value != 0)
+
+    @staticmethod
+    def _unsupported_stabilizer_count_error() -> ValueError:
+        return ValueError(
+            "X/Z stabilizer counts are only available for surface CodePatch objects and "
+            "CSS qLDPC-backed CodePatch objects."
+        )
 
     def logical_ops(self, pauli: str | object | None = None, *, recompute: bool = False) -> Any:
         """Return qLDPC logical Pauli operators for this patch."""
