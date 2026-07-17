@@ -290,7 +290,7 @@ def test_nondeterministic_compilation(random_circ, set_random_seed) -> None:
     compiled1 = comp.ft_compile(lay, arc, dynamic=False)
     compiled2 = comp.ft_compile(lay, arc, dynamic=True)
     # TODO: THIS IS A REALLY BAD TEST I JUST WANT TO MAKE THE PR BECAUSE ITS 4:57
-    assert len(compiled2.all_operations()) < len(compiled1.all_operations())
+    assert len(list(compiled2.all_operations())) < len(list(compiled1.all_operations()))
 
 
 def test_other_passes(random_circ) -> None:
