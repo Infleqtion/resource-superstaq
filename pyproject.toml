@@ -33,40 +33,41 @@ show-fixes = true
 
 # Specific linting rules to enable in `ruff`
 lint.select = [
-    "FA",    # flake8-future-annotations
-    "F401",  # unused imports
-    "I",
-    "ANN",
-    "B",
-    "B905",
-    "C409",    # See https://github.com/astral-sh/ruff/issues/12912
-    "C420",
-    "C",
-    "D",
-    "E",
-    "FAST",
-    "PLC",
-    "PLC0206",
-    "PLW0127",
-    "PT019",
-    "PT022",
-    "PYI041",
-    "RUF001",
-    "RUF002",
-    "SIM102",
-    "SIM105",
-    # The following are excluded to not conflict with `ruff format`:
-    "COM819",
-    "D206",
-    "D300",
-    "E111",
-    "E114",
-    "E117",
-    "Q000",
-    "Q001",
-    "Q002",
-    "Q003",
-    "W191",
+  "FA",    # flake8-future-annotations
+  "F401",  # unused imports
+  "I",
+  "ANN",
+  "B",
+  "B905",
+  "C409",    # See https://github.com/astral-sh/ruff/issues/12912
+  "C420",
+  "C",
+  "D",
+  "E",
+  "FAST",
+  "PLC",
+  "PLW",
+  "PT019",
+  "PT022",
+  "PYI041",
+  "RUF001",
+  "RUF002",
+  "SIM102",
+  "SIM105",
+  # "PLR",  # Has a bunch of the too many branches/too many statements/too many arguments type stuff
+    # Would require pretty significant refactoring to fix all of this
+  # The following are excluded to not conflict with `ruff format`:
+  "COM819",
+  "D206",
+  "D300",
+  "E111",
+  "E114",
+  "E117",
+  "Q000",
+  "Q001",
+  "Q002",
+  "Q003",
+  "W191",
 ]
 lint.ignore = [
   "ARG002",
@@ -103,8 +104,8 @@ lint.ignore = [
   "PLR0913",
   "PLR0915",
   "PLR2004",
-  # "PLW0127",
-  "PLW2901",
+  "PLW1641", # Object does not implement hashing
+  # "PLW2901",
   "PT012",
   # "PT019",
   # "PT022",

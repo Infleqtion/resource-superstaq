@@ -48,8 +48,8 @@ def eject_z(
             yield op
 
     circuit = circuit.map_operations(_map_fn)
-    for q, exponent in backlog.items():
-        exponent = cirq.canonicalize_half_turns(exponent)
+    for q, exp in backlog.items():
+        exponent = cirq.canonicalize_half_turns(exp)
         if not np.isclose(exponent, 0, atol=atol):
             circuit += cirq.Z(q) ** exponent
 

@@ -15,15 +15,15 @@ import subprocess
 
 
 def test_clifford_t() -> None:
-    result = subprocess.run(["python", "scripts/clifford_t.py"])
+    result = subprocess.run(["python", "scripts/clifford_t.py"], check=True)
     assert result
 
 
 def test_scaling() -> None:
-    result = subprocess.run(["python", "scripts/scaling.py", "10", "20"])
+    result = subprocess.run(["python", "scripts/scaling.py", "10", "20"], check=True)
     assert result
 
 
 def test_rz_games() -> None:
-    result = subprocess.run(["python", "scripts/rz_games.py", ".122441", "12", "0"])
+    result = subprocess.run(["python", "scripts/rz_games.py", ".122441", "12", "0"], check=True)
     assert result
