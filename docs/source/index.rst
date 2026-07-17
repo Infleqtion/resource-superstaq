@@ -60,12 +60,27 @@ documentation for details.
 
 .. toctree::
    :maxdepth: 1
+   :titlesonly:
    :caption: Getting Started:
 
    getting_started/installation
    getting_started/workflow
    getting_started/tutorial
 
+.. toctree::
+   :maxdepth: 1
+   :titlesonly:
+   :caption: Resource Estimation Models
 
+   resource_estimation_models/architectures
+   resource_estimation_models/layouts
+
+.. toctree::
+   :maxdepth: 1
+   :titlesonly:
+   :caption: Compilation
+
+   compilation/gate_set_compilation
+   compilation/magic_state_resources
 
 
