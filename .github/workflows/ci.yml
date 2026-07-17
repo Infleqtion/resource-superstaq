@@ -140,6 +140,7 @@ jobs:
           pip install --upgrade pip
           pip install checks-superstaq
           pip install -r requirements.txt
+          pip install -r docs/requirements.txt
           sudo apt-get update
           sudo apt-get install -y pandoc
       - name: Build docs
