@@ -18,10 +18,8 @@ from openfermion.circuits import simulate_trotter
 from openfermion.ops import FermionOperator
 
 
-def fermi_hubbard(n, verbose=0):
-    """
-    Generate the circuit we have been using as our proxy for 'Hamiltonian Simulation' in the materials science context
-    """
+def fermi_hubbard(n: int, verbose: int = 0) -> cirq.Circuit:
+    """Generate the circuit we have been using as our proxy for 'Hamiltonian Simulation' in the materials science context."""
     U = 2.0
     J = -1.0
     time = 1
@@ -54,7 +52,7 @@ def fermi_hubbard(n, verbose=0):
     return ham_circuit
 
 
-def map_orbitals(n_imp, n_b, method="impurity_centered"):
+def map_orbitals(n_imp, n_b, method="impurity_centered"):  # noqa: ANN001, ANN201
     impurity_sites = [f"I{ii}" for ii in range(0, n_imp)]
     bath_sites = [f"B{jj}" for jj in range(0, n_b)]
     all_sites = bath_sites + impurity_sites
@@ -85,7 +83,7 @@ def map_orbitals(n_imp, n_b, method="impurity_centered"):
     return impurity_sites, bath_sites, all_sites, spins, orbital_map
 
 
-def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_bath):
+def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_bath):  # noqa: ANN001, ANN201
     n_imp = 3
 
     # Map orbitals to tensor indices
@@ -122,7 +120,7 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
     h_u3j = FermionOperator()
     for ii in range(0, n_imp):
         for jj in range(ii + 1, n_imp):
-            for sigma, spin in enumerate(spins):
+            for _sigma, spin in enumerate(spins):
                 index_1 = orbital_map[f"I{ii}_" + spin]
                 index_2 = orbital_map[f"I{jj}_" + spin]
                 h_u3j += FermionOperator(f"{index_1}^ {index_1} {index_2}^ {index_2}", u - 3 * j_ex)
@@ -198,7 +196,7 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
     return full_hamiltonian
 
 
-def kanamori(n_bath, verbose=0):
+def kanamori(n_bath: int, verbose: int = 0) -> cirq.Circuit:
     n_imp = 3  # Don't change this for now
     v = np.ones((n_imp, n_bath))
     hamiltonian = three_orbital_kanamori_hamiltonian(1, 1, v, 1, 1, n_bath)

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import argparse
 import textwrap
 from time import time
@@ -25,7 +27,7 @@ from resource_estimation.analysis import STR2ARCH
 from resource_estimation.visualizations import C, make_pretty
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Resource Estimation Experiment")
 
     parser.add_argument("file", type=str, help="File in .json format to read as cirq circuit")
@@ -81,7 +83,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(args=None) -> int:
+def main(args: argparse.Namespace | None = None) -> int:
     args = args or parse_args()
     file, fid, facts, verbose, arch_name, fold_cultiv = (
         args.file,

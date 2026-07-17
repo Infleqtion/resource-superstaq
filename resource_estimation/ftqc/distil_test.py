@@ -88,14 +88,14 @@ def base_15_to_one() -> cirq.Circuit:
 
 
 def test_15_to_one(base_15_to_one) -> None:
-    """Check to confirm that the compression technique agrees with the standard circuit"""
+    """Check to confirm that the compression technique agrees with the standard circuit."""
     circuit = distil_15_to_1()
 
     # There should be exactly 15 Cultivations
     assert sum(op.gate == Cultivate(pi / 4) for op in circuit.all_operations()) == 15
 
     # There should be 30 Measurements
-    assert sum(type(op.gate) == cirq.MeasurementGate for op in circuit.all_operations()) == 30
+    assert sum(type(op.gate) is cirq.MeasurementGate for op in circuit.all_operations()) == 30
 
     # There should be 7*5 + 15 = 50 CNOT gates
     assert sum(op.gate in cirq.GateFamily(cirq.CNOT) for op in circuit.all_operations()) == 50

@@ -52,8 +52,7 @@ def get_eps(
     cliff_rz_circuit: cirq.Circuit,
     approximation_fidelity: float,
 ) -> tuple[float, int, int]:
-    """
-    Gets the per-angle rotation approximation parameter epsilon such that the
+    """Gets the per-angle rotation approximation parameter epsilon such that the
     product of all Rz gate fidelities is equal to the requested
     `approximation_fidelity` (i.e., the total approximation fidelity is no less
     than the requested target).
@@ -80,18 +79,15 @@ def surface_code_fidelity(
     pth: float = 0.0057,
     p: float = 0.001,
 ) -> np.floating | npt.NDArray[np.float64]:
-    """
-    Fidelity of surface code operations according to the Fowler paper (Eq 11 of https://web.physics.ucsb.edu/~martinisgroup/papers/Fowler2012.pdf)
-    """
+    """Fidelity of surface code operations according to the Fowler paper (Eq 11 of https://web.physics.ucsb.edu/~martinisgroup/papers/Fowler2012.pdf)."""
     d_arr = np.asarray(d, dtype=np.int_)
     A_arr = np.asarray(A, dtype=np.float64)
     return 1 - A_arr * (p / pth) ** ((d_arr + 1) // 2)
 
 
 def get_t_path(circuit: cirq.Circuit, verbose: bool = True) -> list[cirq.Operation]:
-    """
-    Get the T Path of a logical circuit
-    Good for comparing with cost model resource estimations
+    """Get the T Path of a logical circuit
+    Good for comparing with cost model resource estimations.
     """
     qubit_paths: dict[cirq.Qid, list[cirq.Operation]] = {
         qubit: [] for qubit in circuit.all_qubits()
@@ -120,8 +116,7 @@ def get_important_information(
     fold_cultiv: bool,
     pfid: float = 0.99,
 ) -> tuple[int, int, Counter[cirq.Gate | None], float, int]:
-    """
-    Get information used to set certain error-correction assumptions.
+    """Get information used to set certain error-correction assumptions.
 
     Given a Clifford + T circuit and a target program fidelity, determine which
     T-gate fidelity level is needed to stay within the error budget. If neither
@@ -164,6 +159,7 @@ def get_important_information(
         cultivation_fault_distance = 5
         warnings.warn(
             f"Cultivation Error Options of 1e-6 and 1e-9 are not sufficient for desired program fidelity of {pfid}.\nUsing 1e-9 numbers.",
+            stacklevel=2,
         )
         over_budget = True
     if over_budget:
@@ -176,16 +172,14 @@ def get_important_information(
         if other_gates * np.log(surface_code_fidelity(distance)) > new_log_pfid:
             break
     if distance == 31:
-        warnings.warn("Max code distance 31 reached")
+        warnings.warn("Max code distance 31 reached", stacklevel=2)
 
     expected_fidelity = np.exp(t_fidelity + other_gates * np.log(surface_code_fidelity(distance)))
     return cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance
 
 
 def break_up_ops(cliff_rz_circuit: cirq.Circuit) -> tuple[int, int]:
-    """
-    Counts operations in Clifford + Rz circuit according to Rz Gates (continuous angle rotations) and Cliffords
-    """
+    """Counts operations in Clifford + Rz circuit according to Rz Gates (continuous angle rotations) and Cliffords."""
     total_ops = 0
     num_rz_gates = 0
     for op in cliff_rz_circuit.all_operations():
@@ -235,9 +229,7 @@ def error_estimate(
 
 @dataclass
 class Report:
-    """
-    Class for containing information about a resource estimate to be saved and reviewed later.
-    """
+    """Class for containing information about a resource estimate to be saved and reviewed later."""
 
     ## Inputs
     filename: str

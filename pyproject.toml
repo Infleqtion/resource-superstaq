@@ -36,17 +36,16 @@ lint.select = [
     "FA",    # flake8-future-annotations
     "F401",  # unused imports
     "I",
-    "ANN401",
-    "B019",
-    "B023",
-    "B034",
+    "ANN",
+    "B",
     "B905",
     "C409",    # See https://github.com/astral-sh/ruff/issues/12912
     "C420",
-    "D301",
-    "E731",
-    "FAST002",
-    "PLC0105",
+    "C",
+    "D",
+    "E",
+    "FAST",
+    "PLC",
     "PLC0206",
     "PLW0127",
     "PT019",
@@ -81,11 +80,18 @@ lint.ignore = [
   # "C409",    # See https://github.com/astral-sh/ruff/issues/12912
   "C416",
   # "C420",
+  "C901",
   "D100",
-  "D104",
-  "D105",
-  "D107",
-  "D205",
+    # Want to un-comment these (D100-107 once all classes/functions are documented, but that is not 
+    # my current PR
+  "D101", # Public class docs
+  "D102", # Public method docs
+  "D103", # Public function docs
+  "D104", # Public package docs
+  "D105", # Other __ method docs
+  "D107", # __init__ docs
+  "D205", # One blank line? In docstring for summary vs detailed description I guess
+  "E501", # Line too long
   # "D301",
   # "E731",
   # "FAST002",
@@ -147,7 +153,7 @@ docstring-code-format = true
 
 [tool.ruff.lint.per-file-ignores]
 "*.ipynb" = ["D101", "D102", "D103", "E501", "ERA001", "T201"]
-"*test.py" = ["D101", "D102", "D103"]
+"*test.py" = ["D101", "D102", "D103", "ANN201", "ANN001"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

@@ -22,7 +22,7 @@ import cirq
 
 
 def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
-    """Tells cirq.json how to deserialize custom gates"""
+    """Tells cirq.json how to deserialize custom gates."""
     if cirq_type == "lsp.Merge":
         return Merge
     if cirq_type == "lsp.Split":
@@ -136,7 +136,7 @@ class SyndromeExtract(cirq.Gate):  # For now we are sort of ignoring the "buffer
     """
 
     # TODO: Should this be limited to a single qubit gate?
-    def __init__(self, num_qubits, rounds) -> None:
+    def __init__(self, num_qubits: int, rounds: int) -> None:
         self._num_qubits = num_qubits
         self._rounds = rounds
 
@@ -174,7 +174,7 @@ class ErrorCorrect(cirq.Gate):
     num_qubits: Number of logical qubits being corrected
     """
 
-    def __init__(self, num_qubits) -> None:
+    def __init__(self, num_qubits: int) -> None:
         self._num_qubits = num_qubits
 
     def _num_qubits_(self) -> int:
@@ -270,7 +270,7 @@ class Distil(cirq.Gate):
 
 @cirq.value_equality
 class Move(cirq.Gate):
-    """Subclassed cirq gate to represent a iter-patch movement operation
+    """Subclassed cirq gate to represent a iter-patch movement operation.
 
     It is currently used to describe both movement to a zone and movement through alleyways to other
     logical qubit patches.
@@ -344,12 +344,12 @@ class RotatedCodePatch:
 
     @cached_property
     def num_data_qubits(self) -> int:
-        """The number of data qubits in surface code patch"""
+        """The number of data qubits in surface code patch."""
         return self.d**2
 
     @cached_property
     def num_measure_qubits(self) -> int:
-        """The number of measure qubits in a surface code patch"""
+        """The number of measure qubits in a surface code patch."""
         return self.d**2 - 1
 
     def num_z_stabs(self, full: bool = True) -> int:  # Still assuming square lattice
@@ -362,7 +362,7 @@ class RotatedCodePatch:
         return self.d - 1
 
     def num_x_stabs(self, full: bool = True) -> int:  # Still assuming square lattice here
-        """The number of X-type stabilizers in the patch (should be same as Z)"""
+        """The number of X-type stabilizers in the patch (should be same as Z)."""
         if full:
             return (self.d - 1) ** 2 // 2
         return self.d - 1
@@ -384,7 +384,7 @@ class RotatedCodePatch:
 
 class BufferCodePatch(RotatedCodePatch):
     """2 x d buffer zone formed between qubit patches
-    Includes two partial X stabilizers if the merge is smooth, else two partial Z stabilizers
+    Includes two partial X stabilizers if the merge is smooth, else two partial Z stabilizers.
     """
 
     def __init__(self, d: int, smooth: bool) -> None:
@@ -413,7 +413,7 @@ class BufferCodePatch(RotatedCodePatch):
 
 class IntermediatePatch(RotatedCodePatch):
     """(d - 1) x  (d - 1) patch formed between distant patches during a merge operation
-    Has the X partial stabilizers of a full patch if smooth else the Z partial stabilizers from a full patch
+    Has the X partial stabilizers of a full patch if smooth else the Z partial stabilizers from a full patch.
     """
 
     def __init__(self, d: int, smooth: bool = True) -> None:
@@ -447,7 +447,7 @@ class IntermediatePatch(RotatedCodePatch):
 class EndpointPatch(RotatedCodePatch):
     """(d - 1) x (d - 1) patch at the endpoints of a merge operation
     Looks like a normal rotated code patch with three 'flaps' instead of four
-    If the merge is smooth, the flaps are X stabilizers else Z
+    If the merge is smooth, the flaps are X stabilizers else Z.
     """
 
     def __init__(self, d: int, smooth: bool = True) -> None:

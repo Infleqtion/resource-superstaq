@@ -857,7 +857,7 @@ def test_folded_architecture() -> None:
 
 
 def test_convert_globals_to_phasedxz() -> None:
-    """Confirm that the conversion function works as expected"""
+    """Confirm that the conversion function works as expected."""
     sc = arch.Superconductor()
     example1 = {
         "gate_cost": {ParallelRGate: 2, cirq.Rz: 3},

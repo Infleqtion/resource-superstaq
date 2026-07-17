@@ -37,7 +37,7 @@ def test_fermi() -> None:
     allowed_ops = [cirq.GateFamily(op) for op in allowed_ops]
     for op in compiled_circuit.all_operations():
         gate = op.gate
-        truth = any([gate in allowed_op for allowed_op in allowed_ops])
+        truth = any(gate in allowed_op for allowed_op in allowed_ops)
         assert truth, f"{gate}"
 
 
@@ -57,7 +57,7 @@ def test_kanamori() -> None:
     allowed_ops = [cirq.GateFamily(op) for op in allowed_ops]
     for op in compiled_circuit.all_operations():
         gate = op.gate
-        truth = any([gate in allowed_op for allowed_op in allowed_ops])
+        truth = any(gate in allowed_op for allowed_op in allowed_ops)
         assert truth, f"{gate}"
 
 

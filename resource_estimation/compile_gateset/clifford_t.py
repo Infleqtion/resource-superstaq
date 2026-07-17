@@ -94,9 +94,8 @@ def process_cirq_str(
     gates: list[str],
     q: cirq.GridQubit | cirq.LineQubit | cirq.NamedQubit,
 ) -> cirq.Operation:
-    """
-    Maps list of strings representing an Rz angle decomposition to a cirq gate
-    The list is reversed because gridsynth returns gates in matrix order instead of circuit operation order
+    """Maps list of strings representing an Rz angle decomposition to a cirq gate
+    The list is reversed because gridsynth returns gates in matrix order instead of circuit operation order.
     """
     for g in gates[::-1]:
         if g == "H":
@@ -118,9 +117,7 @@ def process_cirq_str(
 
 
 def cin_cliffs(gate: cirq.Gate) -> bool:
-    """
-    Helper function for checking Cliffordness
-    """
+    """Helper function for checking Cliffordness."""
     return gate in [cirq.H, cirq.S, cirq.Z, cirq.CNOT, cirq.I, cirq.X]
 
 
@@ -129,9 +126,8 @@ def compile_cirq_to_clifford_t(
     eps: float,
     verbose: bool = True,
 ) -> cirq.Circuit:
-    """
-    Synthesizes the Clifford + Rz circuit into a Clifford + T circuit
-    The eps parameter defines the maximum allowable error in the angle of each synthesized Rz gate
+    """Synthesizes the Clifford + Rz circuit into a Clifford + T circuit
+    The eps parameter defines the maximum allowable error in the angle of each synthesized Rz gate.
     """
     newcirc = cirq.Circuit()
     for moment in tqdm(circ.moments, colour="cyan", disable=not verbose):
@@ -153,14 +149,13 @@ def compile_cirq_to_clifford_t(
 
 
 def toffoli_decompose(circuit: cirq.Circuit) -> cirq.Circuit:
-    """
-    Decomposes TOFFOLI gates in circuit according to canned decomposition
+    """Decomposes TOFFOLI gates in circuit according to canned decomposition
     Does not optimize the circuit
-    Implements T dagger with ZST
+    Implements T dagger with ZST.
     """
 
     # TODO: Pretty sure there is a faster way to do this like the way we do ft compile now
-    def mapper(op, idx):
+    def mapper(op: cirq.Operation, idx: int) -> cirq.OP_TREE:
         if op in cirq.GateFamily(cirq.TOFFOLI):
             a, b, c = op.qubits
             return cirq.Circuit(

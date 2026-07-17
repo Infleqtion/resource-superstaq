@@ -239,7 +239,7 @@ def test_different_rounds() -> None:
         compiled_circuit = comp.ft_compile(layout=layout, arc=architecture)
         for op in compiled_circuit.all_operations():
             if op in cirq.GateFamily(lsp.SyndromeExtract):
-                op.gate.rounds == k
+                assert op.gate.rounds == k
 
 
 def test_deterministic_compilation(random_circ) -> None:
@@ -435,7 +435,7 @@ def test_bell_lattice_FF(bell_circuit) -> None:
         idling=False,
         post_op_correction=False,
     )
-    lattice_layout.input_circuit
+    # lattice_layout.input_circuit
     compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
 
     # no idling, no post-op correction
@@ -518,7 +518,7 @@ def test_bell_lattice_TT(bell_circuit) -> None:
         post_op_correction=True,
     )
     compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
-    compiled_bell_circuit
+    # compiled_bell_circuit
     # yes idling, yes post-op correction
     # Post-op correction does not add anything in this circuit, so this circuit is the same as the last one
     cirq.testing.assert_has_diagram(
@@ -662,7 +662,7 @@ def test_t_lattice_FF(t_circuit) -> None:
         idling=False,
         post_op_correction=False,
     )
-    lattice_layout.input_circuit
+    # lattice_layout.input_circuit
     compiled_t_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
     # no idling, no post-op correction
     compiled_t_circuit = cirq.align_left(compiled_t_circuit)

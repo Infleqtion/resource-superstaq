@@ -29,13 +29,13 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 class ResourceEstimator:
-    """Class for resource estimator objects defined by the given architecture"""
+    """Class for resource estimator objects defined by the given architecture."""
 
     def __init__(self, arc: Architecture) -> None:
         self.arc = arc
 
     def validate_circuit_ops(self, circuit: cirq.Circuit) -> None:
-        """Checks that the input circuit contains only valid operations and warns of operations still in progress"""
+        """Checks that the input circuit contains only valid operations and warns of operations still in progress."""
         unrecognized = [
             op
             for op in dict(Counter([op_.gate for op_ in circuit.all_operations()])).keys()
@@ -53,7 +53,7 @@ class ResourceEstimator:
         verbose: int = 0,
         pretty: bool = False,
     ) -> dict[cirq.Gate | str, int]:
-        """Counts up the total physical gates from all logical primitives in the input circuit"""
+        """Counts up the total physical gates from all logical primitives in the input circuit."""
         self.validate_circuit_ops(circuit=circuit)
         cost = Counter()
         for op in tqdm(
@@ -71,14 +71,15 @@ class ResourceEstimator:
         return {op: val for op, val in cost.items()}
 
     def serial_circuit_time(self, circuit: cirq.Circuit) -> float:
-        """Adds up the total physical time from all logical primitives in the input circuit"""
+        """Adds up the total physical time from all logical primitives in the input circuit."""
         self.validate_circuit_ops(circuit=circuit)
-        return sum(
-            map(lambda x: self.arc.total_time(self.arc.gate_cost(x)), circuit.all_operations()),
-        )
+        return sum([self.arc.total_time(self.arc.gate_cost(gate)) for gate in
+            circuit.all_operations()])
+        #     map(lambda x: self.arc.total_time(self.arc.gate_cost(x)), circuit.all_operations()),
+        # )
 
     def parallel_circuit_time(self, circuit: cirq.Circuit, verbose: int = 0) -> float:
-        """Estimation of the critical path in the input circuit according to the most expensive operation per moment"""
+        """Estimation of the critical path in the input circuit according to the most expensive operation per moment."""
         qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
@@ -95,10 +96,11 @@ class ResourceEstimator:
 
     def critical_path(self, circuit: cirq.Circuit, verbose: int = 0) -> list[cirq.Operation]:
         """Returns the circuit's critical path in terms of the logical primitive operations
-        Is very slow and expensive
+        Is very slow and expensive.
         """
         warnings.warn(
             "This function can be very expensive.\nIf you just want the physical operations or circuit time, use `critical_path_ops` or `parallel_circuit_time` instead.",
+            stacklevel=2,
         )
         qubit_paths = {qubit: [] for qubit in circuit.all_qubits()}
         qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
@@ -129,7 +131,7 @@ class ResourceEstimator:
         verbose: int = 0,
         pretty: bool = False,
     ) -> dict[cirq.Gate | str, int]:
-        """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
+        """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment."""
         qubit_paths = {qubit: Counter() for qubit in circuit.all_qubits()}
         qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
         total_ops = len(list(circuit.all_operations()))
@@ -160,7 +162,7 @@ class ResourceEstimator:
         return big_path
 
     def physical_qubits(self, circuit: cirq.Circuit) -> int:
-        """Calculates the physical qubit cost of the requested circuit"""
+        """Calculates the physical qubit cost of the requested circuit."""
         return cirq.num_qubits(circuit) * self.arc.patch.num_physical_qubits
 
 

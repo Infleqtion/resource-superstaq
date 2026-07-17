@@ -34,9 +34,7 @@ STR2GATE = {
 
 
 def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.Gate, int]]:
-    """
-    Parses stim circuit to count relevant operations and returns both parallel and serial costs
-    """
+    """Parses stim circuit to count relevant operations and returns both parallel and serial costs."""
     # A map from Stim operations to replacement physical operations
     op_map = {
         "CX": ("CZ",),
@@ -61,10 +59,10 @@ def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.G
         "QUBIT_COORDS",
         "SHIFT_COORDS",
     ]
-    total_serial = Counter(dict())
-    total_parallel = Counter(dict())
+    total_serial = Counter({})
+    total_parallel = Counter({})
     tick_total = Counter(
-        dict(),
+        {}
     )  # Keeps partial total for different operations that can be done in parallel
     for instr in stim_circuit:
         if instr.name in ops_to_ignore:
@@ -101,9 +99,8 @@ def load_saved_cost(
     style: Literal[None, "gidney", "yale"] = None,
     fault_distance: Literal[None, 3, 5] = None,
 ) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
-    """
-    Gets saved serial and parallel costs from the `cultivate_costs.json` file
-    Converts saved strings to proper cirq gate objects
+    """Gets saved serial and parallel costs from the `cultivate_costs.json` file
+    Converts saved strings to proper cirq gate objects.
     """
     if op_key == "cultivate" and style is None:
         raise ValueError("Style cannot be None for cultivation")
@@ -130,19 +127,20 @@ def cultivate(
     fold: bool = False,
     for_test: bool = False,
 ) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
-    """
-    Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
+    """Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
     If the final patch size is less than 25 it reads from saved resources instead of calling the functions directly
-    The `for_test` argument is to turn off the loading behvior for the purpose of testing
+    The `for_test` argument is to turn off the loading behvior for the purpose of testing.
     """
     if dsurface < 7 and fault_distance == 3:
         warnings.warn(
             "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=7",
+            stacklevel=2,
         )
         dsurface = 7
     if dsurface < 11 and fault_distance == 5:
         warnings.warn(
             "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=11",
+            stacklevel=2,
         )
         dsurface = 11
     style = "yale" if fold else "gidney"

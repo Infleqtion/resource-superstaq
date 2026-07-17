@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 from itertools import chain
+from typing import Any
 
 import cirq
 import matplotlib.animation as animation
@@ -30,9 +31,7 @@ def visualize_layout_moment(
     moment_paths: list[list[str]],
     column_layout: Layout,
 ) -> None:  # pragma: no cover
-    """
-    This probably does not work anymore without a significant amount of changes.
-    """
+    """This probably does not work anymore without a significant amount of changes."""
     moment_paths_flat = list(chain.from_iterable(moment_paths))
     diction = {}
     for qubit in column_layout.qubits:
@@ -91,14 +90,12 @@ def visualize_layout_moment(
 
 
 def display_NN_graph(G: nx.Graph) -> None:  # pragma: no cover
-    """
-    This can display the connectivity graph of a layout effectively
-    """
+    """This can display the connectivity graph of a layout effectively."""
     pos_dict = {}
     labels = {}
     node_colors = []
     for grid_qubit in list(G.nodes):
-        assert type(grid_qubit) == cirq.GridQubit
+        assert type(grid_qubit) is cirq.GridQubit
         pos_dict[grid_qubit] = (grid_qubit.col, -1 * grid_qubit.row)
         if G.nodes[grid_qubit]["patch_type"] == "factory":
             labels[grid_qubit] = G.nodes[grid_qubit]["ftype"]
@@ -124,9 +121,8 @@ def display_NN_graph(G: nx.Graph) -> None:  # pragma: no cover
 
 
 def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout) -> None:  # pragma: no cover
-    """
-    Little animation for tracking factory usage in the (slow) movement layout. The new fast
-    layouts don't really use graphs
+    """Little animation for tracking factory usage in the (slow) movement layout. The new fast
+    layouts don't really use graphs.
     """
     G = lay.layout_graph
     pos_dict = {}
@@ -140,7 +136,7 @@ def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout) -> None: 
             labels[grid_qubit] = "d"
             G.nodes[grid_qubit]["color"] = "red"
 
-    def animate(i) -> None:
+    def animate(i: int) -> None:
         moment_ops = ops[i]
         G = lay.layout_graph
         for edge in G.edges:
@@ -184,9 +180,8 @@ def display_lattice_moments(
     ops: list[list[cirq.Operation]],
     lay: Layout,
 ) -> None:  # pragma: no cover
-    """
-    Little animation for tracking factory usage in the (slow) lattice surgery layout. The new fast
-    layouts don't really use graphs, maybe there is some way to change these to bring it back though
+    """Little animation for tracking factory usage in the (slow) lattice surgery layout. The new fast
+    layouts don't really use graphs, maybe there is some way to change these to bring it back though.
     """
     G = lay.layout_graph
     pos_dict = {}
@@ -203,7 +198,7 @@ def display_lattice_moments(
             labels[grid_qubit] = "a"
             G.nodes[grid_qubit]["color"] = "cyan"
 
-    def animate(i) -> None:
+    def animate(i: int) -> None:
         moment_ops = ops[i]
         G = lay.layout_graph
         for edge in G.edges:
@@ -250,9 +245,7 @@ def animate_layout_moment(
     moment_paths: list[list[str]],
     column_layout: Layout,
 ) -> None:  # pragma: no cover
-    """
-    Not sure if this visualization works anymore, hard to get the moment_paths
-    """
+    """Not sure if this visualization works anymore, hard to get the moment_paths."""
     moment_paths_flat = list(chain.from_iterable(moment_paths))
     diction = {}
     for qubit in column_layout.qubits:
@@ -268,7 +261,7 @@ def animate_layout_moment(
     for edge in G.edges:
         G.edges[edge]["color"] = "black"
 
-    def animate(i) -> None:
+    def animate(i: int) -> None:
         if i != 0:
             if G.nodes[moment_paths_flat[i]]["color"] == "yellow":
                 G.nodes[moment_paths_flat[i]]["color"] = "magenta"
@@ -294,7 +287,7 @@ def animate_layout_moment(
     plt.show()
 
 
-def draw_2d_array_ascii(arr) -> None:  # pragma: no cover
+def draw_2d_array_ascii(arr: list[list[Any]]) -> None:  # pragma: no cover
     RED = "\033[31m"
     GREEN = "\033[32m"
     BLUE = "\033[34m"
@@ -351,7 +344,7 @@ class C:
     MAGENTA = "\033[95m"
 
 
-def boxed_header(title, width: int = 40) -> str:
+def boxed_header(title: str, width: int = 40) -> str:
     pad = width - len(title) - 2
     left = pad // 2
     right = pad - left
@@ -362,10 +355,8 @@ def hr(width: int = 40) -> LiteralString:  # pragma: no cover
     return "=" * width
 
 
-def make_pretty(obj) -> str:  # pragma: no cover
-    """
-    Pulling out the pretty functionality from the ResourceEstimator class to avoid doubling resource calls
-    """
+def make_pretty(obj: Any) -> str:  # pragma: no cover # noqa: ANN401
+    """Pulling out the pretty functionality from the ResourceEstimator class to avoid doubling resource calls."""
     if hasattr(obj, "__name__"):
         return obj.__name__
     return str(obj)

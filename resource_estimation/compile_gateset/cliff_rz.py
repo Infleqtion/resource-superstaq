@@ -28,10 +28,10 @@ def eject_z(
     context: cirq.TransformerContext | None = None,
     atol: float = 1e-8,
 ) -> cirq.Circuit:
-    """Pushes Z gates towards the end of the circuit"""
+    """Pushes Z gates towards the end of the circuit."""
     backlog = dict.fromkeys(circuit.all_qubits(), 0.0)
 
-    def _map_fn(op):
+    def _map_fn(op: cirq.Operation) -> cirq.OP_TREE:
         if isinstance(op.gate, cirq.ZPowGate):
             backlog[op.qubits[0]] += op.gate.exponent
         else:
@@ -62,7 +62,7 @@ def phx_to_zhzhz(
     context: cirq.TransformerContext | None = None,
     atol: float = 1e-8,
 ) -> cirq.Circuit:
-    """Converts PhasedX gates to ZPOW gates and Hadamards with handling for special angles"""
+    """Converts PhasedX gates to ZPOW gates and Hadamards with handling for special angles."""
 
     # Adding this as its own thing
     def _map_fn(op: cirq.Operation, _: int) -> list[cirq.Operation]:
@@ -118,7 +118,7 @@ def zpow_to_rz(
     circuit: cirq.Circuit,
     context: cirq.TransformerContext | None = None,
 ) -> cirq.Circuit:
-    """Converts ZPOW gates to Rz gates minding special angle cases and including the angle factor"""
+    """Converts ZPOW gates to Rz gates minding special angle cases and including the angle factor."""
 
     # Maybe this should be a transformer or something?
     def _map_fn(
@@ -149,9 +149,7 @@ def zpow_to_rz(
 
 
 class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
-    """
-    A Gateset for a Clifford + Rz
-    """
+    """A Gateset for a Clifford + Rz."""
 
     def __init__(self, atol: float = 1e-8) -> None:
         self._atol = atol

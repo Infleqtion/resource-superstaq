@@ -18,8 +18,7 @@ from typing import Literal
 
 import cirq
 
-parent_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(parent_dir))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 import os
 
 import cultiv
@@ -33,9 +32,7 @@ GATE2STR = {v: k for k, v in STR2GATE.items()}
 def format_cost_dict(
     cost_dict: dict[Literal["serial", "parallel"], dict[cirq.Gate, int]],
 ) -> dict[Literal["serial", "parallel"], dict[str, int]]:
-    """
-    Converts cost dictionaries from `count_stim_resources` from cirq gate to string format
-    """
+    """Converts cost dictionaries from `count_stim_resources` from cirq gate to string format."""
     reformatted = {
         "serial": {GATE2STR[k]: v for k, v in cost_dict["serial"].items()},
         "parallel": {GATE2STR[k]: v for k, v in cost_dict["parallel"].items()},

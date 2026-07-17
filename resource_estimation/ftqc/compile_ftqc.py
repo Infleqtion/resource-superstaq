@@ -50,7 +50,7 @@ def knock_off_tqdm(
     tstart: float,
     message: str,
 ) -> None:  # pragma: no cover
-    """Implements tqdm-like behavior for the compiler"""
+    """Implements tqdm-like behavior for the compiler."""
     if not sys.stdout.isatty():
         # This is to ensure that testing can progress as normal
         return
@@ -168,7 +168,7 @@ def handle_idling(
     layout: Layout,
     with_barriers: bool,
     rounds: int,
-    verbose=0,
+    verbose: int = 0,
 ) -> cirq.Circuit:
     """Helper function for the compiler that handles idling. This way we can experiment with different kinds of idling or even turn it off entirely.
     This function is still a work in progress, but it is likely to take the form of various compiler passes.
@@ -176,17 +176,11 @@ def handle_idling(
     # TODO: This pass is a main bottleneck for larger experiments, so make it faster
     # Assemble Qubits that will be subject to Idling
     G = layout.layout_graph
-    logical_qubits = list(node for node in G.nodes if G.nodes[node]["patch_type"] == "data")
-    t_factories = list(
-        node
-        for node in G.nodes
-        if G.nodes[node]["patch_type"] == "factory" and G.nodes[node]["ftype"] == "t"
-    )
-    s_factories = list(
-        node
-        for node in G.nodes
-        if G.nodes[node]["patch_type"] == "factory" and G.nodes[node]["ftype"] == "s"
-    )
+    logical_qubits = [node for node in G.nodes if G.nodes[node]["patch_type"] == "data"]
+    t_factories = [node for node in G.nodes if G.nodes[node]["patch_type"] == "factory" and
+        G.nodes[node]["ftype"] == "t"]
+    s_factories = [node for node in G.nodes if G.nodes[node]["patch_type"] == "factory" and
+        G.nodes[node]["ftype"] == "s" ]
     non_ancillas = logical_qubits + s_factories + t_factories
     # Ensures no idling happens on qubits that are not used in the circuit
     # This is a bit faster
@@ -199,7 +193,7 @@ def handle_idling(
 
     se = lsp.SyndromeExtract(1, rounds)
 
-    def _map_func(moment, moment_idx):
+    def _map_func(moment: cirq.Moment, moment_idx: int) -> cirq.Moment:
         if verbose > 0:
             knock_off_tqdm(moment_idx=moment_idx, total=total, tstart=tstart, message="Idling:")
         if all(isinstance(gate.gate, (Barrier, lsp.Split)) for gate in moment):
@@ -277,7 +271,7 @@ def post_op_syndrome_extraction(
     return cirq.map_operations_and_unroll(circuit, _map_func, raise_if_add_qubits=False)
 
 
-def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
+def validate_ops(circuit: cirq.Circuit, verbose: int = 1) -> None:
     """Checks that the given circuit is in the Clifford+T gateset."""
     # TODO: This function probably belongs in some utilities file, since it is not particularly integral to compiling.
     valid_gates = (
@@ -329,11 +323,11 @@ def add_moves(
     alley_ops: cirq.Gateset,
     verbose: int = 0,
 ) -> cirq.Circuit:
-    """Handles replacement moves for both alley movement and interaction zone movement"""
+    """Handles replacement moves for both alley movement and interaction zone movement."""
     total = len(circuit)
     tstart = time()
 
-    def map_func(op, moment_idx):
+    def map_func(op: cirq.Operation, moment_idx: int) -> cirq.OP_TREE:
         if verbose:
             knock_off_tqdm(
                 moment_idx=moment_idx,
@@ -418,15 +412,16 @@ def ft_compile(
                 verbose=verbose,
             )
         else:  # pragma: no cover
-            warn("Parallelization is untested. Use at your own peril")
-            from resource_estimation.ftqc.compile_ftqc_parallel import handle_idling_parallel
+            warn("Parallelization is untested. Use at your own peril", stacklevel=2)
+            # Parallelization also does not exist? Commenting this out for now
+            # from resource_estimation.ftqc.compile_ftqc_parallel import handle_idling_parallel
 
-            circuit = handle_idling_parallel(
-                circuit=circuit,
-                layout=layout,
-                rounds=arc.rounds,
-                num_threads=num_threads,
-            )
+            # circuit = handle_idling_parallel(
+            #     circuit=circuit,
+            #     layout=layout,
+            #     rounds=arc.rounds,
+            #     num_threads=num_threads,
+            # )
 
     if arc.zone_ops is not None or arc.alley_ops is not None:
         zone_ops = arc.zone_ops if arc.zone_ops is not None else cirq.Gateset()

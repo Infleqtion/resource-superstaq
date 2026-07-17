@@ -258,40 +258,32 @@ def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
     column = Column(circuit5)
     # Assert all start with the used status
     assert all(
-        [
-            column.layout_graph.nodes[node]["used"]
-            for node in column.layout_graph.nodes
-            if column.layout_graph.nodes[node]["patch_type"] == "factory"
-        ],
+        column.layout_graph.nodes[node]["used"]
+        for node in column.layout_graph.nodes
+        if column.layout_graph.nodes[node]["patch_type"] == "factory"
     )
     # Reloading S should reload all S factories
     column.reload_factories("s")
     assert not any(
-        [
-            column.layout_graph.nodes[node]["used"]
-            for node in column.layout_graph.nodes
-            if column.layout_graph.nodes[node]["patch_type"] == "factory"
-            and column.layout_graph.nodes[node]["ftype"] == "s"
-        ],
+        column.layout_graph.nodes[node]["used"]
+        for node in column.layout_graph.nodes
+        if column.layout_graph.nodes[node]["patch_type"] == "factory"
+        and column.layout_graph.nodes[node]["ftype"] == "s"
     )
     # Reloading T should reload all T factories
     column.reload_factories("t")
     assert not any(
-        [
-            column.layout_graph.nodes[node]["used"]
-            for node in column.layout_graph.nodes
-            if column.layout_graph.nodes[node]["patch_type"] == "factory"
-            and column.layout_graph.nodes[node]["ftype"] == "t"
-        ],
+        column.layout_graph.nodes[node]["used"]
+        for node in column.layout_graph.nodes
+        if column.layout_graph.nodes[node]["patch_type"] == "factory"
+        and column.layout_graph.nodes[node]["ftype"] == "t"
     )
     # Resetting should unload all factories
     column.reset_graph()
     assert all(
-        [
-            column.layout_graph.nodes[node]["used"]
-            for node in column.layout_graph.nodes
-            if column.layout_graph.nodes[node]["patch_type"] == "factory"
-        ],
+        column.layout_graph.nodes[node]["used"]
+        for node in column.layout_graph.nodes
+        if column.layout_graph.nodes[node]["patch_type"] == "factory"
     )
 
 
@@ -300,26 +292,20 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
     distillery.reload_factories(ftype="s")
     distillery.reload_factories(ftype="t")
 
-    expected_program_qubits = set(cirq.GridQubit(0, i) for i in range(5))
-    realized_program_qubits = set(
-        q
-        for q in distillery.layout_graph.nodes
-        if distillery.layout_graph.nodes[q]["patch_type"] == "data"
-    )
+    expected_program_qubits = {cirq.GridQubit(0, i) for i in range(5)}
+    realized_program_qubits = {q for q in distillery.layout_graph.nodes if
+        distillery.layout_graph.nodes[q]["patch_type"] == "data" }
     assert expected_program_qubits == realized_program_qubits
 
     expected_factories = {cirq.GridQubit(0, 5), cirq.GridQubit(3, 6), cirq.GridQubit(6, 7)}
     realized_factories = distillery._all_factories
     assert expected_factories == realized_factories
 
-    expected_block_qubits = set(q for q in distillery.layout_graph.nodes) - (
+    expected_block_qubits = {q for q in distillery.layout_graph.nodes} - (
         expected_program_qubits.union(expected_factories)
     )
-    realized_block_qubits = set(
-        q
-        for q in distillery.layout_graph.nodes
-        if distillery.layout_graph.nodes[q]["patch_type"] == "block"
-    )
+    realized_block_qubits = {q for q in distillery.layout_graph.nodes if
+        distillery.layout_graph.nodes[q]["patch_type"] == "block" }
     assert expected_block_qubits == realized_block_qubits
 
     # Check that nearest T factory is as expected and changes when used
