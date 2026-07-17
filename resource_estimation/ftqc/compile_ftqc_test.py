@@ -28,6 +28,7 @@ from resource_estimation.ftqc.layout import (
     MovementDistillery,
     MovementLayout,
 )
+import random
 
 
 @pytest.fixture
@@ -53,6 +54,11 @@ def random_circ() -> cirq.Circuit:
         gate_domain={cirq.H: 1, cirq.CNOT: 2, cirq.T: 1, cirq.S: 1},
         random_state=73,
     )
+
+
+@pytest.fixture()
+def set_random_seed():
+    random.seed(73)
 
 
 @pytest.mark.parametrize(
@@ -275,6 +281,16 @@ def test_deterministic_compilation(random_circ) -> None:
     compiled1 = comp.ft_compile(lay, arc)
     compiled2 = comp.ft_compile(lay, arc)
     cirq.testing.assert_has_diagram(compiled1, str(compiled2))
+
+
+def test_nondeterministic_compilation(random_circ, set_random_seed) -> None:
+    circuit = random_circ
+    lay = Column(circuit)
+    arc = arch.DefaultLattice()
+    compiled1 = comp.ft_compile(lay, arc, dynamic=False)
+    compiled2 = comp.ft_compile(lay, arc, dynamic=True)
+    # TODO: THIS IS A REALLY BAD TEST I JUST WANT TO MAKE THE PR BECAUSE ITS 4:57
+    assert len(list(compiled2.all_operations())) < len(list(compiled1.all_operations()))
 
 
 def test_other_passes(random_circ) -> None:
