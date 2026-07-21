@@ -179,7 +179,11 @@ class ReactionDepthEstimator:
     anti-commutes with any of the target vertex's dependency Paulis.
     """
 
-    _DEFAULT_FACTORIES: ClassVar[dict[cirq.Gate, bool]] = {cirq.T: True, cirq.S: True}
+    _DEFAULT_FACTORIES: ClassVar[dict[cirq.Gate, bool]] = {
+        cirq.T: True,
+        cirq.S: True,
+        cirq.CCZ: True,
+    }
     _NON_CLIFFORD_ERROR: ClassVar[str] = (
         "Reaction-depth estimator encountered a non-Clifford operation without a "
         "factory dynamic: {operation!r}."
@@ -198,7 +202,7 @@ class ReactionDepthEstimator:
 
         Args:
             factories: Factory gates mapped to their auto-correction setting.
-                Defaults to auto-corrected T and S gates.
+                Defaults to auto-corrected T, S, and CCZ gates.
             reaction_vertex_dynamics: Factory vertex dynamics keyed by
                 `(gate, auto_corrected)`. Entries override defaults;
                 `factories` still determines which gates are factory-backed.
@@ -210,13 +214,20 @@ class ReactionDepthEstimator:
                 uses a qubit index outside the factory gate's arity.
         """
         self.factories = dict(self._DEFAULT_FACTORIES if factories is None else factories)
-        local_qubit = cirq.LineQubit(0)
-        local_x = cirq.PauliString(cirq.X(local_qubit))
-        local_z = cirq.PauliString(cirq.Z(local_qubit))
+        local_qubits = cirq.LineQubit.range(3)
+        local_x = cirq.PauliString(cirq.X(local_qubits[0]))
+        local_z = tuple(cirq.PauliString(cirq.Z(qubit)) for qubit in local_qubits)
         self._factory_dynamics: dict[tuple[cirq.Gate, bool], tuple[ReactionDynamics, ...]] = {
-            (cirq.T, True): (ReactionDynamics((local_z,), (local_z,)),),
-            (cirq.T, False): (ReactionDynamics((local_x, local_z), (local_x, local_z)),),
-            (cirq.S, True): (ReactionDynamics((local_z,), (local_z,)),),
+            (cirq.T, True): (ReactionDynamics((local_z[0],), (local_z[0],)),),
+            (cirq.T, False): (
+                ReactionDynamics((local_x, local_z[0]), (local_x, local_z[0])),
+            ),
+            (cirq.S, True): (ReactionDynamics((local_z[0],), (local_z[0],)),),
+            (cirq.CCZ, True): (
+                ReactionDynamics((local_z[0],), (local_z[1] * local_z[2],)),
+                ReactionDynamics((local_z[1],), (local_z[0] * local_z[2],)),
+                ReactionDynamics((local_z[2],), (local_z[0] * local_z[1],)),
+            ),
         }
         if reaction_vertex_dynamics is not None:
             self._factory_dynamics.update(

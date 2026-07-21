@@ -301,6 +301,58 @@ def test_reaction_depth_uses_default_single_vertex_factories(factory_op: cirq.Ga
     assert reaction_depth_estimator.reaction_depth(circuit) == 1
 
 
+def test_default_ccz_dynamics_schedule_expanded_toffolis() -> None:
+    q1, q2, q3, q4, q5 = cirq.LineQubit.range(1, 6)
+    toffolis = (
+        (q1, q2, q3),
+        (q3, q4, q5),
+        (q1, q2, q3),
+        (q3, q4, q5),
+    )
+    operations = tuple(
+        operation
+        for control_a, control_b, target in toffolis
+        for operation in (
+            cirq.H(target),
+            cirq.CCZ(control_a, control_b, target),
+            cirq.H(target),
+        )
+    )
+    circuit = cirq.Circuit(cirq.Moment(operation) for operation in operations)
+    reaction_depth_estimator = est.ReactionDepthEstimator()
+
+    reaction_tree = reaction_depth_estimator.reaction_tree(circuit)
+
+    ccz_operation_indices = (1, 4, 7, 10)
+    assert set(reaction_tree.nodes) == {
+        (operation_index, vertex_index)
+        for operation_index in ccz_operation_indices
+        for vertex_index in range(3)
+    }
+
+    z_paulis = {qubit: cirq.PauliString(cirq.Z(qubit)) for qubit in (q1, q2, q3)}
+    first_ccz_dynamics = (
+        ((z_paulis[q1],), (z_paulis[q2] * z_paulis[q3],)),
+        ((z_paulis[q2],), (z_paulis[q1] * z_paulis[q3],)),
+        ((z_paulis[q3],), (z_paulis[q1] * z_paulis[q2],)),
+    )
+    for vertex_index, (dependency_paulis, outputs) in enumerate(first_ccz_dynamics):
+        assert reaction_tree.nodes[(1, vertex_index)]["dependency_paulis"] == dependency_paulis
+        assert reaction_tree.nodes[(1, vertex_index)]["outputs"] == outputs
+
+    assert set(reaction_tree.edges) == {
+        ((1, 0), (4, 0)),
+        ((1, 1), (4, 0)),
+        ((1, 0), (10, 0)),
+        ((1, 1), (10, 0)),
+        ((4, 1), (7, 2)),
+        ((4, 2), (7, 2)),
+        ((7, 0), (10, 0)),
+        ((7, 1), (10, 0)),
+    }
+    assert reaction_depth_estimator.reaction_depth(circuit) == 2
+
+
 def test_reaction_depth_uses_explicit_non_auto_corrected_t_factory() -> None:
     qubit = cirq.LineQubit(0)
     reaction_depth_estimator = est.ReactionDepthEstimator(
@@ -379,7 +431,7 @@ def test_reaction_depth_factory_dict_keys_define_factory_gates() -> None:
         reaction_depth_estimator.reaction_depth(cirq.Circuit(cirq.T(qubit)))
 
 
-@pytest.mark.parametrize("factories", [{cirq.S: False}, {cirq.CCZ: True}])
+@pytest.mark.parametrize("factories", [{cirq.S: False}, {cirq.TOFFOLI: True}])
 def test_reaction_depth_rejects_undefined_factory_corrections(
     factories,
 ) -> None:
@@ -654,7 +706,7 @@ def test_reaction_depth_rejects_non_factory_non_clifford() -> None:
     reaction_depth_estimator = est.ReactionDepthEstimator()
 
     with pytest.raises(ValueError, match="non-Clifford operation without a factory dynamic"):
-        reaction_depth_estimator.reaction_depth(cirq.Circuit(cirq.CCZ(q0, q1, q2)))
+        reaction_depth_estimator.reaction_depth(cirq.Circuit(cirq.TOFFOLI(q0, q1, q2)))
 
 
 def test_reaction_tree_rejects_non_factory_non_clifford() -> None:
@@ -662,4 +714,4 @@ def test_reaction_tree_rejects_non_factory_non_clifford() -> None:
     reaction_depth_estimator = est.ReactionDepthEstimator()
 
     with pytest.raises(ValueError, match="non-Clifford operation without a factory dynamic"):
-        reaction_depth_estimator.reaction_tree(cirq.Circuit(cirq.CCZ(q0, q1, q2)))
+        reaction_depth_estimator.reaction_tree(cirq.Circuit(cirq.TOFFOLI(q0, q1, q2)))
