@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import warnings
 from collections import Counter
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
@@ -219,9 +219,7 @@ class ReactionDepthEstimator:
         local_z = tuple(cirq.PauliString(cirq.Z(qubit)) for qubit in local_qubits)
         self._factory_dynamics: dict[tuple[cirq.Gate, bool], tuple[ReactionDynamics, ...]] = {
             (cirq.T, True): (ReactionDynamics((local_z[0],), (local_z[0],)),),
-            (cirq.T, False): (
-                ReactionDynamics((local_x, local_z[0]), (local_x, local_z[0])),
-            ),
+            (cirq.T, False): (ReactionDynamics((local_x, local_z[0]), (local_x, local_z[0])),),
             (cirq.S, True): (ReactionDynamics((local_z[0],), (local_z[0],)),),
             (cirq.CCZ, True): (
                 ReactionDynamics((local_z[0],), (local_z[1] * local_z[2],)),
@@ -292,20 +290,15 @@ class ReactionDepthEstimator:
 
                 for dynamics, node_depth in zip(operation_dynamics, node_depths, strict=True):
                     for output in dynamics.outputs:
-                        phase_free_output = cirq.PauliString(dict(output.items()))
+                        phase_free_output = output.with_coefficient(1)
                         tracked_paulis[phase_free_output] = max(
                             tracked_paulis.get(phase_free_output, 0), node_depth
                         )
                 continue
 
-            source_depths = tuple(tracked_paulis.values())
             propagated_paulis: dict[cirq.PauliString, int] = {}
-            for pauli, depth in zip(
-                self._propagate_paulis(tracked_paulis, operation),
-                source_depths,
-                strict=True,
-            ):
-                phase_free_pauli = cirq.PauliString(dict(pauli.items()))
+            for pauli, depth in tracked_paulis.items():
+                phase_free_pauli = self._propagate_pauli(pauli, operation).with_coefficient(1)
                 propagated_paulis[phase_free_pauli] = max(
                     propagated_paulis.get(phase_free_pauli, 0), depth
                 )
@@ -411,8 +404,9 @@ class ReactionDepthEstimator:
                     target_operation = operations[target_operation_index]
                     target_nodes = factory_nodes.get(target_operation_index)
                     if target_nodes is None:
-                        propagated_paulis = self._propagate_paulis(
-                            propagated_paulis, target_operation
+                        propagated_paulis = tuple(
+                            self._propagate_pauli(pauli, target_operation)
+                            for pauli in propagated_paulis
                         )
                         continue
 
@@ -446,13 +440,12 @@ class ReactionDepthEstimator:
         )
 
     @staticmethod
-    def _propagate_paulis(
-        paulis: Iterable[cirq.PauliString],
+    def _propagate_pauli(
+        pauli: cirq.PauliString,
         operation: cirq.Operation,
-    ) -> tuple[cirq.PauliString, ...]:
-        return tuple(
+    ) -> cirq.PauliString:
+        return (
             pauli.conjugated_by(operation)
             if any(qubit in pauli for qubit in operation.qubits)
             else pauli
-            for pauli in paulis
         )
