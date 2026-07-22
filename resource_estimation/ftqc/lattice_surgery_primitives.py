@@ -333,6 +333,8 @@ _QLDPC_FAMILY_ALIASES = {
 
 _QLDPC_DISTANCE_FAMILIES = {"SurfaceCode", "ToricCode"}
 
+LogicalQubitLabel = Literal["zero", "one", "plus", "minus", "data"]
+_LOGICAL_QUBIT_LABELS = {"zero", "one", "plus", "minus", "data"}
 PatchLabel = Literal["memory", "compute", "cultivate", "distil"]
 _PATCH_LABELS = {"memory", "compute", "cultivate", "distil"}
 DistilleryLabel = Literal["CCZ", "T"]
@@ -369,6 +371,14 @@ def _resolve_qldpc_family_name(code_type: str, codes_module: Any) -> str:
     raise ValueError(f"qLDPC code family not found for code_type={code_type!r}")
 
 
+def _validate_logical_qubit_label(label: str) -> LogicalQubitLabel:
+    if label not in _LOGICAL_QUBIT_LABELS:
+        raise ValueError(
+            f"Logical qubit label must be one of {sorted(_LOGICAL_QUBIT_LABELS)}, not {label!r}"
+        )
+    return cast(LogicalQubitLabel, label)
+
+
 def _validate_patch_label(patch_label: str) -> PatchLabel:
     if patch_label not in _PATCH_LABELS:
         raise ValueError(f"Patch label must be one of {sorted(_PATCH_LABELS)}, not {patch_label!r}")
@@ -399,6 +409,18 @@ def _default_vault_code_patch() -> CodePatch:
         simplex_code_b,
         patch_label="memory",
     )
+
+
+class LogicalQubit:
+    """Metadata for a logical qubit primitive."""
+
+    def __init__(self, label: LogicalQubitLabel = "zero", num_qubits: int = 1) -> None:
+        if not isinstance(num_qubits, int) or isinstance(num_qubits, bool):
+            raise TypeError("LogicalQubit num_qubits must be an integer.")
+        if num_qubits < 1:
+            raise ValueError("LogicalQubit num_qubits must be positive.")
+        self.label = _validate_logical_qubit_label(label)
+        self.num_qubits = num_qubits
 
 
 class CodePatch:

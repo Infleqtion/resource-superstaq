@@ -77,6 +77,43 @@ def test_move() -> None:
     assert str(measure_move) == "MOVE_MZ(q(0, 1))"
 
 
+def test_logical_qubit_default() -> None:
+    qubit = lsp.LogicalQubit()
+
+    assert qubit.label == "zero"
+    assert qubit.num_qubits == 1
+
+
+@pytest.mark.parametrize("label", ["zero", "one", "plus", "minus", "data"])
+def test_logical_qubit_labels(label: lsp.LogicalQubitLabel) -> None:
+    qubit = lsp.LogicalQubit(label)
+
+    assert qubit.label == label
+
+
+def test_logical_qubit_num_qubits() -> None:
+    qubit = lsp.LogicalQubit("data", num_qubits=7)
+
+    assert qubit.num_qubits == 7
+
+
+def test_logical_qubit_rejects_invalid_label() -> None:
+    with pytest.raises(ValueError, match="Logical qubit label must be one of"):
+        lsp.LogicalQubit("bad")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("num_qubits", [0, -1])
+def test_logical_qubit_rejects_nonpositive_num_qubits(num_qubits: int) -> None:
+    with pytest.raises(ValueError, match="num_qubits must be positive"):
+        lsp.LogicalQubit(num_qubits=num_qubits)
+
+
+@pytest.mark.parametrize("num_qubits", [1.5, True])
+def test_logical_qubit_rejects_noninteger_num_qubits(num_qubits: object) -> None:
+    with pytest.raises(TypeError, match="num_qubits must be an integer"):
+        lsp.LogicalQubit(num_qubits=num_qubits)  # type: ignore[arg-type]
+
+
 def test_code_patch_surface_metadata() -> None:
     pytest.importorskip("qldpc")
 
