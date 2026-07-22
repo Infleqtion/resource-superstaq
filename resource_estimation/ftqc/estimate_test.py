@@ -381,7 +381,7 @@ def test_non_auto_corrected_factory_always_creates_dependencies(
     source_gate = cirq.XPowGate(exponent=0.25)
     reaction_depth_estimator = est.ReactionDepthEstimator(
         factories={source_gate: True, cirq.T: False},
-        reaction_vertex_dynamics={
+        factory_reaction_dynamics={
             (source_gate, True): (
                 est.ReactionDynamics(
                     (local_pauli(cirq.Z),),
@@ -427,7 +427,9 @@ def test_reaction_depth_factory_dict_keys_define_factory_gates() -> None:
     qubit = cirq.LineQubit(0)
     reaction_depth_estimator = est.ReactionDepthEstimator(factories={})
 
-    with pytest.raises(ValueError, match="non-Clifford operation without a factory dynamic"):
+    with pytest.raises(
+        ValueError, match="non-Clifford operation without factory reaction dynamics"
+    ):
         reaction_depth_estimator.reaction_depth(cirq.Circuit(cirq.T(qubit)))
 
 
@@ -435,7 +437,7 @@ def test_reaction_depth_factory_dict_keys_define_factory_gates() -> None:
 def test_reaction_depth_rejects_undefined_factory_corrections(
     factories,
 ) -> None:
-    with pytest.raises(ValueError, match="No reaction-depth factory vertex dynamic is defined"):
+    with pytest.raises(ValueError, match="No factory reaction dynamics are defined"):
         est.ReactionDepthEstimator(factories=factories)
 
 
@@ -443,7 +445,7 @@ def test_reaction_depth_rejects_nonlocal_dependency_pauli_at_construction() -> N
     dependency_qubit = cirq.LineQubit(1)
     with pytest.raises(ValueError, match="Reaction Pauli .* must use only operation-local qubits"):
         est.ReactionDepthEstimator(
-            reaction_vertex_dynamics={
+            factory_reaction_dynamics={
                 (cirq.T, True): (
                     est.ReactionDynamics(
                         (cirq.PauliString(cirq.X(dependency_qubit)),),
@@ -485,7 +487,7 @@ def test_reaction_tree_adds_edges_for_anticommuting_y_outputs() -> None:
     source_gate = cirq.XPowGate(exponent=0.25)
     reaction_depth_estimator = est.ReactionDepthEstimator(
         factories={source_gate: True, cirq.T: True},
-        reaction_vertex_dynamics={
+        factory_reaction_dynamics={
             (source_gate, True): (
                 est.ReactionDynamics(
                     (local_pauli(cirq.Z),),
@@ -507,7 +509,7 @@ def test_reaction_tree_supports_multiple_vertices_per_factory_operation() -> Non
     custom_gate = cirq.XPowGate(exponent=0.25)
     reaction_depth_estimator = est.ReactionDepthEstimator(
         factories={custom_gate: True},
-        reaction_vertex_dynamics={
+        factory_reaction_dynamics={
             (custom_gate, True): (
                 est.ReactionDynamics(
                     (local_pauli(cirq.Z),),
@@ -535,7 +537,7 @@ def test_reaction_tree_omits_transitive_dependencies() -> None:
     sink_gate = cirq.YPowGate(exponent=0.25)
     reaction_depth_estimator = est.ReactionDepthEstimator(
         factories={custom_gate: True, sink_gate: True},
-        reaction_vertex_dynamics={
+        factory_reaction_dynamics={
             (custom_gate, True): (
                 est.ReactionDynamics(
                     (local_pauli(cirq.Z),),
@@ -570,7 +572,7 @@ def test_reaction_tree_omits_covered_vertex_in_multi_vertex_factory() -> None:
     target_gate = cirq.YPowGate(exponent=0.25)
     reaction_depth_estimator = est.ReactionDepthEstimator(
         factories={source_gate: True, target_gate: True},
-        reaction_vertex_dynamics={
+        factory_reaction_dynamics={
             (source_gate, True): (
                 est.ReactionDynamics(
                     (local_pauli(cirq.Z),),
@@ -597,7 +599,7 @@ def test_reaction_tree_keeps_irreducible_dependencies() -> None:
     sink_gate = cirq.YPowGate(exponent=0.25)
     reaction_depth_estimator = est.ReactionDepthEstimator(
         factories={source_gate: True, sink_gate: True},
-        reaction_vertex_dynamics={
+        factory_reaction_dynamics={
             (source_gate, True): (
                 est.ReactionDynamics(
                     (local_pauli(cirq.X),),
@@ -635,7 +637,7 @@ def test_reaction_tree_supports_multi_qubit_pauli_anticommutation() -> None:
     custom_gate = cirq.CZPowGate(exponent=0.25)
     reaction_depth_estimator = est.ReactionDepthEstimator(
         factories={custom_gate: True},
-        reaction_vertex_dynamics={
+        factory_reaction_dynamics={
             (custom_gate, True): (
                 est.ReactionDynamics(
                     (local_pauli(cirq.X) * local_pauli(cirq.X, qubit_index=1),),
@@ -657,7 +659,7 @@ def test_reaction_tree_localizes_dynamics_to_operation_qubits() -> None:
     custom_gate = cirq.XPowGate(exponent=0.25)
     reaction_depth_estimator = est.ReactionDepthEstimator(
         factories={custom_gate: True},
-        reaction_vertex_dynamics={
+        factory_reaction_dynamics={
             (custom_gate, True): (
                 est.ReactionDynamics(
                     (local_pauli(cirq.X),),
@@ -690,7 +692,7 @@ def test_reaction_depth_rejects_concrete_qubits_in_dynamics_at_construction(
     with pytest.raises(ValueError, match="must use only operation-local qubits"):
         est.ReactionDepthEstimator(
             factories={custom_gate: True},
-            reaction_vertex_dynamics={
+            factory_reaction_dynamics={
                 (custom_gate, True): (
                     est.ReactionDynamics(
                         (local_pauli(cirq.X),) if concrete_pauli_is_output else (concrete_pauli,),
@@ -705,7 +707,9 @@ def test_reaction_depth_rejects_non_factory_non_clifford() -> None:
     q0, q1, q2 = cirq.LineQubit.range(3)
     reaction_depth_estimator = est.ReactionDepthEstimator()
 
-    with pytest.raises(ValueError, match="non-Clifford operation without a factory dynamic"):
+    with pytest.raises(
+        ValueError, match="non-Clifford operation without factory reaction dynamics"
+    ):
         reaction_depth_estimator.reaction_depth(cirq.Circuit(cirq.TOFFOLI(q0, q1, q2)))
 
 
@@ -713,5 +717,7 @@ def test_reaction_tree_rejects_non_factory_non_clifford() -> None:
     q0, q1, q2 = cirq.LineQubit.range(3)
     reaction_depth_estimator = est.ReactionDepthEstimator()
 
-    with pytest.raises(ValueError, match="non-Clifford operation without a factory dynamic"):
+    with pytest.raises(
+        ValueError, match="non-Clifford operation without factory reaction dynamics"
+    ):
         reaction_depth_estimator.reaction_tree(cirq.Circuit(cirq.TOFFOLI(q0, q1, q2)))

@@ -185,14 +185,14 @@ class ReactionDepthEstimator:
         cirq.CCZ: True,
     }
     _NON_CLIFFORD_ERROR: ClassVar[str] = (
-        "Reaction-depth estimator encountered a non-Clifford operation without a "
-        "factory dynamic: {operation!r}."
+        "Reaction-depth estimator encountered a non-Clifford operation without "
+        "factory reaction dynamics: {operation!r}."
     )
 
     def __init__(
         self,
         factories: dict[cirq.Gate, bool] | None = None,
-        reaction_vertex_dynamics: Mapping[
+        factory_reaction_dynamics: Mapping[
             tuple[cirq.Gate, bool],
             Sequence[ReactionDynamics],
         ]
@@ -203,21 +203,23 @@ class ReactionDepthEstimator:
         Args:
             factories: Factory gates mapped to their auto-correction setting.
                 Defaults to auto-corrected T, S, and CCZ gates.
-            reaction_vertex_dynamics: Factory vertex dynamics keyed by
+            factory_reaction_dynamics: Factory reaction dynamics keyed by
                 `(gate, auto_corrected)`. Entries override defaults;
                 `factories` still determines which gates are factory-backed.
                 Pauli qubits are operation-local `cirq.LineQubit` indices from
                 zero through the gate's arity minus one.
 
         Raises:
-            ValueError: If a configured factory has no dynamics or a dynamic
-                uses a qubit index outside the factory gate's arity.
+            ValueError: If a configured factory has no reaction dynamics or a
+                dynamic uses a qubit index outside the factory gate's arity.
         """
         self.factories = dict(self._DEFAULT_FACTORIES if factories is None else factories)
         local_qubits = cirq.LineQubit.range(3)
         local_x = cirq.PauliString(cirq.X(local_qubits[0]))
         local_z = tuple(cirq.PauliString(cirq.Z(qubit)) for qubit in local_qubits)
-        self._factory_dynamics: dict[tuple[cirq.Gate, bool], tuple[ReactionDynamics, ...]] = {
+        self._factory_reaction_dynamics: dict[
+            tuple[cirq.Gate, bool], tuple[ReactionDynamics, ...]
+        ] = {
             (cirq.T, True): (ReactionDynamics((local_z[0],), (local_z[0],)),),
             (cirq.T, False): (ReactionDynamics((local_x, local_z[0]), (local_x, local_z[0])),),
             (cirq.S, True): (ReactionDynamics((local_z[0],), (local_z[0],)),),
@@ -227,19 +229,22 @@ class ReactionDepthEstimator:
                 ReactionDynamics((local_z[2],), (local_z[0] * local_z[1],)),
             ),
         }
-        if reaction_vertex_dynamics is not None:
-            self._factory_dynamics.update(
-                {key: tuple(dynamics) for key, dynamics in reaction_vertex_dynamics.items()}
+        if factory_reaction_dynamics is not None:
+            self._factory_reaction_dynamics.update(
+                {
+                    key: tuple(factory_dynamics)
+                    for key, factory_dynamics in factory_reaction_dynamics.items()
+                }
             )
 
         unsupported_pairs = [
             (gate, auto_corrected)
             for gate, auto_corrected in self.factories.items()
-            if (gate, auto_corrected) not in self._factory_dynamics
+            if (gate, auto_corrected) not in self._factory_reaction_dynamics
         ]
         if unsupported_pairs:
             raise ValueError(
-                "No reaction-depth factory vertex dynamic is defined for: "
+                "No factory reaction dynamics are defined for: "
                 + ", ".join(
                     f"({gate!r}, {auto_corrected!r})" for gate, auto_corrected in unsupported_pairs
                 )
@@ -247,8 +252,11 @@ class ReactionDepthEstimator:
 
         for gate, auto_corrected in self.factories.items():
             local_qubits = tuple(cirq.LineQubit.range(cirq.num_qubits(gate)))
-            for dynamics in self._factory_dynamics[(gate, auto_corrected)]:
-                for pauli in (*dynamics.dependency_paulis, *dynamics.outputs):
+            for reaction_dynamics in self._factory_reaction_dynamics[(gate, auto_corrected)]:
+                for pauli in (
+                    *reaction_dynamics.dependency_paulis,
+                    *reaction_dynamics.outputs,
+                ):
                     if not set(pauli.qubits).issubset(local_qubits):
                         raise ValueError(
                             f"Reaction Pauli {pauli!r} must use only operation-local qubits "
@@ -270,26 +278,28 @@ class ReactionDepthEstimator:
         reaction_depth = 0
 
         for operation in circuit.all_operations():
-            operation_dynamics = self._operation_dynamics(operation)
-            if operation_dynamics is not None:
+            factory_dynamics = self._factory_dynamics(operation)
+            if factory_dynamics is not None:
                 node_depths = tuple(
                     max(
                         (
                             source_depth
                             for source_pauli, source_depth in tracked_paulis.items()
                             if self._creates_reaction_dependency(
-                                source_pauli, dynamics.dependency_paulis
+                                source_pauli, reaction_dynamics.dependency_paulis
                             )
                         ),
                         default=0,
                     )
                     + 1
-                    for dynamics in operation_dynamics
+                    for reaction_dynamics in factory_dynamics
                 )
                 reaction_depth = max((reaction_depth, *node_depths))
 
-                for dynamics, node_depth in zip(operation_dynamics, node_depths, strict=True):
-                    for output in dynamics.outputs:
+                for reaction_dynamics, node_depth in zip(
+                    factory_dynamics, node_depths, strict=True
+                ):
+                    for output in reaction_dynamics.outputs:
                         phase_free_output = output.with_coefficient(1)
                         tracked_paulis[phase_free_output] = max(
                             tracked_paulis.get(phase_free_output, 0), node_depth
@@ -339,7 +349,7 @@ class ReactionDepthEstimator:
 
         return reaction_tree
 
-    def _operation_dynamics(self, operation: cirq.Operation) -> tuple[ReactionDynamics, ...] | None:
+    def _factory_dynamics(self, operation: cirq.Operation) -> tuple[ReactionDynamics, ...] | None:
         if operation.gate not in self.factories:
             if not cirq.has_stabilizer_effect(operation.gate):
                 raise ValueError(self._NON_CLIFFORD_ERROR.format(operation=operation))
@@ -350,10 +360,15 @@ class ReactionDepthEstimator:
         )
         return tuple(
             ReactionDynamics(
-                tuple(pauli.map_qubits(local_qubit_map) for pauli in dynamics.dependency_paulis),
-                tuple(output.map_qubits(local_qubit_map) for output in dynamics.outputs),
+                tuple(
+                    pauli.map_qubits(local_qubit_map)
+                    for pauli in reaction_dynamics.dependency_paulis
+                ),
+                tuple(output.map_qubits(local_qubit_map) for output in reaction_dynamics.outputs),
             )
-            for dynamics in self._factory_dynamics[(operation.gate, self.factories[operation.gate])]
+            for reaction_dynamics in self._factory_reaction_dynamics[
+                (operation.gate, self.factories[operation.gate])
+            ]
         )
 
     def _add_reaction_node(
@@ -363,18 +378,18 @@ class ReactionDepthEstimator:
         reaction_tree: nx.DiGraph,
         factory_nodes: dict[int, tuple[ReactionTreeNode, ...]],
     ) -> None:
-        operation_dynamics = self._operation_dynamics(operation)
-        if operation_dynamics is None:
+        factory_dynamics = self._factory_dynamics(operation)
+        if factory_dynamics is None:
             return
 
         nodes: list[ReactionTreeNode] = []
-        for vertex_index, dynamics in enumerate(operation_dynamics):
+        for vertex_index, reaction_dynamics in enumerate(factory_dynamics):
             node = (operation_index, vertex_index)
             nodes.append(node)
             reaction_tree.add_node(
                 node,
-                dependency_paulis=dynamics.dependency_paulis,
-                outputs=dynamics.outputs,
+                dependency_paulis=reaction_dynamics.dependency_paulis,
+                outputs=reaction_dynamics.outputs,
             )
         factory_nodes[operation_index] = tuple(nodes)
 
