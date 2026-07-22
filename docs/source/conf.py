@@ -57,4 +57,6 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_rtd_theme"
-html_static_path = ["_static"]
+# html_static_path = ["_static"] #This is commented out because nothing is in '_static' folder atm
+#   and the CI pipeline was getting mad because git wasn't tracking the folder.
+#   once we have custom CSS, images, or anything to put in _static, we can add this back

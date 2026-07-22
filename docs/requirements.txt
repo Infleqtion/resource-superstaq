@@ -1,5 +1,5 @@
-sphinx~=8.2
 myst-parser
-sphinx-rtd-theme
 nbsphinx
 nbsphinx-link
+sphinx~=8.2
+sphinx-rtd-theme
