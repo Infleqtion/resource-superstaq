@@ -77,41 +77,47 @@ def test_move() -> None:
     assert str(measure_move) == "MOVE_MZ(q(0, 1))"
 
 
-def test_logical_qubit_default() -> None:
-    qubit = lsp.LogicalQubit()
+def test_logical_qubit() -> None:
+    qubit = lsp.LogicalQubit(x_support={0, 2}, z_support={2, 3})
 
     assert qubit.label == "zero"
-    assert qubit.num_qubits == 1
+    assert qubit.x_support == frozenset({0, 2})
+    assert qubit.z_support == frozenset({2, 3})
+    assert qubit.num_qubits == 3
 
 
 @pytest.mark.parametrize("label", ["zero", "one", "plus", "minus", "data"])
 def test_logical_qubit_labels(label: lsp.LogicalQubitLabel) -> None:
-    qubit = lsp.LogicalQubit(label)
+    qubit = lsp.LogicalQubit(x_support={0}, z_support={0}, label=label)
 
     assert qubit.label == label
 
 
-def test_logical_qubit_num_qubits() -> None:
-    qubit = lsp.LogicalQubit("data", num_qubits=7)
+def test_logical_qubit_rejects_missing_supports() -> None:
+    with pytest.raises(TypeError):
+        lsp.LogicalQubit()  # type: ignore[call-arg]
 
-    assert qubit.num_qubits == 7
+
+def test_logical_qubit_rejects_empty_supports() -> None:
+    with pytest.raises(ValueError, match="supports must include"):
+        lsp.LogicalQubit(x_support=set(), z_support=set())
 
 
 def test_logical_qubit_rejects_invalid_label() -> None:
     with pytest.raises(ValueError, match="Logical qubit label must be one of"):
-        lsp.LogicalQubit("bad")  # type: ignore[arg-type]
+        lsp.LogicalQubit(x_support={0}, z_support={0}, label="bad")  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("num_qubits", [0, -1])
-def test_logical_qubit_rejects_nonpositive_num_qubits(num_qubits: int) -> None:
-    with pytest.raises(ValueError, match="num_qubits must be positive"):
-        lsp.LogicalQubit(num_qubits=num_qubits)
+@pytest.mark.parametrize("support", [{-1}, {0, -1}])
+def test_logical_qubit_rejects_negative_support_entries(support: set[int]) -> None:
+    with pytest.raises(ValueError, match="entries must be nonnegative"):
+        lsp.LogicalQubit(x_support=support, z_support={0})
 
 
-@pytest.mark.parametrize("num_qubits", [1.5, True])
-def test_logical_qubit_rejects_noninteger_num_qubits(num_qubits: object) -> None:
-    with pytest.raises(TypeError, match="num_qubits must be an integer"):
-        lsp.LogicalQubit(num_qubits=num_qubits)  # type: ignore[arg-type]
+@pytest.mark.parametrize("support", [{1.5}, {True}])
+def test_logical_qubit_rejects_noninteger_support_entries(support: set[object]) -> None:
+    with pytest.raises(TypeError, match="entries must be integers"):
+        lsp.LogicalQubit(x_support=support, z_support={0})  # type: ignore[arg-type]
 
 
 def test_code_patch_surface_metadata() -> None:
@@ -128,6 +134,8 @@ def test_code_patch_surface_metadata() -> None:
     assert patch.num_z_stabs() == 24
     assert patch.patch_label == "compute"
     assert patch.is_qldpc_backed
+    assert len(patch.logical_qubits) == 1
+    assert [qubit.label for qubit in patch.logical_qubits] == ["zero"]
     assert (
         repr(patch) == "lsp.CodePatch(code_type='surface', d=7, n=49, k=1, patch_label='compute')"
     )
@@ -139,6 +147,7 @@ def test_code_patch_surface_metadata() -> None:
     assert patch.num_measure_qubits == 24
     assert patch.patch_label == "cultivate"
     assert patch.is_qldpc_backed
+    assert len(patch.logical_qubits) == 1
     assert (
         repr(patch) == "lsp.CodePatch(code_type='surface', d=5, n=25, k=1, patch_label='cultivate')"
     )
@@ -154,6 +163,32 @@ def test_code_patch_surface_stabilizer_metadata_matches_qldpc() -> None:
 
         assert patch.num_x_stabs() == qldpc_code.num_checks_x
         assert patch.num_z_stabs() == qldpc_code.num_checks_z
+
+
+def test_code_patch_logical_qubits_from_css_logical_support() -> None:
+    pytest.importorskip("qldpc")
+
+    patch = lsp.CodePatch("surface", d=3)
+
+    assert len(patch.logical_qubits) == 1
+    assert patch.logical_qubits[0].label == "zero"
+    assert patch.logical_qubits[0].num_qubits == 5
+    assert patch.logical_qubits[0].x_support == frozenset({6, 7, 8})
+    assert patch.logical_qubits[0].z_support == frozenset({0, 4, 8})
+
+    patch = lsp.CodePatch("toric", d=2)
+
+    assert len(patch.logical_qubits) == 2
+    assert [qubit.label for qubit in patch.logical_qubits] == ["zero"] * 2
+    assert [qubit.num_qubits for qubit in patch.logical_qubits] == [3, 3]
+    assert [qubit.x_support for qubit in patch.logical_qubits] == [
+        frozenset({1, 2}),
+        frozenset({1, 3}),
+    ]
+    assert [qubit.z_support for qubit in patch.logical_qubits] == [
+        frozenset({0, 2}),
+        frozenset({0, 3}),
+    ]
 
 
 def test_code_patch_rejects_mismatched_distance() -> None:
@@ -189,6 +224,11 @@ def test_code_patch_non_css_stabilizer_metadata_errors() -> None:
     assert patch.num_measure_qubits == 4
     assert patch.is_qldpc_backed
     assert patch.patch_label == "distil"
+    assert len(patch.logical_qubits) == 1
+    assert patch.logical_qubits[0].label == "zero"
+    assert patch.logical_qubits[0].num_qubits == 5
+    assert patch.logical_qubits[0].x_support == frozenset({1, 2, 4})
+    assert patch.logical_qubits[0].z_support == frozenset({0, 1, 2, 3, 4})
     with pytest.raises(ValueError, match="X/Z stabilizer counts"):
         patch.num_x_stabs()
     with pytest.raises(ValueError, match="X/Z stabilizer counts"):
@@ -205,6 +245,30 @@ def test_code_patch_qldpc_css_stabilizer_metadata() -> None:
     assert patch.num_x_stabs() == 49
     assert patch.num_z_stabs() == 49
     assert patch.num_physical_qubits == 196
+    assert len(patch.logical_qubits) == 18
+    assert [qubit.label for qubit in patch.logical_qubits] == ["zero"] * 18
+    assert [qubit.num_qubits for qubit in patch.logical_qubits] == [7] * 18
+
+
+def test_code_patch_rejects_unequal_logical_qubit_supports() -> None:
+    pytest.importorskip("qldpc")
+    from qldpc.objects import Pauli
+
+    class UnequalLogicalSupportCode:
+        num_checks = 0
+
+        def get_code_params(self) -> tuple[int, int, int]:
+            return 4, 2, 2
+
+        def get_logical_ops(self, pauli: object) -> list[list[int]]:
+            if pauli == Pauli.X:
+                return [[1, 0, 0, 0], [0, 1, 0, 0]]
+            if pauli == Pauli.Z:
+                return [[0, 1, 0, 0], [0, 0, 1, 1]]
+            raise ValueError(f"Unexpected pauli: {pauli!r}")
+
+    with pytest.raises(ValueError, match="must have the same size"):
+        lsp.CodePatch(UnequalLogicalSupportCode)
 
 
 def test_code_patch_qldpc_family_alias() -> None:

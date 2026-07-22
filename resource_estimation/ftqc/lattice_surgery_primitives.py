@@ -414,13 +414,29 @@ def _default_vault_code_patch() -> CodePatch:
 class LogicalQubit:
     """Metadata for a logical qubit primitive."""
 
-    def __init__(self, label: LogicalQubitLabel = "zero", num_qubits: int = 1) -> None:
-        if not isinstance(num_qubits, int) or isinstance(num_qubits, bool):
-            raise TypeError("LogicalQubit num_qubits must be an integer.")
-        if num_qubits < 1:
-            raise ValueError("LogicalQubit num_qubits must be positive.")
+    def __init__(
+        self,
+        x_support: Iterable[int],
+        z_support: Iterable[int],
+        label: LogicalQubitLabel = "zero",
+    ) -> None:
         self.label = _validate_logical_qubit_label(label)
-        self.num_qubits = num_qubits
+        self.x_support = self._validate_support(x_support, "x_support")
+        self.z_support = self._validate_support(z_support, "z_support")
+        self.num_qubits = len(self.x_support | self.z_support)
+        if self.num_qubits < 1:
+            raise ValueError("LogicalQubit supports must include at least one physical qubit.")
+
+    @staticmethod
+    def _validate_support(support: Iterable[int], name: str) -> frozenset[int]:
+        qubits = set()
+        for qubit in support:
+            if not isinstance(qubit, int) or isinstance(qubit, bool):
+                raise TypeError(f"LogicalQubit {name} entries must be integers.")
+            if qubit < 0:
+                raise ValueError(f"LogicalQubit {name} entries must be nonnegative.")
+            qubits.add(qubit)
+        return frozenset(qubits)
 
 
 class CodePatch:
@@ -465,6 +481,7 @@ class CodePatch:
             )
         self.num_data_qubits = self.n
         self.num_measure_qubits = int(getattr(self._qldpc_code, "num_checks"))
+        self.logical_qubits = self._logical_qubits_from_qldpc_code()
 
     @property
     def code_params(self) -> tuple[int, int, int | float | None]:
@@ -502,6 +519,49 @@ class CodePatch:
             return int(matrix.shape[0])
 
         raise self._unsupported_stabilizer_count_error()
+
+    def _logical_qubits_from_qldpc_code(self) -> list[LogicalQubit]:
+        from qldpc.objects import Pauli
+
+        logical_xs = self.qldpc_code.get_logical_ops(Pauli.X)
+        logical_zs = self.qldpc_code.get_logical_ops(Pauli.Z)
+        self._validate_logical_ops_count(logical_xs, "X")
+        self._validate_logical_ops_count(logical_zs, "Z")
+
+        supports = [
+            (
+                self._logical_op_support(logical_xs[index]),
+                self._logical_op_support(logical_zs[index]),
+            )
+            for index in range(self.k)
+        ]
+        support_sizes = [len(x_support | z_support) for x_support, z_support in supports]
+        if len(set(support_sizes)) > 1:
+            raise ValueError(
+                "Logical qubit physical supports must have the same size within a CodePatch."
+            )
+        return [
+            LogicalQubit(x_support=x_support, z_support=z_support, label="zero")
+            for x_support, z_support in supports
+        ]
+
+    def _validate_logical_ops_count(self, logical_ops: Any, pauli: str) -> None:
+        if len(logical_ops) != self.k:
+            raise ValueError(
+                f"qLDPC returned {len(logical_ops)} logical {pauli} operators for "
+                f"a CodePatch with k={self.k}."
+            )
+
+    def _logical_op_support(self, logical_op: Any) -> set[int]:
+        row = [int(value) for value in logical_op]
+        width = len(row)
+        if width == self.n:
+            return {index for index, value in enumerate(row) if value}
+        if width == 2 * self.n:
+            return {index for index in range(self.n) if row[index] or row[index + self.n]}
+        raise ValueError(
+            f"Logical operator rows must have length n={self.n} or 2n={2 * self.n}, not {width}."
+        )
 
     @staticmethod
     def _unsupported_stabilizer_count_error() -> ValueError:
