@@ -119,7 +119,7 @@ def replace_cirq_op(
 
 
 def teleport_resource(
-    op: cirq.Operation, layout: Layout, dyanmic: bool = False
+    op: cirq.Operation, layout: Layout, dynamic: bool = False
 ) -> list[cirq.Operation]:
     distil_t = layout.distil and op in cirq.GateFamily(cirq.T)
     distil_ccz = layout.distil and op in cirq.GateFamily(cirq.CCZ)
@@ -174,9 +174,9 @@ def teleport_resource(
     corrections = correction if isinstance(correction, list) else [correction.on(*op.qubits)]
     # 50% of the time, it works every time: we don't have to do an S gate correction on a T gate or
     # a Z gate correction on an S gate (though the Z gate correction is very minimal in resources)
-    if dyanmic and cultivate_t and random.randint(0, 1):
+    if dynamic and cultivate_t and random.randint(0, 1):
         corrections = []
-    if dyanmic and cultivate_s and random.randint(0, 1):
+    if dynamic and cultivate_s and random.randint(0, 1):
         corrections = []
     for factory_qubit, program_qubit in zip(routed_factory, op.qubits):
         cnots.append(cirq.CNOT.on(factory_qubit, program_qubit))

@@ -283,14 +283,36 @@ def test_deterministic_compilation(random_circ) -> None:
     cirq.testing.assert_has_diagram(compiled1, str(compiled2))
 
 
-def test_nondeterministic_compilation(random_circ, set_random_seed) -> None:
+def test_nondeterministic_compilation_sane(random_circ, set_random_seed) -> None:
     circuit = random_circ
     lay = Column(circuit)
     arc = arch.DefaultLattice()
     compiled1 = comp.ft_compile(lay, arc, dynamic=False)
     compiled2 = comp.ft_compile(lay, arc, dynamic=True)
-    # TODO: THIS IS A REALLY BAD TEST I JUST WANT TO MAKE THE PR BECAUSE ITS 4:57
     assert len(list(compiled2.all_operations())) < len(list(compiled1.all_operations()))
+
+
+# def test_nondeterministic_compilation_accurate(random_circ, set_random_seed) -> None:
+#     circuit = random_circ
+#     lay = Column(circuit)
+#     op = cirq.T.on(cirq.LineQubit(0))
+#     determnistic_S = 0
+#     dynamic_S = 0
+#     # Surely this is fast right??
+#     for i in range(10000):
+#         deterministic_ops = comp.teleport_resource(op, lay, dynamic=False)
+#         dynamic_ops = comp.teleport_resource(op, lay, dynamic=True)
+#         for op in deterministic_ops:
+#             if op.gate in cirq.GateFamily(cirq.S):
+#                 determnistic_S += 1
+#         dynamic_ops = comp.teleport_resource(op, lay, dynamic=True)
+#         for op in dynamic_ops:
+#             if op.gate in cirq.GateFamily(cirq.S):
+#                 dynamic_S += 1
+#     # Also possibly questionable
+#     assert dynamic_S / determnistic_S >= 0.48
+#     assert dynamic_S / determnistic_S <= 0.52
+#
 
 
 def test_other_passes(random_circ) -> None:
