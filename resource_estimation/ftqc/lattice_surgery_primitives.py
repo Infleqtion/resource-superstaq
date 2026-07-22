@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from collections.abc import Callable, Collection, Iterable, Mapping
+from collections.abc import Callable, Iterable
 from functools import cached_property
 from typing import Any, Literal, Optional, cast
-import warnings
-
 import cirq
 
 # TODO: Add cirq diagram info
@@ -310,13 +308,6 @@ class Move(cirq.Gate):
         return (self._num_qubits, self._zone)
 
 
-_SURFACE_CODE_TYPES = {
-    "surface",
-    "surface_code",
-    "rotated_surface",
-    "rotated_surface_code",
-}
-
 _QLDPC_FAMILY_ALIASES = {
     "surface": "SurfaceCode",
     "surface_code": "SurfaceCode",
@@ -356,15 +347,14 @@ def _normalize_code_type(code_type: str) -> str:
     return code_type.lower().replace("-", "_").replace(" ", "_")
 
 
-def _import_qldpc() -> tuple[Any, Any, Any]:
+def _import_qldpc() -> Any:
     try:
-        from qldpc import circuits, codes
-        from qldpc.objects import Pauli
+        from qldpc import codes
     except ImportError as ex:  # pragma: no cover - exercised only when qLDPC is absent
         raise ImportError(
             "qLDPC-backed CodePatch objects require the optional `qldpc` package."
         ) from ex
-    return circuits, codes, Pauli
+    return codes
 
 
 def _resolve_qldpc_family_name(code_type: str, codes_module: Any) -> str:
@@ -377,18 +367,6 @@ def _resolve_qldpc_family_name(code_type: str, codes_module: Any) -> str:
         if _normalize_code_type(name) == normalized:
             return name
     raise ValueError(f"qLDPC code family not found for code_type={code_type!r}")
-
-
-def _run_without_external_prompt(function: Callable[[], Any]) -> Any:
-    """Run qLDPC code that may otherwise request manual GAP/MAGMA input."""
-    import builtins
-
-    original_input = builtins.input
-    builtins.input = lambda prompt="": "n"
-    try:
-        return function()
-    finally:
-        builtins.input = original_input
 
 
 def _validate_patch_label(patch_label: str) -> PatchLabel:
@@ -412,10 +390,10 @@ def _validate_vault_label(label: str) -> VaultLabel:
 
 
 def _default_vault_code_patch() -> CodePatch:
-    _, codes, _ = _import_qldpc()
+    codes = _import_qldpc()
     simplex_code_a = codes.SimplexCode(_VAULT_SIMPLEX_R)
     simplex_code_b = codes.SimplexCode(_VAULT_SIMPLEX_R)
-    return CodePatch.from_qldpc_family(
+    return CodePatch(
         "hgp",
         simplex_code_a,
         simplex_code_b,
@@ -426,179 +404,45 @@ def _default_vault_code_patch() -> CodePatch:
 class CodePatch:
     """Metadata for a logical code patch.
 
-    A CodePatch represents a code block together with the resource-estimation metadata needed to
-    reason about its size and intended use. qLDPC-backed patches retain the qLDPC code object so
-    callers can request logical operators and transversal operations when needed. The patch label
-    indicates whether the patch is intended for memory, computation, cultivation, or distillation.
+    A CodePatch represents a qLDPC-backed code block together with the metadata needed
+    to reason about its size and intended use. The patch label indicates whether the
+    patch is intended for memory, computation, cultivation, or distillation.
     """
 
     def __init__(
         self,
-        code_type: str = "surface",
-        d: int | None = 7,
-        *,
-        n: int | None = None,
-        k: int | None = None,
-        num_data_qubits: int | None = None,
-        num_measure_qubits: int | None = None,
-        patch_label: PatchLabel = "compute",
-        qldpc_code: Any | None = None,
-        qldpc_family: str | None = None,
-        qldpc_args: tuple[object, ...] | None = None,
-        qldpc_kwargs: Mapping[str, object] | None = None,
-        distance_bound: int | bool | None = None,
-        distance_kwargs: Mapping[str, object] | None = None,
-    ) -> None:
-        self.code_type = code_type
-        self.patch_label = _validate_patch_label(patch_label)
-        self.qldpc_family = qldpc_family
-        self.qldpc_args = tuple(qldpc_args or ())
-        self.qldpc_kwargs = dict(qldpc_kwargs or {})
-        self._qldpc_code = qldpc_code
-
-        if qldpc_code is not None:
-            metadata = self._metadata_from_qldpc_code(
-                qldpc_code,
-                d=d,
-                distance_bound=distance_bound,
-                distance_kwargs=distance_kwargs,
-            )
-            n = n if n is not None else metadata["n"]
-            k = k if k is not None else metadata["k"]
-            d = d if d is not None else metadata["d"]
-            num_data_qubits = (
-                num_data_qubits
-                if num_data_qubits is not None
-                else metadata["num_data_qubits"]
-            )
-            num_measure_qubits = (
-                num_measure_qubits
-                if num_measure_qubits is not None
-                else metadata["num_measure_qubits"]
-            )
-
-        if n is None and num_data_qubits is not None:
-            n = num_data_qubits
-
-        if n is None and _normalize_code_type(code_type) in _SURFACE_CODE_TYPES and d is not None:
-            n = d**2
-            k = 1 if k is None else k
-            num_data_qubits = n if num_data_qubits is None else num_data_qubits
-            num_measure_qubits = d**2 - 1 if num_measure_qubits is None else num_measure_qubits
-
-        if n is None:
-            raise ValueError(
-                "CodePatch requires a qLDPC code/family, an implemented built-in code type, "
-                "or explicit n/num_data_qubits metadata."
-            )
-
-        if k is None:
-            k = 1
-        if num_data_qubits is None:
-            num_data_qubits = n
-        if num_measure_qubits is None:
-            num_measure_qubits = 0
-
-        self.d = d
-        self.n = n
-        self.k = k
-        self.num_data_qubits = num_data_qubits
-        self.num_measure_qubits = num_measure_qubits
-
-    @classmethod
-    def from_qldpc_code(
-        cls,
-        qldpc_code: Any,
-        *,
-        code_type: str | None = None,
-        d: int | None = None,
-        patch_label: PatchLabel = "compute",
-        qldpc_family: str | None = None,
-        qldpc_args: tuple[object, ...] | None = None,
-        qldpc_kwargs: Mapping[str, object] | None = None,
-        distance_bound: int | bool | None = None,
-        distance_kwargs: Mapping[str, object] | None = None,
-    ) -> CodePatch:
-        """Build a CodePatch from an already constructed qLDPC code."""
-        if code_type is None:
-            code_type = type(qldpc_code).__name__
-        return cls(
-            code_type=code_type,
-            d=d,
-            patch_label=patch_label,
-            qldpc_code=qldpc_code,
-            qldpc_family=qldpc_family,
-            qldpc_args=qldpc_args,
-            qldpc_kwargs=qldpc_kwargs,
-            distance_bound=distance_bound,
-            distance_kwargs=distance_kwargs,
-        )
-
-    @classmethod
-    def from_qldpc_family(
-        cls,
         code_type: str | Callable[..., object],
         *code_args: object,
         d: int | None = None,
         patch_label: PatchLabel = "compute",
-        distance_bound: int | bool | None = None,
-        distance_kwargs: Mapping[str, object] | None = None,
         **code_kwargs: object,
-    ) -> CodePatch:
-        """Build a CodePatch from a qLDPC code family and family-specific constructor data."""
-        _, codes, _ = _import_qldpc()
+    ) -> None:
+        codes = _import_qldpc()
+        self.patch_label = _validate_patch_label(patch_label)
 
         if callable(code_type):
-            qldpc_family = getattr(code_type, "__name__", repr(code_type))
             code_factory = code_type
-            patch_code_type = qldpc_family
+            self.code_type = getattr(code_type, "__name__", repr(code_type))
         else:
-            qldpc_family = _resolve_qldpc_family_name(code_type, codes)
-            code_factory = getattr(codes, qldpc_family)
-            patch_code_type = code_type
+            self.code_type = code_type
+            code_factory = getattr(codes, _resolve_qldpc_family_name(code_type, codes))
 
         qldpc_args = tuple(code_args)
-        if not qldpc_args and d is not None and qldpc_family in _QLDPC_DISTANCE_FAMILIES:
+        if (
+            not qldpc_args
+            and d is not None
+            and getattr(code_factory, "__name__", None) in _QLDPC_DISTANCE_FAMILIES
+        ):
             qldpc_args = (d,)
 
-        qldpc_code = code_factory(*qldpc_args, **code_kwargs)
-        return cls.from_qldpc_code(
-            qldpc_code,
-            code_type=patch_code_type,
-            d=d,
-            patch_label=patch_label,
-            qldpc_family=qldpc_family,
-            qldpc_args=qldpc_args,
-            qldpc_kwargs=code_kwargs,
-            distance_bound=distance_bound,
-            distance_kwargs=distance_kwargs,
-        )
-
-    @classmethod
-    def from_qldpc_factory(
-        cls,
-        code_type: str,
-        code_factory: Callable[..., object],
-        *code_args: object,
-        d: int | None = None,
-        patch_label: PatchLabel = "compute",
-        distance_bound: int | bool | None = None,
-        distance_kwargs: Mapping[str, object] | None = None,
-        **code_kwargs: object,
-    ) -> CodePatch:
-        """Build a CodePatch from a caller-provided qLDPC code factory."""
-        qldpc_code = code_factory(*code_args, **code_kwargs)
-        return cls.from_qldpc_code(
-            qldpc_code,
-            code_type=code_type,
-            d=d,
-            patch_label=patch_label,
-            qldpc_family=getattr(code_factory, "__name__", repr(code_factory)),
-            qldpc_args=tuple(code_args),
-            qldpc_kwargs=code_kwargs,
-            distance_bound=distance_bound,
-            distance_kwargs=distance_kwargs,
-        )
+        self._qldpc_code = code_factory(*qldpc_args, **code_kwargs)
+        self.n, self.k, self.d = self._metadata_from_qldpc_code(self._qldpc_code)
+        if d is not None and self.d is not None and self.d != d:
+            raise ValueError(
+                f"Provided distance d={d} does not match qLDPC code distance {self.d}."
+            )
+        self.num_data_qubits = self.n
+        self.num_measure_qubits = int(getattr(self._qldpc_code, "num_checks"))
 
     @property
     def code_params(self) -> tuple[int, int, int | float | None]:
@@ -612,286 +456,46 @@ class CodePatch:
 
     @property
     def is_qldpc_backed(self) -> bool:
-        return self._qldpc_code is not None
+        return True
 
     @property
     def qldpc_code(self) -> Any:
-        if self._qldpc_code is None:
-            raise ValueError("This CodePatch is not backed by a qLDPC code object.")
         return self._qldpc_code
 
-    @property
-    def rows(self) -> int:
-        """The number of rows in a rotated surface-code patch."""
-        return 2 * self._surface_code_distance() - 1
+    def num_x_stabs(self) -> int:
+        """Return the number of X-type stabilizer checks for CSS qLDPC codes."""
+        return self._qldpc_css_check_count("x")
 
-    @property
-    def cols(self) -> int:
-        """The number of columns in a rotated surface-code patch."""
-        return 2 * self._surface_code_distance() - 1
-
-    @property
-    def total_num_x_stabs(self) -> int:
-        """The total number of X-type stabilizer checks in the patch."""
-        return self.num_x_stabs(full=None)
-
-    @property
-    def total_num_z_stabs(self) -> int:
-        """The total number of Z-type stabilizer checks in the patch."""
-        return self.num_z_stabs(full=None)
-
-    def num_x_stabs(self, full: bool | None = True) -> int:
-        """Return the number of X-type stabilizer checks.
-
-        For surface-code patches, ``full`` selects full or partial plaquette checks. For CSS
-        qLDPC-backed patches, all X checks are returned unless ``full=False`` is requested.
-        """
-        if self._is_surface_code:
-            if full is None:
-                return self._surface_qldpc_check_count("x")
-            return self._surface_stab_count_formula(full=full)
-        if self.is_qldpc_backed:
-            if full is False:
-                raise ValueError(
-                    "Partial stabilizer counts are only defined for surface CodePatch objects."
-                )
-            return self._qldpc_css_check_count("x")
-        raise self._unsupported_stabilizer_count_error()
-
-    def num_z_stabs(self, full: bool | None = True) -> int:
-        """Return the number of Z-type stabilizer checks.
-
-        For surface-code patches, ``full`` selects full or partial plaquette checks. For CSS
-        qLDPC-backed patches, all Z checks are returned unless ``full=False`` is requested.
-        """
-        if self._is_surface_code:
-            if full is None:
-                return self._surface_qldpc_check_count("z")
-            return self._surface_stab_count_formula(full=full)
-        if self.is_qldpc_backed:
-            if full is False:
-                raise ValueError(
-                    "Partial stabilizer counts are only defined for surface CodePatch objects."
-                )
-            return self._qldpc_css_check_count("z")
-        raise self._unsupported_stabilizer_count_error()
-
-    def total_x_syndrome_cnots(self) -> int:
-        """Return the total data-check interactions for measuring all X stabilizers."""
-        if self._is_surface_code:
-            return self._surface_qldpc_matrix_support_size("x")
-        if self.is_qldpc_backed:
-            return self._qldpc_css_matrix_support_size("x")
-        raise self._unsupported_stabilizer_count_error()
-
-    def total_z_syndrome_cnots(self) -> int:
-        """Return the total data-check interactions for measuring all Z stabilizers."""
-        if self._is_surface_code:
-            return self._surface_qldpc_matrix_support_size("z")
-        if self.is_qldpc_backed:
-            return self._qldpc_css_matrix_support_size("z")
-        raise self._unsupported_stabilizer_count_error()
-
-    @property
-    def _is_surface_code(self) -> bool:
-        return _normalize_code_type(self.code_type) in _SURFACE_CODE_TYPES
-
-    def _surface_code_distance(self) -> int:
-        if not self._is_surface_code:
-            raise ValueError("Surface-code geometry is only available for surface CodePatch objects.")
-        if not isinstance(self.d, int):
-            raise ValueError("Surface-code geometry requires an integer code distance.")
-        if (self.d - 1) % 2:
-            raise ValueError("Surface-code geometry requires an odd code distance.")
-        return self.d
-
-    def _surface_stab_count_formula(self, *, full: bool) -> int:
-        d = self._surface_code_distance()
-        if full:
-            return (d - 1) ** 2 // 2
-        return d - 1
-
-    def _surface_total_syndrome_cnots_formula(self) -> int:
-        return 4 * self._surface_stab_count_formula(full=True) + 2 * self._surface_stab_count_formula(
-            full=False
-        )
-
-    def _surface_qldpc_code(self) -> Any:
-        _, codes, _ = _import_qldpc()
-        return codes.SurfaceCode(self._surface_code_distance())
-
-    def _surface_qldpc_check_count(self, pauli: Literal["x", "z"]) -> int:
-        try:
-            return self._qldpc_css_check_count_for_code(self._surface_qldpc_code(), pauli)
-        except ImportError:
-            return self._surface_stab_count_formula(full=True) + self._surface_stab_count_formula(
-                full=False
-            )
-
-    def _surface_qldpc_matrix_support_size(self, pauli: Literal["x", "z"]) -> int:
-        try:
-            return self._qldpc_css_matrix_support_size_for_code(self._surface_qldpc_code(), pauli)
-        except ImportError:
-            return self._surface_total_syndrome_cnots_formula()
+    def num_z_stabs(self) -> int:
+        """Return the number of Z-type stabilizer checks for CSS qLDPC codes."""
+        return self._qldpc_css_check_count("z")
 
     def _qldpc_css_check_count(self, pauli: Literal["x", "z"]) -> int:
-        return self._qldpc_css_check_count_for_code(self.qldpc_code, pauli)
-
-    @staticmethod
-    def _qldpc_css_check_count_for_code(qldpc_code: Any, pauli: Literal["x", "z"]) -> int:
         attr = f"num_checks_{pauli}"
-        try:
-            return int(getattr(qldpc_code, attr))
-        except AttributeError:
-            matrix = getattr(qldpc_code, f"matrix_{pauli}", None)
-            if matrix is not None and getattr(matrix, "shape", None) is not None:
-                return int(matrix.shape[0])
-        raise CodePatch._unsupported_stabilizer_count_error()
+        if hasattr(self.qldpc_code, attr):
+            return int(getattr(self.qldpc_code, attr))
 
-    def _qldpc_css_matrix_support_size(self, pauli: Literal["x", "z"]) -> int:
-        return self._qldpc_css_matrix_support_size_for_code(self.qldpc_code, pauli)
+        matrix = getattr(self.qldpc_code, f"matrix_{pauli}", None)
+        if matrix is not None and getattr(matrix, "shape", None) is not None:
+            return int(matrix.shape[0])
 
-    @staticmethod
-    def _qldpc_css_matrix_support_size_for_code(qldpc_code: Any, pauli: Literal["x", "z"]) -> int:
-        try:
-            matrix = getattr(qldpc_code, f"matrix_{pauli}")
-        except AttributeError:
-            raise CodePatch._unsupported_stabilizer_count_error()
-        return CodePatch._matrix_support_size(matrix)
-
-    @staticmethod
-    def _matrix_support_size(matrix: Any) -> int:
-        if hasattr(matrix, "nnz"):
-            return int(matrix.nnz)
-        nonzero = matrix != 0
-        if hasattr(nonzero, "sum"):
-            return int(nonzero.sum())
-        return sum(1 for row in matrix for value in row if value != 0)
+        raise self._unsupported_stabilizer_count_error()
 
     @staticmethod
     def _unsupported_stabilizer_count_error() -> ValueError:
         return ValueError(
-            "X/Z stabilizer counts are only available for surface CodePatch objects and "
-            "CSS qLDPC-backed CodePatch objects."
+            "X/Z stabilizer counts are only available for CSS qLDPC-backed CodePatch objects."
         )
 
-    def logical_ops(self, pauli: str | object | None = None, *, recompute: bool = False) -> Any:
-        """Return qLDPC logical Pauli operators for this patch."""
-        _, _, Pauli = _import_qldpc()
-        if isinstance(pauli, str):
-            pauli = Pauli.from_string(pauli.upper())
-        return self.qldpc_code.get_logical_ops(pauli, recompute=recompute)
-
-    def transversal_ops(
-        self,
-        local_gates: Collection[str] = ("S", "H", "SWAP"),
-        *,
-        deform_code: bool = False,
-        remove_redundancies: bool = True,
-        with_magma: bool = False,
-        allow_external_prompt: bool = False,
-    ) -> list[Any]:
-        """Return qLDPC logical tableaus and physical circuits for transversal operations."""
-        circuits, _, _ = _import_qldpc()
-
-        def _call() -> list[Any]:
-            return circuits.get_transversal_ops(
-                self.qldpc_code,
-                local_gates,
-                deform_code=deform_code,
-                remove_redundancies=remove_redundancies,
-                with_magma=with_magma,
-            )
-
-        if allow_external_prompt:
-            return _call()
-        return _run_without_external_prompt(_call)
-
-    def transversal_circuit(
-        self,
-        logical_circuit_or_tableau: Any,
-        local_gates: Collection[str] = ("S", "H", "SWAP"),
-        *,
-        deform_code: bool = False,
-        with_magma: bool = False,
-        allow_external_prompt: bool = False,
-    ) -> Any | None:
-        """Find a qLDPC transversal physical circuit for a logical Clifford operation."""
-        circuits, _, _ = _import_qldpc()
-
-        def _call() -> Any | None:
-            return circuits.get_transversal_circuit(
-                self.qldpc_code,
-                logical_circuit_or_tableau,
-                local_gates,
-                deform_code=deform_code,
-                with_magma=with_magma,
-            )
-
-        if allow_external_prompt:
-            return _call()
-        return _run_without_external_prompt(_call)
-
     @staticmethod
-    def _metadata_from_qldpc_code(
-        qldpc_code: Any,
-        *,
-        d: int | None,
-        distance_bound: int | bool | None,
-        distance_kwargs: Mapping[str, object] | None,
-    ) -> dict[str, Any]:
-        n = int(len(qldpc_code))
-        k = int(qldpc_code.dimension)
-        num_measure_qubits = int(getattr(qldpc_code, "num_checks", 0))
-        known_distance = CodePatch._known_qldpc_distance(qldpc_code)
-
-        if d is not None and known_distance is not None and known_distance != d:
-            raise ValueError(
-                f"Provided distance d={d} does not match qLDPC code distance "
-                f"{known_distance}."
-            )
-
-        code_distance: int | float | None
-        if d is not None:
-            code_distance = d
-        elif known_distance is not None:
-            code_distance = known_distance
-        elif distance_bound is not None:
-            warnings.warn(
-                "Computing qLDPC code distance because it is not known. This may be expensive.",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-            code_distance = qldpc_code.get_distance(
-                bound=distance_bound, **dict(distance_kwargs or {})
-            )
-        else:
-            warnings.warn(
-                "Computing qLDPC code distance because it is not known. This may be expensive.",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-            code_distance = qldpc_code.get_distance(**dict(distance_kwargs or {}))
-
-        return {
-            "n": n,
-            "k": k,
-            "d": code_distance,
-            "num_data_qubits": n,
-            "num_measure_qubits": num_measure_qubits,
-        }
-
-    @staticmethod
-    def _known_qldpc_distance(qldpc_code: Any) -> int | float | None:
+    def _metadata_from_qldpc_code(qldpc_code: Any) -> tuple[int, int, int | float | None]:
         try:
-            known_distance = qldpc_code.get_distance_if_known()
+            n, k, d = qldpc_code.get_code_params()
         except AttributeError:
-            return None
-        if known_distance is None or known_distance != known_distance:
-            return None
-        if isinstance(known_distance, float) and known_distance.is_integer():
-            return int(known_distance)
-        return known_distance
+            n = len(qldpc_code)
+            k = qldpc_code.dimension
+            d = qldpc_code.get_distance_if_known()
+        return int(n), int(k), d
 
     def __repr__(self) -> str:
         args = [
@@ -913,14 +517,14 @@ class Farm:
             if code_patches < 0:
                 raise ValueError("Farm patch count must be nonnegative.")
             for _ in range(code_patches):
-                self.add_patch(CodePatch(code_type="surface", patch_label="cultivate"))
+                self.add_patch(CodePatch("surface", d=7, patch_label="cultivate"))
             return
         for patch in code_patches:
             self.add_patch(patch)
 
     @property
     def num_physical_qubits(self) -> int:
-        return sum(patch.n for patch in self.code_patches)
+        return sum(patch.num_physical_qubits for patch in self.code_patches)
 
     @property
     def num_logical_qubits(self) -> int:
@@ -944,13 +548,13 @@ class Distillery:
     def __init__(self, label: DistilleryLabel) -> None:
         self.label = _validate_distillery_label(label)
         self.code_patches = [
-            CodePatch(code_type="surface", patch_label="distil")
+            CodePatch("surface", d=7, patch_label="distil")
             for _ in range(_DISTILLERY_PATCH_COUNTS[self.label])
         ]
 
     @property
     def num_physical_qubits(self) -> int:
-        return sum(patch.n for patch in self.code_patches)
+        return sum(patch.num_physical_qubits for patch in self.code_patches)
 
     @property
     def num_logical_qubits(self) -> int:
@@ -1052,7 +656,7 @@ class Vault:
 
     @property
     def num_physical_qubits(self) -> int:
-        return sum(patch.n for patch in self.code_patches)
+        return sum(patch.num_physical_qubits for patch in self.code_patches)
 
     @property
     def num_logical_qubits(self) -> int:
@@ -1066,9 +670,7 @@ class Vault:
         if not isinstance(patch, CodePatch):
             raise TypeError("Vault can only contain CodePatch objects.")
         if patch.patch_label != "memory":
-            raise ValueError(
-                "Vault can only contain CodePatch objects with patch_label='memory'."
-            )
+            raise ValueError("Vault can only contain CodePatch objects with patch_label='memory'.")
         self.code_patches.append(patch)
 
 

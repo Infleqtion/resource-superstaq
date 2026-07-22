@@ -78,30 +78,21 @@ def test_move() -> None:
 
 
 def test_code_patch_surface_metadata() -> None:
-    patch = lsp.CodePatch()
+    pytest.importorskip("qldpc")
+
+    patch = lsp.CodePatch("surface", d=7)
 
     assert patch.code_type == "surface"
     assert patch.code_params == (49, 1, 7)
     assert patch.num_data_qubits == 49
     assert patch.num_measure_qubits == 48
     assert patch.num_physical_qubits == 97
-    assert patch.rows == 13
-    assert patch.cols == 13
-    assert patch.num_x_stabs(full=True) == 18
-    assert patch.num_x_stabs(full=False) == 6
-    assert patch.num_x_stabs(full=None) == 24
-    assert patch.num_z_stabs(full=True) == 18
-    assert patch.num_z_stabs(full=False) == 6
-    assert patch.num_z_stabs(full=None) == 24
-    assert patch.total_num_x_stabs == 24
-    assert patch.total_num_z_stabs == 24
-    assert patch.total_x_syndrome_cnots() == 84
-    assert patch.total_z_syndrome_cnots() == 84
+    assert patch.num_x_stabs() == 24
+    assert patch.num_z_stabs() == 24
     assert patch.patch_label == "compute"
-    assert not patch.is_qldpc_backed
+    assert patch.is_qldpc_backed
     assert (
-        repr(patch)
-        == "lsp.CodePatch(code_type='surface', d=7, n=49, k=1, patch_label='compute')"
+        repr(patch) == "lsp.CodePatch(code_type='surface', d=7, n=49, k=1, patch_label='compute')"
     )
 
     patch = lsp.CodePatch("surface", d=5, patch_label="cultivate")
@@ -110,10 +101,9 @@ def test_code_patch_surface_metadata() -> None:
     assert patch.num_data_qubits == 25
     assert patch.num_measure_qubits == 24
     assert patch.patch_label == "cultivate"
-    assert not patch.is_qldpc_backed
+    assert patch.is_qldpc_backed
     assert (
-        repr(patch)
-        == "lsp.CodePatch(code_type='surface', d=5, n=25, k=1, patch_label='cultivate')"
+        repr(patch) == "lsp.CodePatch(code_type='surface', d=5, n=25, k=1, patch_label='cultivate')"
     )
 
 
@@ -125,58 +115,35 @@ def test_code_patch_surface_stabilizer_metadata_matches_qldpc() -> None:
         patch = lsp.CodePatch("surface", d=d)
         qldpc_code = codes.SurfaceCode(d)
 
-        assert patch.num_x_stabs(full=None) == qldpc_code.num_checks_x
-        assert patch.num_z_stabs(full=None) == qldpc_code.num_checks_z
-        assert patch.total_num_x_stabs == qldpc_code.num_checks_x
-        assert patch.total_num_z_stabs == qldpc_code.num_checks_z
-        assert patch.total_x_syndrome_cnots() == int((qldpc_code.matrix_x != 0).sum())
-        assert patch.total_z_syndrome_cnots() == int((qldpc_code.matrix_z != 0).sum())
+        assert patch.num_x_stabs() == qldpc_code.num_checks_x
+        assert patch.num_z_stabs() == qldpc_code.num_checks_z
 
 
-def test_code_patch_surface_stabilizer_metadata_rejects_even_distance() -> None:
-    patch = lsp.CodePatch("surface", d=4)
+def test_code_patch_rejects_mismatched_distance() -> None:
+    pytest.importorskip("qldpc")
 
-    with pytest.raises(ValueError, match="odd code distance"):
-        patch.num_x_stabs()
-    with pytest.raises(ValueError, match="odd code distance"):
-        patch.num_z_stabs(full=None)
-    with pytest.raises(ValueError, match="odd code distance"):
-        patch.total_x_syndrome_cnots()
-    with pytest.raises(ValueError, match="odd code distance"):
-        _ = patch.rows
+    with pytest.raises(ValueError, match="does not match qLDPC code distance"):
+        lsp.CodePatch("surface", 3, d=5)
 
 
-def test_code_patch_explicit_metadata() -> None:
-    patch = lsp.CodePatch(
-        "custom",
-        d=3,
-        n=15,
-        k=1,
-        num_measure_qubits=10,
-        patch_label="memory",
-    )
+def test_code_patch_requires_qldpc_code_type() -> None:
+    pytest.importorskip("qldpc")
 
-    assert patch.code_params == (15, 1, 3)
-    assert patch.n == 15
-    assert patch.patch_label == "memory"
-
-    with pytest.raises(ValueError, match="X/Z stabilizer counts"):
-        patch.num_x_stabs()
-    with pytest.raises(ValueError, match="X/Z stabilizer counts"):
-        patch.total_z_syndrome_cnots()
-
-    with pytest.raises(ValueError, match="requires a qLDPC code"):
+    with pytest.raises(ValueError, match="qLDPC code family not found"):
         lsp.CodePatch("color", d=3)
 
     with pytest.raises(ValueError, match="Patch label must be one of"):
-        lsp.CodePatch(patch_label="bad")  # type: ignore[arg-type]
+        lsp.CodePatch("surface", d=3, patch_label="bad")  # type: ignore[arg-type]
+
+    with pytest.raises(TypeError):
+        lsp.CodePatch()  # type: ignore[call-arg]
 
 
-def test_code_patch_from_qldpc_code() -> None:
+def test_code_patch_non_css_stabilizer_metadata_errors() -> None:
     qldpc = pytest.importorskip("qldpc")
     from qldpc import codes
 
-    patch = lsp.CodePatch.from_qldpc_code(codes.FiveQubitCode(), patch_label="distil")
+    patch = lsp.CodePatch(codes.FiveQubitCode, patch_label="distil")
 
     assert qldpc.__version__
     assert patch.code_type == "FiveQubitCode"
@@ -188,9 +155,7 @@ def test_code_patch_from_qldpc_code() -> None:
     with pytest.raises(ValueError, match="X/Z stabilizer counts"):
         patch.num_x_stabs()
     with pytest.raises(ValueError, match="X/Z stabilizer counts"):
-        patch.total_x_syndrome_cnots()
-    assert len(patch.logical_ops("X")) == 1
-    assert len(patch.transversal_ops()) == 2
+        patch.num_z_stabs()
 
 
 def test_code_patch_qldpc_css_stabilizer_metadata() -> None:
@@ -198,55 +163,33 @@ def test_code_patch_qldpc_css_stabilizer_metadata() -> None:
     from qldpc import codes
 
     simplex = codes.SimplexCode(3)
-    patch = lsp.CodePatch.from_qldpc_code(
-        codes.HGPCode(simplex, simplex),
-        code_type="hgp",
-        d=4,
-    )
+    patch = lsp.CodePatch("hgp", simplex, simplex, d=4)
 
     assert patch.num_x_stabs() == 49
-    assert patch.num_x_stabs(full=None) == 49
     assert patch.num_z_stabs() == 49
-    assert patch.num_z_stabs(full=None) == 49
-    assert patch.total_num_x_stabs == 49
-    assert patch.total_num_z_stabs == 49
     assert patch.num_physical_qubits == 196
-    assert patch.total_x_syndrome_cnots() == 294
-    assert patch.total_z_syndrome_cnots() == 294
-    with pytest.raises(ValueError, match="Partial stabilizer counts"):
-        patch.num_x_stabs(full=False)
-    with pytest.raises(ValueError, match="Partial stabilizer counts"):
-        patch.num_z_stabs(full=False)
-    with pytest.raises(ValueError, match="Surface-code geometry"):
-        _ = patch.rows
-    with pytest.raises(ValueError, match="Surface-code geometry"):
-        _ = patch.cols
 
 
-def test_code_patch_from_qldpc_family() -> None:
+def test_code_patch_qldpc_family_alias() -> None:
     pytest.importorskip("qldpc")
 
-    patch = lsp.CodePatch.from_qldpc_family("toric", d=2)
+    patch = lsp.CodePatch("toric", d=2)
 
     assert patch.code_type == "toric"
-    assert patch.qldpc_family == "ToricCode"
-    assert patch.qldpc_args == (2,)
-    assert patch.qldpc_kwargs == {}
     assert patch.code_params == (4, 2, 2)
     assert patch.patch_label == "compute"
 
 
-def test_code_patch_from_qldpc_factory() -> None:
+def test_code_patch_callable_factory() -> None:
     pytest.importorskip("qldpc")
     from qldpc import codes
 
-    patch = lsp.CodePatch.from_qldpc_factory(
-        "custom_five", codes.FiveQubitCode, patch_label="memory"
-    )
+    def custom_five_qubit_code() -> object:
+        return codes.FiveQubitCode()
 
-    assert patch.code_type == "custom_five"
-    assert patch.qldpc_family == "FiveQubitCode"
-    assert patch.qldpc_args == ()
+    patch = lsp.CodePatch(custom_five_qubit_code, patch_label="memory")
+
+    assert patch.code_type == "custom_five_qubit_code"
     assert patch.code_params == (5, 1, 3)
     assert patch.patch_label == "memory"
 
@@ -261,22 +204,26 @@ def test_farm_empty() -> None:
 
 
 def test_farm_sums_cultivation_patches() -> None:
-    patch_a = lsp.CodePatch(patch_label="cultivate")
-    patch_b = lsp.CodePatch("custom", d=3, n=15, k=2, patch_label="cultivate")
+    pytest.importorskip("qldpc")
+
+    patch_a = lsp.CodePatch("surface", d=3, patch_label="cultivate")
+    patch_b = lsp.CodePatch("surface", d=5, patch_label="cultivate")
 
     farm = lsp.Farm([patch_a])
     farm.add_patch(patch_b)
 
     assert farm.code_patches == [patch_a, patch_b]
-    assert farm.num_physical_qubits == 64
-    assert farm.num_logical_qubits == 3
+    assert farm.num_physical_qubits == 66
+    assert farm.num_logical_qubits == 2
     assert farm.num_code_patches == 2
 
 
 def test_farm_initializes_default_cultivation_patches() -> None:
+    pytest.importorskip("qldpc")
+
     farm = lsp.Farm(3)
 
-    assert farm.num_physical_qubits == 147
+    assert farm.num_physical_qubits == 291
     assert farm.num_logical_qubits == 3
     assert farm.num_code_patches == 3
     assert [patch.code_type for patch in farm.code_patches] == ["surface"] * 3
@@ -285,7 +232,9 @@ def test_farm_initializes_default_cultivation_patches() -> None:
 
 
 def test_farm_rejects_non_cultivation_patches() -> None:
-    patch = lsp.CodePatch()
+    pytest.importorskip("qldpc")
+
+    patch = lsp.CodePatch("surface", d=7)
 
     with pytest.raises(ValueError, match="patch_label='cultivate'"):
         lsp.Farm([patch])
@@ -304,18 +253,16 @@ def test_farm_rejects_negative_patch_count() -> None:
 def test_distillery_initializes_default_distil_patches(
     label: lsp.DistilleryLabel, num_code_patches: int
 ) -> None:
+    pytest.importorskip("qldpc")
+
     distillery = lsp.Distillery(label)
 
     assert distillery.label == label
-    assert distillery.num_physical_qubits == 49 * num_code_patches
+    assert distillery.num_physical_qubits == 97 * num_code_patches
     assert distillery.num_logical_qubits == num_code_patches
     assert distillery.num_code_patches == num_code_patches
-    assert [patch.code_type for patch in distillery.code_patches] == [
-        "surface"
-    ] * num_code_patches
-    assert [patch.patch_label for patch in distillery.code_patches] == [
-        "distil"
-    ] * num_code_patches
+    assert [patch.code_type for patch in distillery.code_patches] == ["surface"] * num_code_patches
+    assert [patch.patch_label for patch in distillery.code_patches] == ["distil"] * num_code_patches
     assert [patch.code_params for patch in distillery.code_patches] == [
         (49, 1, 7)
     ] * num_code_patches
@@ -339,6 +286,8 @@ def test_factory_empty() -> None:
 
 
 def test_factory_initializes_distilleries_from_counts() -> None:
+    pytest.importorskip("qldpc")
+
     factory = lsp.Factory(2, 3)
 
     assert [distillery.label for distillery in factory.ccz_distilleries] == ["CCZ"] * 2
@@ -346,11 +295,13 @@ def test_factory_initializes_distilleries_from_counts() -> None:
     assert factory.num_ccz_distilleries == 2
     assert factory.num_t_distilleries == 3
     assert factory.num_distilleries == 5
-    assert factory.num_physical_qubits == 49 * (2 * 9 + 3 * 11)
+    assert factory.num_physical_qubits == 97 * (2 * 9 + 3 * 11)
     assert factory.num_logical_qubits == 2 * 9 + 3 * 11
 
 
 def test_factory_initializes_distilleries_from_iterables() -> None:
+    pytest.importorskip("qldpc")
+
     ccz_distillery = lsp.Distillery("CCZ")
     t_distilleries = [lsp.Distillery("T"), lsp.Distillery("T")]
 
@@ -361,11 +312,13 @@ def test_factory_initializes_distilleries_from_iterables() -> None:
     assert factory.num_ccz_distilleries == 1
     assert factory.num_t_distilleries == 2
     assert factory.num_distilleries == 3
-    assert factory.num_physical_qubits == 49 * (9 + 2 * 11)
+    assert factory.num_physical_qubits == 97 * (9 + 2 * 11)
     assert factory.num_logical_qubits == 9 + 2 * 11
 
 
 def test_factory_initializes_distilleries_from_mixed_inputs() -> None:
+    pytest.importorskip("qldpc")
+
     t_distillery = lsp.Distillery("T")
 
     factory = lsp.Factory(1, [t_distillery])
@@ -373,11 +326,13 @@ def test_factory_initializes_distilleries_from_mixed_inputs() -> None:
     assert factory.num_ccz_distilleries == 1
     assert factory.t_distilleries == [t_distillery]
     assert factory.num_distilleries == 2
-    assert factory.num_physical_qubits == 49 * (9 + 11)
+    assert factory.num_physical_qubits == 97 * (9 + 11)
     assert factory.num_logical_qubits == 9 + 11
 
 
 def test_factory_adds_distilleries() -> None:
+    pytest.importorskip("qldpc")
+
     ccz_distillery = lsp.Distillery("CCZ")
     t_distillery = lsp.Distillery("T")
     factory = lsp.Factory()
@@ -388,7 +343,7 @@ def test_factory_adds_distilleries() -> None:
     assert factory.ccz_distilleries == [ccz_distillery]
     assert factory.t_distilleries == [t_distillery]
     assert factory.num_distilleries == 2
-    assert factory.num_physical_qubits == 49 * (9 + 11)
+    assert factory.num_physical_qubits == 97 * (9 + 11)
     assert factory.num_logical_qubits == 9 + 11
 
 
@@ -409,6 +364,8 @@ def test_factory_rejects_non_distillery_objects() -> None:
 
 
 def test_factory_rejects_label_mismatches() -> None:
+    pytest.importorskip("qldpc")
+
     with pytest.raises(ValueError, match="Expected a CCZ Distillery"):
         lsp.Factory([lsp.Distillery("T")])
     with pytest.raises(ValueError, match="Expected a T Distillery"):
@@ -435,40 +392,33 @@ def test_vault_empty(label: lsp.VaultLabel) -> None:
 def test_vault_initializes_default_hgp_simplex_memory_patches() -> None:
     pytest.importorskip("qldpc")
 
-    with pytest.warns(RuntimeWarning, match="Computing qLDPC code distance"):
-        vault = lsp.Vault("T:distilled", 2)
+    vault = lsp.Vault("T:distilled", 2)
 
     assert vault.label == "T:distilled"
-    assert vault.num_physical_qubits == 196
+    assert vault.num_physical_qubits == 392
     assert vault.num_logical_qubits == 36
     assert vault.num_code_patches == 2
     assert [patch.code_type for patch in vault.code_patches] == ["hgp"] * 2
-    assert [patch.qldpc_family for patch in vault.code_patches] == ["HGPCode"] * 2
-    assert [
-        [type(code).__name__ for code in patch.qldpc_args] for patch in vault.code_patches
-    ] == [["SimplexCode", "SimplexCode"]] * 2
-    assert [
-        [code.get_code_params() for code in patch.qldpc_args] for patch in vault.code_patches
-    ] == [[(7, 3, 4), (7, 3, 4)]] * 2
+    assert [type(patch.qldpc_code).__name__ for patch in vault.code_patches] == ["HGPCode"] * 2
     assert [patch.patch_label for patch in vault.code_patches] == ["memory"] * 2
     assert [patch.code_params for patch in vault.code_patches] == [(98, 18, 4)] * 2
     assert [patch.num_x_stabs() for patch in vault.code_patches] == [49] * 2
     assert [patch.num_z_stabs() for patch in vault.code_patches] == [49] * 2
-    assert [patch.total_x_syndrome_cnots() for patch in vault.code_patches] == [294] * 2
-    assert [patch.total_z_syndrome_cnots() for patch in vault.code_patches] == [294] * 2
     assert all(patch.is_qldpc_backed for patch in vault.code_patches)
 
 
 def test_vault_sums_memory_patches() -> None:
-    patch_a = lsp.CodePatch("custom", d=3, n=15, k=2, patch_label="memory")
-    patch_b = lsp.CodePatch(patch_label="memory")
+    pytest.importorskip("qldpc")
+
+    patch_a = lsp.CodePatch("surface", d=3, patch_label="memory")
+    patch_b = lsp.CodePatch("surface", d=5, patch_label="memory")
 
     vault = lsp.Vault("CCZ:distilled", [patch_a])
     vault.add_patch(patch_b)
 
     assert vault.code_patches == [patch_a, patch_b]
-    assert vault.num_physical_qubits == 64
-    assert vault.num_logical_qubits == 3
+    assert vault.num_physical_qubits == 66
+    assert vault.num_logical_qubits == 2
     assert vault.num_code_patches == 2
 
 
@@ -478,7 +428,9 @@ def test_vault_rejects_invalid_label() -> None:
 
 
 def test_vault_rejects_non_memory_patches() -> None:
-    patch = lsp.CodePatch()
+    pytest.importorskip("qldpc")
+
+    patch = lsp.CodePatch("surface", d=7)
 
     with pytest.raises(ValueError, match="patch_label='memory'"):
         lsp.Vault("T:cultivated", [patch])
@@ -520,8 +472,7 @@ def test_bank_empty() -> None:
 def test_bank_initializes_default_vaults() -> None:
     pytest.importorskip("qldpc")
 
-    with pytest.warns(RuntimeWarning, match="Computing qLDPC code distance"):
-        bank = lsp.Bank(t_cultivated=True, t_distilled=True, ccz_distilled=True)
+    bank = lsp.Bank(t_cultivated=True, t_distilled=True, ccz_distilled=True)
 
     assert bank.has_t_cultivated_vault
     assert bank.has_t_distilled_vault
@@ -534,14 +485,16 @@ def test_bank_initializes_default_vaults() -> None:
     assert bank.ccz_distilled_vault.label == "CCZ:distilled"
     assert bank.num_vaults == 3
     assert bank.num_code_patches == 3
-    assert bank.num_physical_qubits == 294
+    assert bank.num_physical_qubits == 588
     assert bank.num_logical_qubits == 54
 
 
 def test_bank_adds_vaults() -> None:
-    patch_a = lsp.CodePatch("custom", d=3, n=15, k=2, patch_label="memory")
-    patch_b = lsp.CodePatch("custom", d=5, n=25, k=3, patch_label="memory")
-    patch_c = lsp.CodePatch("custom", d=7, n=35, k=4, patch_label="memory")
+    pytest.importorskip("qldpc")
+
+    patch_a = lsp.CodePatch("surface", d=3, patch_label="memory")
+    patch_b = lsp.CodePatch("surface", d=5, patch_label="memory")
+    patch_c = lsp.CodePatch("surface", d=7, patch_label="memory")
     t_cultivated_vault = lsp.Vault("T:cultivated", [patch_a])
     t_distilled_vault = lsp.Vault("T:distilled", [patch_b])
     ccz_distilled_vault = lsp.Vault("CCZ:distilled", [patch_c])
@@ -556,8 +509,8 @@ def test_bank_adds_vaults() -> None:
     assert bank.ccz_distilled_vault == ccz_distilled_vault
     assert bank.num_vaults == 3
     assert bank.num_code_patches == 3
-    assert bank.num_physical_qubits == 75
-    assert bank.num_logical_qubits == 9
+    assert bank.num_physical_qubits == 163
+    assert bank.num_logical_qubits == 3
 
 
 def test_bank_rejects_non_vault_objects() -> None:
@@ -568,7 +521,9 @@ def test_bank_rejects_non_vault_objects() -> None:
 
 
 def test_bank_rejects_label_mismatches() -> None:
-    patch = lsp.CodePatch("custom", d=3, n=15, k=2, patch_label="memory")
+    pytest.importorskip("qldpc")
+
+    patch = lsp.CodePatch("surface", d=3, patch_label="memory")
     bank = lsp.Bank()
 
     with pytest.raises(ValueError, match="Expected a T:cultivated Vault"):
@@ -580,8 +535,10 @@ def test_bank_rejects_label_mismatches() -> None:
 
 
 def test_bank_rejects_duplicate_vaults() -> None:
-    patch_a = lsp.CodePatch("custom", d=3, n=15, k=2, patch_label="memory")
-    patch_b = lsp.CodePatch("custom", d=5, n=25, k=3, patch_label="memory")
+    pytest.importorskip("qldpc")
+
+    patch_a = lsp.CodePatch("surface", d=3, patch_label="memory")
+    patch_b = lsp.CodePatch("surface", d=5, patch_label="memory")
     bank = lsp.Bank()
 
     bank.add_t_cultivated_vault(lsp.Vault("T:cultivated", [patch_a]))
