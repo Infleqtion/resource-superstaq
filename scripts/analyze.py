@@ -15,7 +15,6 @@
 import argparse
 import textwrap
 import time
-from time import time
 
 import cirq
 import cirq_superstaq as css
