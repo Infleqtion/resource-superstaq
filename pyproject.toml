@@ -36,38 +36,13 @@ lint.select = [
     "FA",    # flake8-future-annotations
     "F401",  # unused imports
     "I",
-    "ANN401",
-    "B019",
-    "B023",
     "B034",
-    "B905",
-    "C409",    # See https://github.com/astral-sh/ruff/issues/12912
     "C420",
     "D301",
     "E731",
-    "FAST002",
     "PLC0105",
     "PLC0206",
     "PLW0127",
-    "PT019",
-    "PT022",
-    "PYI041",
-    "RUF001",
-    "RUF002",
-    "SIM102",
-    "SIM105",
-    # The following are excluded to not conflict with `ruff format`:
-    "COM819",
-    "D206",
-    "D300",
-    "E111",
-    "E114",
-    "E117",
-    "Q000",
-    "Q001",
-    "Q002",
-    "Q003",
-    "W191",
 ]
 lint.ignore = [
   "ANN401",  # Any type
