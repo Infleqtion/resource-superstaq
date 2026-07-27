@@ -22,8 +22,8 @@ import copy
 import os
 import sys
 from collections.abc import Iterator
-from itertools import combinations
 from functools import partial
+from itertools import combinations
 from math import pi
 from time import time
 from warnings import warn

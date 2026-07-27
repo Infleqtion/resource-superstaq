@@ -137,11 +137,17 @@ class Layout(abc.ABC):
 
     def all_factories(self, ftype: Literal["t", "s", "ccz"]):
         G = self.layout_graph
-        is_ftype_factory = lambda node: "ftype" in G.nodes[node] and G.nodes[node]["ftype"] == ftype
+
+        def is_ftype_factory(node):
+            return "ftype" in G.nodes[node] and G.nodes[node]["ftype"] == ftype
+
         unique_fids = np.unique(
             [G.nodes[node]["fid"] for node in G.nodes if is_ftype_factory(node)]
         )
-        has_fid = lambda node, fid: "fid" in G.nodes[node] and G.nodes[node]["fid"] == fid
+
+        def has_fid(node, fid):
+            return "fid" in G.nodes[node] and G.nodes[node]["fid"] == fid
+
         return [
             tuple(
                 sorted(
@@ -167,11 +173,11 @@ class Layout(abc.ABC):
             raise ValueError(f"No {ftype} factories available!")
 
         def movement_heuristic(factory):
-            "Heuristic based on the closest qubit within the factory by Manhattan distance"
+            """Heuristic based on the closest qubit within the factory by Manhattan distance"""
             return min(abs(f.row - q.row) + abs(f.col - q.col) for q in qubits for f in factory)
 
         def lattice_heuristic(factory):
-            "Heuristic based on the lattice surgery routing distance between the first qubit in the factory and the first qubit in the set of target qubits"
+            """Heuristic based on the lattice surgery routing distance between the first qubit in the factory and the first qubit in the set of target qubits"""
             return len(self.route_cnot(factory[0], qubits[0]))
 
         factories = self.available_factories(ftype=ftype)
