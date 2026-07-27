@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import cirq
-import openfermion
 import numpy as np
+import openfermion
 
 
 def fermi_hubbard(n, verbose=0):
@@ -25,10 +25,14 @@ def fermi_hubbard(n, verbose=0):
     time = 1
     final_rank = 1
     hubbard_fermion_hamiltonian = openfermion.fermi_hubbard(
-        n, n, tunneling=-J, coulomb=U, periodic=False
+        n,
+        n,
+        tunneling=-J,
+        coulomb=U,
+        periodic=False,
     )
     hubbard_interaction_hamiltonian = openfermion.get_interaction_operator(
-        hubbard_fermion_hamiltonian
+        hubbard_fermion_hamiltonian,
     )
     n_qubits = openfermion.count_qubits(hubbard_interaction_hamiltonian)
     qubits = cirq.LineQubit.range(n_qubits)
@@ -80,7 +84,9 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
 
     # Map orbitals to tensor indices
     impurity_sites, bath_sites, all_sites, spins, orbital_map = map_orbitals(
-        n_imp=n_imp, n_b=n_bath, method="paired"
+        n_imp=n_imp,
+        n_b=n_bath,
+        method="paired",
     )
 
     # Diagonal and degenerate impurity energies. For 5-site case, e.g., SrMnO3, will need to include CF splitting

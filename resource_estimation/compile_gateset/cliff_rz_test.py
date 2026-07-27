@@ -15,7 +15,7 @@ import cirq
 import cirq_superstaq as css
 
 import resource_estimation.compile_gateset as cliff
-from scripts.circuits import kanamori, fermi_hubbard
+from scripts.circuits import fermi_hubbard, kanamori
 
 
 def _compile_cliff_rz(circuit: cirq.Circuit) -> cirq.Circuit:

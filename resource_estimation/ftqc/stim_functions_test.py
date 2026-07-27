@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import cirq
-import pytest
 import cultiv
+import pytest
 import stim
 
 from resource_estimation.ftqc.stim_functions import (
@@ -70,10 +70,16 @@ def test_saved_gidney(gidney3, gidney5, fault_distance) -> None:
     example_gidney = gidney3 if fault_distance == 3 else gidney5
     dsurface = 2 * fault_distance + 1
     saved_cost = load_saved_cost(
-        dsurface=dsurface, op_key="cultivate", style="gidney", fault_distance=fault_distance
+        dsurface=dsurface,
+        op_key="cultivate",
+        style="gidney",
+        fault_distance=fault_distance,
     )
     cultivate_cost = cultivate(
-        dsurface=dsurface, fold=False, for_test=True, fault_distance=fault_distance
+        dsurface=dsurface,
+        fold=False,
+        for_test=True,
+        fault_distance=fault_distance,
     )
     counted_cost = count_stim_resources(stim_circuit=example_gidney)
     assert saved_cost == counted_cost
@@ -90,7 +96,10 @@ def test_saved_yale(yale3, yale5, fault_distance) -> None:
         fault_distance=fault_distance,
     )
     cultivate_cost = cultivate(
-        dsurface=2 * fault_distance + 1, fold=True, for_test=True, fault_distance=fault_distance
+        dsurface=2 * fault_distance + 1,
+        fold=True,
+        for_test=True,
+        fault_distance=fault_distance,
     )
     assert saved_cost == cultivate_cost
 

@@ -81,7 +81,7 @@ def base_15_to_one() -> cirq.Circuit:
             cirq.T.on_each(*qubits[:-1]),
             # css.Barrier(16).on(*qubits),
             cirq.H.on_each(*qubits[:-1]),
-        ]
+        ],
     )
     circuit.append(cirq.Moment(cirq.measure_each(*qubits[:-1])))
     return circuit[1:-1]  # Just the non-classical part

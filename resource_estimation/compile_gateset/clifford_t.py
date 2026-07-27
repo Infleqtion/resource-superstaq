@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-import math
-import functools
 
-import numpy as np
+import functools
+import math
+
 import cirq
 import mpmath
+import numpy as np
 import pygridsynth
 import tqdm
 
@@ -26,35 +27,59 @@ import tqdm
 @functools.cache
 def approx_rz(theta: float, epsilon: float) -> str:
     if math.isclose(theta, np.pi, abs_tol=epsilon, rel_tol=0.0) or math.isclose(
-        theta, -np.pi, abs_tol=epsilon, rel_tol=0.0
+        theta,
+        -np.pi,
+        abs_tol=epsilon,
+        rel_tol=0.0,
     ):
         return "Z"
     if math.isclose(theta, np.pi / 2, abs_tol=epsilon, rel_tol=0.0) or math.isclose(
-        theta, -3 * np.pi / 2, abs_tol=epsilon, rel_tol=0.0
+        theta,
+        -3 * np.pi / 2,
+        abs_tol=epsilon,
+        rel_tol=0.0,
     ):
         return "S"
     if math.isclose(theta, np.pi / 4, abs_tol=epsilon, rel_tol=0.0) or math.isclose(
-        theta, -7 * np.pi / 4, abs_tol=epsilon, rel_tol=0.0
+        theta,
+        -7 * np.pi / 4,
+        abs_tol=epsilon,
+        rel_tol=0.0,
     ):
         return "T"
     if math.isclose(theta, 3 * np.pi / 2, abs_tol=epsilon, rel_tol=0.0) or math.isclose(
-        theta, -np.pi / 2, abs_tol=epsilon, rel_tol=0.0
+        theta,
+        -np.pi / 2,
+        abs_tol=epsilon,
+        rel_tol=0.0,
     ):
         return "ZS"
     if math.isclose(theta, 3 * np.pi / 4, abs_tol=epsilon, rel_tol=0.0) or math.isclose(
-        theta, -5 * np.pi / 4, abs_tol=epsilon, rel_tol=0.0
+        theta,
+        -5 * np.pi / 4,
+        abs_tol=epsilon,
+        rel_tol=0.0,
     ):
         return "ST"
     if math.isclose(theta, 5 * np.pi / 4, abs_tol=epsilon, rel_tol=0.0) or math.isclose(
-        theta, -3 * np.pi / 4, abs_tol=epsilon, rel_tol=0.0
+        theta,
+        -3 * np.pi / 4,
+        abs_tol=epsilon,
+        rel_tol=0.0,
     ):
         return "ZT"
     if math.isclose(theta, 7 * np.pi / 4, abs_tol=epsilon, rel_tol=0.0) or math.isclose(
-        theta, -np.pi / 4, abs_tol=epsilon, rel_tol=0.0
+        theta,
+        -np.pi / 4,
+        abs_tol=epsilon,
+        rel_tol=0.0,
     ):
         return "ZST"
     if math.isclose(theta, 0, abs_tol=epsilon, rel_tol=0.0) or math.isclose(
-        theta, 2 * np.pi, abs_tol=epsilon, rel_tol=0.0
+        theta,
+        2 * np.pi,
+        abs_tol=epsilon,
+        rel_tol=0.0,
     ):
         return "I"
     mpmath.mp.dps = 128
@@ -65,7 +90,9 @@ def approx_rz(theta: float, epsilon: float) -> str:
 
 
 def process_cirq_str(
-    circ: cirq.Circuit, gates: list[str], q: cirq.GridQubit | cirq.LineQubit | cirq.NamedQubit
+    circ: cirq.Circuit,
+    gates: list[str],
+    q: cirq.GridQubit | cirq.LineQubit | cirq.NamedQubit,
 ) -> cirq.Operation:
     """
     Maps list of strings representing an Rz angle decomposition to a cirq gate
@@ -98,7 +125,9 @@ def cin_cliffs(gate: cirq.Gate) -> bool:
 
 
 def compile_cirq_to_clifford_t(
-    circ: cirq.Circuit, eps: float, verbose: bool = True
+    circ: cirq.Circuit,
+    eps: float,
+    verbose: bool = True,
 ) -> cirq.Circuit:
     """
     Synthesizes the Clifford + Rz circuit into a Clifford + T circuit
@@ -155,7 +184,7 @@ def toffoli_decompose(circuit: cirq.Circuit) -> cirq.Circuit:
                     cirq.Z.on(b),
                     cirq.S.on(b),
                     cirq.CNOT.on(a, b),
-                ]
+                ],
             )
         return op
 

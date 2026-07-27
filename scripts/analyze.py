@@ -20,8 +20,8 @@ import cirq
 import cirq_superstaq as css
 
 import resource_estimation as res
-from resource_estimation.visualizations import C, make_pretty
 from resource_estimation.analysis import STR2ARCH
+from resource_estimation.visualizations import C, make_pretty
 
 
 def parse_args():
@@ -37,7 +37,10 @@ def parse_args():
         help="Flag to generate the logical T path (can be slow)",
     )
     parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Turns on verbosity for sub-functions"
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Turns on verbosity for sub-functions",
     )
     parser.add_argument("--arch", type=str, default="ssm", help="String for architecture to load.")
     parser.add_argument(
@@ -95,11 +98,11 @@ def main(args=None) -> int:
             args.cultivation_repetition > 0,
             args.error_per_rz > 0,
             args.error_per_cult > 0,
-        ]
+        ],
     ) not in [0, 4]:
         raise ValueError(
             "If any of --code-distance, --cultivation-repetition, --error-per-rz, "
-            "or --error-per-cult is overridden, all must be overridden"
+            "or --error-per-cult is overridden, all must be overridden",
         )
 
     # Flag to note when we are going to want to overwrite the error pipeline
@@ -153,7 +156,8 @@ def main(args=None) -> int:
         eps = args.error_per_rz
     else:
         eps, rz_gates, other_gates = res.analysis.get_eps(
-            rz_circuit, approximation_fidelity=1 - synthesis_error
+            rz_circuit,
+            approximation_fidelity=1 - synthesis_error,
         )
 
     clifford_t_circuit = res.compile_gateset.compile_gateset(
@@ -165,7 +169,7 @@ def main(args=None) -> int:
         {
             qubit: cirq.LineQubit(i)
             for i, qubit in enumerate(sorted(clifford_t_circuit.all_qubits()))
-        }
+        },
     )
     t2 = time.time()
     if args.t_path:
@@ -176,7 +180,7 @@ def main(args=None) -> int:
 
     report.eps = eps
     report.t_gates = len(
-        [op for op in clifford_t_circuit.all_operations() if op.gate in cirq.GateFamily(cirq.T)]
+        [op for op in clifford_t_circuit.all_operations() if op.gate in cirq.GateFamily(cirq.T)],
     )
     report.non_t_gates = len(list(clifford_t_circuit.all_operations())) - report.t_gates
     report.cliff_t_width = cirq.num_qubits(clifford_t_circuit)
@@ -192,7 +196,7 @@ def main(args=None) -> int:
         T Path Summary:
           - Total Operations:         {C.MAGENTA}{len(t_path)}{C.END}
           - Total T Gates:            {C.MAGENTA}{sum(op.gate in cirq.GateFamily(cirq.T) for op in t_path)}{C.END}
-        """).strip()
+        """).strip(),
         )
 
     t1 = time.time()
@@ -211,7 +215,9 @@ def main(args=None) -> int:
     else:
         cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance = (
             res.analysis.get_important_information(
-                clifford_t_circuit=clifford_t_circuit, pfid=1 - gate_error, fold_cultiv=fold_cultiv
+                clifford_t_circuit=clifford_t_circuit,
+                pfid=1 - gate_error,
+                fold_cultiv=fold_cultiv,
             )
         )
     t2 = time.time()
@@ -242,7 +248,9 @@ def main(args=None) -> int:
         layt = res.ftqc.MovementLayout(num_t_factories=facts, input_circuit=clifford_t_circuit)
     else:
         layt = res.ftqc.FactorySandwich(
-            input_circuit=clifford_t_circuit, num_t_factories=facts, num_s_factories=facts
+            input_circuit=clifford_t_circuit,
+            num_t_factories=facts,
+            num_s_factories=facts,
         )
     primitive_circuit = res.ftqc.ft_compile(arc=arch, layout=layt, verbose=verbose)
     t2 = time.time()
@@ -260,7 +268,9 @@ def main(args=None) -> int:
     }
     total_time_serial = sum(serial_gate_times.values())
     parallel_gate_counts = est.parallel_circuit_cost(
-        primitive_circuit, pretty=False, verbose=verbose
+        primitive_circuit,
+        pretty=False,
+        verbose=verbose,
     )
     parallel_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in parallel_gate_counts.items()

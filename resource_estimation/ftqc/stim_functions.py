@@ -11,11 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pathlib import Path
-import json
-import warnings
 import collections
+import json
 import typing
+import warnings
+from pathlib import Path
 
 import cirq
 import cultiv
@@ -139,28 +139,32 @@ def cultivate(
     """
     if dsurface < 7 and fault_distance == 3:
         warnings.warn(
-            "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=7"
+            "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=7",
         )
         dsurface = 7
     if dsurface < 11 and fault_distance == 5:
         warnings.warn(
-            "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=11"
+            "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=11",
         )
         dsurface = 11
     style = "yale" if fold else "gidney"
     if dsurface <= 25 and not for_test:
         if fault_distance not in (3, 5):
             raise ValueError(
-                "Saved cultivation costs are only available for fault_distance values 3 and 5."
+                "Saved cultivation costs are only available for fault_distance values 3 and 5.",
             )
         return load_saved_cost(
-            dsurface=dsurface, op_key="cultivate", style=style, fault_distance=fault_distance
+            dsurface=dsurface,
+            op_key="cultivate",
+            style=style,
+            fault_distance=fault_distance,
         )
     if fold:
         resources = cultiv.make_cirq_circuits.dirty_count(
             cultiv.make_cirq_circuits.make_cirq_circuit(
-                code_distance=dsurface, fault_distance=fault_distance
-            )
+                code_distance=dsurface,
+                fault_distance=fault_distance,
+            ),
         )
     else:
         stim_circuit = cultiv.make_end2end_cultivation_circuit(
