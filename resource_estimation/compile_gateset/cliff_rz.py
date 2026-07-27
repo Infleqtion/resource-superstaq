@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from cirq.ops.raw_types import Operation
-from cirq.ops.pauli_string import SingleQubitPauliStringGateOperation
+
+import numpy as np
 import cirq
 import cirq_superstaq as css
-import numpy as np
 
 # warnings.filterwarnings(category=FutureWarning, action="ignore")
 
@@ -122,9 +121,9 @@ def zpow_to_rz(
     def _map_fn(
         op: cirq.Operation, _: int
     ) -> (
-        Operation
-        | SingleQubitPauliStringGateOperation
-        | list[Operation | SingleQubitPauliStringGateOperation]
+        cirq.Operation
+        | cirq.SingleQubitPauliStringGateOperation
+        | list[cirq.Operation | cirq.SingleQubitPauliStringGateOperation]
     ):
         if not isinstance(op.gate, cirq.ZPowGate):
             return op

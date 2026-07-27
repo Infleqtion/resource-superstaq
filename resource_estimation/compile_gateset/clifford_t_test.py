@@ -11,10 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from math import pi
+
+import numpy as np
 import cirq
 import pytest
-from math import pi
-import numpy as np
+
 from resource_estimation.compile_gateset import (
     compile_cirq_to_clifford_t,
     process_cirq_str,

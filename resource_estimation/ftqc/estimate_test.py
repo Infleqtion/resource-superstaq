@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from resource_estimation.ftqc import distil_15_to_1, ccz_8_to_1
 from math import pi
 
+import numpy as np
 import cirq
 import pytest
-from numpy import isclose
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
@@ -88,7 +89,8 @@ def test_all_primitives(estimator) -> None:
     if arc.movement:
         circuit += [cirq.CNOT.on(dummy_qubits[i], dummy_qubits[i + 1]) for i in range(8)]
         circuit += [cirq.S.on(q) for q in dummy_qubits]
-        circuit += [lsp.Distil().on(*factory_block)]
+        circuit += [lsp.Distil("T").on(*factory_block)]
+        circuit += [lsp.Distil("CCZ").on(*factory_block[:23])]
     else:
         circuit += [
             lsp.Merge(2, smooth=True).on(*dummy_qubits[:2]),
@@ -107,7 +109,7 @@ def test_all_primitives(estimator) -> None:
         t2 = estimator.serial_circuit_time(circuit)
     for key in c1.keys():
         assert c1[key] == c2[key]
-    assert isclose(t1, t2, atol=0.00001)
+    assert np.isclose(t1, t2, atol=0.00001)
 
 
 def test_parallel_circuit_cost(lattice_estimator, movement_estimator) -> None:
@@ -207,7 +209,7 @@ def test_critical_path() -> None:
     arc = arch.DefaultMovement()
     estim = est.ResourceEstimator(arc)
     # Should be identical aside from floating point errors
-    assert isclose(estim.serial_circuit_time(c1), estim.serial_circuit_time(c2), atol=1e-5)
+    assert np.isclose(estim.serial_circuit_time(c1), estim.serial_circuit_time(c2), atol=1e-5)
 
     qa, qb = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit(
@@ -245,6 +247,17 @@ def test_critical_path() -> None:
     assert estim.parallel_circuit_time(circuit=circuit) == estim.parallel_circuit_time(
         circuit=cirq.Circuit(expected)
     )
+
+    # Test that critical path for distillation circuits are as expected
+    # Critical paths are currently the same for both distillation circuits
+    t_15_to_1 = distil_15_to_1()
+    ccz_distilled = ccz_8_to_1()
+    expected_types = [lsp.Cultivate, cirq.CNOT, cirq.S, cirq.H, cirq.MeasurementGate]
+    with pytest.warns(UserWarning, match="very expensive"):
+        path1 = estim.critical_path(t_15_to_1)
+        path2 = estim.critical_path(ccz_distilled)
+        assert all(op in cirq.GateFamily(expected) for op, expected in zip(path1, expected_types))
+        assert all(op in cirq.GateFamily(expected) for op, expected in zip(path2, expected_types))
 
 
 def test_physical_qubit_count(lattice_estimator) -> None:
