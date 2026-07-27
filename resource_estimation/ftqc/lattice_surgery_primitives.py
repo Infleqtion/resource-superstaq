@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from functools import cached_property
+
 import typing
+from functools import cached_property
 
 import cirq
 

@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import sys
-from pathlib import Path
-import typing
 import os
-import cultiv
+import sys
+import typing
+from pathlib import Path
 
 import cirq
+import cultiv
 import tqdm
 
-from resource_estimation.ftqc.stim_functions import count_stim_resources, STR2GATE
+from resource_estimation.ftqc.stim_functions import STR2GATE, count_stim_resources
 
 parent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(parent_dir))
@@ -66,10 +66,12 @@ if __name__ == "__main__":
             inject_style="unitary",
         )
         yale_cultiv3 = cultiv.make_cirq_circuits.make_cirq_circuit(
-            code_distance=max(7, d), fault_distance=3
+            code_distance=max(7, d),
+            fault_distance=3,
         )
         yale_cultiv5 = cultiv.make_cirq_circuits.make_cirq_circuit(
-            code_distance=max(11, d), fault_distance=5
+            code_distance=max(11, d),
+            fault_distance=5,
         )
 
         # Count up the resources and format the results
@@ -79,10 +81,10 @@ if __name__ == "__main__":
         gidney_cultiv3_costs = format_cost_dict(count_stim_resources(stim_circuit=gidney_cultiv3))
         gidney_cultiv5_costs = format_cost_dict(count_stim_resources(stim_circuit=gidney_cultiv5))
         yale_cultiv3_costs = format_cost_dict(
-            cultiv.make_cirq_circuits.dirty_count(circuit=yale_cultiv3)
+            cultiv.make_cirq_circuits.dirty_count(circuit=yale_cultiv3),
         )
         yale_cultiv5_costs = format_cost_dict(
-            cultiv.make_cirq_circuits.dirty_count(circuit=yale_cultiv5)
+            cultiv.make_cirq_circuits.dirty_count(circuit=yale_cultiv5),
         )
 
         # Add the costs to the dictionary
@@ -97,6 +99,7 @@ if __name__ == "__main__":
         }
         # Save at each iteration
         with open(
-            os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json", "w"
+            os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json",
+            "w",
         ) as f:
             json.dump(resources_dict, f, indent=4)

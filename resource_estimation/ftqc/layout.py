@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from dataclasses import dataclass
+
 import abc
 import collections
 import itertools
-from math import ceil, sqrt
 import typing
+from dataclasses import dataclass
+from math import ceil, sqrt
 
-import numpy as np
 import cirq
 import networkx as nx
+import numpy as np
 
 
 @dataclass
@@ -136,11 +137,17 @@ class Layout(abc.ABC):
 
     def all_factories(self, ftype: typing.Literal["t", "s", "ccz"]):
         G = self.layout_graph
-        is_ftype_factory = lambda node: "ftype" in G.nodes[node] and G.nodes[node]["ftype"] == ftype
+
+        def is_ftype_factory(node):
+            return "ftype" in G.nodes[node] and G.nodes[node]["ftype"] == ftype
+
         unique_fids = np.unique(
             [G.nodes[node]["fid"] for node in G.nodes if is_ftype_factory(node)]
         )
-        has_fid = lambda node, fid: "fid" in G.nodes[node] and G.nodes[node]["fid"] == fid
+
+        def has_fid(node, fid):
+            return "fid" in G.nodes[node] and G.nodes[node]["fid"] == fid
+
         return [
             tuple(
                 sorted(
@@ -166,11 +173,11 @@ class Layout(abc.ABC):
             raise ValueError(f"No {ftype} factories available!")
 
         def movement_heuristic(factory):
-            "Heuristic based on the closest qubit within the factory by Manhattan distance"
+            """Heuristic based on the closest qubit within the factory by Manhattan distance"""
             return min(abs(f.row - q.row) + abs(f.col - q.col) for q in qubits for f in factory)
 
         def lattice_heuristic(factory):
-            "Heuristic based on the lattice surgery routing distance between the first qubit in the factory and the first qubit in the set of target qubits"
+            """Heuristic based on the lattice surgery routing distance between the first qubit in the factory and the first qubit in the set of target qubits"""
             return len(self.route_cnot(factory[0], qubits[0]))
 
         factories = self.available_factories(ftype=ftype)
@@ -303,7 +310,7 @@ class Column(Layout):
             if row % 2 == 0:
                 s_factories.extend([cirq.GridQubit(row, 0), cirq.GridQubit(row, 6)])
                 ancillas.extend(
-                    [cirq.GridQubit(row, 1), cirq.GridQubit(row, 3), cirq.GridQubit(row, 5)]
+                    [cirq.GridQubit(row, 1), cirq.GridQubit(row, 3), cirq.GridQubit(row, 5)],
                 )
             else:
                 t_factories.extend([cirq.GridQubit(row, 0), cirq.GridQubit(row, 6)])
@@ -395,7 +402,7 @@ class FactorySandwich(Layout):
                 (n1, n2)
                 for n1, n2 in itertools.combinations(G.nodes, 2)
                 if abs(n1.row - n2.row) + abs(n1.col - n2.col) == 1
-            ]
+            ],
         )
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
@@ -506,7 +513,7 @@ class Embedded(Layout):
                 (n1, n2)
                 for n1, n2 in itertools.combinations(G.nodes, 2)
                 if abs(n1.row - n2.row) + abs(n1.col - n2.col) == 1
-            ]
+            ],
         )
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
@@ -570,7 +577,7 @@ class MovementDistillery(MovementLayout):
                 cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, qubits_per_t_distil)
             ]
             G.add_nodes_from(
-                [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
+                [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits],
             )
         # Add CCZ Distillation Factories to Graph
         data_plus_t = program_qubits + (qubits_per_t_distil * self.num_t_factories)

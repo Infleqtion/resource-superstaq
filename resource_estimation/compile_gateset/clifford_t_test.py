@@ -13,14 +13,14 @@
 # limitations under the License.
 from math import pi
 
-import numpy as np
 import cirq
+import numpy as np
 import pytest
 
 from resource_estimation.compile_gateset import (
+    approx_rz,
     compile_cirq_to_clifford_t,
     process_cirq_str,
-    approx_rz,
     toffoli_decompose,
 )
 
@@ -148,5 +148,7 @@ def test_toffoli_decompose() -> None:
     circuit = cirq.Circuit(cirq.I.on(qubits[0]), cirq.TOFFOLI.on(*qubits))
     new_circuit = toffoli_decompose(circuit=circuit)
     cirq.testing.assert_circuits_have_same_unitary_given_final_permutation(
-        actual=new_circuit, expected=circuit, qubit_map={qubit: qubit for qubit in qubits}
+        actual=new_circuit,
+        expected=circuit,
+        qubit_map={qubit: qubit for qubit in qubits},
     )

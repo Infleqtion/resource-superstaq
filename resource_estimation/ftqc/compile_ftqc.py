@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from typing import TYPE_CHECKING
+
+import collections
 import copy
+import functools
+import itertools
 import os
 import sys
-import collections
-import itertools
-import functools
-from math import pi
 import time
+from math import pi
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import cirq
@@ -41,7 +42,10 @@ from .layout import Layout
 
 # This function is only visual and is extremely finicky, so it is not tested
 def knock_off_tqdm(
-    moment_idx: int, total: int, tstart: float, message: str
+    moment_idx: int,
+    total: int,
+    tstart: float,
+    message: str,
 ) -> None:  # pragma: no cover
     """Implements tqdm-like behavior for the compiler"""
     if not sys.stdout.isatty():
@@ -55,7 +59,7 @@ def knock_off_tqdm(
         f"{message} || {moment_idx} / {total} ["
         f"{int(time_passed // 3600)}:{int(time_passed // 60)}:{int(time_passed % 60)}.{int(10 * time_passed) % 10}{int(100 * time_passed) % 10}<"
         f"{int(guessed_time // 3600)}:{int(guessed_time // 60)}:{int(guessed_time % 60)}.{int(10 * guessed_time) % 10}{int(100 * guessed_time) % 10}, "
-        f"{round(moment_idx / time_passed, 2)}it/s]"
+        f"{round(moment_idx / time_passed, 2)}it/s]",
     )
     bars = int((WIDTH - offset) * moment_idx / total)
     spaces = int(WIDTH - offset) - bars
@@ -100,7 +104,7 @@ def replace_cirq_op(
         return [
             lsp.Merge(num_qubits=num_qubits - 1, smooth=True).on(*path_patches[:-1]),
             lsp.Split(partitions=[1, len(path_patches[:-1]) - 1], smooth=True).on(
-                *path_patches[:-1]
+                *path_patches[:-1],
             ),
             lsp.Merge(num_qubits=num_qubits - 1, smooth=False).on(*path_patches[1:]),
             lsp.Split(partitions=[1] * (len(path_patches[1:])), smooth=False).on(*path_patches[1:]),
@@ -108,7 +112,7 @@ def replace_cirq_op(
     if _requires_resource(op, transversal_cnot):
         return teleport_resource(op, layout)
     raise ValueError(
-        f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} gate: {op.gate}"
+        f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} gate: {op.gate}",
     )
 
 
@@ -313,7 +317,7 @@ def _decompose_to_primitives(
     arc: Architecture,
 ) -> tuple[cirq.Circuit, list[cirq.GridQubit]]:
     primitives = cirq.Gateset(
-        *(cirq.GateFamily(g._gate, ignore_global_phase=False) for g in arc.primitives.gates)
+        *(cirq.GateFamily(g._gate, ignore_global_phase=False) for g in arc.primitives.gates),
     )
     transversal_cnot = cirq.CX in primitives
 
@@ -438,7 +442,10 @@ def ft_compile(
         zone_ops = arc.zone_ops if arc.zone_ops is not None else cirq.Gateset()
         alley_ops = arc.alley_ops if arc.alley_ops is not None else cirq.Gateset()
         circuit = add_moves(
-            circuit=circuit, verbose=verbose, zone_ops=zone_ops, alley_ops=alley_ops
+            circuit=circuit,
+            verbose=verbose,
+            zone_ops=zone_ops,
+            alley_ops=alley_ops,
         )
 
     if verbose > 1:

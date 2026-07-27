@@ -14,7 +14,7 @@
 import cirq
 
 import resource_estimation.compile_gateset as cliff
-from scripts.circuits import kanamori, fermi_hubbard
+from scripts.circuits import fermi_hubbard, kanamori
 
 
 def _compile_cliff_rz(circuit: cirq.Circuit) -> cirq.Circuit:
@@ -68,7 +68,8 @@ def test_already_in_gateset() -> None:
     print(gateset._decompose_two_qubit_operation(op))
     same_op = cirq.Circuit(gateset._decompose_two_qubit_operation(op))
     cirq.testing.assert_circuits_with_terminal_measurements_are_equivalent(
-        actual=same_op, reference=cirq.Circuit(op)
+        actual=same_op,
+        reference=cirq.Circuit(op),
     )
 
 
