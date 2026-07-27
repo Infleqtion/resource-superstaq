@@ -73,8 +73,9 @@ class ResourceEstimator:
     def serial_circuit_time(self, circuit: cirq.Circuit) -> float:
         """Adds up the total physical time from all logical primitives in the input circuit."""
         self.validate_circuit_ops(circuit=circuit)
-        return sum([self.arc.total_time(self.arc.gate_cost(gate)) for gate in
-            circuit.all_operations()])
+        return sum(
+            [self.arc.total_time(self.arc.gate_cost(gate)) for gate in circuit.all_operations()]
+        )
         #     map(lambda x: self.arc.total_time(self.arc.gate_cost(x)), circuit.all_operations()),
         # )
 

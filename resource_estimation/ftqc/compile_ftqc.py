@@ -177,10 +177,16 @@ def handle_idling(
     # Assemble Qubits that will be subject to Idling
     G = layout.layout_graph
     logical_qubits = [node for node in G.nodes if G.nodes[node]["patch_type"] == "data"]
-    t_factories = [node for node in G.nodes if G.nodes[node]["patch_type"] == "factory" and
-        G.nodes[node]["ftype"] == "t"]
-    s_factories = [node for node in G.nodes if G.nodes[node]["patch_type"] == "factory" and
-        G.nodes[node]["ftype"] == "s" ]
+    t_factories = [
+        node
+        for node in G.nodes
+        if G.nodes[node]["patch_type"] == "factory" and G.nodes[node]["ftype"] == "t"
+    ]
+    s_factories = [
+        node
+        for node in G.nodes
+        if G.nodes[node]["patch_type"] == "factory" and G.nodes[node]["ftype"] == "s"
+    ]
     non_ancillas = logical_qubits + s_factories + t_factories
     # Ensures no idling happens on qubits that are not used in the circuit
     # This is a bit faster

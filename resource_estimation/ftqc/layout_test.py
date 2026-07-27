@@ -293,8 +293,11 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
     distillery.reload_factories(ftype="t")
 
     expected_program_qubits = {cirq.GridQubit(0, i) for i in range(5)}
-    realized_program_qubits = {q for q in distillery.layout_graph.nodes if
-        distillery.layout_graph.nodes[q]["patch_type"] == "data" }
+    realized_program_qubits = {
+        q
+        for q in distillery.layout_graph.nodes
+        if distillery.layout_graph.nodes[q]["patch_type"] == "data"
+    }
     assert expected_program_qubits == realized_program_qubits
 
     expected_factories = {cirq.GridQubit(0, 5), cirq.GridQubit(3, 6), cirq.GridQubit(6, 7)}
@@ -304,8 +307,11 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
     expected_block_qubits = {q for q in distillery.layout_graph.nodes} - (
         expected_program_qubits.union(expected_factories)
     )
-    realized_block_qubits = {q for q in distillery.layout_graph.nodes if
-        distillery.layout_graph.nodes[q]["patch_type"] == "block" }
+    realized_block_qubits = {
+        q
+        for q in distillery.layout_graph.nodes
+        if distillery.layout_graph.nodes[q]["patch_type"] == "block"
+    }
     assert expected_block_qubits == realized_block_qubits
 
     # Check that nearest T factory is as expected and changes when used
