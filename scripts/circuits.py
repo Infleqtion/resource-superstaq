@@ -13,6 +13,7 @@
 # limitations under the License.
 import cirq
 import numpy as np
+import openfermion
 
 
 def fermi_hubbard(n, verbose=0):
