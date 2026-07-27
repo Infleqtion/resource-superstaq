@@ -22,7 +22,12 @@ from cirq_superstaq import Barrier
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.compile_ftqc as comp
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-from resource_estimation.ftqc.layout import Column, Embedded, MovementDistillery, MovementLayout
+from resource_estimation.ftqc.layout import (
+    Column,
+    Embedded,
+    MovementDistillery,
+    MovementLayout,
+)
 
 
 @pytest.fixture
@@ -94,6 +99,17 @@ def test_end2end(with_barriers) -> None:
             assert is_primitive
 
 
+def test_end2end_distillery():
+    q1, q2, q3 = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
+    circuit = cirq.Circuit(
+        [cirq.CNOT.on(q1, q2), cirq.CCZ.on(q1, q2, q3), cirq.T.on_each(q1, q2, q3)]
+    )
+    layout = MovementDistillery(input_circuit=circuit, num_t_factories=1, num_ccz_factories=1)
+    arc = arch.DefaultMovement(post_op_correction=False, idling=False)
+    compiled = comp.ft_compile(layout, arc, with_barriers=False)
+    assert all(arc.primitives.validate(op) for op in compiled.all_operations())
+
+
 def test_direct_substitution() -> None:
     dummy_qubits = [cirq.GridQubit(i, j) for i in range(3) for j in range(3)]
     nothing_circuit = cirq.Circuit(cirq.I.on_each(dummy_qubits))
@@ -135,7 +151,7 @@ def test_direct_substitution() -> None:
     for op_to_replace in [
         cirq.CNOT.on(*dummy_qubits[:2]),
         cirq.S.on(dummy_qubits[0]),
-        lsp.Distil().on(*cirq.LineQubit.range(31)),
+        lsp.Distil("T").on(*cirq.LineQubit.range(31)),
     ]:
         replacement = comp._decompose_to_primitives(
             circuit=cirq.Circuit(op_to_replace),
@@ -162,16 +178,19 @@ def test_replace_cirq_op_movement(bell_circuit) -> None:
         layout=movement_layout,
         transversal_cnot=True,
     )
+    ops_flattened = (
+        returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
+    )
     expected_types = [
         lsp.Cultivate,
         lsp.Cultivate,
         cirq.CNOT,
         cirq.MeasurementGate,
-        cirq.S,
         cirq.ResetChannel,
+        cirq.S,
     ]
-    assert len(expected_types) == len(returned_ops)
-    for op, expected_type in zip(returned_ops, expected_types):
+    assert len(expected_types) == len(ops_flattened)
+    for op, expected_type in zip(ops_flattened, expected_types):
         assert op in cirq.GateFamily(expected_type)
 
 
@@ -181,13 +200,22 @@ def test_replace_cirq_op_lattice(op_type, bell_circuit) -> None:
 
     op_to_replace = op_type.on(*list(layout.mapped_circuit.all_qubits())[: op_type.num_qubits()])
     returned_ops = comp.replace_cirq_op(op=op_to_replace, layout=layout, transversal_cnot=False)
-
+    if op_type == cirq.CNOT:
+        ops_flattened = returned_ops  # Already flat
+    else:
+        ops_flattened = (
+            returned_ops[:2]
+            + [op for moment in returned_ops[2:5] for op in moment]
+            + returned_ops[5:]
+        )
     if op_type == cirq.S:
-        expected_types = [lsp.Cultivate] * 2 + [
+        expected_types = [
+            lsp.Cultivate,
+            lsp.Cultivate,
             cirq.CNOT,
             cirq.MeasurementGate,
-            cirq.Z,
             cirq.ResetChannel,
+            cirq.Z,
         ]
     elif op_type == cirq.T:
         expected_types = [
@@ -195,13 +223,13 @@ def test_replace_cirq_op_lattice(op_type, bell_circuit) -> None:
             lsp.Cultivate,
             cirq.CNOT,
             cirq.MeasurementGate,
-            cirq.S,
             cirq.ResetChannel,
+            cirq.S,
         ]
     elif op_type == cirq.CNOT:
         expected_types = [lsp.Merge, lsp.Split, lsp.Merge, lsp.Split]
-    assert len(expected_types) == len(returned_ops)
-    for op, expected_type in zip(returned_ops, expected_types):
+    assert len(expected_types) == len(ops_flattened)
+    for op, expected_type in zip(ops_flattened, expected_types):
         assert op in cirq.GateFamily(expected_type)
 
 
@@ -920,8 +948,8 @@ def test_hm_moves() -> None:
     )
 
 
-def test_replace_cirq_op_distil(bell_circuit) -> None:
-    distillery_layout = MovementDistillery(bell_circuit, num_t_factories=2)
+def test_replace_cirq_op_distil_t(bell_circuit) -> None:
+    distillery_layout = MovementDistillery(bell_circuit, num_t_factories=2, num_ccz_factories=0)
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
     returned_ops = comp.replace_cirq_op(
@@ -929,16 +957,46 @@ def test_replace_cirq_op_distil(bell_circuit) -> None:
         layout=distillery_layout,
         transversal_cnot=True,
     )
+    ops_flattened = (
+        returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
+    )
     expected_types = [
-        lsp.Distil,
-        lsp.Distil,
+        lsp.Distil("T"),
+        lsp.Distil("T"),
         cirq.CNOT,
         cirq.MeasurementGate,
-        cirq.S,
         cirq.ResetChannel,
+        cirq.S,
     ]
-    assert len(expected_types) == len(returned_ops)
-    for op, expected_type in zip(returned_ops, expected_types):
+    assert len(expected_types) == len(ops_flattened)
+    for op, expected_type in zip(ops_flattened, expected_types):
+        assert op in cirq.GateFamily(expected_type)
+
+
+def test_replace_cirq_op_distil_ccz(random_circ) -> None:
+    distillery_layout = MovementDistillery(random_circ, num_ccz_factories=2, num_t_factories=0)
+
+    op_to_replace = cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
+    returned_ops = comp.replace_cirq_op(
+        op=op_to_replace, layout=distillery_layout, transversal_cnot=True
+    )
+    print(returned_ops)
+    # We flatten them here to be explicit about the order the operations should be in
+    ops_flattened = (
+        returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
+    )
+    expected_types = [
+        *([lsp.Distil("CCZ")] * 2),
+        *([cirq.CNOT] * 3),
+        *([cirq.MeasurementGate] * 3),
+        *([cirq.ResetChannel] * 3),
+        *([cirq.H] * 3),
+        *([cirq.X] * 3),
+        *([cirq.CNOT] * 3),
+        *([cirq.H] * 3),
+    ]
+    assert len(expected_types) == len(ops_flattened)
+    for op, expected_type in zip(ops_flattened, expected_types):
         assert op in cirq.GateFamily(expected_type)
 
 
@@ -957,3 +1015,11 @@ def test_different_rounds_distil() -> None:
         for op in compiled_circuit.all_operations():
             if op in cirq.GateFamily(lsp.SyndromeExtract):
                 assert op.gate.rounds == k
+
+
+def test_teleport_resource_exceptions():
+    invalid_resource = cirq.CCZ.on(*cirq.LineQubit.range(3))
+    layout = MovementLayout(cirq.Circuit())
+    with pytest.raises(ValueError, match="Invalid resource"):
+        _ = comp.teleport_resource(invalid_resource, layout)
+    sometimes_valid_resource = cirq.TOFFOLI.on(*cirq.LineQubit.range(3))

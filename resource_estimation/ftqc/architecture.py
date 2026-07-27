@@ -16,7 +16,7 @@ from __future__ import annotations
 import abc
 import json
 from collections import Counter
-from functools import cached_property, lru_cache
+from functools import cached_property, lru_cache, cache
 from math import ceil
 from pathlib import Path
 
@@ -26,7 +26,7 @@ from cirq_superstaq.ops.qubit_gates import ParallelRGate
 
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.compile_ftqc import add_moves
-from resource_estimation.ftqc.distil import distil_15_to_1
+from resource_estimation.ftqc.distil import distil_15_to_1, ccz_8_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.stim_functions import cultivate
 
@@ -289,6 +289,12 @@ class Architecture(abc.ABC):
     @cached_property
     def _cultivate_t_cost(self):  # pragma: no cover
         raise NotImplementedError
+
+    @cached_property
+    def _distil_cost(self):
+        raise NotImplementedError(
+            "Distillation is currently reserved to distillation movement architectures only"
+        )
 
     @cached_property
     def _cultivate_y_cost(self) -> dict[str, dict[type[Gate], int] | float]:
@@ -755,13 +761,17 @@ class DefaultMovement(Architecture):
         new_time = self.total_time(new_moment_cost)
         return {"op_time": new_time, "gate_cost": new_gate_cost, "moment_cost": new_moment_cost}
 
-    def distil_t_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
-        return self._distil_t_cost
+    def distil_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
+        return self._distil_cost(op.gate._resource)
 
-    @cached_property
-    def _distil_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
-        """Cost to get a T state using 15-to-1 distillation"""
-        mapped_circuit = distil_15_to_1()
+    @cache
+    def _distil_cost(self, resource) -> dict[str, dict[type[Gate], int] | float]:
+        if resource == "T":
+            mapped_circuit = distil_15_to_1()
+        elif resource == "CCZ":
+            mapped_circuit = ccz_8_to_1()
+        else:
+            raise ValueError(f"Unknown distillation resource: {resource!r}")
         with_moves = add_moves(
             mapped_circuit,
             zone_ops=self.zone_ops if self.zone_ops is not None else cirq.Gateset(),
@@ -785,7 +795,7 @@ class DefaultMovement(Architecture):
         self.op_cost[type(cirq.CNOT)] = self.cnot_cost
         self.op_cost[type(cirq.S)] = self.s_cost
         self.op_cost[lsp.Move] = self.move_cost
-        self.op_cost[lsp.Distil] = self.distil_t_cost
+        self.op_cost[lsp.Distil] = self.distil_cost
 
     @property
     def __name__(self) -> str:

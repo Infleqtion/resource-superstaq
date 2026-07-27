@@ -22,6 +22,7 @@ import copy
 import os
 import sys
 from collections.abc import Iterator
+from itertools import combinations
 from functools import partial
 from math import pi
 from time import time
@@ -40,7 +41,6 @@ from .layout import Layout
 #   If you requested S, I assume you measure 1 and have to do Z
 #   If you requested T, I assume you measure 1 and have to do S
 # ABC -- Always be Cultivating
-# Only Applicable to Clifford + T currently
 
 
 # This function is only visual and is extremely finicky, so it is not tested
@@ -78,6 +78,17 @@ def knock_off_tqdm(
     )
 
 
+def _requires_resource(op: cirq.Operation, transversal_cnot: bool) -> bool:
+    """Checks if performing an operation requires a resource state. S is assumed to need a resource state when transversal CNOT is unavailable."""
+    if op in cirq.GateFamily(cirq.S) and not transversal_cnot:
+        return True
+    if op in cirq.GateFamily(cirq.T):
+        return True
+    if op in cirq.GateFamily(cirq.CCZ):
+        return True
+    return False
+
+
 def replace_cirq_op(
     op: cirq.Operation,
     layout: Layout,
@@ -90,10 +101,6 @@ def replace_cirq_op(
     primitives: cirq gates that are allowed in the underlying architecture
     verbose: flag to print more information
     """
-    if op.gate == cirq.T:
-        return teleport_T(op, layout)
-    if op.gate == cirq.S:
-        return teleport_S(op, layout)
     if op.gate == cirq.CNOT and not transversal_cnot:
         path_patches = layout.route_cnot(*op.qubits)
         num_qubits = len(path_patches)
@@ -105,60 +112,66 @@ def replace_cirq_op(
             lsp.Merge(num_qubits=num_qubits - 1, smooth=False).on(*path_patches[1:]),
             lsp.Split(partitions=[1] * (len(path_patches[1:])), smooth=False).on(*path_patches[1:]),
         ]
+    if _requires_resource(op, transversal_cnot):
+        return teleport_resource(op, layout)
     raise ValueError(
         f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} gate: {op.gate}",
     )
 
 
-def teleport_T(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
-    if hasattr(layout, "distil"):
-        distil = True
+def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
+    distil_t = layout.distil and op in cirq.GateFamily(cirq.T)
+    distil_ccz = layout.distil and op in cirq.GateFamily(cirq.CCZ)
+    cultivate_t = (not layout.distil) and op in cirq.GateFamily(cirq.T)
+    cultivate_s = op in cirq.GateFamily(cirq.S)
+    if distil_t:
+        ftype = "t"
+        prep_gate = lsp.Distil("T")
+        correction = cirq.S
+    elif cultivate_t:
+        ftype = "t"
+        prep_gate = lsp.Cultivate(pi / 4)
+        correction = cirq.S
+    elif cultivate_s:
+        ftype = "s"
+        prep_gate = lsp.Cultivate(pi / 2)
+        correction = cirq.Z
+    elif distil_ccz:
+        ftype = "ccz"
+        prep_gate = lsp.Distil("CCZ")
+        # Since CNOT is the logical primitve, we use conjugation here
+        correction = [
+            *cirq.H.on_each(*op.qubits),
+            *cirq.X.on_each(*op.qubits),
+            *cirq.CNOT.on_each(*combinations(op.qubits, 2)),
+            *cirq.H.on_each(*op.qubits),
+        ]
     else:
-        distil = False
-    available_t_factories = layout.available_t_factories
-    all_t_factories = [
-        factory
-        for factory in layout._all_factories
-        if layout.layout_graph.nodes[factory]["ftype"] == "t"
-    ]
+        raise ValueError(f"Invalid resource encountered: {op.gate}")
+    available_factories = layout.available_factories(ftype)
+    all_factories = layout.all_factories(ftype)
     operations = []
-    if not available_t_factories:
-        if distil:
+    if not available_factories:
+        if distil_t or distil_ccz:
             operations += [
-                lsp.Distil().on(*layout.distillation_block(factory)) for factory in all_t_factories
+                prep_gate.on(*layout.distillation_block(factory)) for factory in all_factories
             ]
         else:
-            operations += [lsp.Cultivate(pi / 4).on(factory) for factory in all_t_factories]
-        layout.reload_factories("t")
-    data_qubit = op.qubits[0]
-    factory_qubit = layout.nearest_factory(data_qubit, ftype="t")
+            operations += [prep_gate.on(*factory) for factory in all_factories]
+        layout.reload_factories(ftype=ftype)
+    # These should be tuples of qubits
+    routed_factory = layout.nearest_factory(op.qubits, ftype=ftype)
+    cnots, measurements, resets = [], [], []
+    corrections = correction if isinstance(correction, list) else [correction.on(*op.qubits)]
+    for factory_qubit, program_qubit in zip(routed_factory, op.qubits):
+        cnots.append(cirq.CNOT.on(factory_qubit, program_qubit))
+        measurements.append(cirq.MeasurementGate(1, key="").on(factory_qubit))
+        resets.append(cirq.ResetChannel().on(factory_qubit))
     operations += [
-        cirq.CNOT.on(factory_qubit, data_qubit),
-        cirq.MeasurementGate(1, key="").on(factory_qubit),
-        cirq.S.on(data_qubit),
-        cirq.ResetChannel().on(factory_qubit),
-    ]
-    return operations
-
-
-def teleport_S(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
-    available_s_factories = layout.available_s_factories
-    all_s_factories = [
-        factory
-        for factory in layout._all_factories
-        if layout.layout_graph.nodes[factory]["ftype"] == "s"
-    ]
-    operations = []
-    if not available_s_factories:
-        operations += [lsp.Cultivate(pi / 2).on(factory) for factory in all_s_factories]
-        layout.reload_factories("s")
-    data_qubit = op.qubits[0]
-    factory_qubit = layout.nearest_factory(data_qubit, ftype="s")
-    operations += [
-        cirq.CNOT.on(factory_qubit, data_qubit),
-        cirq.MeasurementGate(1, key="").on(factory_qubit),
-        cirq.Z.on(data_qubit),
-        cirq.ResetChannel().on(factory_qubit),
+        cirq.Moment(cnots),
+        cirq.Moment(measurements),
+        cirq.Moment(resets),
+        *corrections,
     ]
     return operations
 
@@ -278,8 +291,7 @@ def post_op_syndrome_extraction(
 
 
 def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
-    """Checks that the given circuit is in the Clifford+T gateset."""
-    # TODO: This function probably belongs in some utilities file, since it is not particularly integral to compiling.
+    """Checks that the given circuit is in the Clifford+T gateset. CCZs are also allowed"""
     valid_gates = (
         cirq.T,
         cirq.X,
@@ -288,6 +300,7 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
         cirq.H,
         cirq.I,
         cirq.CNOT,
+        cirq.CCZ,
     )
     valid_types = (
         cirq.MeasurementGate,
@@ -298,7 +311,7 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
         op.gate in valid_gates or isinstance(op.gate, valid_types)
         for op in tqdm(circuit.all_operations(), total=total_ops, disable=not verbose)
     ):
-        raise ValueError("This compiler only handles Clifford + T circuits")
+        raise ValueError("This compiler only handles Clifford + T + CCZ circuits")
 
 
 def _decompose_to_primitives(
@@ -368,7 +381,7 @@ def ft_compile(
     num_threads: int = 1,
     skip_validation: bool = False,
 ) -> cirq.Circuit:
-    """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T gateset to a cirq circuit of primitives.
+    """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T + CCZ gateset to a cirq circuit of primitives.
     The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
     The architecture input contains information about what primtives are accessible to the compiler and which extra passes should be added to the primitive circuit.
     The passes available are post op correction and idling.

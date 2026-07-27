@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from resource_estimation.ftqc import distil_15_to_1, ccz_8_to_1
 from math import pi
 
 import cirq
@@ -88,7 +89,8 @@ def test_all_primitives(estimator) -> None:
     if arc.movement:
         circuit += [cirq.CNOT.on(dummy_qubits[i], dummy_qubits[i + 1]) for i in range(8)]
         circuit += [cirq.S.on(q) for q in dummy_qubits]
-        circuit += [lsp.Distil().on(*factory_block)]
+        circuit += [lsp.Distil("T").on(*factory_block)]
+        circuit += [lsp.Distil("CCZ").on(*factory_block[:23])]
     else:
         circuit += [
             lsp.Merge(2, smooth=True).on(*dummy_qubits[:2]),
@@ -245,6 +247,17 @@ def test_critical_path() -> None:
     assert estim.parallel_circuit_time(circuit=circuit) == estim.parallel_circuit_time(
         circuit=cirq.Circuit(expected),
     )
+
+    # Test that critical path for distillation circuits are as expected
+    # Critical paths are currently the same for both distillation circuits
+    t_15_to_1 = distil_15_to_1()
+    ccz_distilled = ccz_8_to_1()
+    expected_types = [lsp.Cultivate, cirq.CNOT, cirq.S, cirq.H, cirq.MeasurementGate]
+    with pytest.warns(UserWarning, match="very expensive"):
+        path1 = estim.critical_path(t_15_to_1)
+        path2 = estim.critical_path(ccz_distilled)
+        assert all(op in cirq.GateFamily(expected) for op, expected in zip(path1, expected_types))
+        assert all(op in cirq.GateFamily(expected) for op, expected in zip(path2, expected_types))
 
 
 def test_physical_qubit_count(lattice_estimator) -> None:
