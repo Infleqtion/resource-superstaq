@@ -33,16 +33,36 @@ show-fixes = true
 
 # Specific linting rules to enable in `ruff`
 lint.select = [
-    "FA",    # flake8-future-annotations
-    "F401",  # unused imports
-    "I",
-    "B034",
-    "C420",
-    "D301",
-    "E731",
-    "PLC0105",
-    "PLC0206",
-    "PLW0127",
+  "A",      # flake8-builtins
+  "ASYNC",  # flake8-async
+  "B034",
+  "C420",
+  "COM818", # trailing-comma-on-bare-tuple error
+  "D301",
+  "DTZ",    # flake8-datetimez checks
+  "E731",
+  "F401",   # unused imports
+  "FA",     # flake8-future-annotations checks
+  "FAST",   # FastAPI checks
+  "FLY",    # flynt checks
+  "G",      # flake8-logging-format
+  "I",      # isort checks
+  "ICN",    # flake8-import-conventions
+  "ISC",    # flake8-implicit-str-concat checks
+  "LOG",    # flake8-logging checks
+  "NPY",    # numpy-specific checks
+  "PD",     # pandas-vet
+  "PLC0105",
+  "PLC0206",
+  "PLW0127",
+  "PGH",    # pygrep-hooks checks
+  "Q",      # flake8-quotes checks
+  "RSE",    # flake8-raise checks
+  "S",      # flake8-bandit
+  "SLOT",   # flake8-slots checks
+  "T10",    # flake8-debugger checks
+  "TID",    # flake8-tidy-imports
+  "TRY",    # tryceratops
 ]
 lint.ignore = [
   "ANN401",  # Any type
