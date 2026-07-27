@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 from functools import cached_property
-from typing import Literal, Optional
+import typing
 
 import cirq
 
@@ -278,7 +278,7 @@ class Move(cirq.Gate):
     logical qubit patches.
     """
 
-    def __init__(self, zone: Optional[Literal["measure", "interact"]] = None) -> None:
+    def __init__(self, zone: typing.Optional[typing.Literal["measure", "interact"]] = None) -> None:
         self._num_qubits = 2 if zone is None else 1
         self._zone = zone
 
@@ -286,7 +286,7 @@ class Move(cirq.Gate):
         return self._num_qubits
 
     @property
-    def zone(self) -> Literal["interact", "measure"] | None:
+    def zone(self) -> typing.Literal["interact", "measure"] | None:
         return self._zone
 
     def __str__(self) -> str:
@@ -294,7 +294,7 @@ class Move(cirq.Gate):
             return "MOVE"
         return "MOVE_MZ" if self.zone == "measure" else "MOVE_IZ"
 
-    def _json_dict_(self) -> dict[str, Literal["interact", "measure"] | None]:
+    def _json_dict_(self) -> dict[str, typing.Literal["interact", "measure"] | None]:
         return {"zone": self._zone}
 
     def __repr__(self) -> str:

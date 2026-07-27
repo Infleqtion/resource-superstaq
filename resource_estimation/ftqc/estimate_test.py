@@ -14,9 +14,9 @@
 from resource_estimation.ftqc import distil_15_to_1, ccz_8_to_1
 from math import pi
 
+import numpy as np
 import cirq
 import pytest
-from numpy import isclose
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
@@ -109,7 +109,7 @@ def test_all_primitives(estimator) -> None:
         t2 = estimator.serial_circuit_time(circuit)
     for key in c1.keys():
         assert c1[key] == c2[key]
-    assert isclose(t1, t2, atol=0.00001)
+    assert np.isclose(t1, t2, atol=0.00001)
 
 
 def test_parallel_circuit_cost(lattice_estimator, movement_estimator) -> None:
@@ -209,7 +209,7 @@ def test_critical_path() -> None:
     arc = arch.DefaultMovement()
     estim = est.ResourceEstimator(arc)
     # Should be identical aside from floating point errors
-    assert isclose(estim.serial_circuit_time(c1), estim.serial_circuit_time(c2), atol=1e-5)
+    assert np.isclose(estim.serial_circuit_time(c1), estim.serial_circuit_time(c2), atol=1e-5)
 
     qa, qb = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit(

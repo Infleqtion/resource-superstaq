@@ -11,11 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from pathlib import Path
 import json
 import warnings
-from collections import Counter
-from pathlib import Path
-from typing import Literal
+import collections
+import typing
 
 import cirq
 import cultiv
@@ -33,7 +33,9 @@ STR2GATE = {
 }
 
 
-def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.Gate, int]]:
+def count_stim_resources(
+    stim_circuit: stim.Circuit,
+) -> dict[str, collections.Counter[cirq.Gate, int]]:
     """
     Parses stim circuit to count relevant operations and returns both parallel and serial costs
     """
@@ -61,9 +63,9 @@ def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.G
         "QUBIT_COORDS",
         "SHIFT_COORDS",
     ]
-    total_serial = Counter(dict())
-    total_parallel = Counter(dict())
-    tick_total = Counter(
+    total_serial = collections.Counter(dict())
+    total_parallel = collections.Counter(dict())
+    tick_total = collections.Counter(
         dict()
     )  # Keeps partial total for different operations that can be done in parallel
     for instr in stim_circuit:
@@ -71,7 +73,7 @@ def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.G
             continue
         elif instr.name == "TICK":
             total_parallel += tick_total
-            tick_total = Counter({})  # Reset moment counting
+            tick_total = collections.Counter({})  # Reset moment counting
             continue
         elif instr.name == "REPEAT":
             repeats = instr.repeat_count
@@ -97,10 +99,10 @@ def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.G
 
 def load_saved_cost(
     dsurface: int,
-    op_key: Literal["cultivate", "cnot", "memory_d_rounds", "memory_1_round"],
-    style: Literal[None, "gidney", "yale"] = None,
-    fault_distance: Literal[None, 3, 5] = None,
-) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
+    op_key: typing.Literal["cultivate", "cnot", "memory_d_rounds", "memory_1_round"],
+    style: typing.Literal[None, "gidney", "yale"] = None,
+    fault_distance: typing.Literal[None, 3, 5] = None,
+) -> dict[typing.Literal["serial", "parallel"], collections.Counter[cirq.Gate, int]]:
     """
     Gets saved serial and parallel costs from the `cultivate_costs.json` file
     Converts saved strings to proper cirq gate objects
@@ -129,7 +131,7 @@ def cultivate(
     fault_distance: int,
     fold: bool = False,
     for_test: bool = False,
-) -> dict[Literal["serial", "parallel"], Counter[cirq.Gate, int]]:
+) -> dict[typing.Literal["serial", "parallel"], collections.Counter[cirq.Gate, int]]:
     """
     Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
     If the final patch size is less than 25 it reads from saved resources instead of calling the functions directly
