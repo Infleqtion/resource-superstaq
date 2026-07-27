@@ -13,8 +13,8 @@
 # limitations under the License.
 from math import pi
 
-import cirq
 import numpy as np
+import cirq
 import pytest
 
 from resource_estimation.compile_gateset import (

@@ -12,34 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
+from dataclasses import dataclass, asdict, field
+from pathlib import Path
+import collections
+import json
+import shutil
+import functools
+import tqdm
+import warnings
 
 try:
     from typing import Self
 except ImportError:  # pragma: no cover
     from typing_extensions import Self
-import json
-import shutil
-import warnings
-from collections import Counter
-from collections.abc import Callable
-from dataclasses import asdict, dataclass, field
-from functools import partial
-from pathlib import Path
 
 import cirq
 import numpy as np
 import numpy.typing as npt
-from tqdm import tqdm
 
 import resource_estimation.ftqc.architecture as arch
 from resource_estimation.visualizations import C, boxed_header
 
-STR2ARCH: dict[str, Callable[..., arch.Architecture]] = {
-    "ssm": partial(arch.DefaultMovement, idling=False, post_op_correction=True),
-    "dsnm": partial(arch.DefaultLattice, idling=False, post_op_correction=True),
-    "dsm": partial(arch.DualSpeciesMovement, idling=False, post_op_correction=True),
-    "mzo": partial(arch.MeasureZonesOnly, idling=False, post_op_correction=True),
-    "sc": partial(arch.Superconductor, idling=False, post_op_correction=True),
+import resource_estimation.ftqc.architecture as arch
+from resource_estimation.visualizations import C, boxed_header
+
+STR2ARCH: dict[str, collections.abc.Callable[..., arch.Architecture]] = {
+    "ssm": functools.partial(arch.DefaultMovement, idling=False, post_op_correction=True),
+    "dsnm": functools.partial(arch.DefaultLattice, idling=False, post_op_correction=True),
+    "dsm": functools.partial(arch.DualSpeciesMovement, idling=False, post_op_correction=True),
+    "mzo": functools.partial(arch.MeasureZonesOnly, idling=False, post_op_correction=True),
+    "sc": functools.partial(arch.Superconductor, idling=False, post_op_correction=True),
 }
 
 try:
@@ -96,8 +98,8 @@ def get_t_path(circuit: cirq.Circuit, verbose: bool = True) -> list[cirq.Operati
     qubit_paths: dict[cirq.Qid, list[cirq.Operation]] = {
         qubit: [] for qubit in circuit.all_qubits()
     }
-    qubit_times: dict[cirq.Qid, float] = dict.fromkeys(circuit.all_qubits(), 0)
-    for op in tqdm(list(circuit.all_operations()), disable=not verbose, colour="cyan"):
+    qubit_times: dict[cirq.Qid, float] = {qubit: 0 for qubit in circuit.all_qubits()}
+    for op in tqdm.tqdm(list(circuit.all_operations()), disable=not verbose, colour="cyan"):
         op_qubits = op.qubits
         big_qubit = max(op_qubits, key=lambda qubit: qubit_times[qubit])
         big_path = qubit_paths[big_qubit]
@@ -119,7 +121,7 @@ def get_important_information(
     clifford_t_circuit: cirq.Circuit,
     fold_cultiv: bool,
     pfid: float = 0.99,
-) -> tuple[int, int, Counter[cirq.Gate | None], float, int]:
+) -> tuple[int, int, collections.Counter[cirq.Gate | None], float, int]:
     """
     Get information used to set certain error-correction assumptions.
 
@@ -136,7 +138,7 @@ def get_important_information(
     These assumptions are approximate, but they are intended to provide a
     reasonable-faith estimate.
     """
-    gates = Counter(op.gate for op in clifford_t_circuit.all_operations())
+    gates = collections.Counter(op.gate for op in clifford_t_circuit.all_operations())
     t_gates = gates.get(cirq.T, 0)
     other_gates = sum(gates.values()) - t_gates
 

@@ -13,9 +13,9 @@
 # limitations under the License.
 from math import pi
 
+import numpy as np
 import cirq
 import pytest
-from numpy.testing import assert_array_equal
 
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 
@@ -138,7 +138,7 @@ def test_buffer() -> None:
     smooth_buff = lsp.BufferCodePatch(d=d, smooth=True)
     rough_buff = lsp.BufferCodePatch(d=d, smooth=False)
 
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_buff.num_z_stabs(full=True),
             smooth_buff.num_x_stabs(full=True),
@@ -147,14 +147,14 @@ def test_buffer() -> None:
         ],
         6,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_buff.num_x_stabs(full=False),
             rough_buff.num_z_stabs(full=False),
         ],
         2,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_buff.num_z_stabs(full=False),
             rough_buff.num_x_stabs(full=False),
@@ -167,7 +167,7 @@ def test_intermediate_patch() -> None:
     d = 7
     smooth_inter = lsp.IntermediatePatch(d=d, smooth=True)
     rough_inter = lsp.IntermediatePatch(d=d, smooth=False)
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_inter.num_z_stabs(full=True),
             smooth_inter.num_x_stabs(full=True),
@@ -176,14 +176,14 @@ def test_intermediate_patch() -> None:
         ],
         18,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_inter.num_x_stabs(full=False),
             rough_inter.num_z_stabs(full=False),
         ],
         6,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_inter.num_z_stabs(full=False),
             rough_inter.num_x_stabs(full=False),
@@ -196,7 +196,7 @@ def test_endpoint_patch() -> None:
     d = 7
     smooth_end = lsp.EndpointPatch(d=d, smooth=True)
     rough_end = lsp.EndpointPatch(d=d, smooth=False)
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_end.num_z_stabs(full=True),
             smooth_end.num_x_stabs(full=True),
@@ -205,14 +205,14 @@ def test_endpoint_patch() -> None:
         ],
         18,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_end.num_x_stabs(full=False),
             rough_end.num_z_stabs(full=False),
         ],
         6,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_end.num_z_stabs(full=False),
             rough_end.num_x_stabs(full=False),

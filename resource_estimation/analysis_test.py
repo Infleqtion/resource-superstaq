@@ -14,6 +14,7 @@
 import math
 
 import cirq
+import pytest
 import numpy as np
 import pytest
 
@@ -23,7 +24,7 @@ from resource_estimation.analysis import Report
 
 
 @pytest.fixture
-def report() -> Report:
+def report() -> analysis.Report:
     return analysis.Report(
         filename="dummy_file.json",
         program_fidelity=0.99,

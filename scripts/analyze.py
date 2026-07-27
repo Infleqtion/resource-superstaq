@@ -12,6 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import argparse
+import textwrap
+import time
 
 import argparse
 import textwrap
@@ -116,7 +119,7 @@ def main(args=None) -> int:
         arch_name=arch_name,
         fold_cultiv=fold_cultiv,
     )
-    t0 = time()
+    t0 = time.time()
     if overwrite_error_params:
         pass
     else:
@@ -125,10 +128,10 @@ def main(args=None) -> int:
         gate_error = total_allowed_error / 2
 
     input_circuit = cirq.read_json(file)
-    report.load_time = time() - t0
+    report.load_time = time.time() - t0
     print(report.sub_report("Inputs"))
 
-    t1 = time()
+    t1 = time.time()
     barriers = [
         (idx, op)
         for idx, moment in enumerate(input_circuit)
@@ -142,7 +145,7 @@ def main(args=None) -> int:
     )
     rz_circuit_width = cirq.num_qubits(rz_circuit)
     rz_circuit_depth = len(rz_circuit)
-    t2 = time()
+    t2 = time.time()
 
     report.rz_width = rz_circuit_width
     report.rz_depth = rz_circuit_depth
@@ -151,7 +154,7 @@ def main(args=None) -> int:
     report.rz_time = t2 - t1
     print(report.sub_report("Clifford + RZ"))
 
-    t1 = time()
+    t1 = time.time()
     if overwrite_error_params:
         rz_gates, other_gates = res.analysis.break_up_ops(cliff_rz_circuit=rz_circuit)
         eps = args.error_per_rz
@@ -172,10 +175,10 @@ def main(args=None) -> int:
             for i, qubit in enumerate(sorted(clifford_t_circuit.all_qubits()))
         },
     )
-    t2 = time()
+    t2 = time.time()
     if args.t_path:
         t_path = res.analysis.get_t_path(circuit=clifford_t_circuit, verbose=verbose)
-        t3 = time()
+        t3 = time.time()
     else:
         print("Skipped T Path Generation")
 
@@ -200,7 +203,7 @@ def main(args=None) -> int:
         """).strip(),
         )
 
-    t1 = time()
+    t1 = time.time()
     if overwrite_error_params:
         cultivation_repetition = args.cultivation_repetition
         # Fault distance limited by 1e-6 at distance 3 for both
@@ -221,7 +224,7 @@ def main(args=None) -> int:
                 fold_cultiv=fold_cultiv,
             )
         )
-    t2 = time()
+    t2 = time.time()
 
     report.cultivation_repetition = cultivation_repetition
     report.cultivation_fault_distance = cultivation_fault_distance
@@ -244,7 +247,7 @@ def main(args=None) -> int:
             cultivation_fault_distance=cultivation_fault_distance,
         )
 
-    t1 = time()
+    t1 = time.time()
     if isinstance(arch, res.ftqc.DefaultMovement):
         layt = res.ftqc.MovementLayout(num_t_factories=facts, input_circuit=clifford_t_circuit)
     else:
@@ -254,14 +257,14 @@ def main(args=None) -> int:
             num_s_factories=facts,
         )
     primitive_circuit = res.ftqc.ft_compile(arc=arch, layout=layt, verbose=verbose)
-    t2 = time()
+    t2 = time.time()
 
     report.primitive_width = cirq.num_qubits(primitive_circuit)
     report.primitive_depth = len(primitive_circuit)
     report.compile_time = t2 - t1
     print(report.sub_report("FT Compiled Circuit"))
 
-    t1 = time()
+    t1 = time.time()
     est = res.ftqc.ResourceEstimator(arc=arch)
     serial_gate_counts = est.serial_circuit_cost(primitive_circuit, pretty=False, verbose=verbose)
     serial_gate_times = {
@@ -278,7 +281,7 @@ def main(args=None) -> int:
     }
     total_time_parallel = sum(parallel_gate_times.values())
     physical_qubits = est.physical_qubits(primitive_circuit)
-    t2 = time()
+    t2 = time.time()
 
     report.gates_serial = {
         make_pretty(gate): (serial_gate_counts[gate], gate_time)
@@ -293,10 +296,10 @@ def main(args=None) -> int:
     report.physical_qubits = physical_qubits
     report.volume = total_time_parallel * physical_qubits
     report.resource_time = t2 - t1
-    report.total_time = time() - t0
+    report.total_time = time.time() - t0
     print(report.sub_report("Resource Estimation"))
     print(
-        f"\n{C.OKGREEN}Script Executed in {C.END}{C.YELLOW}{time() - t0:.3e}{C.END}{C.OKGREEN} seconds{C.END}\n",
+        f"\n{C.OKGREEN}Script Executed in {C.END}{C.YELLOW}{time.time() - t0:.3e}{C.END}{C.OKGREEN} seconds{C.END}\n"
     )
 
     print(report.report())

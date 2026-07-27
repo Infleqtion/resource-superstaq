@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-
-from itertools import chain
+import itertools
 
 import cirq
 import matplotlib.animation as animation
@@ -21,7 +20,6 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-
 from .ftqc.layout import Layout
 
 
@@ -33,7 +31,7 @@ def visualize_layout_moment(
     """
     This probably does not work anymore without a significant amount of changes.
     """
-    moment_paths_flat = list(chain.from_iterable(moment_paths))
+    moment_paths_flat = list(itertools.chain.from_iterable(moment_paths))
     diction = {}
     for qubit in column_layout.qubits:
         diction[qubit["name"]] = (qubit["qubit"].col, -qubit["qubit"].row)
@@ -253,7 +251,7 @@ def animate_layout_moment(
     """
     Not sure if this visualization works anymore, hard to get the moment_paths
     """
-    moment_paths_flat = list(chain.from_iterable(moment_paths))
+    moment_paths_flat = list(itertools.chain.from_iterable(moment_paths))
     diction = {}
     for qubit in column_layout.qubits:
         diction[qubit["name"]] = (qubit["qubit"].col, -qubit["qubit"].row)
@@ -283,7 +281,7 @@ def animate_layout_moment(
         nx.draw(G, pos=diction, node_color=colors, edge_color=edge_colors, with_labels=True)
 
     fig, ax = plt.subplots()
-    anim = FuncAnimation(
+    anim = animation.FuncAnimation(
         fig,
         animate,
         frames=len(moment_paths_flat),

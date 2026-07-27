@@ -13,13 +13,13 @@
 # limitations under the License.
 import json
 import os
-from collections import Counter
+import collections
 from math import ceil, pi
 
 import cirq
 import numpy as np
 import pytest
-from cirq_superstaq import ParallelRGate
+import cirq_superstaq as css
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
@@ -48,22 +48,22 @@ def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
         lsp.Cultivate(pi / 2).on(cirq.GridQubit(0, 0)),
     )
     # Tests that the parallel gates are counted correctly
-    se_moment_cost = Counter(
-        arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["moment_cost"],
+    se_moment_cost = collections.Counter(
+        arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["moment_cost"]
     )
-    expected_Y_moment_cost = Counter(
-        {cirq.PhasedXZGate: 10, cirq.CZ: 10, cirq.MeasurementGate: 2, cirq.ResetChannel: 2},
+    expected_Y_moment_cost = collections.Counter(
+        {cirq.PhasedXZGate: 10, cirq.CZ: 10, cirq.MeasurementGate: 2, cirq.ResetChannel: 2}
     )  # Includes both pieces
     expected_moment_cost = expected_Y_moment_cost + se_moment_cost
     assert expected_moment_cost == actual_op_cost["moment_cost"]
 
     # Tests that the serial gates are counted correctly
     # It does continue the assumption that we can just use a syndrome extraction cycle to approximate the total cost
-    se_gate_cost = Counter(
-        arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"],
+    se_gate_cost = collections.Counter(
+        arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"]
     )
-    expected_Y_gate_cost = Counter(
-        arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"],
+    expected_Y_gate_cost = collections.Counter(
+        arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"]
     )
     expected_gate_cost = expected_Y_gate_cost + se_gate_cost + expected_Y_gate_cost
     expected_gate_cost += {cirq.CZ: 2 * (7 - 1)}
@@ -156,9 +156,9 @@ def test_movement_gate_costs(d) -> None:
     # Check S gate
     op = cirq.S.on(qubit_a)
     cost = arc.gate_cost(op)
-    expected_cost = Counter(arc.gate_cost(lsp.SyndromeExtract(1, 1).on(qubit_a)))
-    expected_cost += Counter(
-        {cirq.CZ: (d - 1) ** 2, cirq.PhasedXZGate: d, cirq.QubitPermutationGate: 2},
+    expected_cost = collections.Counter(arc.gate_cost(lsp.SyndromeExtract(1, 1).on(qubit_a)))
+    expected_cost += collections.Counter(
+        {cirq.CZ: (d - 1) ** 2, cirq.PhasedXZGate: d, cirq.QubitPermutationGate: 2}
     )
     assert cost == expected_cost
 
@@ -369,7 +369,7 @@ def test_against_cultiv(d) -> None:
     # Remove the Logical Measurement operation
     s_count[cirq.MeasurementGate] -= d**2
 
-    syndrome_estimate = Counter(
+    syndrome_estimate = collections.Counter(
         arch.DefaultLattice(d=d).syndrome_extract_cost(
             lsp.SyndromeExtract(1, d).on(cirq.LineQubit(0)),
         )["gate_cost"],
@@ -404,7 +404,7 @@ def test_against_cultiv(d) -> None:
             lsp.Split([1, 1], smooth=False).on(cnot_qubits[1], cnot_qubits[2]),
         ],
     )
-    circuit_cost = Counter(Estimator.serial_circuit_cost(low_level_circuit))
+    circuit_cost = collections.Counter(Estimator.serial_circuit_cost(low_level_circuit))
     assert circuit_cost[cirq.CZ] == official_cnot_resources[cirq.CZ]
 
 
@@ -860,9 +860,9 @@ def test_convert_globals_to_phasedxz() -> None:
     """Confirm that the conversion function works as expected"""
     sc = arch.Superconductor()
     example1 = {
-        "gate_cost": {ParallelRGate: 2, cirq.Rz: 3},
+        "gate_cost": {css.ParallelRGate: 2, cirq.Rz: 3},
         "moment_cost": {
-            ParallelRGate: 13,
+            css.ParallelRGate: 13,
         },
     }
     expected = {"gate_cost": {cirq.PhasedXZGate: 3}, "moment_cost": {}, "op_time": 0.0}
@@ -871,7 +871,7 @@ def test_convert_globals_to_phasedxz() -> None:
 
     example2 = {
         "gate_cost": {cirq.MeasurementGate: 5},
-        "moment_cost": {cirq.Rz: 5, ParallelRGate: 9},
+        "moment_cost": {cirq.Rz: 5, css.ParallelRGate: 9},
     }
     expected = {
         "gate_cost": {cirq.MeasurementGate: 5},

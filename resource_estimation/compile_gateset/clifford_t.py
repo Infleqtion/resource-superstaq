@@ -14,17 +14,17 @@
 from __future__ import annotations
 
 import math
-from functools import cache
+import functools
 
+import numpy as np
 import cirq
 import mpmath
-import numpy as np
 import pygridsynth
-from tqdm import tqdm
+import tqdm
 
 
 # pygridsynth comes from https://www.mathstat.dal.ca/~selinger/newsynth/
-@cache
+@functools.cache
 def approx_rz(theta: float, epsilon: float) -> str:
     if math.isclose(theta, np.pi, abs_tol=epsilon, rel_tol=0.0) or math.isclose(
         theta,
@@ -134,7 +134,7 @@ def compile_cirq_to_clifford_t(
     The eps parameter defines the maximum allowable error in the angle of each synthesized Rz gate
     """
     newcirc = cirq.Circuit()
-    for moment in tqdm(circ.moments, colour="cyan", disable=not verbose):
+    for moment in tqdm.tqdm(circ.moments, colour="cyan", disable=not verbose):
         for op in moment:
             qubits = op.qubits
             gate = op.gate

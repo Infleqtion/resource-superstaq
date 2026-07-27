@@ -14,25 +14,24 @@
 import json
 import sys
 from pathlib import Path
-from typing import Literal
+import typing
+import os
+import cultiv
 
 import cirq
+import tqdm
+
+from resource_estimation.ftqc.stim_functions import count_stim_resources, STR2GATE
 
 parent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(parent_dir))
-import os
-
-import cultiv
-from tqdm import tqdm
-
-from resource_estimation.ftqc.stim_functions import STR2GATE, count_stim_resources
 
 GATE2STR = {v: k for k, v in STR2GATE.items()}
 
 
 def format_cost_dict(
-    cost_dict: dict[Literal["serial", "parallel"], dict[cirq.Gate, int]],
-) -> dict[Literal["serial", "parallel"], dict[str, int]]:
+    cost_dict: dict[typing.Literal["serial", "parallel"], dict[cirq.Gate, int]],
+) -> dict[typing.Literal["serial", "parallel"], dict[str, int]]:
     """
     Converts cost dictionaries from `count_stim_resources` from cirq gate to string format
     """
@@ -45,7 +44,7 @@ def format_cost_dict(
 
 if __name__ == "__main__":
     resources_dict = {}
-    for d in tqdm(range(3, 26, 2)):
+    for d in tqdm.tqdm(range(3, 26, 2)):
         # Establish official resources as basis
         cnot = cultiv.make_surface_code_cnot(distance=d, basis="Z")
         memory_d_rounds = cultiv.make_surface_code_memory_circuit(dsurface=d, rounds=d, basis="Z")
