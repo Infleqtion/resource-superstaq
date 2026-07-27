@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import cirq
-import pytest
 import cultiv
+import pytest
 import stim
 
 from resource_estimation.ftqc.stim_functions import (

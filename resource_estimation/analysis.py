@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from dataclasses import dataclass, asdict, field
-from pathlib import Path
+
 import collections
+import functools
 import json
 import shutil
-import functools
-import tqdm
 import warnings
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+
+import tqdm
 
 try:
     from typing import Self
@@ -29,9 +31,6 @@ except ImportError:  # pragma: no cover
 import cirq
 import numpy as np
 import numpy.typing as npt
-
-import resource_estimation.ftqc.architecture as arch
-from resource_estimation.visualizations import C, boxed_header
 
 import resource_estimation.ftqc.architecture as arch
 from resource_estimation.visualizations import C, boxed_header
@@ -98,7 +97,7 @@ def get_t_path(circuit: cirq.Circuit, verbose: bool = True) -> list[cirq.Operati
     qubit_paths: dict[cirq.Qid, list[cirq.Operation]] = {
         qubit: [] for qubit in circuit.all_qubits()
     }
-    qubit_times: dict[cirq.Qid, float] = {qubit: 0 for qubit in circuit.all_qubits()}
+    qubit_times: dict[cirq.Qid, float] = dict.fromkeys(circuit.all_qubits(), 0)
     for op in tqdm.tqdm(list(circuit.all_operations()), disable=not verbose, colour="cyan"):
         op_qubits = op.qubits
         big_qubit = max(op_qubits, key=lambda qubit: qubit_times[qubit])

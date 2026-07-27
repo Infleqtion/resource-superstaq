@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from typing import TYPE_CHECKING
+
+import collections
 import copy
+import functools
+import itertools
 import os
 import sys
-import collections
-import itertools
-import functools
-from math import pi
 import time
+from math import pi
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import cirq

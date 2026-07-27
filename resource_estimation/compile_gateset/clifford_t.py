@@ -13,12 +13,12 @@
 # limitations under the License.
 from __future__ import annotations
 
-import math
 import functools
+import math
 
-import numpy as np
 import cirq
 import mpmath
+import numpy as np
 import pygridsynth
 import tqdm
 

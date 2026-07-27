@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from dataclasses import dataclass
+
 import abc
 import collections
 import itertools
-from math import ceil, sqrt
 import typing
+from dataclasses import dataclass
+from math import ceil, sqrt
 
-import numpy as np
 import cirq
 import networkx as nx
+import numpy as np
 
 
 @dataclass

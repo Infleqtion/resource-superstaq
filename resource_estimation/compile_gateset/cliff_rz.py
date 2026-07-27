@@ -13,9 +13,9 @@
 # limitations under the License.
 from __future__ import annotations
 
-import numpy as np
 import cirq
 import cirq_superstaq as css
+import numpy as np
 
 # warnings.filterwarnings(category=FutureWarning, action="ignore")
 

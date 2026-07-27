@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import collections
 import json
 import os
-import collections
 from math import ceil, pi
 
 import cirq
+import cirq_superstaq as css
 import numpy as np
 import pytest
-import cirq_superstaq as css
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est

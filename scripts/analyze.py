@@ -15,9 +15,6 @@
 import argparse
 import textwrap
 import time
-
-import argparse
-import textwrap
 from time import time
 
 import cirq

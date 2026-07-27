@@ -13,8 +13,8 @@
 # limitations under the License.
 from math import pi
 
-import numpy as np
 import cirq
+import numpy as np
 import pytest
 
 import resource_estimation.ftqc.architecture as arch

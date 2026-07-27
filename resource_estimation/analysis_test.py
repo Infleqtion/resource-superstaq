@@ -14,13 +14,11 @@
 import math
 
 import cirq
-import pytest
 import numpy as np
 import pytest
 
 import resource_estimation.analysis as analysis
 import resource_estimation.ftqc.architecture as arc
-from resource_estimation.analysis import Report
 
 
 @pytest.fixture

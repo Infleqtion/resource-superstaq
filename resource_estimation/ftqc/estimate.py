@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from typing import TYPE_CHECKING, ClassVar, Literal
-import warnings
+
 import collections
 import functools
+import warnings
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 import cirq
 import tqdm
@@ -128,7 +129,7 @@ class ResourceEstimator:
     ) -> dict[cirq.Gate | str, int]:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
         qubit_paths = {qubit: collections.Counter() for qubit in circuit.all_qubits()}
-        qubit_times = {qubit: 0 for qubit in circuit.all_qubits()}
+        qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm.tqdm(
             circuit.all_operations(), disable=not verbose, total=total_ops, colour="cyan"

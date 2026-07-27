@@ -14,22 +14,21 @@
 from __future__ import annotations
 
 import abc
-import json
 import collections
-from functools import cached_property, lru_cache, cache
+import json
+from functools import cached_property, lru_cache
 from math import ceil
 from pathlib import Path
 
 import cirq
-import numpy as np
 import cirq_superstaq as css
+import numpy as np
 
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.compile_ftqc import add_moves
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.stim_functions import cultivate
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 
 NEUTRAL_GATES = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.CZ: 0.27,
