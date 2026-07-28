@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
           check-latest: true
       - name: Install dependencies
         run: |
@@ -31,10 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
           check-latest: true
       - name: Install dependencies
         run: |
@@ -50,10 +50,10 @@ jobs:
     timeout-minutes: 6
     steps:
       - uses: actions/checkout@v5
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
           check-latest: true
       - name: Install dependencies
         run: |
@@ -69,10 +69,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
           check-latest: true
       - name: Install dependencies
         run: |
@@ -87,10 +87,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
           check-latest: true
       - name: Install dependencies
         run: |
@@ -112,7 +112,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
           check-latest: true
 
       - name: Install dependencies
@@ -120,7 +120,7 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Pytest and Coverage check (3.11)
+      - name: Pytest and Coverage check (3.14)
         run: |
           python checks/coverage_.py
   
@@ -133,13 +133,14 @@ jobs:
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
           check-latest: true
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install checks-superstaq
           pip install -r requirements.txt
+          pip install -r docs/requirements.txt
           sudo apt-get update
           sudo apt-get install -y pandoc
       - name: Build docs
