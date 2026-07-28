@@ -12,26 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+import os
 import sys
+import typing
 from pathlib import Path
-from typing import Literal
+
 import cirq
+import cultiv
+import tqdm
+
+from resource_estimation.ftqc.stim_functions import STR2GATE, count_stim_resources
 
 parent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(parent_dir))
-import os
-
-import cultiv
-from resource_estimation.ftqc.stim_functions import count_stim_resources, STR2GATE
-from tqdm import tqdm
-
 
 GATE2STR = {v: k for k, v in STR2GATE.items()}
 
 
 def format_cost_dict(
-    cost_dict: dict[Literal["serial", "parallel"], dict[cirq.Gate, int]],
-) -> dict[Literal["serial", "parallel"], dict[str, int]]:
+    cost_dict: dict[typing.Literal["serial", "parallel"], dict[cirq.Gate, int]],
+) -> dict[typing.Literal["serial", "parallel"], dict[str, int]]:
     """
     Converts cost dictionaries from `count_stim_resources` from cirq gate to string format
     """
@@ -44,7 +44,7 @@ def format_cost_dict(
 
 if __name__ == "__main__":
     resources_dict = {}
-    for d in tqdm(range(3, 26, 2)):
+    for d in tqdm.tqdm(range(3, 26, 2)):
         # Establish official resources as basis
         cnot = cultiv.make_surface_code_cnot(distance=d, basis="Z")
         memory_d_rounds = cultiv.make_surface_code_memory_circuit(dsurface=d, rounds=d, basis="Z")
@@ -66,10 +66,12 @@ if __name__ == "__main__":
             inject_style="unitary",
         )
         yale_cultiv3 = cultiv.make_cirq_circuits.make_cirq_circuit(
-            code_distance=max(7, d), fault_distance=3
+            code_distance=max(7, d),
+            fault_distance=3,
         )
         yale_cultiv5 = cultiv.make_cirq_circuits.make_cirq_circuit(
-            code_distance=max(11, d), fault_distance=5
+            code_distance=max(11, d),
+            fault_distance=5,
         )
 
         # Count up the resources and format the results
@@ -79,10 +81,10 @@ if __name__ == "__main__":
         gidney_cultiv3_costs = format_cost_dict(count_stim_resources(stim_circuit=gidney_cultiv3))
         gidney_cultiv5_costs = format_cost_dict(count_stim_resources(stim_circuit=gidney_cultiv5))
         yale_cultiv3_costs = format_cost_dict(
-            cultiv.make_cirq_circuits.dirty_count(circuit=yale_cultiv3)
+            cultiv.make_cirq_circuits.dirty_count(circuit=yale_cultiv3),
         )
         yale_cultiv5_costs = format_cost_dict(
-            cultiv.make_cirq_circuits.dirty_count(circuit=yale_cultiv5)
+            cultiv.make_cirq_circuits.dirty_count(circuit=yale_cultiv5),
         )
 
         # Add the costs to the dictionary
@@ -97,6 +99,7 @@ if __name__ == "__main__":
         }
         # Save at each iteration
         with open(
-            os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json", "w"
+            os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json",
+            "w",
         ) as f:
             json.dump(resources_dict, f, indent=4)

@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import collections
 import json
 import os
-from collections import Counter
 from math import ceil, pi
 
 import cirq
+import cirq_superstaq as css
 import numpy as np
 import pytest
-from cirq_superstaq import ParallelRGate
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
@@ -45,13 +45,13 @@ def test_architecture_exceptions(lattice_architecture, movement_architecture) ->
 def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
     # TODO: Brainstorm a better way to test this feature
     actual_op_cost = lattice_architecture.cultivate_cost(
-        lsp.Cultivate(pi / 2).on(cirq.GridQubit(0, 0))
+        lsp.Cultivate(pi / 2).on(cirq.GridQubit(0, 0)),
     )
     # Tests that the parallel gates are counted correctly
-    se_moment_cost = Counter(
+    se_moment_cost = collections.Counter(
         arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["moment_cost"]
     )
-    expected_Y_moment_cost = Counter(
+    expected_Y_moment_cost = collections.Counter(
         {cirq.PhasedXZGate: 10, cirq.CZ: 10, cirq.MeasurementGate: 2, cirq.ResetChannel: 2}
     )  # Includes both pieces
     expected_moment_cost = expected_Y_moment_cost + se_moment_cost
@@ -59,10 +59,10 @@ def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
 
     # Tests that the serial gates are counted correctly
     # It does continue the assumption that we can just use a syndrome extraction cycle to approximate the total cost
-    se_gate_cost = Counter(
+    se_gate_cost = collections.Counter(
         arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"]
     )
-    expected_Y_gate_cost = Counter(
+    expected_Y_gate_cost = collections.Counter(
         arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"]
     )
     expected_gate_cost = expected_Y_gate_cost + se_gate_cost + expected_Y_gate_cost
@@ -156,8 +156,8 @@ def test_movement_gate_costs(d) -> None:
     # Check S gate
     op = cirq.S.on(qubit_a)
     cost = arc.gate_cost(op)
-    expected_cost = Counter(arc.gate_cost(lsp.SyndromeExtract(1, 1).on(qubit_a)))
-    expected_cost += Counter(
+    expected_cost = collections.Counter(arc.gate_cost(lsp.SyndromeExtract(1, 1).on(qubit_a)))
+    expected_cost += collections.Counter(
         {cirq.CZ: (d - 1) ** 2, cirq.PhasedXZGate: d, cirq.QubitPermutationGate: 2}
     )
     assert cost == expected_cost
@@ -355,7 +355,7 @@ def test_against_cultiv(d) -> None:
     # Test Syndrome Extract
     # Set up memory circuit
     data_path = os.path.normpath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "data", "cultivate_costs.json")
+        os.path.join(os.path.dirname(__file__), "..", "..", "data", "cultivate_costs.json"),
     )
     with open(data_path) as f:
         saved_resources = json.load(f)
@@ -369,10 +369,10 @@ def test_against_cultiv(d) -> None:
     # Remove the Logical Measurement operation
     s_count[cirq.MeasurementGate] -= d**2
 
-    syndrome_estimate = Counter(
+    syndrome_estimate = collections.Counter(
         arch.DefaultLattice(d=d).syndrome_extract_cost(
-            lsp.SyndromeExtract(1, d).on(cirq.LineQubit(0))
-        )["gate_cost"]
+            lsp.SyndromeExtract(1, d).on(cirq.LineQubit(0)),
+        )["gate_cost"],
     )
     assert d_count[cirq.CZ] == syndrome_estimate[cirq.CZ]
     assert d_count[cirq.MeasurementGate] == syndrome_estimate[cirq.MeasurementGate]
@@ -393,7 +393,7 @@ def test_against_cultiv(d) -> None:
     official_cnot_resources[cirq.MeasurementGate]
 
     Estimator = est.ResourceEstimator(
-        arc=arch.DefaultLattice(d=d, idling=False, post_op_correction=True)
+        arc=arch.DefaultLattice(d=d, idling=False, post_op_correction=True),
     )
     cnot_qubits = [cirq.GridQubit(0, 1), cirq.GridQubit(0, 0), cirq.GridQubit(1, 0)]
     low_level_circuit = cirq.Circuit(
@@ -402,9 +402,9 @@ def test_against_cultiv(d) -> None:
             lsp.Split([1, 1], smooth=True).on(cnot_qubits[0], cnot_qubits[1]),
             lsp.Merge(2, smooth=False).on(cnot_qubits[1], cnot_qubits[2]),
             lsp.Split([1, 1], smooth=False).on(cnot_qubits[1], cnot_qubits[2]),
-        ]
+        ],
     )
-    circuit_cost = Counter(Estimator.serial_circuit_cost(low_level_circuit))
+    circuit_cost = collections.Counter(Estimator.serial_circuit_cost(low_level_circuit))
     assert circuit_cost[cirq.CZ] == official_cnot_resources[cirq.CZ]
 
 
@@ -679,10 +679,18 @@ def test_dual_species_with_movement() -> None:
     # This has all nearest-neighbor CZs, so no moves
     d = 7
     hm = arch.DualSpeciesMovement(
-        d=d, syndrome_rounds=1, cultivation_repetition=1, idling=False, post_op_correction=True
+        d=d,
+        syndrome_rounds=1,
+        cultivation_repetition=1,
+        idling=False,
+        post_op_correction=True,
     )
     mv = arch.DefaultMovement(
-        d=d, syndrome_rounds=1, cultivation_repetition=1, idling=False, post_op_correction=True
+        d=d,
+        syndrome_rounds=1,
+        cultivation_repetition=1,
+        idling=False,
+        post_op_correction=True,
     )
     ls = arch.DefaultLattice(
         d=d,
@@ -702,10 +710,18 @@ def test_dual_species_with_movement() -> None:
     assert hm.syndrome_extract_cost(op)["gate_cost"] == ls.syndrome_extract_cost(op)["gate_cost"]
 
     hm_folded = arch.DualSpeciesMovement(
-        d=d, cultivation_repetition=1, idling=False, post_op_correction=True, fold_cultiv=True
+        d=d,
+        cultivation_repetition=1,
+        idling=False,
+        post_op_correction=True,
+        fold_cultiv=True,
     )
     mv_folded = arch.DefaultMovement(
-        d=d, cultivation_repetition=1, idling=False, post_op_correction=True, fold_cultiv=True
+        d=d,
+        cultivation_repetition=1,
+        idling=False,
+        post_op_correction=True,
+        fold_cultiv=True,
     )
     assert hm_folded._cnot_cost == mv_folded._cnot_cost
     assert hm_folded._measure_cost == ls._measure_cost
@@ -779,27 +795,47 @@ def test_mzo(fold) -> None:
 
 def test_string_representations() -> None:
     ssm = arch.DefaultMovement(
-        idling=True, post_op_correction=True, d=9, cultivation_repetition=10, syndrome_rounds=1
+        idling=True,
+        post_op_correction=True,
+        d=9,
+        cultivation_repetition=10,
+        syndrome_rounds=1,
     )
     assert str(ssm) == "SingleSpeciesMovement(d=9, cr=10, fd=3, sr=1, fold=False)"
 
     dsnm = arch.DefaultLattice(
-        idling=True, post_op_correction=True, d=9, cultivation_repetition=10, syndrome_rounds=9
+        idling=True,
+        post_op_correction=True,
+        d=9,
+        cultivation_repetition=10,
+        syndrome_rounds=9,
     )
     assert str(dsnm) == "DualSpeciesNoMovement(d=9, cr=10, fd=3, sr=9)"
 
     dsm = arch.DualSpeciesMovement(
-        idling=True, post_op_correction=True, d=11, cultivation_repetition=17, syndrome_rounds=1
+        idling=True,
+        post_op_correction=True,
+        d=11,
+        cultivation_repetition=17,
+        syndrome_rounds=1,
     )
     assert str(dsm) == "DualSpeciesMovement(d=11, cr=17, fd=3, sr=1, fold=False)"
 
     mzo = arch.MeasureZonesOnly(
-        idling=True, post_op_correction=True, d=19, cultivation_repetition=7, syndrome_rounds=5
+        idling=True,
+        post_op_correction=True,
+        d=19,
+        cultivation_repetition=7,
+        syndrome_rounds=5,
     )
     assert str(mzo) == "ReadoutZonesOnly(d=19, cr=7, fd=3, sr=5, fold=False)"
 
     sc = arch.Superconductor(
-        idling=True, post_op_correction=True, d=13, cultivation_repetition=99, syndrome_rounds=14
+        idling=True,
+        post_op_correction=True,
+        d=13,
+        cultivation_repetition=99,
+        syndrome_rounds=14,
     )
     assert str(sc) == "Superconductor(d=13, cr=99, fd=3, sr=14)"
 
@@ -824,9 +860,9 @@ def test_convert_globals_to_phasedxz() -> None:
     """Confirm that the conversion function works as expected"""
     sc = arch.Superconductor()
     example1 = {
-        "gate_cost": {ParallelRGate: 2, cirq.Rz: 3},
+        "gate_cost": {css.ParallelRGate: 2, cirq.Rz: 3},
         "moment_cost": {
-            ParallelRGate: 13,
+            css.ParallelRGate: 13,
         },
     }
     expected = {"gate_cost": {cirq.PhasedXZGate: 3}, "moment_cost": {}, "op_time": 0.0}
@@ -835,7 +871,7 @@ def test_convert_globals_to_phasedxz() -> None:
 
     example2 = {
         "gate_cost": {cirq.MeasurementGate: 5},
-        "moment_cost": {cirq.Rz: 5, ParallelRGate: 9},
+        "moment_cost": {cirq.Rz: 5, css.ParallelRGate: 9},
     }
     expected = {
         "gate_cost": {cirq.MeasurementGate: 5},

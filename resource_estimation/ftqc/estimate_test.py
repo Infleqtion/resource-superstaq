@@ -15,8 +15,8 @@ from math import pi
 
 import cirq
 import networkx as nx
+import numpy as np
 import pytest
-from numpy import isclose
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
@@ -33,7 +33,7 @@ def lattice_estimator() -> est.ResourceEstimator:
             post_op_correction=1,
             cultivation_repetition=1,
             syndrome_rounds=None,
-        )
+        ),
     )
 
 
@@ -47,7 +47,7 @@ def movement_estimator() -> est.ResourceEstimator:
             cultivation_repetition=1,
             distillation_repetition=1,
             syndrome_rounds=None,
-        )
+        ),
     )
 
 
@@ -62,7 +62,7 @@ def movement_estimator() -> est.ResourceEstimator:
                 cultivation_repetition=1,
                 distillation_repetition=1,
                 syndrome_rounds=None,
-            )
+            ),
         ),
         est.ResourceEstimator(
             arc=arch.DefaultLattice(
@@ -71,7 +71,7 @@ def movement_estimator() -> est.ResourceEstimator:
                 post_op_correction=1,
                 cultivation_repetition=1,
                 syndrome_rounds=None,
-            )
+            ),
         ),
     ],
 )
@@ -110,7 +110,7 @@ def test_all_primitives(estimator) -> None:
         t2 = estimator.serial_circuit_time(circuit)
     for key in c1.keys():
         assert c1[key] == c2[key]
-    assert isclose(t1, t2, atol=0.00001)
+    assert np.isclose(t1, t2, atol=0.00001)
 
 
 def test_parallel_circuit_cost(lattice_estimator, movement_estimator) -> None:
@@ -137,7 +137,7 @@ def test_parallel_circuit_cost(lattice_estimator, movement_estimator) -> None:
     )
     estimated_moment_cost = lattice_estimator.parallel_circuit_cost(circuit=circuit)
     expected_moment_cost = lattice_estimator.arc.moment_cost(
-        lsp.SyndromeExtract(1, lattice_estimator.arc.d).on(qubit_a)
+        lsp.SyndromeExtract(1, lattice_estimator.arc.d).on(qubit_a),
     )
     assert estimated_moment_cost == expected_moment_cost
 
@@ -158,7 +158,7 @@ def test_self_returns(movement_estimator, lattice_estimator) -> None:
     # TODO: There are no self-returns anymore so this function is not well named
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit(
-        [lsp.ErrorCorrect(2).on(qubit_a, qubit_b), cirq.ResetChannel().on(qubit_a)]
+        [lsp.ErrorCorrect(2).on(qubit_a, qubit_b), cirq.ResetChannel().on(qubit_a)],
     )
     cost = movement_estimator.serial_circuit_cost(circuit=circuit, pretty=True)
     assert cost == {
@@ -169,7 +169,7 @@ def test_self_returns(movement_estimator, lattice_estimator) -> None:
         [
             lsp.ErrorCorrect(1).on_each(qubit_a, qubit_b),
             cirq.ResetChannel().on_each(qubit_a, qubit_b),
-        ]
+        ],
     )
     cost = lattice_estimator.serial_circuit_cost(circuit=circuit, pretty=True)
     assert cost == {
@@ -190,7 +190,7 @@ def test_error_handling(lattice_estimator, movement_estimator) -> None:
             cirq.S.on(qubit_a),
             cirq.Rx(rads=1 / 3).on(qubit_b),
             cirq.CNOT.on(qubit_a, qubit_b),
-        ]
+        ],
     )
     with pytest.raises(ValueError, match="incompatible"):
         _ = movement_estimator.serial_circuit_cost(bad_circuit)
@@ -210,7 +210,7 @@ def test_critical_path() -> None:
     arc = arch.DefaultMovement()
     estim = est.ResourceEstimator(arc)
     # Should be identical aside from floating point errors
-    assert isclose(estim.serial_circuit_time(c1), estim.serial_circuit_time(c2), atol=1e-5)
+    assert np.isclose(estim.serial_circuit_time(c1), estim.serial_circuit_time(c2), atol=1e-5)
 
     qa, qb = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit(
@@ -228,7 +228,7 @@ def test_critical_path() -> None:
             cirq.S.on(qb),
             cirq.H.on(qb),
             cirq.H.on(qb),
-        ]
+        ],
     )
     with pytest.warns(UserWarning, match="very expensive"):
         cp = estim.critical_path(circuit)
@@ -246,7 +246,7 @@ def test_critical_path() -> None:
     ]
     assert cp == expected
     assert estim.parallel_circuit_time(circuit=circuit) == estim.parallel_circuit_time(
-        circuit=cirq.Circuit(expected)
+        circuit=cirq.Circuit(expected),
     )
 
     # Test that critical path for distillation circuits are as expected
@@ -266,7 +266,7 @@ def test_physical_qubit_count(lattice_estimator) -> None:
         [
             cirq.I.on(cirq.GridQubit(0, 0)),
             lsp.SyndromeExtract(1, rounds=7).on(cirq.GridQubit(1, 0)),
-        ]
+        ],
     )
     expected_num_physical_qubits = 98  # 2 * (2 * d**2 - 1)
     num_physical_qubits = lattice_estimator.physical_qubits(test_circuit)
