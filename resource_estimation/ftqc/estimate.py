@@ -14,13 +14,10 @@
 from __future__ import annotations
 
 import collections
-import functools
 import warnings
-
-from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar
 
 import cirq
 import networkx as nx
@@ -62,7 +59,7 @@ class ResourceEstimator:
         """Counts up the total physical gates from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
         cost = collections.Counter()
-        for op in tqdm.tqdm(
+        for op in tqdm(
             circuit.all_operations(),
             total=len(list(circuit.all_operations())),
             colour="cyan",
@@ -87,7 +84,7 @@ class ResourceEstimator:
         """Estimation of the critical path in the input circuit according to the most expensive operation per moment"""
         qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
         total_ops = len(list(circuit.all_operations()))
-        for op in tqdm.tqdm(
+        for op in tqdm(
             circuit.all_operations(), disable=not verbose, total=total_ops, colour="cyan"
         ):
             big_time = max(qubit_times[q] for q in op.qubits)
@@ -106,7 +103,7 @@ class ResourceEstimator:
         qubit_paths = {qubit: [] for qubit in circuit.all_qubits()}
         qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
         total_ops = len(list(circuit.all_operations()))
-        for op in tqdm.tqdm(
+        for op in tqdm(
             circuit.all_operations(),
             disable=not verbose,
             total=total_ops,
@@ -136,7 +133,7 @@ class ResourceEstimator:
         qubit_paths = {qubit: collections.Counter() for qubit in circuit.all_qubits()}
         qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
         total_ops = len(list(circuit.all_operations()))
-        for op in tqdm.tqdm(
+        for op in tqdm(
             circuit.all_operations(), disable=not verbose, total=total_ops, colour="cyan"
         ):
             op_qubits = op.qubits
