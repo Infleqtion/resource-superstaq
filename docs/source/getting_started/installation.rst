@@ -6,7 +6,7 @@ It is not distributed as a package on PyPI.
 
 Requirements
 ------------
-Python 3.11 is recommended because it is the version used by the project's
+Python 3.14 is recommended because it is the version used by the project's
 continuous integration tests.
 
 Clone the repository
@@ -22,34 +22,22 @@ Clone the repository and enter its root directory:
 Create an environment
 ---------------------
 
-Create a Python 3.11 virtual environment.
+Create a Python 3.14 virtual environment.
 
 On macOS or Linux:
 
 .. code-block:: console
 
-   python3.11 -m venv .venv
+   python3.14 -m venv .venv
    source .venv/bin/activate
 
 On Windows PowerShell:
 
 .. code-block:: powershell
 
-   py -3.11 -m venv .venv
+   py -3.14 -m venv .venv
    .\.venv\Scripts\Activate.ps1
 
-.. note::
-
-   Conda is not required. If you already use Conda, you can instead create and
-   activate a Python 3.11 environment with:
-
-   .. code-block:: console
-
-      conda create -n resource-superstaq python=3.11
-      conda activate resource-superstaq
-
-   After activating the environment, continue with the installation commands
-   below.
 
 Install the repository
 ----------------------

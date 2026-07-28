@@ -102,7 +102,7 @@ Its compilation and postprocessing steps include:
 * Aligning the resulting circuit and synchronizing terminal measurements.
 
 For the computational portion of the circuit, the resulting representation is
-built from operations such as:
+built from the following operations:
 
 * H
 * S
