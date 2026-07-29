@@ -28,7 +28,6 @@ from resource_estimation.ftqc.layout import (
     MovementDistillery,
     MovementLayout,
 )
-import random
 
 
 @pytest.fixture
@@ -54,11 +53,6 @@ def random_circ() -> cirq.Circuit:
         gate_domain={cirq.H: 1, cirq.CNOT: 2, cirq.T: 1, cirq.S: 1},
         random_state=73,
     )
-
-
-@pytest.fixture()
-def set_random_seed():
-    random.seed(73)
 
 
 @pytest.mark.parametrize(
@@ -283,36 +277,17 @@ def test_deterministic_compilation(random_circ) -> None:
     cirq.testing.assert_has_diagram(compiled1, str(compiled2))
 
 
-def test_nondeterministic_compilation_sane(random_circ, set_random_seed) -> None:
+def test_nondeterministic_compilation_same(random_circ) -> None:
     circuit = random_circ
-    lay = Column(circuit)
-    arc = arch.DefaultLattice()
+    lay = MovementLayout(circuit)
+    arc = arch.DefaultMovement()
     compiled1 = comp.ft_compile(lay, arc, dynamic=False)
     compiled2 = comp.ft_compile(lay, arc, dynamic=True)
-    assert len(list(compiled2.all_operations())) < len(list(compiled1.all_operations()))
-
-
-# def test_nondeterministic_compilation_accurate(random_circ, set_random_seed) -> None:
-#     circuit = random_circ
-#     lay = Column(circuit)
-#     op = cirq.T.on(cirq.LineQubit(0))
-#     determnistic_S = 0
-#     dynamic_S = 0
-#     # Surely this is fast right??
-#     for i in range(10000):
-#         deterministic_ops = comp.teleport_resource(op, lay, dynamic=False)
-#         dynamic_ops = comp.teleport_resource(op, lay, dynamic=True)
-#         for op in deterministic_ops:
-#             if op.gate in cirq.GateFamily(cirq.S):
-#                 determnistic_S += 1
-#         dynamic_ops = comp.teleport_resource(op, lay, dynamic=True)
-#         for op in dynamic_ops:
-#             if op.gate in cirq.GateFamily(cirq.S):
-#                 dynamic_S += 1
-#     # Also possibly questionable
-#     assert dynamic_S / determnistic_S >= 0.48
-#     assert dynamic_S / determnistic_S <= 0.52
-#
+    # We expect there to be tagged operations, but otherwise no difference should be there
+    assert compiled1 != compiled2
+    cirq.testing.assert_has_diagram(
+        compiled1, str(cirq.remove_tags(compiled2, remove_if=lambda tag: True))
+    )
 
 
 def test_other_passes(random_circ) -> None:

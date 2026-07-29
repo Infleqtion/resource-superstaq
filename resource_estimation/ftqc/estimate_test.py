@@ -17,7 +17,7 @@ from math import pi
 import cirq
 import pytest
 from numpy import isclose
-
+import random
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
@@ -258,6 +258,44 @@ def test_critical_path() -> None:
         path2 = estim.critical_path(ccz_distilled)
         assert all(op in cirq.GateFamily(expected) for op, expected in zip(path1, expected_types))
         assert all(op in cirq.GateFamily(expected) for op, expected in zip(path2, expected_types))
+
+
+def test_dynamic_resource_counts() -> None:
+    # If this test is flaky double check that `random.seed` actually makes randint calls
+    # deterministic, or if it always fails maybe change the seed
+    # Expected sequence of calls: 1,0,1,0,1,1 (1 is no cost, 0 is cost)
+    # There may be a better way of doing this than just testing numbers in ipython lol
+    # Could also just divide things by 2
+    # This is not the most ideal test ever
+    random.seed(73)
+    arc = arch.DefaultMovement()
+    qubit = cirq.GridQubit(0, 0)
+    op: cirq.Operation = cirq.S.on(qubit)
+    normal_s_cost = arc.gate_cost(op)
+    ops_and_expectations = [(op.with_tags(*["Dynamic"]), {}), (op, normal_s_cost)]
+    for op, expectation in ops_and_expectations:
+        cost = arc.gate_cost(op)
+        assert expectation == cost
+    ops_and_expectations = [(op.with_tags(*["Dynamic"]), normal_s_cost), (op, normal_s_cost)]
+    for op, expectation in ops_and_expectations:
+        cost = arc.gate_cost(op)
+        assert expectation == cost
+
+    normal_s_time = arc.op_time(op)
+    ops_and_times = [(op.with_tags(*["Dynamic"]), 0.0), (op, normal_s_time)]
+    for (
+        op,
+        expectation,
+    ) in ops_and_times:
+        time = arc.op_time(op)
+        assert isclose(time, expectation)
+    ops_and_times = [(op.with_tags(*["Dynamic"]), normal_s_time), (op, normal_s_time)]
+    for (
+        op,
+        expectation,
+    ) in ops_and_times:
+        time = arc.op_time(op)
+        assert isclose(time, expectation)
 
 
 def test_physical_qubit_count(lattice_estimator) -> None:

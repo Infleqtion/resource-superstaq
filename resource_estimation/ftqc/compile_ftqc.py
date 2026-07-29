@@ -32,7 +32,6 @@ import cirq
 import cirq_superstaq as css
 from cirq_superstaq import Barrier, barrier
 from tqdm import tqdm
-import random
 
 from . import lattice_surgery_primitives as lsp
 from .layout import Layout
@@ -141,6 +140,7 @@ def teleport_resource(
         ftype = "ccz"
         prep_gate = lsp.Distil("CCZ")
         # Since CNOT is the logical primitve, we use conjugation here
+        # TODO: Is this also a non-deterministic operation?
         correction = [
             *cirq.H.on_each(*op.qubits),
             *cirq.X.on_each(*op.qubits),
@@ -163,21 +163,19 @@ def teleport_resource(
     # These should be tuples of qubits
     routed_factory = layout.nearest_factory(op.qubits, ftype=ftype)
     cnots, measurements, resets = [], [], []
-    # I think the S gates that are corrections for T gates have to be dynamically compiled here.
-    # If we instead try to just halve the resources taken up by the particular S gate, then this
-    # still uses up an S factory, which will then be difficult to account for in terms of like
-    # routing/factory management, since then a future S gate might cause a factory reset when there
-    # actually was a factory available since we didn't need to perform that S gate and so on. So it
-    # seems like we need to flip a coin here (probably with some sort of dynamic flag that is false
-    # by default) on if we actually add this S gate or not. That way as well, things only need to
-    # change in compile_ftqc, and everything below it in the stack can be left alone
-    corrections = correction if isinstance(correction, list) else [correction.on(*op.qubits)]
-    # 50% of the time, it works every time: we don't have to do an S gate correction on a T gate or
-    # a Z gate correction on an S gate (though the Z gate correction is very minimal in resources)
-    if dynamic and cultivate_t and random.randint(0, 1):
-        corrections = []
-    if dynamic and cultivate_s and random.randint(0, 1):
-        corrections = []
+
+    corrections: list[cirq.Operation] = (
+        correction if isinstance(correction, list) else [correction.on(*op.qubits)]
+    )
+    if dynamic:
+        tagged_corrections = []
+        for operation in corrections:
+            tagged_corrections.append(operation.with_tags(*["Dynamic"]))
+        corrections = tagged_corrections
+        if cultivate_s:  # pragma: no cover
+            warn(
+                "Dynamic corrections for S cultivations layouts (lattice suergery) are not implemented"
+            )
     for factory_qubit, program_qubit in zip(routed_factory, op.qubits):
         cnots.append(cirq.CNOT.on(factory_qubit, program_qubit))
         measurements.append(cirq.MeasurementGate(1, key="").on(factory_qubit))

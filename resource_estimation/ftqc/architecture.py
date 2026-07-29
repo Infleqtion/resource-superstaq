@@ -18,6 +18,7 @@ from collections import Counter
 from functools import cached_property, lru_cache, cache
 from math import ceil
 from pathlib import Path
+from random import randint
 
 import cirq
 import numpy as np
@@ -259,7 +260,7 @@ class Architecture(abc.ABC):
     # These should never be overwritten
     def gate_cost(self, op: cirq.Operation) -> dict[type[cirq.Gate], int]:
         try:
-            return self.op_cost[type(op.gate)](op)["gate_cost"]
+            return self.op_cost[type(op.untagged.gate)](op)["gate_cost"]
         except KeyError:
             raise ValueError("Gate not recognized")
 
@@ -667,6 +668,10 @@ class DefaultMovement(Architecture):
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     def s_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
+        # 50% of the time, it works every time
+        # Could also just divide by 2 every time and have no randint
+        if op.tags and op.tags[0] == "Dynamic" and randint(0, 1):
+            return {"op_time": 0.0, "gate_cost": {}, "moment_cost": {}}
         return self._s_cost
 
     @cached_property
