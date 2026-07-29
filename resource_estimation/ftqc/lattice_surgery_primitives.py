@@ -509,6 +509,14 @@ class CodePatch:
         """Return the number of Z-type stabilizer checks for CSS qLDPC codes."""
         return self._qldpc_css_check_count("z")
 
+    def total_x_syndrome_cnots(self) -> int:
+        """Return the data-check interactions needed to measure all X stabilizers."""
+        return self._qldpc_css_interaction_count("x")
+
+    def total_z_syndrome_cnots(self) -> int:
+        """Return the data-check interactions needed to measure all Z stabilizers."""
+        return self._qldpc_css_interaction_count("z")
+
     def _qldpc_css_check_count(self, pauli: Literal["x", "z"]) -> int:
         attr = f"num_checks_{pauli}"
         if hasattr(self.qldpc_code, attr):
@@ -517,6 +525,13 @@ class CodePatch:
         matrix = getattr(self.qldpc_code, f"matrix_{pauli}", None)
         if matrix is not None and getattr(matrix, "shape", None) is not None:
             return int(matrix.shape[0])
+
+        raise self._unsupported_stabilizer_count_error()
+
+    def _qldpc_css_interaction_count(self, pauli: Literal["x", "z"]) -> int:
+        matrix = getattr(self.qldpc_code, f"matrix_{pauli}", None)
+        if matrix is not None and getattr(matrix, "shape", None) is not None:
+            return len(matrix.nonzero()[0])
 
         raise self._unsupported_stabilizer_count_error()
 

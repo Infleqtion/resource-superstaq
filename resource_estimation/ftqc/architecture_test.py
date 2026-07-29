@@ -42,6 +42,22 @@ def test_architecture_exceptions(lattice_architecture, movement_architecture) ->
         _ = lattice_architecture.cultivate_cost(lsp.Cultivate(1).on(cirq.GridQubit(0, 0)))
 
 
+def test_architecture_uses_surface_code_patch(
+    lattice_architecture: arch.DefaultLattice,
+    movement_architecture: arch.DefaultMovement,
+) -> None:
+    for architecture in (lattice_architecture, movement_architecture):
+        assert isinstance(architecture.patch, lsp.CodePatch)
+        assert architecture.patch.code_params == (49, 1, 7)
+        assert architecture.patch.patch_label == "compute"
+        assert len(architecture.patch.logical_qubits) == 1
+
+
+def test_architecture_rejects_even_code_distance() -> None:
+    with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
+        arch.DefaultLattice(d=4)
+
+
 def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
     # TODO: Brainstorm a better way to test this feature
     actual_op_cost = lattice_architecture.cultivate_cost(
@@ -49,7 +65,9 @@ def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
     )
     # Tests that the parallel gates are counted correctly
     se_moment_cost = Counter(
-        arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["moment_cost"]
+        arch._syndrome_extract_cost(
+            rounds=4, num_logical_qubits=1, patch=lattice_architecture.patch
+        )["moment_cost"]
     )
     expected_Y_moment_cost = Counter(
         {cirq.PhasedXZGate: 10, cirq.CZ: 10, cirq.MeasurementGate: 2, cirq.ResetChannel: 2}
@@ -60,10 +78,14 @@ def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
     # Tests that the serial gates are counted correctly
     # It does continue the assumption that we can just use a syndrome extraction cycle to approximate the total cost
     se_gate_cost = Counter(
-        arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"]
+        arch._syndrome_extract_cost(
+            rounds=4, num_logical_qubits=1, patch=lattice_architecture.patch
+        )["gate_cost"]
     )
     expected_Y_gate_cost = Counter(
-        arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"]
+        arch._syndrome_extract_cost(
+            rounds=4, num_logical_qubits=1, patch=lattice_architecture.patch
+        )["gate_cost"]
     )
     expected_gate_cost = expected_Y_gate_cost + se_gate_cost + expected_Y_gate_cost
     expected_gate_cost += {cirq.CZ: 2 * (7 - 1)}
@@ -119,19 +141,17 @@ def test_movement_gate_costs(d) -> None:
     # Check Syndrome on single qubit
     op = lsp.SyndromeExtract(1, 1).on(qubit_a)
     cost = arc.gate_cost(op)
+    phased_xz_gates = 2 * (
+        arc.patch.total_x_syndrome_cnots()
+        + arc.patch.num_x_stabs()
+        + arc.patch.num_z_stabs()
+    )
     assert cost == {
         cirq.CZ: arc.patch.total_z_syndrome_cnots() + arc.patch.total_x_syndrome_cnots(),
         cirq.QubitPermutationGate: 10,
         cirq.MeasurementGate: arc.patch.num_measure_qubits,
         cirq.ResetChannel: arc.patch.num_measure_qubits,
-        cirq.PhasedXZGate: (
-            (10 * arc.patch.num_x_stabs(full=True))  # 5 Hadamards on left and 5 Hadamards on right
-            + (2 * arc.patch.num_z_stabs(full=True))  # 1 Hadamard on left and 1 Hadamard on right
-            + (
-                6 * arc.patch.num_x_stabs(full=False)
-            )  # 3 Hadamards on left and 3 Hadamards on right
-            + (2 * arc.patch.num_z_stabs(full=False))  # 1 Hadamard on left and 1 Hadamard on right
-        ),
+        cirq.PhasedXZGate: phased_xz_gates,
     }
 
     # Check Syndrome on two qubits
@@ -142,15 +162,7 @@ def test_movement_gate_costs(d) -> None:
         cirq.QubitPermutationGate: 10,
         cirq.MeasurementGate: arc.patch.num_measure_qubits * 2,
         cirq.ResetChannel: arc.patch.num_measure_qubits * 2,
-        cirq.PhasedXZGate: 2
-        * (
-            (10 * arc.patch.num_x_stabs(full=True))  # 5 Hadamards on left and 5 Hadamards on right
-            + (2 * arc.patch.num_z_stabs(full=True))  # 1 Hadamard on left and 1 Hadamard on right
-            + (
-                6 * arc.patch.num_x_stabs(full=False)
-            )  # 3 Hadamards on left and 3 Hadamards on right
-            + (2 * arc.patch.num_z_stabs(full=False))  # 1 Hadamard on left and 1 Hadamard on right
-        ),
+        cirq.PhasedXZGate: 2 * phased_xz_gates,
     }
 
     # Check S gate

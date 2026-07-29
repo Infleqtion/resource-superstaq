@@ -132,6 +132,8 @@ def test_code_patch_surface_metadata() -> None:
     assert patch.num_physical_qubits == 97
     assert patch.num_x_stabs() == 24
     assert patch.num_z_stabs() == 24
+    assert patch.total_x_syndrome_cnots() == 84
+    assert patch.total_z_syndrome_cnots() == 84
     assert patch.patch_label == "compute"
     assert patch.is_qldpc_backed
     assert len(patch.logical_qubits) == 1
@@ -145,6 +147,8 @@ def test_code_patch_surface_metadata() -> None:
     assert patch.code_params == (25, 1, 5)
     assert patch.num_data_qubits == 25
     assert patch.num_measure_qubits == 24
+    assert patch.total_x_syndrome_cnots() == 40
+    assert patch.total_z_syndrome_cnots() == 40
     assert patch.patch_label == "cultivate"
     assert patch.is_qldpc_backed
     assert len(patch.logical_qubits) == 1
@@ -163,6 +167,8 @@ def test_code_patch_surface_stabilizer_metadata_matches_qldpc() -> None:
 
         assert patch.num_x_stabs() == qldpc_code.num_checks_x
         assert patch.num_z_stabs() == qldpc_code.num_checks_z
+        assert patch.total_x_syndrome_cnots() == len(qldpc_code.matrix_x.nonzero()[0])
+        assert patch.total_z_syndrome_cnots() == len(qldpc_code.matrix_z.nonzero()[0])
 
 
 def test_code_patch_logical_qubits_from_css_logical_support() -> None:
@@ -233,6 +239,10 @@ def test_code_patch_non_css_stabilizer_metadata_errors() -> None:
         patch.num_x_stabs()
     with pytest.raises(ValueError, match="X/Z stabilizer counts"):
         patch.num_z_stabs()
+    with pytest.raises(ValueError, match="X/Z stabilizer counts"):
+        patch.total_x_syndrome_cnots()
+    with pytest.raises(ValueError, match="X/Z stabilizer counts"):
+        patch.total_z_syndrome_cnots()
 
 
 def test_code_patch_qldpc_css_stabilizer_metadata() -> None:
