@@ -99,7 +99,7 @@ def count_stim_resources(
 
 def load_saved_cost(
     dsurface: int,
-    op_key: typing.Literal["cultivate", "cnot", "memory_d_rounds", "memory_1_round"],
+    op_key: typing.Literal["cultivate"],
     style: typing.Literal[None, "gidney", "yale"] = None,
     fault_distance: typing.Literal[None, 3, 5] = None,
 ) -> dict[typing.Literal["serial", "parallel"], collections.Counter[cirq.Gate, int]]:
@@ -107,17 +107,13 @@ def load_saved_cost(
     Gets saved serial and parallel costs from the `cultivate_costs.json` file
     Converts saved strings to proper cirq gate objects
     """
-    if op_key == "cultivate" and style is None:
+    if style is None:
         raise ValueError("Style cannot be None for cultivation")
-    if op_key == "cultivate" and fault_distance is None:
+    if fault_distance is None:
         raise ValueError("Fault distance cannot be None for cultivation")
     with open(DATA_DIR / "cultivate_costs.json") as f:
         saved_costs = json.load(f)
-    loaded_costs = (
-        saved_costs[str(dsurface)][op_key][style][str(fault_distance)]
-        if op_key == "cultivate"
-        else saved_costs[str(dsurface)][op_key]
-    )
+    loaded_costs = saved_costs[str(dsurface)][op_key][style][str(fault_distance)]
     # Check to make sure there are no out of bounds gates saved
     assert all(k in STR2GATE for k in loaded_costs.get("serial"))
     assert all(k in STR2GATE for k in loaded_costs.get("parallel"))
