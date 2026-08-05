@@ -14,10 +14,31 @@
 from math import pi
 
 import cirq
-from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
+from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate, MagicStateCodeTeleport
 
 
-def distil_15_to_1() -> cirq.Circuit:
+T_DISTILLATION_INPUTS = 15
+T_DISTILLATION_PROTOCOL_PATCHES = 16
+CCZ_DISTILLATION_INPUTS = 8
+CCZ_DISTILLATION_PROTOCOL_PATCHES = 15
+
+
+def _insert_magic_state_code_teleports(circuit: cirq.Circuit) -> cirq.Circuit:
+    """Insert one parallel code-transfer stage after every cultivation stage."""
+    adapted = cirq.Circuit()
+    for moment in circuit:
+        adapted.append(moment)
+        cultivated_qubits = [
+            operation.qubits[0]
+            for operation in moment.operations
+            if isinstance(operation.gate, Cultivate)
+        ]
+        if cultivated_qubits:
+            adapted.append(cirq.Moment(MagicStateCodeTeleport().on_each(*cultivated_qubits)))
+    return adapted
+
+
+def distil_15_to_1(*, adapt_cultivated_inputs: bool = False) -> cirq.Circuit:
     """Generates a 15-to-1 non-recursive distillation circuit.
     The circuit is a compact version of the one in https://github.com/Infleqtion/client-superstaq/blob/main/cirq-superstaq/cirq_superstaq/circuits/msd.py
     T gates are produced via cultivation.
@@ -31,8 +52,8 @@ def distil_15_to_1() -> cirq.Circuit:
     C6  Q6  Q14  C14
     C7  Q7    F  <- Output Factory Qubit
     """
-    qubits = cirq.LineQubit.range(15) + [cirq.NamedQubit("F")]
-    cults = [cirq.NamedQubit(f"C{i}") for i in range(15)]
+    qubits = cirq.LineQubit.range(T_DISTILLATION_INPUTS) + [cirq.NamedQubit("F")]
+    cults = [cirq.NamedQubit(f"C{i}") for i in range(T_DISTILLATION_INPUTS)]
     exp = cirq.Circuit(
         [
             cirq.ResetChannel().on_each(*qubits),
@@ -98,10 +119,14 @@ def distil_15_to_1() -> cirq.Circuit:
         qmap[q] = cirq.GridQubit(row, col1)
         qmap[f] = cirq.GridQubit(row, col2)
     mapped_circuit = cirq.Circuit(moment.transform_qubits(qmap) for moment in exp)
-    return mapped_circuit
+    return (
+        _insert_magic_state_code_teleports(mapped_circuit)
+        if adapt_cultivated_inputs
+        else mapped_circuit
+    )
 
 
-def ccz_8_to_1() -> cirq.Circuit:
+def ccz_8_to_1(*, adapt_cultivated_inputs: bool = False) -> cirq.Circuit:
     """Function to perform a 8-to-1 CCZ magic state distillation.
        Takes eight Ts to make one CCZ
        Reference: http://arxiv.org/abs/1812.01238 page 7 figure 5.
@@ -116,8 +141,8 @@ def ccz_8_to_1() -> cirq.Circuit:
         The magic state distillation circuit.
     """
     cir = cirq.Circuit()
-    qubits = cirq.LineQubit.range(15)
-    cults = [cirq.NamedQubit(f"C{i}") for i in range(8)]
+    qubits = cirq.LineQubit.range(CCZ_DISTILLATION_PROTOCOL_PATCHES)
+    cults = [cirq.NamedQubit(f"C{i}") for i in range(CCZ_DISTILLATION_INPUTS)]
 
     for q in qubits:
         cir.append(cirq.reset(q))
@@ -175,4 +200,8 @@ def ccz_8_to_1() -> cirq.Circuit:
     qmap[cults[7]] = cirq.GridQubit(4, 3)
 
     mapped_circuit = cirq.Circuit(moment.transform_qubits(qmap) for moment in cir)
-    return mapped_circuit
+    return (
+        _insert_magic_state_code_teleports(mapped_circuit)
+        if adapt_cultivated_inputs
+        else mapped_circuit
+    )

@@ -167,7 +167,7 @@ def teleport_resource(
         layout.reload_factories(ftype=ftype)
     # These should be tuples of qubits
     routed_factory = layout.nearest_factory(op.qubits, ftype=ftype)
-    if ftype == "t" and magic_state_code_teleport:
+    if ftype == "t" and magic_state_code_teleport and not distil:
         operations.append(cirq.Moment(lsp.MagicStateCodeTeleport().on_each(*routed_factory)))
     cnots, measurements, resets = [], [], []
     corrections = [correction.on(*op.qubits)]
@@ -410,11 +410,6 @@ def ft_compile(
         raise ValueError(
             "Magic-state code teleportation is currently supported only with MovementLayout."
         )
-    if arc.requires_magic_state_code_teleport and hasattr(layout, "distil"):
-        raise NotImplementedError(
-            "Magic-state code teleportation currently supports cultivated T factories only."
-        )
-
     # TODO: Aligning left results in circuits that have are more expensive in terms of circuit time than not aligning left. This is probably the result of requesting a layer of parallel cultivations but realigning so the expensive cultivation operations become spread out over multiple moments. It is currently unclear if aligning left is correct or not in general, but the specific tests for ft_compile very much rely on it...
     layout = copy.deepcopy(layout)
     layout.reset_graph()

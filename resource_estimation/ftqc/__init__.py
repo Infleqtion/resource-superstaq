@@ -29,7 +29,6 @@ from resource_estimation.ftqc.compile_ftqc import (
     teleport_resource,
     validate_ops,
 )
-from resource_estimation.ftqc.distil import distil_15_to_1
 from resource_estimation.ftqc.estimate import ReactionDepthEstimator, ResourceEstimator
 from resource_estimation.ftqc.lattice_surgery_primitives import (
     Bank,
@@ -57,6 +56,7 @@ from resource_estimation.ftqc.layout import (
     Embedded,
     FactorySandwich,
     Layout,
+    MovementDistillery,
     MovementLayout,
 )
 from resource_estimation.ftqc.stim_functions import (
@@ -90,6 +90,7 @@ __all__ = [
     "MagicStateCodeTeleport",
     "Merge",
     "MeasureZonesOnly",
+    "MovementDistillery",
     "MovementLayout",
     "Move",
     "ReactionDepthEstimator",

@@ -134,6 +134,65 @@ def test_generic_css_movement_compilation_keeps_surface_t_cultivation() -> None:
     assert injection.qubits == (program_qubit, factory_qubit)
 
 
+def test_generic_css_movement_distillery_adapts_inputs_not_output() -> None:
+    qubit = cirq.LineQubit(0)
+    circuit = cirq.Circuit(cirq.T(qubit))
+    architecture = arch.DefaultMovement(
+        patch=lsp.CodePatch("steane"),
+        patch_span=4,
+        idling=False,
+        post_op_correction=False,
+        t_state_transfer_rounds=1,
+    )
+    layout = MovementDistillery(circuit, num_t_factories=1)
+
+    compiled = comp.ft_compile(layout, architecture, verbose=0)
+    operations = list(compiled.all_operations())
+    distillation = next(
+        operation
+        for operation in operations
+        if isinstance(operation.gate, lsp.Distil) and operation.gate._resource == "T"
+    )
+
+    # The input adapters live inside the Distil resource circuit.  Its output is already in the
+    # Steane compute code, so the top-level program circuit must not adapt it a second time.
+    assert not any(
+        isinstance(operation.gate, lsp.MagicStateCodeTeleport) for operation in operations
+    )
+    factory_qubit = distillation.qubits[-1]
+    program_qubit = next(iter(layout.mapped_circuit.all_qubits()))
+    injection = next(
+        operation
+        for operation in operations
+        if operation.gate == cirq.CNOT and factory_qubit in operation.qubits
+    )
+    assert injection.qubits == (program_qubit, factory_qubit)
+
+
+def test_generic_css_movement_ccz_distillery_compiles_without_output_adapter() -> None:
+    qubits = cirq.LineQubit.range(3)
+    circuit = cirq.Circuit(cirq.TOFFOLI(*qubits))
+    architecture = arch.DefaultMovement(
+        patch=lsp.CodePatch("steane"),
+        patch_span=4,
+        idling=False,
+        post_op_correction=False,
+        t_state_transfer_rounds=1,
+    )
+    layout = MovementDistillery(circuit, num_toff_factories=1)
+
+    compiled = comp.ft_compile(layout, architecture, verbose=0)
+    operations = list(compiled.all_operations())
+
+    assert any(
+        isinstance(operation.gate, lsp.Distil) and operation.gate._resource == "Toffoli"
+        for operation in operations
+    )
+    assert not any(
+        isinstance(operation.gate, lsp.MagicStateCodeTeleport) for operation in operations
+    )
+
+
 def test_surface_movement_compilation_does_not_adapt_t_state() -> None:
     qubit = cirq.LineQubit(0)
     layout = MovementLayout(cirq.Circuit(cirq.T(qubit)))
