@@ -99,6 +99,26 @@ def test_end2end(with_barriers) -> None:
             assert is_primitive
 
 
+def test_generic_css_movement_compilation_keeps_surface_t_cultivation() -> None:
+    q0, q1 = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
+    circuit = cirq.Circuit(
+        cirq.H(q0),
+        cirq.CNOT(q0, q1),
+        cirq.T(q1),
+        cirq.S(q0),
+        cirq.measure(q0, q1),
+    )
+    architecture = arch.DefaultMovement(patch=lsp.CodePatch("steane"), patch_span=4, idling=False)
+    layout = MovementLayout(input_circuit=circuit, num_t_factories=1)
+
+    compiled = comp.ft_compile(layout, architecture, with_barriers=False)
+
+    operations = list(compiled.all_operations())
+    assert all(architecture.primitives.validate(op) for op in operations)
+    assert any(isinstance(op.gate, lsp.Cultivate) for op in operations)
+    assert any(op in cirq.GateFamily(cirq.S) for op in operations)
+
+
 def test_direct_substitution() -> None:
     dummy_qubits = [cirq.GridQubit(i, j) for i in range(3) for j in range(3)]
     nothing_circuit = cirq.Circuit(cirq.I.on_each(dummy_qubits))

@@ -498,6 +498,28 @@ class CodePatch:
         return True
 
     @property
+    def is_binary(self) -> bool:
+        """Whether this patch is defined over the binary field."""
+        return getattr(self.qldpc_code.field, "order", None) == 2
+
+    @property
+    def is_css(self) -> bool:
+        """Whether this patch is backed by a qLDPC CSS code."""
+        codes = _import_qldpc()
+        return isinstance(self.qldpc_code, codes.CSSCode)
+
+    @property
+    def is_stabilizer_code(self) -> bool:
+        """Whether all checks of this patch commute."""
+        return not bool(self.qldpc_code.is_subsystem_code)
+
+    @property
+    def is_surface_code(self) -> bool:
+        """Whether this patch uses qLDPC's surface-code family."""
+        codes = _import_qldpc()
+        return isinstance(self.qldpc_code, codes.SurfaceCode)
+
+    @property
     def qldpc_code(self) -> Any:
         return self._qldpc_code
 

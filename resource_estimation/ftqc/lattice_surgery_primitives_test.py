@@ -136,6 +136,10 @@ def test_code_patch_surface_metadata() -> None:
     assert patch.total_z_syndrome_cnots() == 84
     assert patch.patch_label == "compute"
     assert patch.is_qldpc_backed
+    assert patch.is_binary
+    assert patch.is_css
+    assert patch.is_stabilizer_code
+    assert patch.is_surface_code
     assert len(patch.logical_qubits) == 1
     assert [qubit.label for qubit in patch.logical_qubits] == ["zero"]
     assert (
@@ -228,6 +232,10 @@ def test_code_patch_non_css_stabilizer_metadata_errors() -> None:
     assert patch.code_params == (5, 1, 3)
     assert patch.num_data_qubits == 5
     assert patch.num_measure_qubits == 4
+    assert patch.is_binary
+    assert not patch.is_css
+    assert patch.is_stabilizer_code
+    assert not patch.is_surface_code
     assert patch.is_qldpc_backed
     assert patch.patch_label == "distil"
     assert len(patch.logical_qubits) == 1
