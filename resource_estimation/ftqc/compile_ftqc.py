@@ -33,7 +33,7 @@ from cirq_superstaq import Barrier, barrier
 from tqdm import tqdm
 
 from . import lattice_surgery_primitives as lsp
-from .layout import Layout
+from .layout import Layout, MovementLayout
 
 # IMPORTANT NOTES
 # Classical control has not been implemented yet
@@ -90,6 +90,8 @@ def replace_cirq_op(
     op: cirq.Operation,
     layout: Layout,
     transversal_cnot: bool,
+    movement: bool = False,
+    magic_state_code_teleport: bool = False,
 ) -> list[cirq.Operation]:
     """Replacement logic similar to decomposition for cirq operations to be converted to primitives.
 
@@ -110,13 +112,24 @@ def replace_cirq_op(
             lsp.Split(partitions=[1] * (len(path_patches[1:])), smooth=False).on(*path_patches[1:]),
         ]
     if _requires_resource(op, transversal_cnot):
-        return teleport_resource(op, layout)
+        return teleport_resource(
+            op,
+            layout,
+            movement=movement,
+            magic_state_code_teleport=magic_state_code_teleport,
+        )
     raise ValueError(
         f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} gate: {op.gate}"
     )
 
 
-def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
+def teleport_resource(
+    op: cirq.Operation,
+    layout: Layout,
+    *,
+    movement: bool = False,
+    magic_state_code_teleport: bool = False,
+) -> list[cirq.Operation]:
     # Double check that these don't suffer from overlap!
     distil = hasattr(layout, "distil")
     if op in cirq.GateFamily(cirq.T):
@@ -154,10 +167,17 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
         layout.reload_factories(ftype=ftype)
     # These should be tuples of qubits
     routed_factory = layout.nearest_factory(op.qubits, ftype=ftype)
+    if ftype == "t" and magic_state_code_teleport and not distil:
+        operations.append(cirq.Moment(lsp.MagicStateCodeTeleport().on_each(*routed_factory)))
     cnots, measurements, resets = [], [], []
     corrections = [correction.on(*op.qubits)]
     for factory_qubit, program_qubit in zip(routed_factory, op.qubits):
-        cnots.append(cirq.CNOT.on(factory_qubit, program_qubit))
+        if ftype == "t" and movement:
+            # Standard |T> injection uses the program as control and the encoded magic state
+            # as target. The CNOT cost is symmetric, but the direction matters semantically.
+            cnots.append(cirq.CNOT.on(program_qubit, factory_qubit))
+        else:
+            cnots.append(cirq.CNOT.on(factory_qubit, program_qubit))
         measurements.append(cirq.MeasurementGate(1, key="").on(factory_qubit))
         resets.append(cirq.ResetChannel().on(factory_qubit))
     operations += [
@@ -318,7 +338,13 @@ def _decompose_to_primitives(
     transversal_cnot = cirq.CX in primitives
 
     def _map_fn(op: cirq.Operation) -> list[cirq.Operation]:
-        return replace_cirq_op(op=op, layout=layout, transversal_cnot=transversal_cnot)
+        return replace_cirq_op(
+            op=op,
+            layout=layout,
+            transversal_cnot=transversal_cnot,
+            movement=arc.movement,
+            magic_state_code_teleport=arc.requires_magic_state_code_teleport,
+        )
 
     # TODO: can we turn layout into a decomposition_context?
     ops = cirq.decompose(
@@ -380,6 +406,10 @@ def ft_compile(
     The passes available are post op correction and idling.
     The architecture is also the source of information for how many rounds of syndrome extraction should be performed when syndrome extraction is called for.
     """
+    if arc.requires_magic_state_code_teleport and not isinstance(layout, MovementLayout):
+        raise ValueError(
+            "Magic-state code teleportation is currently supported only with MovementLayout."
+        )
     # TODO: Aligning left results in circuits that have are more expensive in terms of circuit time than not aligning left. This is probably the result of requesting a layer of parallel cultivations but realigning so the expensive cultivation operations become spread out over multiple moments. It is currently unclear if aligning left is correct or not in general, but the specific tests for ft_compile very much rely on it...
     layout = copy.deepcopy(layout)
     layout.reset_graph()

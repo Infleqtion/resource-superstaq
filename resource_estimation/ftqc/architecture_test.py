@@ -13,17 +13,20 @@
 # limitations under the License.
 import json
 import os
+import warnings
 from collections import Counter
 from math import ceil, pi
 
 import cirq
 import numpy as np
 import pytest
+import stim
 from cirq_superstaq import ParallelRGate
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+from resource_estimation.ftqc.logical_operations import CSSLogicalOperations
 from resource_estimation.ftqc.stim_functions import cultivate, load_saved_cost
 
 
@@ -56,6 +59,289 @@ def test_architecture_uses_surface_code_patch(
 def test_architecture_rejects_even_code_distance() -> None:
     with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
         arch.DefaultLattice(d=4)
+
+
+@pytest.fixture(scope="module")
+def steane_patch() -> lsp.CodePatch:
+    return lsp.CodePatch("steane")
+
+
+@pytest.fixture(scope="module")
+def steane_operations(steane_patch: lsp.CodePatch) -> CSSLogicalOperations:
+    return CSSLogicalOperations.from_circuits(
+        steane_patch,
+        h_circuit=stim.Circuit("H 0 1 2 3 4 5 6"),
+        s_circuit=stim.Circuit("S_DAG 0 1 2 3 4 5 6"),
+    )
+
+
+def test_generic_css_movement_costs(
+    steane_patch: lsp.CodePatch, steane_operations: CSSLogicalOperations
+) -> None:
+    arc = arch.DefaultMovement(
+        patch=steane_patch, logical_operations=steane_operations, patch_span=4
+    )
+    qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
+
+    assert arc.d == 3
+    assert arc.patch is steane_patch
+    assert arc.gate_cost(cirq.H(qubit_a)) == {cirq.PhasedXZGate: 7}
+    assert arc.moment_cost(cirq.H(qubit_a)) == {cirq.PhasedXZGate: 1}
+    assert arc.gate_cost(cirq.S(qubit_a)) == {cirq.PhasedXZGate: 7}
+    assert arc.moment_cost(cirq.S(qubit_a)) == {cirq.PhasedXZGate: 1}
+    assert arc.gate_cost(cirq.CNOT(qubit_a, qubit_b)) == {
+        cirq.CZ: 7,
+        cirq.PhasedXZGate: 14,
+    }
+
+    syndrome = lsp.SyndromeExtract(1, 1)(qubit_a)
+    assert arc.gate_cost(syndrome) == {
+        cirq.MeasurementGate: 6,
+        cirq.ResetChannel: 6,
+        cirq.CZ: 24,
+        cirq.PhasedXZGate: 36,
+        cirq.QubitPermutationGate: 14,
+    }
+    assert arc.moment_cost(syndrome) == {
+        cirq.MeasurementGate: 1,
+        cirq.ResetChannel: 1,
+        cirq.CZ: 6,
+        cirq.PhasedXZGate: 2,
+        cirq.QubitPermutationGate: 14,
+    }
+
+
+@pytest.mark.parametrize("architecture_type", [arch.DualSpeciesMovement, arch.MeasureZonesOnly])
+def test_generic_css_other_movement_architectures(
+    architecture_type: type[arch.DefaultMovement],
+    steane_patch: lsp.CodePatch,
+    steane_operations: CSSLogicalOperations,
+) -> None:
+    arc = architecture_type(patch=steane_patch, logical_operations=steane_operations, patch_span=4)
+    qubit = cirq.GridQubit(0, 0)
+
+    assert arc.gate_cost(cirq.H(qubit)) == {cirq.PhasedXZGate: 7}
+    assert arc.moment_cost(lsp.SyndromeExtract(1, 1)(qubit))[cirq.CZ] == 6
+
+
+def test_generic_css_missing_clifford_cost_warns_once(steane_patch: lsp.CodePatch) -> None:
+    arc = arch.DefaultMovement(patch=steane_patch)
+    qubit = cirq.LineQubit(0)
+
+    with pytest.warns(arch.MissingLogicalGateCostWarning, match="logical H.*costing.*zero"):
+        assert arc.gate_cost(cirq.H(qubit)) == {}
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        assert arc.gate_cost(cirq.H(qubit)) == {}
+        assert arc.moment_cost(cirq.H(qubit)) == {}
+        assert arc.op_time(cirq.H(qubit)) == 0
+    assert not caught
+
+    with pytest.warns(arch.MissingLogicalGateCostWarning, match="logical S.*undercounts"):
+        assert arc.gate_cost(cirq.S(qubit)) == {}
+
+
+def test_generic_css_movement_requires_patch_span_for_alleys(
+    steane_patch: lsp.CodePatch,
+) -> None:
+    arc = arch.DefaultMovement(patch=steane_patch)
+    qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(2, 1)
+
+    with pytest.raises(ValueError, match="requires patch_span"):
+        arc.op_time(lsp.Move()(qubit_a, qubit_b))
+    assert arc.op_time(lsp.Move(zone="interact")(qubit_a)) == 500
+
+    arc_with_span = arch.DefaultMovement(patch=steane_patch, patch_span=4)
+    assert arc_with_span.op_time(lsp.Move()(qubit_a, qubit_b)) == 24
+
+
+def test_generic_css_architecture_validation(steane_patch: lsp.CodePatch) -> None:
+    with pytest.raises(ValueError, match="require k=1"):
+        arch.DefaultMovement(patch=lsp.CodePatch("toric", d=2))
+
+    from qldpc import codes
+
+    with pytest.raises(ValueError, match="require a CSS"):
+        arch.DefaultMovement(patch=lsp.CodePatch(codes.FiveQubitCode))
+
+    other_steane_patch = lsp.CodePatch("steane")
+    profile = CSSLogicalOperations(patch=other_steane_patch)
+    with pytest.raises(ValueError, match="profile must refer"):
+        arch.DefaultMovement(patch=steane_patch, logical_operations=profile)
+
+
+def test_generic_css_t_cultivation_keeps_surface_code_cost(steane_patch: lsp.CodePatch) -> None:
+    arc = arch.DefaultMovement(patch=steane_patch)
+    cultivate_t = lsp.Cultivate(pi / 4)(cirq.LineQubit(0))
+
+    cost = arc.gate_cost(cultivate_t)
+
+    assert arc.cultivation_surface_distance == 7
+    assert arc.cultivation_patch.code_params == (49, 1, 7)
+    assert arc.cultivation_patch.patch_label == "cultivate"
+    assert cost[cirq.CZ] > 0
+    assert cost[cirq.MeasurementGate] > 0
+
+
+@pytest.mark.parametrize(
+    ("architecture_type", "expected_moves"),
+    [
+        (arch.DefaultMovement, 34),
+        (arch.DualSpeciesMovement, 0),
+        (arch.MeasureZonesOnly, 8),
+    ],
+)
+def test_magic_state_code_teleport_cost_includes_complete_protocol(
+    architecture_type: type[arch.DefaultMovement],
+    expected_moves: int,
+    steane_patch: lsp.CodePatch,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requested: dict[str, object] = {}
+
+    class FakeResource:
+        circuit = stim.Circuit("R 0\nTICK\nCX 0 1\nTICK\nM 0")
+
+    def fake_builder(left_patch, right_patch, *, basis, rounds):
+        requested.update(left=left_patch, right=right_patch, basis=basis, rounds=rounds)
+        return FakeResource()
+
+    monkeypatch.setattr(arch, "build_joint_logical_pauli_measurement_circuit", fake_builder)
+    architecture = architecture_type(patch=steane_patch, patch_span=4, syndrome_rounds=1)
+    operation = lsp.MagicStateCodeTeleport()(cirq.LineQubit(0))
+
+    assert architecture.gate_cost(operation) == {
+        cirq.MeasurementGate: 62,
+        cirq.ResetChannel: 20,
+        cirq.CZ: 49,
+        cirq.PhasedXZGate: 128,
+        **({cirq.QubitPermutationGate: expected_moves} if expected_moves else {}),
+    }
+    assert architecture.moment_cost(operation) == {
+        cirq.MeasurementGate: 4,
+        cirq.ResetChannel: 4,
+        cirq.CZ: 13,
+        cirq.PhasedXZGate: 6,
+        **({cirq.QubitPermutationGate: expected_moves} if expected_moves else {}),
+    }
+    assert architecture.op_time(operation) > 0
+    assert requested == {
+        "left": architecture.cultivation_patch,
+        "right": steane_patch,
+        "basis": "Z",
+        "rounds": 7,
+    }
+
+
+def test_magic_state_code_teleport_missing_cost_warns_once(
+    steane_patch: lsp.CodePatch,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unavailable(*args, **kwargs):
+        raise ValueError("no bridge")
+
+    monkeypatch.setattr(arch, "build_joint_logical_pauli_measurement_circuit", unavailable)
+    architecture = arch.DefaultMovement(patch=steane_patch)
+    operation = lsp.MagicStateCodeTeleport()(cirq.LineQubit(0))
+
+    with pytest.warns(arch.MissingMagicStateTransferCostWarning, match="costing.*zero"):
+        assert architecture.gate_cost(operation) == {}
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        assert architecture.moment_cost(operation) == {}
+        assert architecture.op_time(operation) == 0
+    assert not caught
+    assert architecture.t_factory_physical_qubits == (
+        architecture.cultivation_patch.num_physical_qubits + steane_patch.num_physical_qubits
+    )
+
+
+def test_magic_state_transfer_parameters(steane_patch: lsp.CodePatch) -> None:
+    architecture = arch.DefaultMovement(
+        patch=steane_patch,
+        cultivation_surface_distance=9,
+        t_state_transfer_rounds=2,
+    )
+
+    assert architecture.cultivation_surface_distance == 9
+    assert architecture.t_state_transfer_rounds == 2
+
+    with pytest.raises(ValueError, match="must be odd"):
+        arch.DefaultMovement(patch=steane_patch, cultivation_surface_distance=8)
+    with pytest.raises(ValueError, match="must be at least"):
+        arch.DefaultMovement(patch=steane_patch, cultivation_surface_distance=5)
+    with pytest.raises(ValueError, match="positive integer"):
+        arch.DefaultMovement(patch=steane_patch, t_state_transfer_rounds=0)
+
+
+def test_magic_state_code_teleport_is_movement_only() -> None:
+    operation = lsp.MagicStateCodeTeleport()(cirq.LineQubit(0))
+
+    assert arch.DefaultMovement().primitives.validate(operation)
+    assert not arch.DefaultLattice().primitives.validate(operation)
+
+
+@pytest.mark.parametrize(
+    ("resource", "factory_qubits", "cultivated_inputs"),
+    [("T", 31, 15), ("Toffoli", 23, 8)],
+)
+def test_generic_css_distillation_counts_parallel_input_adapters(
+    resource: str,
+    factory_qubits: int,
+    cultivated_inputs: int,
+    steane_patch: lsp.CodePatch,
+    steane_operations: CSSLogicalOperations,
+) -> None:
+    architecture = arch.DefaultMovement(
+        patch=steane_patch,
+        logical_operations=steane_operations,
+        patch_span=4,
+        syndrome_rounds=1,
+        t_state_transfer_rounds=1,
+    )
+    # Use a unique physical gate as a marker so the adapter contribution can be isolated from
+    # every pre-existing operation in both distillation protocols.
+    architecture.__dict__["_magic_state_code_teleport_cost"] = {
+        "gate_cost": Counter({cirq.CCZ: 1}),
+        "moment_cost": Counter({cirq.CCZ: 1}),
+        "op_time": 1_000_000.0,
+        "num_physical_qubits": 20,
+    }
+    operation = lsp.Distil(resource).on(*cirq.LineQubit.range(factory_qubits))
+
+    assert architecture.gate_cost(operation)[cirq.CCZ] == cultivated_inputs
+    assert architecture.moment_cost(operation)[cirq.CCZ] == 1
+    assert architecture.op_time(operation) >= 1_000_000.0
+
+
+def test_generic_css_distillation_missing_input_adapter_warns_once(
+    steane_patch: lsp.CodePatch,
+    steane_operations: CSSLogicalOperations,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unavailable(*args, **kwargs):
+        raise ValueError("no bridge")
+
+    monkeypatch.setattr(arch, "build_joint_logical_pauli_measurement_circuit", unavailable)
+    architecture = arch.DefaultMovement(
+        patch=steane_patch,
+        logical_operations=steane_operations,
+        patch_span=4,
+        syndrome_rounds=1,
+    )
+    operation = lsp.Distil("T").on(*cirq.LineQubit.range(31))
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        cost = architecture.gate_cost(operation)
+
+    transfer_warnings = [
+        warning
+        for warning in caught
+        if issubclass(warning.category, arch.MissingMagicStateTransferCostWarning)
+    ]
+    assert len(transfer_warnings) == 1
+    assert cost[cirq.CZ] > 0
 
 
 def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
@@ -142,9 +428,7 @@ def test_movement_gate_costs(d) -> None:
     op = lsp.SyndromeExtract(1, 1).on(qubit_a)
     cost = arc.gate_cost(op)
     phased_xz_gates = 2 * (
-        arc.patch.total_x_syndrome_cnots()
-        + arc.patch.num_x_stabs()
-        + arc.patch.num_z_stabs()
+        arc.patch.total_x_syndrome_cnots() + arc.patch.num_x_stabs() + arc.patch.num_z_stabs()
     )
     assert cost == {
         cirq.CZ: arc.patch.total_z_syndrome_cnots() + arc.patch.total_x_syndrome_cnots(),

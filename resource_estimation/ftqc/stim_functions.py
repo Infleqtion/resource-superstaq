@@ -33,41 +33,68 @@ STR2GATE = {
 }
 
 
-def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.Gate, int]]:
+_STIM_OP_MAP = {
+    "CX": ("CZ",),
+    "CY": ("CZ",),
+    "CZ": ("CZ",),
+    "SWAP": ("QubitPermutationGate",),
+    "S": ("PhasedXZGate",),
+    "S_DAG": ("PhasedXZGate",),
+    "SQRT_X": ("PhasedXZGate",),
+    "SQRT_X_DAG": ("PhasedXZGate",),
+    "SQRT_Y": ("PhasedXZGate",),
+    "SQRT_Y_DAG": ("PhasedXZGate",),
+    "SQRT_Z": ("PhasedXZGate",),
+    "SQRT_Z_DAG": ("PhasedXZGate",),
+    "H": ("PhasedXZGate",),
+    "H_XY": ("PhasedXZGate",),
+    "H_XZ": ("PhasedXZGate",),
+    "H_YZ": ("PhasedXZGate",),
+    "C_XYZ": ("PhasedXZGate",),
+    "C_ZYX": ("PhasedXZGate",),
+    "X": ("PhasedXZGate",),
+    "Y": ("PhasedXZGate",),
+    "Z": ("PhasedXZGate",),
+    "MX": ("PhasedXZGate", "MeasurementGate"),
+    "MY": ("PhasedXZGate", "MeasurementGate"),
+    "M": ("MeasurementGate",),
+    "R": ("ResetChannel",),
+    "RX": ("ResetChannel", "PhasedXZGate"),
+    "RY": ("ResetChannel", "PhasedXZGate"),
+    "I": (),
+}
+
+_STIM_OPS_TO_IGNORE = {
+    "DETECTOR",
+    "MPP",
+    "OBSERVABLE_INCLUDE",
+    "QUBIT_COORDS",
+    "SHIFT_COORDS",
+}
+
+
+def count_stim_resources(
+    stim_circuit: stim.Circuit, *, scheduling: Literal["ticks", "asap"] = "ticks"
+) -> dict[str, Counter[cirq.Gate, int]]:
     """
-    Parses stim circuit to count relevant operations and returns both parallel and serial costs
+    Parse a Stim circuit and return parallel and serial physical-operation costs.
+
+    ``ticks`` preserves the historical behavior where TICK instructions define moments. ``asap``
+    greedily schedules operations by their qubit dependencies and is intended for qLDPC's
+    tick-free transversal circuits.
     """
-    # A map from Stim operations to replacement physical operations
-    op_map = {
-        "CX": ("CZ",),
-        "CY": ("CZ",),
-        "CZ": ("CZ",),
-        "S": ("PhasedXZGate",),
-        "S_DAG": ("PhasedXZGate",),
-        "MX": ("PhasedXZGate", "MeasurementGate"),
-        "MY": ("PhasedXZGate", "MeasurementGate"),
-        "M": ("MeasurementGate",),
-        "R": ("ResetChannel",),
-        "RX": ("ResetChannel", "PhasedXZGate"),
-        "RY": ("ResetChannel", "PhasedXZGate"),
-        "H": ("PhasedXZGate",),
-        "I": (),
-    }
-    # Operations that are not tracked for the purpose of resource estimation
-    ops_to_ignore = [
-        "DETECTOR",
-        "MPP",
-        "OBSERVABLE_INCLUDE",
-        "QUBIT_COORDS",
-        "SHIFT_COORDS",
-    ]
+    if scheduling == "asap":
+        return _count_stim_resources_asap(stim_circuit)
+    if scheduling != "ticks":
+        raise ValueError(f"Unknown Stim scheduling mode: {scheduling!r}")
+
     total_serial = Counter(dict())
     total_parallel = Counter(dict())
     tick_total = Counter(
         dict()
     )  # Keeps partial total for different operations that can be done in parallel
     for instr in stim_circuit:
-        if instr.name in ops_to_ignore:
+        if instr.name in _STIM_OPS_TO_IGNORE:
             continue
         elif instr.name == "TICK":
             total_parallel += tick_total
@@ -75,13 +102,13 @@ def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.G
             continue
         elif instr.name == "REPEAT":
             repeats = instr.repeat_count
-            one_round = count_stim_resources(instr.body_copy())
+            one_round = count_stim_resources(instr.body_copy(), scheduling="ticks")
             total_serial += {k: v * repeats for k, v in one_round["serial"].items()}
             total_parallel += {k: v * repeats for k, v in one_round["parallel"].items()}
-        elif instr.name not in op_map:
+        elif instr.name not in _STIM_OP_MAP:
             raise ValueError(f"Unknown Instruction: {instr.name}")
         else:
-            replacement = op_map[instr.name]
+            replacement = _STIM_OP_MAP[instr.name]
             # Add up all the gates serially
             total_serial += {
                 STR2GATE[gate_type]: len(instr.target_groups()) for gate_type in replacement
@@ -92,6 +119,42 @@ def count_stim_resources(stim_circuit: stim.Circuit) -> dict[str, Counter[cirq.G
                 for gate_type in replacement
                 if STR2GATE[gate_type] not in tick_total
             }
+    total_parallel += tick_total
+    return {"serial": total_serial, "parallel": total_parallel}
+
+
+def _count_stim_resources_asap(
+    stim_circuit: stim.Circuit,
+) -> dict[str, Counter[cirq.Gate, int]]:
+    total_serial: Counter[cirq.Gate, int] = Counter()
+    occupied_layers: dict[cirq.Gate, set[int]] = {}
+    next_layer: dict[int, int] = {}
+    barrier = 0
+
+    for instr in stim_circuit.flattened():
+        if instr.name in _STIM_OPS_TO_IGNORE:
+            continue
+        if instr.name == "TICK":
+            barrier = max([barrier, *next_layer.values()])
+            continue
+        if instr.name not in _STIM_OP_MAP:
+            raise ValueError(f"Unknown Instruction: {instr.name}")
+
+        replacement = _STIM_OP_MAP[instr.name]
+        for target_group in instr.target_groups():
+            qubits = [target.value for target in target_group if target.is_qubit_target]
+            layer = max([barrier, *(next_layer.get(qubit, barrier) for qubit in qubits)])
+            for gate_name in replacement:
+                gate = STR2GATE[gate_name]
+                total_serial[gate] += 1
+                occupied_layers.setdefault(gate, set()).add(layer)
+                layer += 1
+            for qubit in qubits:
+                next_layer[qubit] = layer
+
+    total_parallel = Counter(
+        {gate: len(layers) for gate, layers in occupied_layers.items() if layers}
+    )
     return {"serial": total_serial, "parallel": total_parallel}
 
 

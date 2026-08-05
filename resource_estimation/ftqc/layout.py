@@ -17,11 +17,21 @@ from collections import deque
 from dataclasses import dataclass
 from itertools import combinations, product
 from math import ceil, sqrt
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import cirq
 import networkx as nx
 import numpy as np
+
+from resource_estimation.ftqc.distil import (
+    CCZ_DISTILLATION_INPUTS,
+    CCZ_DISTILLATION_PROTOCOL_PATCHES,
+    T_DISTILLATION_INPUTS,
+    T_DISTILLATION_PROTOCOL_PATCHES,
+)
+
+if TYPE_CHECKING:
+    from resource_estimation.ftqc.architecture import DefaultMovement
 
 
 @dataclass
@@ -262,6 +272,26 @@ class MovementLayout(Layout):
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit):
         raise NotImplementedError
+
+    def physical_qubits(self, architecture: DefaultMovement) -> int:
+        """Return the configured movement layout's peak physical-qubit footprint.
+
+        Each T-factory station is sized for the larger of cultivation and code teleportation.
+        Other graph locations retain the architecture's computational-patch footprint.
+        """
+        graph = self.layout_graph
+        t_factory_nodes = {
+            node
+            for node in graph
+            if graph.nodes[node].get("patch_type") == "factory"
+            and graph.nodes[node].get("ftype") == "t"
+        }
+        t_factory_ids = {graph.nodes[node]["fid"] for node in t_factory_nodes}
+        other_locations = len(graph.nodes) - len(t_factory_nodes)
+        return (
+            other_locations * architecture.patch.num_physical_qubits
+            + len(t_factory_ids) * architecture.t_factory_physical_qubits
+        )
 
 
 class Column(Layout):
@@ -607,3 +637,41 @@ class MovementDistillery(MovementLayout):
             if (G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid)
         ]
         return block_qubits + list(factory)
+
+    def physical_qubits(self, architecture: DefaultMovement) -> int:
+        """Return the peak footprint of heterogeneous movement distillation factories.
+
+        Raw T inputs occupy surface-code cultivation/adaptation stations, while every protocol
+        wire and output occupies the architecture's computational CodePatch.  All raw inputs are
+        assumed to be cultivated and adapted in parallel, matching the fixed factory circuits.
+        """
+        graph = self.layout_graph
+        program_patches = sum(graph.nodes[node].get("patch_type") == "data" for node in graph)
+        t_factory_ids = {
+            graph.nodes[node]["fid"]
+            for node in graph
+            if graph.nodes[node].get("patch_type") == "factory"
+            and graph.nodes[node].get("ftype") == "t"
+        }
+        toffoli_factory_ids = {
+            graph.nodes[node]["fid"]
+            for node in graph
+            if graph.nodes[node].get("patch_type") == "factory"
+            and graph.nodes[node].get("ftype") == "toff"
+        }
+
+        compute_patch_qubits = architecture.patch.num_physical_qubits
+        raw_t_station_qubits = architecture.t_factory_physical_qubits
+        t_factory_qubits = (
+            T_DISTILLATION_INPUTS * raw_t_station_qubits
+            + T_DISTILLATION_PROTOCOL_PATCHES * compute_patch_qubits
+        )
+        toffoli_factory_qubits = (
+            CCZ_DISTILLATION_INPUTS * raw_t_station_qubits
+            + CCZ_DISTILLATION_PROTOCOL_PATCHES * compute_patch_qubits
+        )
+        return (
+            program_patches * compute_patch_qubits
+            + len(t_factory_ids) * t_factory_qubits
+            + len(toffoli_factory_ids) * toffoli_factory_qubits
+        )

@@ -22,6 +22,8 @@ import cirq
 
 def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
     """Tells cirq.json how to deserialize custom gates"""
+    if cirq_type == "lsp.MagicStateCodeTeleport":
+        return MagicStateCodeTeleport
     if cirq_type == "lsp.Merge":
         return Merge
     if cirq_type == "lsp.Split":
@@ -36,6 +38,34 @@ def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
         return Move
     if cirq_type == "lsp.Distil":
         return Distil
+    return None
+
+
+@cirq.value_equality
+class MagicStateCodeTeleport(cirq.Gate):
+    """Transfer a cultivated magic state into the movement architecture's compute code."""
+
+    def _num_qubits_(self) -> int:
+        return 1
+
+    def __str__(self) -> str:
+        return "T-CODE-TELEPORT"
+
+    def _circuit_diagram_info_(self, args: cirq.CircuitDiagramInfoArgs) -> str:
+        return "T-CODE-XFER"
+
+    def _json_dict_(self) -> dict[str, object]:
+        return {}
+
+    def __repr__(self) -> str:
+        return "lsp.MagicStateCodeTeleport()"
+
+    @classmethod
+    def _json_namespace_(cls) -> str:
+        return "lsp"
+
+    def _value_equality_values_(self) -> tuple[()]:
+        return ()
 
 
 @cirq.value_equality
@@ -496,6 +526,28 @@ class CodePatch:
     @property
     def is_qldpc_backed(self) -> bool:
         return True
+
+    @property
+    def is_binary(self) -> bool:
+        """Whether this patch is defined over the binary field."""
+        return getattr(self.qldpc_code.field, "order", None) == 2
+
+    @property
+    def is_css(self) -> bool:
+        """Whether this patch is backed by a qLDPC CSS code."""
+        codes = _import_qldpc()
+        return isinstance(self.qldpc_code, codes.CSSCode)
+
+    @property
+    def is_stabilizer_code(self) -> bool:
+        """Whether all checks of this patch commute."""
+        return not bool(self.qldpc_code.is_subsystem_code)
+
+    @property
+    def is_surface_code(self) -> bool:
+        """Whether this patch uses qLDPC's surface-code family."""
+        codes = _import_qldpc()
+        return isinstance(self.qldpc_code, codes.SurfaceCode)
 
     @property
     def qldpc_code(self) -> Any:
