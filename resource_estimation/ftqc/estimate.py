@@ -24,6 +24,7 @@ from tqdm import tqdm
 
 if TYPE_CHECKING:
     from resource_estimation.ftqc.architecture import Architecture
+    from resource_estimation.ftqc.layout import Layout
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -147,8 +148,12 @@ class ResourceEstimator:
             }
         return big_path
 
-    def physical_qubits(self, circuit: cirq.Circuit) -> int:
-        """Calculates the physical qubit cost of the requested circuit"""
+    def physical_qubits(self, circuit: cirq.Circuit, layout: Layout | None = None) -> int:
+        """Calculate the peak physical-qubit cost of the requested circuit and layout."""
+        if layout is not None:
+            layout_counter = getattr(layout, "physical_qubits", None)
+            if layout_counter is not None:
+                return layout_counter(self.arc)
         return cirq.num_qubits(circuit) * self.arc.patch.num_physical_qubits
 
 

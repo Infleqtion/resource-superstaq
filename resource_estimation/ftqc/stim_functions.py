@@ -119,6 +119,7 @@ def count_stim_resources(
                 for gate_type in replacement
                 if STR2GATE[gate_type] not in tick_total
             }
+    total_parallel += tick_total
     return {"serial": total_serial, "parallel": total_parallel}
 
 

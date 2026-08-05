@@ -116,7 +116,33 @@ def test_generic_css_movement_compilation_keeps_surface_t_cultivation() -> None:
     operations = list(compiled.all_operations())
     assert all(architecture.primitives.validate(op) for op in operations)
     assert any(isinstance(op.gate, lsp.Cultivate) for op in operations)
+    assert sum(isinstance(op.gate, lsp.MagicStateCodeTeleport) for op in operations) == 1
     assert any(op in cirq.GateFamily(cirq.S) for op in operations)
+
+    transfer_index = next(
+        index
+        for index, op in enumerate(operations)
+        if isinstance(op.gate, lsp.MagicStateCodeTeleport)
+    )
+    factory_qubit = operations[transfer_index].qubits[0]
+    injection = next(
+        op
+        for op in operations[transfer_index + 1 :]
+        if op.gate == cirq.CNOT and factory_qubit in op.qubits
+    )
+    program_qubit = next(iter(layout.mapped_circuit.all_qubits() - {cirq.GridQubit(0, 0)}))
+    assert injection.qubits == (program_qubit, factory_qubit)
+
+
+def test_surface_movement_compilation_does_not_adapt_t_state() -> None:
+    qubit = cirq.LineQubit(0)
+    layout = MovementLayout(cirq.Circuit(cirq.T(qubit)))
+
+    compiled = comp.ft_compile(layout, arch.DefaultMovement(), verbose=0)
+
+    assert not any(
+        isinstance(op.gate, lsp.MagicStateCodeTeleport) for op in compiled.all_operations()
+    )
 
 
 def test_direct_substitution() -> None:
@@ -197,6 +223,31 @@ def test_replace_cirq_op_movement(bell_circuit) -> None:
     assert len(expected_types) == len(ops_flattened)
     for op, expected_type in zip(ops_flattened, expected_types):
         assert op in cirq.GateFamily(expected_type)
+
+
+def test_replace_cirq_op_adapts_non_surface_movement_t_state(bell_circuit) -> None:
+    movement_layout = MovementLayout(bell_circuit, num_t_factories=1)
+    program_qubit = cirq.GridQubit(0, 0)
+
+    returned_ops = comp.replace_cirq_op(
+        op=cirq.T(program_qubit),
+        layout=movement_layout,
+        transversal_cnot=True,
+        movement=True,
+        magic_state_code_teleport=True,
+    )
+    flattened = []
+    for item in returned_ops:
+        flattened.extend(item if isinstance(item, cirq.Moment) else [item])
+
+    transfer_index = next(
+        index
+        for index, op in enumerate(flattened)
+        if isinstance(op.gate, lsp.MagicStateCodeTeleport)
+    )
+    factory_qubit = flattened[transfer_index].qubits[0]
+    injection = flattened[transfer_index + 1]
+    assert injection == cirq.CNOT(program_qubit, factory_qubit)
 
 
 @pytest.mark.parametrize("op_type", (cirq.S, cirq.T, cirq.CNOT))
@@ -580,11 +631,11 @@ def test_t_movement_FF(t_circuit) -> None:
             """
             (0, 0): ───SE(1)─────────H───MOVE───@───#2───────────────────────────────────────────────────────
                                          │      │   │
-            (0, 1): ───SE(1)─────────────#2─────X───MOVE───#2─────X───MOVE───S───────────────────────────────
+            (0, 1): ───SE(1)─────────────#2─────X───MOVE───MOVE───@───#2─────S───────────────────────────────
                                                            │      │   │
             (1, 0): ───CULT(0.785)─────────────────────────┼──────┼───┼──────────────────────────────────────
                                                            │      │   │
-            (1, 1): ───CULT(0.785)─────────────────────────MOVE───@───#2─────MOVE_MZ───M('')───MOVE_MZ───R───
+            (1, 1): ───CULT(0.785)─────────────────────────#2─────X───MOVE───MOVE_MZ───M('')───MOVE_MZ───R───
             """
         ),
     )
@@ -608,11 +659,11 @@ def test_t_movement_FT(t_circuit) -> None:
             """
             (0, 0): ───SE(1)─────────H───SE(1)───MOVE───@───#2─────SE(1)─────────────────────────────────────────────────────────────────────
                                                  │      │   │
-            (0, 1): ───SE(1)─────────────────────#2─────X───MOVE───SE(1)───#2─────X───MOVE───SE(1)───S─────────SE(1)─────────────────────────
+            (0, 1): ───SE(1)─────────────────────#2─────X───MOVE───SE(1)───MOVE───@───#2─────SE(1)───S─────────SE(1)─────────────────────────
                                                                            │      │   │
             (1, 0): ───CULT(0.785)─────────────────────────────────────────┼──────┼───┼──────────────────────────────────────────────────────
                                                                            │      │   │
-            (1, 1): ───CULT(0.785)─────────────────────────────────────────MOVE───@───#2─────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
+            (1, 1): ───CULT(0.785)─────────────────────────────────────────#2─────X───MOVE───SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
             """
         ),
     )
@@ -637,11 +688,11 @@ def test_t_movement_TF(t_circuit) -> None:
             """
             (0, 0): ───SE(1)─────────H───────MOVE────@───────#2──────SE(1)───SE(1)───SE(1)───────────────────────────────────
                                              │       │       │
-            (0, 1): ───SE(1)─────────SE(1)───#2──────X───────MOVE────#2──────X───────MOVE────S─────────SE(1)─────────────────
+            (0, 1): ───SE(1)─────────SE(1)───#2──────X───────MOVE────MOVE────@───────#2──────S─────────SE(1)─────────────────
                                                                      │       │       │
             (1, 0): ───CULT(0.785)───SE(1)───SE(1)───SE(1)───SE(1)───┼───────┼───────┼───────────────────────────────────────
                                                                      │       │       │
-            (1, 1): ───CULT(0.785)───SE(1)───────────────────────────MOVE────@───────#2──────MOVE_MZ───M('')───MOVE_MZ───R───
+            (1, 1): ───CULT(0.785)───SE(1)───────────────────────────#2──────X───────MOVE────MOVE_MZ───M('')───MOVE_MZ───R───
 
             """
         ),
@@ -669,11 +720,11 @@ def test_t_movement_TT(t_circuit) -> None:
                                                                                      ┌──────────┐   ┌──────────┐
             (0, 0): ───SE(1)─────────H───────SE(1)───MOVE────@───────#2──────SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───────────────────────────────────
                                                      │       │       │
-            (0, 1): ───SE(1)─────────SE(1)───SE(1)───#2──────X───────MOVE────SE(1)────#2─────────────X─────────────MOVE────SE(1)───S─────────SE(1)───SE(1)─────────────────
+            (0, 1): ───SE(1)─────────SE(1)───SE(1)───#2──────X───────MOVE────SE(1)────MOVE───────────@─────────────#2──────SE(1)───S─────────SE(1)───SE(1)─────────────────
                                                                                       │              │             │
             (1, 0): ───CULT(0.785)───SE(1)───SE(1)───SE(1)───SE(1)───SE(1)───SE(1)────┼────SE(1)─────┼────SE(1)────┼───────────────────────────────────────────────────────
                                                                                       │              │             │
-            (1, 1): ───CULT(0.785)───SE(1)───SE(1)───SE(1)────────────────────────────MOVE───────────@─────────────#2──────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
+            (1, 1): ───CULT(0.785)───SE(1)───SE(1)───SE(1)────────────────────────────#2─────────────X─────────────MOVE────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
                                                                                      └──────────┘   └──────────┘
             """
         ),

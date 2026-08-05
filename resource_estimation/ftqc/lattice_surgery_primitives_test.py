@@ -67,6 +67,15 @@ def test_cultivate() -> None:
     assert str(cultivation_gate) == "CULT(1.571)"
 
 
+def test_magic_state_code_teleport() -> None:
+    gate = lsp.MagicStateCodeTeleport()
+
+    assert gate.num_qubits() == 1
+    assert str(gate) == "T-CODE-TELEPORT"
+    assert repr(gate) == "lsp.MagicStateCodeTeleport()"
+    assert lsp.custom_resolver("lsp.MagicStateCodeTeleport") is lsp.MagicStateCodeTeleport
+
+
 def test_move() -> None:
     a, b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     alley_move = lsp.Move(None).on(a, b)

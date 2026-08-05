@@ -130,6 +130,13 @@ def test_asap_scheduling_for_tick_free_transversal_circuit() -> None:
     }
 
 
+def test_tick_scheduling_flushes_final_unterminated_moment() -> None:
+    costs = count_stim_resources(stim.Circuit("H 0"))
+
+    assert costs["serial"] == {cirq.PhasedXZGate: 1}
+    assert costs["parallel"] == {cirq.PhasedXZGate: 1}
+
+
 @pytest.mark.parametrize(
     "gate",
     [

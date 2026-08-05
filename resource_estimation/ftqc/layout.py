@@ -17,11 +17,14 @@ from collections import deque
 from dataclasses import dataclass
 from itertools import combinations, product
 from math import ceil, sqrt
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import cirq
 import networkx as nx
 import numpy as np
+
+if TYPE_CHECKING:
+    from resource_estimation.ftqc.architecture import DefaultMovement
 
 
 @dataclass
@@ -262,6 +265,26 @@ class MovementLayout(Layout):
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit):
         raise NotImplementedError
+
+    def physical_qubits(self, architecture: DefaultMovement) -> int:
+        """Return the configured movement layout's peak physical-qubit footprint.
+
+        Each T-factory station is sized for the larger of cultivation and code teleportation.
+        Other graph locations retain the architecture's computational-patch footprint.
+        """
+        graph = self.layout_graph
+        t_factory_nodes = {
+            node
+            for node in graph
+            if graph.nodes[node].get("patch_type") == "factory"
+            and graph.nodes[node].get("ftype") == "t"
+        }
+        t_factory_ids = {graph.nodes[node]["fid"] for node in t_factory_nodes}
+        other_locations = len(graph.nodes) - len(t_factory_nodes)
+        return (
+            other_locations * architecture.patch.num_physical_qubits
+            + len(t_factory_ids) * architecture.t_factory_physical_qubits
+        )
 
 
 class Column(Layout):

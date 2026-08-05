@@ -174,11 +174,111 @@ def test_generic_css_t_cultivation_keeps_surface_code_cost(steane_patch: lsp.Cod
     arc = arch.DefaultMovement(patch=steane_patch)
     cultivate_t = lsp.Cultivate(pi / 4)(cirq.LineQubit(0))
 
-    with pytest.warns(UserWarning, match="Returning result for d=7"):
-        cost = arc.gate_cost(cultivate_t)
+    cost = arc.gate_cost(cultivate_t)
 
+    assert arc.cultivation_surface_distance == 7
+    assert arc.cultivation_patch.code_params == (49, 1, 7)
+    assert arc.cultivation_patch.patch_label == "cultivate"
     assert cost[cirq.CZ] > 0
     assert cost[cirq.MeasurementGate] > 0
+
+
+@pytest.mark.parametrize(
+    ("architecture_type", "expected_moves"),
+    [
+        (arch.DefaultMovement, 34),
+        (arch.DualSpeciesMovement, 0),
+        (arch.MeasureZonesOnly, 8),
+    ],
+)
+def test_magic_state_code_teleport_cost_includes_complete_protocol(
+    architecture_type: type[arch.DefaultMovement],
+    expected_moves: int,
+    steane_patch: lsp.CodePatch,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requested: dict[str, object] = {}
+
+    class FakeResource:
+        circuit = stim.Circuit("R 0\nTICK\nCX 0 1\nTICK\nM 0")
+
+    def fake_builder(left_patch, right_patch, *, basis, rounds):
+        requested.update(left=left_patch, right=right_patch, basis=basis, rounds=rounds)
+        return FakeResource()
+
+    monkeypatch.setattr(arch, "build_joint_logical_pauli_measurement_circuit", fake_builder)
+    architecture = architecture_type(patch=steane_patch, patch_span=4, syndrome_rounds=1)
+    operation = lsp.MagicStateCodeTeleport()(cirq.LineQubit(0))
+
+    assert architecture.gate_cost(operation) == {
+        cirq.MeasurementGate: 62,
+        cirq.ResetChannel: 20,
+        cirq.CZ: 49,
+        cirq.PhasedXZGate: 128,
+        **({cirq.QubitPermutationGate: expected_moves} if expected_moves else {}),
+    }
+    assert architecture.moment_cost(operation) == {
+        cirq.MeasurementGate: 4,
+        cirq.ResetChannel: 4,
+        cirq.CZ: 13,
+        cirq.PhasedXZGate: 6,
+        **({cirq.QubitPermutationGate: expected_moves} if expected_moves else {}),
+    }
+    assert architecture.op_time(operation) > 0
+    assert requested == {
+        "left": architecture.cultivation_patch,
+        "right": steane_patch,
+        "basis": "Z",
+        "rounds": 7,
+    }
+
+
+def test_magic_state_code_teleport_missing_cost_warns_once(
+    steane_patch: lsp.CodePatch,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unavailable(*args, **kwargs):
+        raise ValueError("no bridge")
+
+    monkeypatch.setattr(arch, "build_joint_logical_pauli_measurement_circuit", unavailable)
+    architecture = arch.DefaultMovement(patch=steane_patch)
+    operation = lsp.MagicStateCodeTeleport()(cirq.LineQubit(0))
+
+    with pytest.warns(arch.MissingMagicStateTransferCostWarning, match="costing.*zero"):
+        assert architecture.gate_cost(operation) == {}
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        assert architecture.moment_cost(operation) == {}
+        assert architecture.op_time(operation) == 0
+    assert not caught
+    assert architecture.t_factory_physical_qubits == (
+        architecture.cultivation_patch.num_physical_qubits + steane_patch.num_physical_qubits
+    )
+
+
+def test_magic_state_transfer_parameters(steane_patch: lsp.CodePatch) -> None:
+    architecture = arch.DefaultMovement(
+        patch=steane_patch,
+        cultivation_surface_distance=9,
+        t_state_transfer_rounds=2,
+    )
+
+    assert architecture.cultivation_surface_distance == 9
+    assert architecture.t_state_transfer_rounds == 2
+
+    with pytest.raises(ValueError, match="must be odd"):
+        arch.DefaultMovement(patch=steane_patch, cultivation_surface_distance=8)
+    with pytest.raises(ValueError, match="must be at least"):
+        arch.DefaultMovement(patch=steane_patch, cultivation_surface_distance=5)
+    with pytest.raises(ValueError, match="positive integer"):
+        arch.DefaultMovement(patch=steane_patch, t_state_transfer_rounds=0)
+
+
+def test_magic_state_code_teleport_is_movement_only() -> None:
+    operation = lsp.MagicStateCodeTeleport()(cirq.LineQubit(0))
+
+    assert arch.DefaultMovement().primitives.validate(operation)
+    assert not arch.DefaultLattice().primitives.validate(operation)
 
 
 def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:

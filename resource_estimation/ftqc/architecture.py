@@ -32,6 +32,9 @@ from resource_estimation.ftqc.logical_operations import (
     LogicalClifford,
     validate_k1_css_patch,
 )
+from resource_estimation.ftqc.qldpc_surgery import (
+    build_joint_logical_pauli_measurement_circuit,
+)
 from resource_estimation.ftqc.stim_functions import count_stim_resources, cultivate
 
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
@@ -56,6 +59,33 @@ SUPERCOND_GATES = {
 
 class MissingLogicalGateCostWarning(UserWarning):
     """A logical gate was retained in the estimate but assigned zero physical cost."""
+
+
+class MissingMagicStateTransferCostWarning(UserWarning):
+    """A magic-state code transfer was retained but assigned zero physical cost."""
+
+
+def _resolve_cultivation_surface_distance(
+    target_distance: int,
+    fault_distance: int,
+    requested_distance: int | None,
+) -> int:
+    minimum_distance = 2 * fault_distance + 1
+    distance = (
+        max(target_distance, minimum_distance) if requested_distance is None else requested_distance
+    )
+    if not isinstance(distance, int) or isinstance(distance, bool):
+        raise TypeError("cultivation_surface_distance must be an integer or None.")
+    if distance < minimum_distance:
+        raise ValueError(
+            "cultivation_surface_distance must be at least "
+            f"2 * cultivation_fault_distance + 1 = {minimum_distance}."
+        )
+    if distance % 2 == 0:
+        if requested_distance is not None:
+            raise ValueError("cultivation_surface_distance must be odd.")
+        distance += 1
+    return distance
 
 
 def _syndrome_entangling_depth(patch: lsp.CodePatch) -> int:
@@ -257,6 +287,8 @@ class Architecture(abc.ABC):
                 cultivation_fault_distance=d["cultivation_fault_distance"],
                 syndrome_rounds=d["syndrome_rounds"],
                 fold_cultiv=d.get("fold_cultiv", False),
+                cultivation_surface_distance=d.get("cultivation_surface_distance"),
+                t_state_transfer_rounds=d.get("t_state_transfer_rounds"),
             )
         else:
             base_arc = DefaultLattice(
@@ -424,6 +456,11 @@ class Architecture(abc.ABC):
     @property
     def primitives(self) -> cirq.Gateset:
         return self._primitives
+
+    @property
+    def requires_magic_state_code_teleport(self) -> bool:
+        """Whether the compiler must adapt cultivated T states into the compute code."""
+        return False
 
     zone_ops = None
 
@@ -629,6 +666,8 @@ class DefaultMovement(Architecture):
         patch: lsp.CodePatch | None = None,
         logical_operations: CSSLogicalOperations | None = None,
         patch_span: float | None = None,
+        cultivation_surface_distance: int | None = None,
+        t_state_transfer_rounds: int | None = None,
     ) -> None:
         super().__init__(
             idling=idling,
@@ -648,11 +687,33 @@ class DefaultMovement(Architecture):
         self.patch_span = (
             float(self.d) if patch_span is None and self.patch.is_surface_code else patch_span
         )
+        self.cultivation_surface_distance = _resolve_cultivation_surface_distance(
+            self.d,
+            self.cultivation_fault_distance,
+            cultivation_surface_distance,
+        )
+        if t_state_transfer_rounds is not None and (
+            not isinstance(t_state_transfer_rounds, int)
+            or isinstance(t_state_transfer_rounds, bool)
+            or t_state_transfer_rounds < 1
+        ):
+            raise ValueError("t_state_transfer_rounds must be a positive integer or None.")
+        self.t_state_transfer_rounds = (
+            max(self.cultivation_surface_distance, self.d)
+            if t_state_transfer_rounds is None
+            else t_state_transfer_rounds
+        )
+        self.cultivation_patch = lsp.CodePatch(
+            "surface",
+            d=self.cultivation_surface_distance,
+            patch_label="cultivate",
+        )
         self.distillation_repetition = distillation_repetition
         self._primitives = cirq.Gateset(
             *[
                 lsp.Cultivate,
                 lsp.Distil,
+                lsp.MagicStateCodeTeleport,
                 lsp.SyndromeExtract,
                 lsp.ErrorCorrect,
                 lsp.Move,
@@ -671,8 +732,113 @@ class DefaultMovement(Architecture):
 
     zone_ops = cirq.Gateset(cirq.CNOT, cirq.MeasurementGate)
 
+    @property
+    def requires_magic_state_code_teleport(self) -> bool:
+        return not self.patch.is_surface_code
+
+    @property
+    def t_factory_physical_qubits(self) -> int:
+        """Peak physical footprint of one cultivated T-state factory station."""
+        if not self.requires_magic_state_code_teleport:
+            return self.cultivation_patch.num_physical_qubits
+        return max(
+            self.cultivation_patch.num_physical_qubits,
+            int(self._magic_state_code_teleport_cost["num_physical_qubits"]),
+        )
+
     def cnot_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         return self._cnot_cost
+
+    def magic_state_code_teleport_cost(self, op: cirq.Operation) -> dict:
+        return self._magic_state_code_teleport_cost
+
+    def _magic_state_transfer_movement_penalty(self, moment_cost: Counter) -> int:
+        """Return the physical movement moments required by the adapter circuit."""
+        return 2 * (moment_cost.get(cirq.CZ, 0) + moment_cost.get(cirq.MeasurementGate, 0))
+
+    @cached_property
+    def _magic_state_code_teleport_cost(self) -> dict:
+        """Cost surface-to-compute-code teleportation of one cultivated T state."""
+        if not self.requires_magic_state_code_teleport:
+            return {
+                "gate_cost": {},
+                "moment_cost": {},
+                "op_time": 0.0,
+                "num_physical_qubits": self.cultivation_patch.num_physical_qubits,
+            }
+
+        lower_bound_qubits = (
+            self.cultivation_patch.num_physical_qubits + self.patch.num_physical_qubits
+        )
+        try:
+            resource = build_joint_logical_pauli_measurement_circuit(
+                self.cultivation_patch,
+                self.patch,
+                basis="Z",
+                rounds=self.t_state_transfer_rounds,
+            )
+            resources = count_stim_resources(resource.circuit)
+        except (ImportError, ValueError, NotImplementedError, RuntimeError) as ex:
+            warnings.warn(
+                "No physical cost is derivable for transferring a cultivated T state from "
+                f"the distance-{self.cultivation_surface_distance} surface code into the "
+                f"{self.patch.code_type} CodePatch ({ex}); costing this transfer at zero. "
+                "The resource estimate therefore undercounts this operation.",
+                MissingMagicStateTransferCostWarning,
+                stacklevel=3,
+            )
+            return {
+                "gate_cost": {},
+                "moment_cost": {},
+                "op_time": 0.0,
+                "num_physical_qubits": lower_bound_qubits,
+            }
+
+        gate_cost = Counter(resources["serial"])
+        moment_cost = Counter(resources["parallel"])
+
+        # Prepare the destination logical |+>: initialize all data in |+>, then project into
+        # the CSS codespace. The generic syndrome circuit measures both check types.
+        gate_cost.update(
+            {
+                cirq.ResetChannel: self.patch.num_data_qubits,
+                cirq.PhasedXZGate: self.patch.num_data_qubits,
+            }
+        )
+        moment_cost.update({cirq.ResetChannel: 1, cirq.PhasedXZGate: 1})
+        target_syndrome_cost = _syndrome_extract_cost(
+            rounds=self.rounds,
+            num_logical_qubits=1,
+            patch=self.patch,
+        )
+        gate_cost += Counter(target_syndrome_cost["gate_cost"])
+        moment_cost += Counter(target_syndrome_cost["moment_cost"])
+
+        # Complete state teleportation by destructively measuring logical X on the source.
+        gate_cost.update(
+            {
+                cirq.PhasedXZGate: self.cultivation_patch.num_data_qubits,
+                cirq.MeasurementGate: self.cultivation_patch.num_data_qubits,
+            }
+        )
+        moment_cost.update({cirq.PhasedXZGate: 1, cirq.MeasurementGate: 1})
+
+        # qLDPC's cost-only resource circuit stops after measuring the temporary bridge and
+        # gadget qubits. Restore the separated target code before it is consumed.
+        gate_cost += Counter(target_syndrome_cost["gate_cost"])
+        moment_cost += Counter(target_syndrome_cost["moment_cost"])
+
+        movement_penalty = self._magic_state_transfer_movement_penalty(moment_cost)
+        if movement_penalty:
+            gate_cost[cirq.QubitPermutationGate] += movement_penalty
+            moment_cost[cirq.QubitPermutationGate] += movement_penalty
+
+        return {
+            "gate_cost": gate_cost,
+            "moment_cost": moment_cost,
+            "op_time": self.total_time(moment_cost_dict=moment_cost),
+            "num_physical_qubits": resource.circuit.num_qubits,
+        }
 
     def syndrome_extract_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         # Build from the base cost of Syndrome Extraction by adding movement penalties CZ and Measurement moments
@@ -806,7 +972,9 @@ class DefaultMovement(Architecture):
     @cached_property
     def _cultivate_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         base_cultivation_cost = cultivate(
-            dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
+            dsurface=self.cultivation_surface_distance,
+            fold=self.fold_cultiv,
+            fault_distance=self.cultivation_fault_distance,
         ).copy()
         # Penalize all Measure and CZ moments with QubitPermutationGates
         # Each penalized moment gets penalized with two Moves
@@ -876,6 +1044,7 @@ class DefaultMovement(Architecture):
         self.op_cost[type(cirq.S)] = self.s_cost
         self.op_cost[lsp.Move] = self.move_cost
         self.op_cost[lsp.Distil] = self.distil_cost
+        self.op_cost[lsp.MagicStateCodeTeleport] = self.magic_state_code_teleport_cost
 
     @property
     def __name__(self) -> str:
@@ -897,6 +1066,9 @@ class DualSpeciesMovement(DefaultMovement):
     zone_ops = None
     alley_ops = cirq.Gateset(cirq.CNOT)
 
+    def _magic_state_transfer_movement_penalty(self, moment_cost: Counter) -> int:
+        return 0
+
     # Syndrome Extract from Lattice Surgery
     def syndrome_extract_cost(self, op: cirq.Operation) -> dict:
         # Get the syndrome extraction cost without the atom shuttling
@@ -913,7 +1085,9 @@ class DualSpeciesMovement(DefaultMovement):
         Values are multiplied by the repeat factor for the architecture instance
         """
         base_cultivation_cost = cultivate(
-            dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
+            dsurface=self.cultivation_surface_distance,
+            fold=self.fold_cultiv,
+            fault_distance=self.cultivation_fault_distance,
         ).copy()
         gate_cost = base_cultivation_cost["serial"]
         moment_cost = base_cultivation_cost["parallel"]
@@ -959,6 +1133,9 @@ class MeasureZonesOnly(DefaultMovement):
     zone_ops = cirq.Gateset(cirq.MeasurementGate)
     alley_ops = cirq.Gateset(cirq.CNOT)
 
+    def _magic_state_transfer_movement_penalty(self, moment_cost: Counter) -> int:
+        return 2 * moment_cost.get(cirq.MeasurementGate, 0)
+
     # TODO: How do we do S gates here?
     #       a) Perform S with fold transversal S gate enabled by motion
     #       b) Cultivate S with "inplace" procedure (Class must inherit from Lattice)
@@ -981,7 +1158,9 @@ class MeasureZonesOnly(DefaultMovement):
     @cached_property
     def _cultivate_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         base_cultivation_cost = cultivate(
-            dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
+            dsurface=self.cultivation_surface_distance,
+            fold=self.fold_cultiv,
+            fault_distance=self.cultivation_fault_distance,
         ).copy()
         gate_cost = base_cultivation_cost["serial"]
         moment_cost = base_cultivation_cost["parallel"]
