@@ -22,9 +22,11 @@ from typing import TYPE_CHECKING, ClassVar
 import cirq
 import networkx as nx
 from tqdm import tqdm
+import cirq_superstaq as css
 
 if TYPE_CHECKING:
     from resource_estimation.ftqc.architecture import Architecture
+    from resource_estimation.ftqc.layout import Layout
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -32,8 +34,9 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 class ResourceEstimator:
     """Class for resource estimator objects defined by the given architecture"""
 
-    def __init__(self, arc: Architecture) -> None:
+    def __init__(self, arc: Architecture, layout: Layout) -> None:
         self.arc = arc
+        self.layout = layout
 
     def validate_circuit_ops(self, circuit: cirq.Circuit) -> None:
         """Checks that the input circuit contains only valid operations and warns of operations still in progress"""
@@ -88,7 +91,10 @@ class ResourceEstimator:
             circuit.all_operations(), disable=not verbose, total=total_ops, colour="cyan"
         ):
             big_time = max(qubit_times[q] for q in op.qubits)
-            big_time += self.arc.op_time(op)
+            if isinstance(op.gate, css.MovementGate):
+                big_time += self.arc.op_time(op, layout=self.layout)
+            else:
+                big_time += self.arc.op_time(op)
             for qubit in op.qubits:
                 qubit_times[qubit] = big_time
         return max(qubit_times.values())
@@ -115,7 +121,10 @@ class ResourceEstimator:
             big_path = qubit_paths[big_qubit]
             big_time = qubit_times[big_qubit]
             big_path.append(op)
-            big_time += self.arc.op_time(op)
+            if isinstance(op.gate, css.MovementGate):
+                big_time += self.arc.op_time(op, layout=self.layout)
+            else:
+                big_time += self.arc.op_time(op)
             for qubit in op_qubits:
                 qubit_paths[qubit] = big_path.copy()
                 qubit_times[qubit] = big_time
@@ -139,8 +148,12 @@ class ResourceEstimator:
             op_qubits = op.qubits
             # This qubit currently has the longest path
             big_qubit = max(op_qubits, key=qubit_times.get)
-            big_time = qubit_times[big_qubit] + self.arc.op_time(op)
-            big_path = qubit_paths[big_qubit] + collections.Counter(self.arc.moment_cost(op))
+            if isinstance(op.gate, css.MovementGate):
+                big_time = qubit_times[big_qubit] + self.arc.op_time(op, layout=self.layout)
+                big_path = qubit_paths[big_qubit] + collections.Counter(self.arc.moment_cost(op, layout=self.layout))
+            else:
+                big_time = qubit_times[big_qubit] + self.arc.op_time(op)
+                big_path = qubit_paths[big_qubit] + collections.Counter(self.arc.moment_cost(op))
             for qubit in op_qubits:
                 qubit_paths[qubit] = big_path
                 qubit_times[qubit] = big_time

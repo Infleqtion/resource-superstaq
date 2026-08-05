@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import collections
 import copy
-import functools
 import itertools
 import os
 import sys
@@ -335,14 +334,22 @@ def _decompose_to_primitives(
 
 def add_moves(
     circuit: cirq.Circuit,
-    zone_ops: cirq.Gateset,
-    alley_ops: cirq.Gateset,
+    layout: Layout,
     verbose: int = 0,
 ) -> cirq.Circuit:
     """Handles replacement moves for both alley movement and interaction zone movement"""
     total = len(circuit)
     tstart = time.time()
 
+    if layout.inplace_cnot and layout.interaction_zones:
+        raise ValueError("Invalid configuration: inplace entanglement & interaction zones")
+    interaction_cycle = itertools.cycle(layout.zone_qubits('interact'))
+    measurement_cycle = itertools.cycle(layout.zone_qubits('measure'))
+    ops_to_replace = [cirq.CNOT]
+    if layout.measure_zones:
+        ops_to_replace.append(cirq.MeasurementGate)
+    ops_to_replace = cirq.Gateset(*ops_to_replace)
+    
     def map_func(op, moment_idx):
         if verbose:
             knock_off_tqdm(
@@ -351,23 +358,39 @@ def add_moves(
                 tstart=tstart,
                 message="Adding Qubit Movement:",
             )
-        if op not in zone_ops and op not in alley_ops:
+        if op not in ops_to_replace:
             yield op
         else:
-            op_qubits = list(op.qubits)
-            zone_type = None
-            if op.gate in zone_ops:
-                zone_type = "interact" if op.gate == cirq.CNOT else "measure"
-            move_op = (
-                functools.partial(lsp.Move(zone=zone_type).on)
-                if zone_type is None
-                else functools.partial(lsp.Move(zone=zone_type).on_each)
-            )
-            yield move_op(*op_qubits)
-            yield op
-            yield move_op(*op_qubits[::-1])
-
-    return cirq.map_operations_and_unroll(circuit, map_func)
+            if layout.inplace_cnot and op.gate == cirq.CNOT:
+                ctrl, trgt = op.qubits
+                op_sequece = [
+                    css.MovementGate({0: 1}).on(ctrl, trgt),
+                    op,
+                    css.MovementGate({1: 0}).on(ctrl, trgt),
+                ]
+            elif layout.interaction_zones and op.gate == cirq.CNOT:
+                ctrl, trgt = op.qubits
+                zone_qubit = next(interaction_cycle)
+                op_sequece = [
+                    css.MovementGate({0: 1}).on(ctrl, zone_qubit),
+                    css.MovementGate({0: 1}).on(trgt, zone_qubit),
+                    op,
+                    css.MovementGate({1: 0}).on(trgt, zone_qubit),     
+                    css.MovementGate({1: 0}).on(ctrl, zone_qubit),        
+                ]
+            elif layout.measure_zones and cirq.is_measurement(op):
+                q = op.qubits[0]  # There should really only be one qubit
+                zone_qubit = next(measurement_cycle)
+                op_sequece = [
+                    css.MovementGate({0: 1}).on(q, zone_qubit),
+                    op,
+                    css.MovementGate({1: 0}).on(q, zone_qubit),                
+                ]
+            else:
+                raise ValueError(f"Unexpected gate found: {op.gate}")
+            for op in op_sequece:
+                yield op
+    return cirq.map_operations_and_unroll(circuit, map_func, raise_if_add_qubits=False)
 
 
 def ft_compile(
@@ -384,6 +407,9 @@ def ft_compile(
     The passes available are post op correction and idling.
     The architecture is also the source of information for how many rounds of syndrome extraction should be performed when syndrome extraction is called for.
     """
+
+    if arc.zone_ops and not (hasattr(layout, 'measure_zones') or hasattr(layout, 'interaction_zones')):
+        raise ValueError("Architecture has zone operations, but Layout does not have any zones")
     # TODO: Aligning left results in circuits that have are more expensive in terms of circuit time than not aligning left. This is probably the result of requesting a layer of parallel cultivations but realigning so the expensive cultivation operations become spread out over multiple moments. It is currently unclear if aligning left is correct or not in general, but the specific tests for ft_compile very much rely on it...
     layout = copy.deepcopy(layout)
     layout.reset_graph()
@@ -439,13 +465,16 @@ def ft_compile(
             )
 
     if arc.zone_ops is not None or arc.alley_ops is not None:
-        zone_ops = arc.zone_ops if arc.zone_ops is not None else cirq.Gateset()
-        alley_ops = arc.alley_ops if arc.alley_ops is not None else cirq.Gateset()
+        measure_zone, interaction_zone, inplace_cnot = False, False, False
+        if arc.zone_ops:
+            measure_zone = cirq.MeasurementGate(num_qubits=1) in arc.zone_ops
+            interaction_zone = cirq.CNOT in arc.zone_ops
+        if arc.alley_ops:
+            inplace_cnot = cirq.CNOT in arc.alley_ops
         circuit = add_moves(
             circuit=circuit,
+            layout=layout,
             verbose=verbose,
-            zone_ops=zone_ops,
-            alley_ops=alley_ops,
         )
 
     if verbose > 1:

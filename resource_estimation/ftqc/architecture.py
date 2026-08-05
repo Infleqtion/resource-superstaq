@@ -172,6 +172,14 @@ def _split_cost(smooth: bool, d: int) -> dict[str, dict[cirq.Gate, int]]:
     moment_cost = {}
     return {"gate_cost": gate_cost, "moment_cost": moment_cost}
 
+def _move_time(l: int, a: float = 5500):
+    """
+    l: physical distance in microns
+    a: acceleration for constant acceleration profile in  m/s^2
+    """
+    l *= 10**6  # convert microns to meters
+    return 2*np.sqrt(l / a)
+
 
 class Architecture(abc.ABC):
     """Class for representing device architectures.
@@ -263,15 +271,15 @@ class Architecture(abc.ABC):
         except KeyError:
             raise ValueError("Gate not recognized")
 
-    def op_time(self, op: cirq.Operation) -> float:
+    def op_time(self, op: cirq.Operation, **kwargs) -> float:
         try:
-            return self.op_cost[type(op.gate)](op)["op_time"]
+            return self.op_cost[type(op.gate)](op, **kwargs)["op_time"]
         except KeyError:
             raise ValueError("Gate not recognized")
 
-    def moment_cost(self, op: cirq.Operation) -> dict[type[cirq.Gate], int]:
+    def moment_cost(self, op: cirq.Operation, **kwargs) -> dict[type[cirq.Gate], int]:
         try:
-            return self.op_cost[type(op.gate)](op)["moment_cost"]
+            return self.op_cost[type(op.gate)](op, **kwargs)["moment_cost"]
         except KeyError:
             raise ValueError("Gate not recognized")
 
@@ -610,7 +618,7 @@ class DefaultMovement(Architecture):
                 lsp.Distil,
                 lsp.SyndromeExtract,
                 lsp.ErrorCorrect,
-                lsp.Move,
+                css.MovementGate,
                 cirq.CNOT,
                 cirq.S,
                 cirq.I,
@@ -702,30 +710,62 @@ class DefaultMovement(Architecture):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
-    def move_cost(self, op) -> dict[str, dict[type[cirq.QubitPermutationGate], int] | float]:
-        """Method to handle both types of movement
-        The maximum move time should be 500us, which corresponds to travelling to a zone
-        Everything else should be penalized by distance away up to a distance of 500us
-        This reference says something about .55um/us (https://www.nature.com/articles/s41586-022-04592-6.pdf)
-        To make things easier, I'm going to call that .5um/us
-        A surface code patch has a side length of ~d physical qubits
-        If we assume qubits are spaced by ~1um, it takes about 2*d us to move a qubit to an adjacent patch
-        So if the L1 distance between logical qubits A and B is C, then we penalize Move(A, B) with time 2*C*d (up to a maximum of 500us)
-        This feels a little too weighted in favor of alleyway movement, but it is at least a rule, and it's something worth debating
+    def move_cost(self, op, layout) -> dict[str, dict[type[cirq.QubitPermutationGate], int] | float]:
         """
-        gate_cost = {cirq.QubitPermutationGate: 1}
-        moment_cost = {cirq.QubitPermutationGate: 1}
-        if op.gate.zone is None:
-            ctrl, trgt = op.qubits
-            distance = abs(trgt.row - ctrl.row) + abs(trgt.col - ctrl.col)
-            penalty_factor = 2 * self.d * distance
-            time_cap = self.phys_gate_times[cirq.QubitPermutationGate]
-            op_time = min(penalty_factor, time_cap)
-        else:
-            op_time = self.phys_gate_times[
-                cirq.QubitPermutationGate
-            ]  # Just a basic penalty based on the literature
-        return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
+        Costs for pre-compiled movement patterns for types of logical moves
+        - Moves to/from an interaction zone to accomplish a logical CNOT
+        - Moves to/from a measurement zone to accomplish a logical Measurement
+        - Moves between logical qubit patches to accomplish a logical CNOT with inplace entanglement
+        Total time is a function of physical distance is given by equation (1) of https://arxiv.org/pdf/2505.15907
+        The SITE_SPACING parameter gives the distance in microns between qubits that are nearest neighbor in the atom array
+        The physical distance is the product the lattice spacing and the number distance between sites in the array
+        All distances use the Manhattan metric
+            a b c d
+            e f g h
+            In the small array above, the distance between e and d is (3 + 1) * SITE_SPACING
+        
+        """
+        SITE_SPACING = 12  # 12 microns between sites
+        
+        ctrl, trgt = op.qubits
+        logical_distance = layout.distance(ctrl, trgt)
+        sites_per_patch = 2*self.d  # number of physical sites in qubit array on one side of a surface code patch
+        if layout.layout_graph.nodes[trgt]["patch_type"] == "izone":
+            # A logical CNOT performed within an interaction zone
+            # Assumes Shift - Move Qubit - Squeeze
+            # The other logical qubit in the zoned CNOT is covered in a separate operation
+            l1 = 1*SITE_SPACING
+            l2 = logical_distance*sites_per_patch*SITE_SPACING
+            l3 = .25*SITE_SPACING  # Based on the idea of moving moving sites a little closer to be ready to interact
+            op_time = sum(map(_move_time, [l1, l2, l3]))
+            return {
+                'gate_cost': {css.MovementGate: 3},
+                'moment_cost': {css.MovementGate: 3},
+                'op_time': op_time
+            }
+        if layout.layout_graph.nodes[trgt]["patch_type"] == "mzone":
+            # A logical Measurement operation performed within a measurement zone
+            # Assuming Shift - Move Measures to Zone
+            l1 = 1*SITE_SPACING
+            l2 = logical_distance*sites_per_patch*SITE_SPACING
+            op_time = sum(map(_move_time, [l1, l2]))
+            return {
+                'gate_cost': {css.MovementGate: 2},
+                'moment_cost': {css.MovementGate: 2},
+                'op_time': op_time
+            }
+        # A logical CNOT operation performed inplace using movement
+        # Assuming Shift - Punt - Interact
+        bottom_right = max(layout.layout_graph.nodes)  # Scratch space for moving measure qubits out of the way
+        distance_to_edge = layout.distance(trgt, bottom_right) + 2  # Accounts for one more diagonal jump to the corner
+        # Shift -- align columns
+        l1 = 1*SITE_SPACING
+        # Punt -- Move measure qubits to logical corner
+        l2 = 2*self.d*distance_to_edge*SITE_SPACING
+        # Interact -- Move datas from ctrl to trgt
+        l3 = 2*self.d*layout.distance(ctrl, trgt)*SITE_SPACING
+        op_time = sum(map(_move_time, [l1, l2, l3]))
+        return {"op_time": op_time, "gate_cost": {css.MovementGate: 3}, "moment_cost": {css.MovementGate: 3}}
 
     @cached_property
     def _cultivate_t_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
@@ -799,7 +839,7 @@ class DefaultMovement(Architecture):
         super().__post_init__()
         self.op_cost[type(cirq.CNOT)] = self.cnot_cost
         self.op_cost[type(cirq.S)] = self.s_cost
-        self.op_cost[lsp.Move] = self.move_cost
+        self.op_cost[css.MovementGate] = self.move_cost
         self.op_cost[lsp.Distil] = self.distil_cost
 
     @property

@@ -120,7 +120,7 @@ class Layout(abc.ABC):
                 for idx in range(self.num_s_factories)
             ],
         )
-        G.add_edges_from((n1, n2) for n1, n2 in itertools.combinations(G.nodes, 2))
+        # G.add_edges_from((n1, n2) for n1, n2 in itertools.combinations(G.nodes, 2))
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
 
@@ -224,6 +224,12 @@ class Layout(abc.ABC):
 
         path = nx.dijkstra_path(G=G, source=ctrl, target=trgt, weight=custom_weight)
         return path
+    
+    def distance(self, q1: cirq.GridQubit, q2: cirq.GridQubit) -> int:
+        """Calculates the Manhattan distance between two logical qubits with defined grid coordinates"""
+        if q1 not in self.layout_graph.nodes or q2 not in self.layout_graph.nodes:
+            raise ValueError("Input qubits are not in the set of layout nodes")
+        return abs(q2.row - q1.row) + abs(q2.col - q1.col)
 
     def draw(self) -> None:  # pragma: no cover
         """Draw method to display layouts clearly
@@ -234,11 +240,12 @@ class Layout(abc.ABC):
         color_dict = {
             "t": "red",
             "s": "yellow",
-            "ccz": "black",
             "data": "green",
             "ancilla": "blue",
             "block": "pink",
             "ccz": "orange",
+            "mzone": "gray",
+            "izone": "lightgray"
         }
         G = self.layout_graph
         node_color = []
@@ -259,14 +266,63 @@ class MovementLayout(Layout):
 
     # TODO: build this implementation
     def __init__(
-        self, input_circuit: cirq.Circuit, num_t_factories: int = 1, num_ccz_factories: int = 0
+        self, 
+        input_circuit: cirq.Circuit, 
+        num_t_factories: int = 1, 
+        num_ccz_factories: int = 0,
+        measure_zones: bool = False,
+        interaction_zones: bool = False,
+        inplace_cnot: bool = False,
     ) -> None:
+        # Need a check here to ensure valid configuration
+        if not any((inplace_cnot, interaction_zones, measure_zones)):
+            raise ValueError("Invalid configuration: no zones or inplace entanglement")
+        self.measure_zones = measure_zones
+        self.interaction_zones = interaction_zones
+        self.inplace_cnot = inplace_cnot
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
             num_ccz_factories=num_ccz_factories,
             num_s_factories=0,
         )
+    
+    def _add_zones(self):
+        G = self.layout_graph
+        cols = max(node.col for node in G.nodes)+1
+        rows = max(node.row for node in G.nodes)+1
+        if self.interaction_zones:  # Place an interaction zone in the -1 row
+            G.add_nodes_from(
+                [
+                    (
+                        cirq.GridQubit(-1, col),
+                        dict(patch_type="izone"),
+                    )
+                    for col in range(cols)
+                ],
+            )
+        if self.measure_zones:  # Place a measurement zone in the final row
+            G.add_nodes_from(
+                [
+                    (
+                        cirq.GridQubit(rows, col),
+                        dict(patch_type="mzone"),
+                    )
+                    for col in range(cols)
+                ],
+            )
+        self.layout_graph = G
+
+    def zone_qubits(self, zone_type: Literal['measure', 'interact']):
+        if zone_type == 'measure':
+            return [node for node in self.layout_graph.nodes if self.layout_graph.nodes[node]["patch_type"] == "mzone"]
+        if zone_type == 'interact':
+            return [node for node in self.layout_graph.nodes if self.layout_graph.nodes[node]["patch_type"] == "izone"]
+        else:
+            raise ValueError(f"Not a recognized zone type: {zone_type}")
+    def __post_init__(self):
+        super().__post_init__()
+        self._add_zones()
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit):
         raise NotImplementedError
@@ -528,12 +584,18 @@ class MovementDistillery(MovementLayout):
     """
 
     def __init__(
-        self, input_circuit: cirq.Circuit, num_t_factories: int = 0, num_ccz_factories: int = 0
+        self, input_circuit: cirq.Circuit, num_t_factories: int = 0, num_ccz_factories: int = 0,
+        measure_zones: bool = False,
+        interaction_zones: bool = False,
+        inplace_cnot: bool = False, 
     ) -> None:
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
             num_ccz_factories=num_ccz_factories,
+            measure_zones=measure_zones,
+            interaction_zones=interaction_zones,
+            inplace_cnot=inplace_cnot, 
         )
         self.distil = True
 
