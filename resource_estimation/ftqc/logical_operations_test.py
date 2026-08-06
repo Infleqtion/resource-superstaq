@@ -13,6 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 import stim
 
@@ -61,6 +63,63 @@ def test_explicit_discovery_records_unavailable_search(
     assert profile.circuit_for("S") is None
     assert "qLDPC transversal search unavailable" in profile.missing_reason_for("H")
     assert "GAP is unavailable" in profile.missing_reason_for("S")
+
+
+def test_explicit_discovery_records_missing_transversal_gates(
+    steane_patch: lsp.CodePatch, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import qldpc
+
+    def no_transversal_gates(*args: object, **kwargs: object) -> tuple[None, None]:
+        return None, None
+
+    monkeypatch.setattr(qldpc.circuits, "get_transversal_circuits", no_transversal_gates)
+
+    profile = CSSLogicalOperations.discover_from_qldpc(steane_patch)
+
+    assert profile.circuit_for("H") is None
+    assert profile.circuit_for("S") is None
+    assert profile.missing_reason_for("H") == "qLDPC found no transversal H implementation"
+    assert profile.missing_reason_for("S") == "qLDPC found no transversal S implementation"
+
+
+def test_profile_reports_qldpc_verification_failure(
+    steane_patch: lsp.CodePatch, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import qldpc
+
+    def verification_failure(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("invalid deformation")
+
+    monkeypatch.setattr(qldpc.circuits, "get_logical_tableau", verification_failure)
+
+    with pytest.raises(ValueError, match="does not preserve the supplied CodePatch"):
+        CSSLogicalOperations.from_circuits(steane_patch, h_circuit=stim.Circuit("H 0"))
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"is_binary": False}, "binary CSS CodePatch"),
+        ({"is_stabilizer_code": False}, "Subsystem CSS codes"),
+        ({"d": None}, "known positive integer code distance"),
+    ],
+)
+def test_validate_k1_css_patch_rejects_invalid_metadata(
+    overrides: dict[str, object], message: str
+) -> None:
+    metadata: dict[str, object] = {
+        "patch_label": "compute",
+        "is_css": True,
+        "is_binary": True,
+        "is_stabilizer_code": True,
+        "k": 1,
+        "d": 3,
+    }
+    metadata.update(overrides)
+
+    with pytest.raises(ValueError, match=message):
+        validate_k1_css_patch(SimpleNamespace(**metadata))  # type: ignore[arg-type]
 
 
 def test_validate_k1_css_patch_rejects_other_code_shapes() -> None:

@@ -40,6 +40,34 @@ def test_build_joint_logical_pauli_measurement_circuit_supports_cross_code_pair(
     )
 
 
+def test_build_joint_logical_pauli_measurement_circuit_clones_shared_code() -> None:
+    patch = CodePatch("surface", d=3)
+
+    resource = build_joint_logical_pauli_measurement_circuit(
+        patch,
+        patch,
+        basis="Z",
+        rounds=1,
+    )
+
+    assert set(resource.left_data_ids).isdisjoint(resource.right_data_ids)
+
+
+def test_build_joint_logical_pauli_measurement_circuit_rejects_non_css_code() -> None:
+    from qldpc import codes
+
+    non_css_patch = CodePatch(codes.FiveQubitCode)
+    surface_patch = CodePatch("surface", d=3)
+
+    with pytest.raises(ValueError, match="requires CSS CodePatch inputs"):
+        build_joint_logical_pauli_measurement_circuit(
+            non_css_patch,
+            surface_patch,
+            basis="Z",
+            rounds=1,
+        )
+
+
 def test_logical_vector_rejects_invalid_logical_index() -> None:
     patch = CodePatch("surface", d=3)
 

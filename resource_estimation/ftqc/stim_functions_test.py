@@ -100,6 +100,8 @@ def test_error_handling() -> None:
     bad_circuit = stim.Circuit("CZSWAP 5 6")
     with pytest.raises(ValueError, match="Unknown Instruction"):
         _ = count_stim_resources(bad_circuit)
+    with pytest.raises(ValueError, match="Unknown Instruction"):
+        _ = count_stim_resources(bad_circuit, scheduling="asap")
     with pytest.raises(ValueError, match="Style cannot be None for cultivation"):
         _ = load_saved_cost(dsurface=7, op_key="cultivate")
     with pytest.raises(ValueError, match="cannot be None"):
@@ -135,6 +137,22 @@ def test_tick_scheduling_flushes_final_unterminated_moment() -> None:
 
     assert costs["serial"] == {cirq.PhasedXZGate: 1}
     assert costs["parallel"] == {cirq.PhasedXZGate: 1}
+
+
+def test_asap_scheduling_honors_ticks_and_ignores_annotations() -> None:
+    circuit = stim.Circuit(
+        """
+        QUBIT_COORDS(0, 0) 0
+        H 0
+        TICK
+        H 0
+        """
+    )
+
+    costs = count_stim_resources(circuit, scheduling="asap")
+
+    assert costs["serial"] == {cirq.PhasedXZGate: 2}
+    assert costs["parallel"] == {cirq.PhasedXZGate: 2}
 
 
 @pytest.mark.parametrize(

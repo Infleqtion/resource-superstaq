@@ -73,7 +73,15 @@ def test_magic_state_code_teleport() -> None:
     assert gate.num_qubits() == 1
     assert str(gate) == "T-CODE-TELEPORT"
     assert repr(gate) == "lsp.MagicStateCodeTeleport()"
+    assert cirq.circuit_diagram_info(gate).wire_symbols == ("T-CODE-XFER",)
+    assert gate._json_dict_() == {}
+    assert gate._json_namespace_() == "lsp"
     assert lsp.custom_resolver("lsp.MagicStateCodeTeleport") is lsp.MagicStateCodeTeleport
+
+
+def test_distil_rejects_invalid_resource() -> None:
+    with pytest.raises(ValueError, match="Invalid resource"):
+        lsp.Distil("S")  # type: ignore[arg-type]
 
 
 def test_move() -> None:
@@ -306,6 +314,48 @@ def test_code_patch_qldpc_family_alias() -> None:
     assert patch.code_type == "toric"
     assert patch.code_params == (4, 2, 2)
     assert patch.patch_label == "compute"
+
+
+def test_qldpc_family_resolution_fallbacks() -> None:
+    class ExactNameCodes:
+        CustomCode = object()
+
+    class ExportedCodes:
+        __all__ = ("Mixed_Case_Code",)
+
+    assert lsp._resolve_qldpc_family_name("CustomCode", ExactNameCodes) == "CustomCode"
+    assert lsp._resolve_qldpc_family_name("mixed case code", ExportedCodes) == "Mixed_Case_Code"
+
+
+def test_code_patch_qldpc_compatibility_fallbacks() -> None:
+    class LegacyCode:
+        dimension = 1
+
+        def __len__(self) -> int:
+            return 5
+
+        def get_distance_if_known(self) -> int:
+            return 3
+
+    class CheckMatrix:
+        shape = (4, 9)
+
+    class MatrixOnlyCode:
+        matrix_x = CheckMatrix()
+
+    assert lsp.CodePatch._metadata_from_qldpc_code(LegacyCode()) == (5, 1, 3)
+
+    patch = object.__new__(lsp.CodePatch)
+    patch._qldpc_code = MatrixOnlyCode()
+    assert patch._qldpc_css_check_count("x") == 4
+
+    patch.k = 2
+    with pytest.raises(ValueError, match="returned 1 logical X operators"):
+        patch._validate_logical_ops_count([[1, 0]], "X")
+
+    patch.n = 3
+    with pytest.raises(ValueError, match="must have length n=3 or 2n=6"):
+        patch._logical_op_support([1, 0])
 
 
 def test_code_patch_callable_factory() -> None:

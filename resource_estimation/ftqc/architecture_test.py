@@ -61,6 +61,13 @@ def test_architecture_rejects_even_code_distance() -> None:
         arch.DefaultLattice(d=4)
 
 
+def test_cultivation_surface_distance_validation_branches() -> None:
+    with pytest.raises(TypeError, match="must be an integer"):
+        arch._resolve_cultivation_surface_distance(7, 3, True)
+
+    assert arch._resolve_cultivation_surface_distance(8, 3, None) == 9
+
+
 @pytest.fixture(scope="module")
 def steane_patch() -> lsp.CodePatch:
     return lsp.CodePatch("steane")
@@ -156,6 +163,14 @@ def test_generic_css_movement_requires_patch_span_for_alleys(
 
 
 def test_generic_css_architecture_validation(steane_patch: lsp.CodePatch) -> None:
+    with pytest.raises(ValueError, match="does not match patch distance"):
+        arch.DefaultMovement(d=5, patch=steane_patch)
+
+    unknown_distance_patch = lsp.CodePatch("steane")
+    unknown_distance_patch.d = None
+    with pytest.raises(ValueError, match="must have a known distance"):
+        arch.DefaultMovement(patch=unknown_distance_patch)
+
     with pytest.raises(ValueError, match="require k=1"):
         arch.DefaultMovement(patch=lsp.CodePatch("toric", d=2))
 
@@ -168,6 +183,9 @@ def test_generic_css_architecture_validation(steane_patch: lsp.CodePatch) -> Non
     profile = CSSLogicalOperations(patch=other_steane_patch)
     with pytest.raises(ValueError, match="profile must refer"):
         arch.DefaultMovement(patch=steane_patch, logical_operations=profile)
+
+    with pytest.raises(ValueError, match="patch_span must be positive"):
+        arch.DefaultMovement(patch=steane_patch, patch_span=0)
 
 
 def test_generic_css_t_cultivation_keeps_surface_code_cost(steane_patch: lsp.CodePatch) -> None:
@@ -279,6 +297,16 @@ def test_magic_state_code_teleport_is_movement_only() -> None:
 
     assert arch.DefaultMovement().primitives.validate(operation)
     assert not arch.DefaultLattice().primitives.validate(operation)
+
+
+def test_surface_magic_state_code_teleport_has_no_adapter_cost() -> None:
+    architecture = arch.DefaultMovement()
+    operation = lsp.MagicStateCodeTeleport()(cirq.LineQubit(0))
+
+    assert architecture.gate_cost(operation) == {}
+    assert architecture.moment_cost(operation) == {}
+    assert architecture.op_time(operation) == 0
+    assert architecture.t_factory_physical_qubits == architecture.patch.num_physical_qubits
 
 
 @pytest.mark.parametrize(

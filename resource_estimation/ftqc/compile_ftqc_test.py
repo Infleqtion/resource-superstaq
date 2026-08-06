@@ -134,6 +134,15 @@ def test_generic_css_movement_compilation_keeps_surface_t_cultivation() -> None:
     assert injection.qubits == (program_qubit, factory_qubit)
 
 
+def test_generic_css_magic_state_transfer_rejects_nonmovement_layout() -> None:
+    qubit = cirq.LineQubit(0)
+    architecture = arch.DefaultMovement(patch=lsp.CodePatch("steane"), patch_span=4)
+    layout = Column(cirq.Circuit(cirq.T(qubit)))
+
+    with pytest.raises(ValueError, match="supported only with MovementLayout"):
+        comp.ft_compile(layout, architecture)
+
+
 def test_generic_css_movement_distillery_adapts_surface_t_output() -> None:
     qubit = cirq.LineQubit(0)
     circuit = cirq.Circuit(cirq.T(qubit))
