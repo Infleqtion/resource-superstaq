@@ -32,15 +32,11 @@ from resource_estimation.ftqc.compile_ftqc import (
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.estimate import ReactionDepthEstimator, ResourceEstimator
 from resource_estimation.ftqc.lattice_surgery_primitives import (
-    Bank,
     BufferCodePatch,
     CodePatch,
     Cultivate,
-    Distillery,
     EndpointPatch,
     ErrorCorrect,
-    Farm,
-    Factory,
     IntermediatePatch,
     MagicStateCodeTeleport,
     Merge,
@@ -49,7 +45,6 @@ from resource_estimation.ftqc.lattice_surgery_primitives import (
     RotatedCodePatch,
     Split,
     SyndromeExtract,
-    Vault,
     custom_resolver,
 )
 from resource_estimation.ftqc.layout import (
@@ -69,20 +64,16 @@ from resource_estimation.ftqc.stim_functions import (
 
 __all__ = [
     "Architecture",
-    "Bank",
     "BufferCodePatch",
     "CodePatch",
     "Column",
     "Cultivate",
     "DefaultLattice",
     "DefaultMovement",
-    "Distillery",
     "DualSpeciesMovement",
     "Embedded",
     "EndpointPatch",
     "ErrorCorrect",
-    "Farm",
-    "Factory",
     "FactorySandwich",
     "IntermediatePatch",
     "Layout",
@@ -99,7 +90,6 @@ __all__ = [
     "Split",
     "Superconductor",
     "SyndromeExtract",
-    "Vault",
     "STR2GATE",
     "add_moves",
     "convert_globals_to_phasedxz",
