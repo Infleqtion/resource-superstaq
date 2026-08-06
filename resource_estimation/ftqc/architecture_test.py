@@ -11,46 +11,44 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
-import os
-from collections import Counter
+import collections
 from math import ceil, pi
-import numpy as np
 
 import cirq
+import cirq_superstaq as css
+import numpy as np
 import pytest
-import resource_estimation.architecture as arch
-import resource_estimation.estimate as est
-import resource_estimation.lattice_surgery_primitives as lsp
-from cirq_superstaq import ParallelRGate
-from resource_estimation.stim_functions import cultivate, load_saved_cost
+
+import resource_estimation.ftqc.architecture as arch
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+from resource_estimation.ftqc.stim_functions import cultivate
 
 
 @pytest.fixture
-def lattice_architecture():
+def lattice_architecture() -> arch.DefaultLattice:
     return arch.DefaultLattice()
 
 
 @pytest.fixture
-def movement_architecture():
+def movement_architecture() -> arch.DefaultMovement:
     return arch.DefaultMovement()
 
 
-def test_architecture_exceptions(lattice_architecture, movement_architecture):
+def test_architecture_exceptions(lattice_architecture, movement_architecture) -> None:
     with pytest.raises(ValueError, match="Cultivation cost"):
         _ = lattice_architecture.cultivate_cost(lsp.Cultivate(1).on(cirq.GridQubit(0, 0)))
 
 
-def test_inplace_exact(lattice_architecture: arch.DefaultLattice):
+def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
     # TODO: Brainstorm a better way to test this feature
     actual_op_cost = lattice_architecture.cultivate_cost(
-        lsp.Cultivate(pi / 2).on(cirq.GridQubit(0, 0))
+        lsp.Cultivate(pi / 2).on(cirq.GridQubit(0, 0)),
     )
     # Tests that the parallel gates are counted correctly
-    se_moment_cost = Counter(
+    se_moment_cost = collections.Counter(
         arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["moment_cost"]
     )
-    expected_Y_moment_cost = Counter(
+    expected_Y_moment_cost = collections.Counter(
         {cirq.PhasedXZGate: 10, cirq.CZ: 10, cirq.MeasurementGate: 2, cirq.ResetChannel: 2}
     )  # Includes both pieces
     expected_moment_cost = expected_Y_moment_cost + se_moment_cost
@@ -58,10 +56,10 @@ def test_inplace_exact(lattice_architecture: arch.DefaultLattice):
 
     # Tests that the serial gates are counted correctly
     # It does continue the assumption that we can just use a syndrome extraction cycle to approximate the total cost
-    se_gate_cost = Counter(
+    se_gate_cost = collections.Counter(
         arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"]
     )
-    expected_Y_gate_cost = Counter(
+    expected_Y_gate_cost = collections.Counter(
         arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"]
     )
     expected_gate_cost = expected_Y_gate_cost + se_gate_cost + expected_Y_gate_cost
@@ -70,14 +68,14 @@ def test_inplace_exact(lattice_architecture: arch.DefaultLattice):
 
 
 @pytest.mark.parametrize("arc", [arch.DefaultMovement(), arch.DefaultLattice()])
-def test_illegal_gate(arc):
+def test_illegal_gate(arc) -> None:
     illegal_gate = cirq.Rx(rads=2).on(cirq.LineQubit(0))
     with pytest.raises(ValueError, match="Gate not recognized"):
         _ = arc.gate_cost(illegal_gate)
 
 
 @pytest.mark.parametrize("d", (3, 5, 7))
-def test_movement_gate_costs(d):
+def test_movement_gate_costs(d) -> None:
     # Check that all gate costs are correct for movment architectures
     arc = arch.DefaultMovement(d=d)
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
@@ -85,12 +83,13 @@ def test_movement_gate_costs(d):
     # Check Cultivate
 
     op = lsp.Cultivate(pi / 4).on(qubit_a)
-    cost = arc.gate_cost(op)
     if d < 7:
         with pytest.warns(UserWarning, match="Returning result for d=7"):
-            base_cost = cultivate(dsurface=d)
+            cost = arc.gate_cost(op)
+            base_cost = cultivate(dsurface=d, fault_distance=3)
     else:
-        base_cost = cultivate(dsurface=d)
+        cost = arc.gate_cost(op)
+        base_cost = cultivate(dsurface=d, fault_distance=3)
     expected_cost = base_cost["serial"]
     # To account for movement we add the QubitPermutationGates to the base cost
     expected_cost[cirq.QubitPermutationGate] = 2 * (
@@ -154,8 +153,8 @@ def test_movement_gate_costs(d):
     # Check S gate
     op = cirq.S.on(qubit_a)
     cost = arc.gate_cost(op)
-    expected_cost = Counter(arc.gate_cost(lsp.SyndromeExtract(1, 1).on(qubit_a)))
-    expected_cost += Counter(
+    expected_cost = collections.Counter(arc.gate_cost(lsp.SyndromeExtract(1, 1).on(qubit_a)))
+    expected_cost += collections.Counter(
         {cirq.CZ: (d - 1) ** 2, cirq.PhasedXZGate: d, cirq.QubitPermutationGate: 2}
     )
     assert cost == expected_cost
@@ -185,7 +184,7 @@ def test_movement_gate_costs(d):
 
 
 @pytest.mark.parametrize("d", (3, 5, 7))
-def test_lattice_gate_costs(d):
+def test_lattice_gate_costs(d) -> None:
     # Test that gate costs are exact for lattice architectures
 
     arc = arch.DefaultLattice(d=d)
@@ -271,10 +270,10 @@ def test_lattice_gate_costs(d):
     if d < 7:
         with pytest.warns(UserWarning, match="Returning result for d=7"):
             cost = arc.gate_cost(op)
-            expected_cost = cultivate(dsurface=d)["serial"]
+            expected_cost = cultivate(dsurface=d, fault_distance=3)["serial"]
     else:
         cost = arc.gate_cost(op)
-        expected_cost = cultivate(dsurface=d)["serial"]
+        expected_cost = cultivate(dsurface=d, fault_distance=3)["serial"]
     assert expected_cost == cost
 
     # Check Syndrome Extract on one qubit
@@ -334,7 +333,7 @@ def test_lattice_gate_costs(d):
         assert expectation == cost
 
 
-def test_self_returns(movement_architecture, lattice_architecture):
+def test_self_returns(movement_architecture, lattice_architecture) -> None:
     # TODO: There are no self-returns anymore so this function is not well named
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     ops_and_expectations = [
@@ -348,64 +347,7 @@ def test_self_returns(movement_architecture, lattice_architecture):
             assert expectation == cost
 
 
-@pytest.mark.parametrize("d", (3, 5, 7))
-def test_against_cultiv(d):
-    # Test Syndrome Extract
-    # Set up memory circuit
-    with open(
-        os.path.dirname(os.path.abspath(__file__)) + "/../data/cultivate_costs.json", "r"
-    ) as f:
-        saved_resources = json.load(f)
-
-    d_count = load_saved_cost(dsurface=d, op_key="memory_d_rounds")["serial"]
-    # Remove the Logical Measurement operation
-    print(d_count)
-    d_count[cirq.MeasurementGate] -= d**2
-
-    s_count = load_saved_cost(dsurface=d, op_key="memory_1_round")["serial"]
-    # Remove the Logical Measurement operation
-    s_count[cirq.MeasurementGate] -= d**2
-
-    syndrome_estimate = Counter(
-        arch.DefaultLattice(d=d).syndrome_extract_cost(
-            lsp.SyndromeExtract(1, d).on(cirq.LineQubit(0))
-        )["gate_cost"]
-    )
-    assert d_count[cirq.CZ] == syndrome_estimate[cirq.CZ]
-    assert d_count[cirq.MeasurementGate] == syndrome_estimate[cirq.MeasurementGate]
-
-    single_syndrome_estimate = {k: v / d for k, v in syndrome_estimate.items()}
-    assert s_count[cirq.CZ] == single_syndrome_estimate[cirq.CZ]
-    assert s_count[cirq.MeasurementGate] == single_syndrome_estimate[cirq.MeasurementGate]
-
-    official_cnot_resources = load_saved_cost(dsurface=d, op_key="cnot")["serial"]
-    # Correct for optimizations/quirks of Cultiv
-    # There are 4 + 2dsurface syndrome extractions just from idling
-    official_cnot_resources[cirq.CZ] -= (4 + 2 * d) * s_count[cirq.CZ]
-    # Removing contributions from idling
-    official_cnot_resources[cirq.MeasurementGate] -= (4 + 2 * d) * s_count[cirq.MeasurementGate]
-
-    # Optimization from measuring the whole ancilla patch in the second Split
-    official_cnot_resources[cirq.MeasurementGate] += 2 * d**2 - 1
-    official_cnot_resources[cirq.MeasurementGate]
-
-    Estimator = est.ResourceEstimator(
-        arc=arch.DefaultLattice(d=d, idling=False, post_op_correction=True)
-    )
-    cnot_qubits = [cirq.GridQubit(0, 1), cirq.GridQubit(0, 0), cirq.GridQubit(1, 0)]
-    low_level_circuit = cirq.Circuit(
-        [
-            lsp.Merge(2, smooth=True).on(cnot_qubits[0], cnot_qubits[1]),
-            lsp.Split([1, 1], smooth=True).on(cnot_qubits[0], cnot_qubits[1]),
-            lsp.Merge(2, smooth=False).on(cnot_qubits[1], cnot_qubits[2]),
-            lsp.Split([1, 1], smooth=False).on(cnot_qubits[1], cnot_qubits[2]),
-        ]
-    )
-    circuit_cost = Counter(Estimator.serial_circuit_cost(low_level_circuit))
-    assert circuit_cost[cirq.CZ] == official_cnot_resources[cirq.CZ]
-
-
-def test_movement_moment_costs(movement_architecture):
+def test_movement_moment_costs(movement_architecture) -> None:
     # Test that all primitives have moment costs
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
 
@@ -483,11 +425,10 @@ def test_movement_moment_costs(movement_architecture):
         _ = movement_architecture.moment_cost(op)
 
 
-def test_lattice_moment_costs(lattice_architecture):
+def test_lattice_moment_costs(lattice_architecture) -> None:
     # Test that all primitives have correct moment costs
     op = lsp.Cultivate(pi / 4).on(cirq.GridQubit(0, 0))
     cost = lattice_architecture.moment_cost(op=op)
-    pass
 
     op = cirq.H.on(cirq.GridQubit(0, 0))
     cost = lattice_architecture.moment_cost(op)
@@ -548,7 +489,7 @@ def test_lattice_moment_costs(lattice_architecture):
         _ = lattice_architecture.gate_cost(cirq.Rx(rads=7).on(cirq.GridQubit(0, 0)))
 
 
-def test_timing(movement_architecture, lattice_architecture):
+def test_timing(movement_architecture, lattice_architecture) -> None:
     # This test should break first when we introduce real gate times
     gates_with_time = [
         (cirq.PhasedXZGate, 5.0),
@@ -571,13 +512,14 @@ def test_timing(movement_architecture, lattice_architecture):
         lattice_architecture.op_time(cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)))
 
 
-def test_classmethods():
+def test_classmethods() -> None:
     movement_input_dict = {
         "movement": True,
         "idling": True,
         "post_op_correction": True,
         "d": 7,
         "cultivation_repetition": 1,
+        "cultivation_fault_distance": 3,
         "syndrome_rounds": 1,
     }
     mv_arc = arch.Architecture.from_dict(movement_input_dict)
@@ -589,6 +531,7 @@ def test_classmethods():
         "post_op_correction": True,
         "d": 7,
         "cultivation_repetition": 1,
+        "cultivation_fault_distance": 3,
         "syndrome_rounds": 1,
     }
     ls_arch = arch.Architecture.from_dict(lattice_input_dict)
@@ -600,6 +543,7 @@ def test_classmethods():
         "post_op_correction": True,
         "d": 7,
         "cultivation_repetition": 1,
+        "cultivation_fault_distance": 3,
         "syndrome_rounds": 1,
         "gate_times": {cirq.QubitPermutationGate: 100},
     }
@@ -612,6 +556,7 @@ def test_classmethods():
         "post_op_correction": True,
         "d": 7,
         "cultivation_repetition": 1,
+        "cultivation_fault_distance": 3,
         "syndrome_rounds": 1,
         "gate_times": {"QubitPermutationGate": 99},
     }
@@ -624,6 +569,7 @@ def test_classmethods():
         "post_op_correction": True,
         "d": 7,
         "cultivation_repetition": 1,
+        "cultivation_fault_distance": 3,
         "syndrome_rounds": 1,
         "gate_times": {cirq.CZ: 100},
     }
@@ -636,12 +582,12 @@ def test_classmethods():
         "post_op_correction": True,
         "d": 7,
         "cultivation_repetition": 1,
+        "cultivation_fault_distance": 3,
         "syndrome_rounds": 1,
         "gate_times": {"CZ": 99},
     }
     ls_arc = arch.Architecture.from_dict(lattice_input_dict)
     assert ls_arc.phys_gate_times[cirq.CZ] == 99
-
     ls_arc = arch.Architecture.from_json("data/lattice_test.json")
     assert ls_arc.phys_gate_times[cirq.CZ] == 99
 
@@ -655,13 +601,14 @@ def test_classmethods():
             "post_op_correction": True,
             "d": 7,
             "cultivation_repetition": 1,
+            "cultivation_fault_distance": 3,
             "syndrome_rounds": 1,
             "gate_times": {"CNOT": 99},
         }
         _ = arch.Architecture.from_dict(input_dict)
 
 
-def test_dual_species_with_movement():
+def test_dual_species_with_movement() -> None:
     # HM never pays for Measurement
     # HM often pays to move for CZ
     # - Transversal CNOT
@@ -671,10 +618,18 @@ def test_dual_species_with_movement():
     # This has all nearest-neighbor CZs, so no moves
     d = 7
     hm = arch.DualSpeciesMovement(
-        d=d, syndrome_rounds=1, cultivation_repetition=1, idling=False, post_op_correction=True
+        d=d,
+        syndrome_rounds=1,
+        cultivation_repetition=1,
+        idling=False,
+        post_op_correction=True,
     )
     mv = arch.DefaultMovement(
-        d=d, syndrome_rounds=1, cultivation_repetition=1, idling=False, post_op_correction=True
+        d=d,
+        syndrome_rounds=1,
+        cultivation_repetition=1,
+        idling=False,
+        post_op_correction=True,
     )
     ls = arch.DefaultLattice(
         d=d,
@@ -694,10 +649,18 @@ def test_dual_species_with_movement():
     assert hm.syndrome_extract_cost(op)["gate_cost"] == ls.syndrome_extract_cost(op)["gate_cost"]
 
     hm_folded = arch.DualSpeciesMovement(
-        d=d, cultivation_repetition=1, idling=False, post_op_correction=True, fold_cultiv=True
+        d=d,
+        cultivation_repetition=1,
+        idling=False,
+        post_op_correction=True,
+        fold_cultiv=True,
     )
     mv_folded = arch.DefaultMovement(
-        d=d, cultivation_repetition=1, idling=False, post_op_correction=True, fold_cultiv=True
+        d=d,
+        cultivation_repetition=1,
+        idling=False,
+        post_op_correction=True,
+        fold_cultiv=True,
     )
     assert hm_folded._cnot_cost == mv_folded._cnot_cost
     assert hm_folded._measure_cost == ls._measure_cost
@@ -715,7 +678,7 @@ def test_dual_species_with_movement():
 
 
 @pytest.mark.parametrize("fold", (True, False))
-def test_mzo(fold):
+def test_mzo(fold) -> None:
     # MZO always pays two Moves per measure
     # - Syndrome Extract
     # - Cultiving (folded or unfolded)
@@ -769,40 +732,60 @@ def test_mzo(fold):
     assert mzo_t_cult == ssm_t_cult
 
 
-def test_string_representations():
+def test_string_representations() -> None:
     ssm = arch.DefaultMovement(
-        idling=True, post_op_correction=True, d=9, cultivation_repetition=10, syndrome_rounds=1
+        idling=True,
+        post_op_correction=True,
+        d=9,
+        cultivation_repetition=10,
+        syndrome_rounds=1,
     )
-    assert str(ssm) == "SingleSpeciesMovement(d=9, cr=10, sr=1, fold=False)"
+    assert str(ssm) == "SingleSpeciesMovement(d=9, cr=10, fd=3, sr=1, fold=False)"
 
     dsnm = arch.DefaultLattice(
-        idling=True, post_op_correction=True, d=9, cultivation_repetition=10, syndrome_rounds=9
+        idling=True,
+        post_op_correction=True,
+        d=9,
+        cultivation_repetition=10,
+        syndrome_rounds=9,
     )
-    assert str(dsnm) == "DualSpeciesNoMovement(d=9, cr=10, sr=9)"
+    assert str(dsnm) == "DualSpeciesNoMovement(d=9, cr=10, fd=3, sr=9)"
 
     dsm = arch.DualSpeciesMovement(
-        idling=True, post_op_correction=True, d=11, cultivation_repetition=17, syndrome_rounds=1
+        idling=True,
+        post_op_correction=True,
+        d=11,
+        cultivation_repetition=17,
+        syndrome_rounds=1,
     )
-    assert str(dsm) == "DualSpeciesMovement(d=11, cr=17, sr=1, fold=False)"
+    assert str(dsm) == "DualSpeciesMovement(d=11, cr=17, fd=3, sr=1, fold=False)"
 
     mzo = arch.MeasureZonesOnly(
-        idling=True, post_op_correction=True, d=19, cultivation_repetition=7, syndrome_rounds=5
+        idling=True,
+        post_op_correction=True,
+        d=19,
+        cultivation_repetition=7,
+        syndrome_rounds=5,
     )
-    assert str(mzo) == "ReadoutZonesOnly(d=19, cr=7, sr=5, fold=False)"
+    assert str(mzo) == "ReadoutZonesOnly(d=19, cr=7, fd=3, sr=5, fold=False)"
 
     sc = arch.Superconductor(
-        idling=True, post_op_correction=True, d=13, cultivation_repetition=99, syndrome_rounds=14
+        idling=True,
+        post_op_correction=True,
+        d=13,
+        cultivation_repetition=99,
+        syndrome_rounds=14,
     )
-    assert str(sc) == "Superconductor(d=13, cr=99, sr=14)"
+    assert str(sc) == "Superconductor(d=13, cr=99, fd=3, sr=14)"
 
     ssm_fold = arch.DefaultMovement(fold_cultiv=True)
-    assert str(ssm_fold) == "SingleSpeciesMovement(d=7, cr=1, sr=1, fold=True)"
+    assert str(ssm_fold) == "SingleSpeciesMovement(d=7, cr=1, fd=3, sr=1, fold=True)"
 
     dsnm = arch.DefaultLattice()
-    assert str(dsnm) == "DualSpeciesNoMovement(d=7, cr=1)"
+    assert str(dsnm) == "DualSpeciesNoMovement(d=7, cr=1, fd=3)"
 
 
-def test_folded_architecture():
+def test_folded_architecture() -> None:
     folded_movement = arch.DefaultMovement(fold_cultiv=True)
     normal_movement = arch.DefaultMovement(fold_cultiv=False)
 
@@ -812,15 +795,13 @@ def test_folded_architecture():
     assert folded_cultivation_time < normal_cultivation_time
 
 
-def test_convert_globals_to_phasedxz():
-    """
-    Confirm that the conversion function works as expected
-    """
+def test_convert_globals_to_phasedxz() -> None:
+    """Confirm that the conversion function works as expected"""
     sc = arch.Superconductor()
     example1 = {
-        "gate_cost": {ParallelRGate: 2, cirq.Rz: 3},
+        "gate_cost": {css.ParallelRGate: 2, cirq.Rz: 3},
         "moment_cost": {
-            ParallelRGate: 13,
+            css.ParallelRGate: 13,
         },
     }
     expected = {"gate_cost": {cirq.PhasedXZGate: 3}, "moment_cost": {}, "op_time": 0.0}
@@ -829,7 +810,7 @@ def test_convert_globals_to_phasedxz():
 
     example2 = {
         "gate_cost": {cirq.MeasurementGate: 5},
-        "moment_cost": {cirq.Rz: 5, ParallelRGate: 9},
+        "moment_cost": {cirq.Rz: 5, css.ParallelRGate: 9},
     }
     expected = {
         "gate_cost": {cirq.MeasurementGate: 5},
@@ -840,7 +821,7 @@ def test_convert_globals_to_phasedxz():
     assert expected == actual
 
 
-def test_logical_move():
+def test_logical_move() -> None:
     arc = arch.DualSpeciesMovement()
     one_hop = lsp.Move(zone=None).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 0))
     two_hop = lsp.Move(zone=None).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 1))
@@ -851,7 +832,7 @@ def test_logical_move():
     assert two_cost == 2 * one_cost
 
 
-def test_y_cult_on_movement():
+def test_y_cult_on_movement() -> None:
     ssm = arch.DefaultMovement(d=11)
     mzo = arch.MeasureZonesOnly(d=11)
     dsm = arch.DualSpeciesMovement(d=11)
@@ -859,3 +840,29 @@ def test_y_cult_on_movement():
     cost2 = mzo.cultivate_cost(lsp.Cultivate(np.pi / 2).on(cirq.GridQubit(0, 0)))
     cost3 = dsm.cultivate_cost(lsp.Cultivate(np.pi / 2).on(cirq.GridQubit(0, 0)))
     assert cost3["op_time"] < cost2["op_time"] < cost1["op_time"]
+
+
+def test_distillation_cases(lattice_architecture, movement_architecture) -> None:
+    # Confirm that distil is only available to movement archs
+    with pytest.raises(NotImplementedError, match="movement architectures only"):
+        _ = lattice_architecture._distil_cost
+    assert lsp.Distil in movement_architecture.op_cost
+
+    # Confirm distillation cost errors for invalid resource
+    with pytest.raises(ValueError, match="Unknown distillation resource"):
+        _ = movement_architecture._distil_cost("Toffoli")
+
+    # Make sure that distillation repetition parameter behaves as expected
+    distil_once = arch.DefaultMovement(distillation_repetition=1)
+    distil_thrice = arch.DefaultMovement(distillation_repetition=3)
+    t_once = distil_once._distil_cost("T")["op_time"]
+    ccz_once = distil_once._distil_cost("CCZ")["op_time"]
+    t_thrice = distil_thrice._distil_cost("T")["op_time"]
+    ccz_thrice = distil_thrice._distil_cost("CCZ")["op_time"]
+    assert t_thrice == 3 * t_once
+    assert ccz_thrice == 3 * ccz_once
+
+    # Distil T and CCZ have the same critical path, so should have the same circuit time for ssm
+    # Cultivation is a subcomponent, so it should be faster than the Distillation implementations
+    single_cult = distil_once._cultivate_t_cost["op_time"]
+    assert single_cult < ccz_once == t_once

@@ -14,16 +14,16 @@
 import subprocess
 
 
-def test_clifford_t():
+def test_clifford_t() -> None:
     result = subprocess.run(["python", "scripts/clifford_t.py"])
     assert result
 
 
-def test_scaling():
+def test_scaling() -> None:
     result = subprocess.run(["python", "scripts/scaling.py", "10", "20"])
     assert result
 
 
-def test_rz_games():
+def test_rz_games() -> None:
     result = subprocess.run(["python", "scripts/rz_games.py", ".122441", "12", "0"])
     assert result

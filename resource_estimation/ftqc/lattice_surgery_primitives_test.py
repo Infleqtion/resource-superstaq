@@ -14,12 +14,13 @@
 from math import pi
 
 import cirq
+import numpy as np
 import pytest
-import resource_estimation.lattice_surgery_primitives as lsp
-from numpy.testing import assert_array_equal
+
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 
 
-def test_merge():
+def test_merge() -> None:
     merge_gate = lsp.Merge(2, smooth=True)
     assert merge_gate.smooth
     assert merge_gate.num_qubits() == 2
@@ -31,7 +32,7 @@ def test_merge():
     assert str(merge_gate) == "MERGE"
 
 
-def test_split():
+def test_split() -> None:
     partitions = [1, 2, 3, 4]
     split_gate = lsp.Split(partitions=partitions, smooth=True)
     assert split_gate.smooth
@@ -46,7 +47,7 @@ def test_split():
     assert split_gate.partitions == partitions
 
 
-def test_syndrome_extract():
+def test_syndrome_extract() -> None:
     for i in [1, 2, 3, 4]:
         extraction_gate = lsp.SyndromeExtract(i, i * 2)
         assert extraction_gate.num_qubits() == i
@@ -54,19 +55,19 @@ def test_syndrome_extract():
         assert str(extraction_gate) == f"SE({i * 2})"
 
 
-def test_error_correct():
+def test_error_correct() -> None:
     error_correction_gate = lsp.ErrorCorrect(1)
     assert str(error_correction_gate) == "ERROR CORRECT"
 
 
-def test_cultivate():
+def test_cultivate() -> None:
     theta = pi / 2
     cultivation_gate = lsp.Cultivate(theta=theta)
     assert cultivation_gate.theta == theta
     assert str(cultivation_gate) == "CULT(1.571)"
 
 
-def test_move():
+def test_move() -> None:
     a, b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     alley_move = lsp.Move(None).on(a, b)
     assert str(alley_move) == "MOVE(q(0, 0), q(0, 1))"
@@ -76,7 +77,16 @@ def test_move():
     assert str(measure_move) == "MOVE_MZ(q(0, 1))"
 
 
-def test_rotated_code_patch():
+def test_distil() -> None:
+    gate = lsp.Distil("T")
+    assert str(gate) == "DISTIL(T)"
+    gate = lsp.Distil("CCZ")
+    assert str(gate) == "DISTIL(CCZ)"
+    with pytest.raises(ValueError, match="Invalid resource"):
+        _ = lsp.Distil("Toffoli")
+
+
+def test_rotated_code_patch() -> None:
     with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
         lsp.RotatedCodePatch(4)
 
@@ -123,12 +133,12 @@ def test_rotated_code_patch():
     assert patch.total_x_syndrome_cnots() == 84
 
 
-def test_buffer():
+def test_buffer() -> None:
     d = 7
     smooth_buff = lsp.BufferCodePatch(d=d, smooth=True)
     rough_buff = lsp.BufferCodePatch(d=d, smooth=False)
 
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_buff.num_z_stabs(full=True),
             smooth_buff.num_x_stabs(full=True),
@@ -137,14 +147,14 @@ def test_buffer():
         ],
         6,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_buff.num_x_stabs(full=False),
             rough_buff.num_z_stabs(full=False),
         ],
         2,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_buff.num_z_stabs(full=False),
             rough_buff.num_x_stabs(full=False),
@@ -153,11 +163,11 @@ def test_buffer():
     )
 
 
-def test_intermediate_patch():
+def test_intermediate_patch() -> None:
     d = 7
     smooth_inter = lsp.IntermediatePatch(d=d, smooth=True)
     rough_inter = lsp.IntermediatePatch(d=d, smooth=False)
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_inter.num_z_stabs(full=True),
             smooth_inter.num_x_stabs(full=True),
@@ -166,14 +176,14 @@ def test_intermediate_patch():
         ],
         18,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_inter.num_x_stabs(full=False),
             rough_inter.num_z_stabs(full=False),
         ],
         6,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_inter.num_z_stabs(full=False),
             rough_inter.num_x_stabs(full=False),
@@ -182,11 +192,11 @@ def test_intermediate_patch():
     )
 
 
-def test_endpoint_patch():
+def test_endpoint_patch() -> None:
     d = 7
     smooth_end = lsp.EndpointPatch(d=d, smooth=True)
     rough_end = lsp.EndpointPatch(d=d, smooth=False)
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_end.num_z_stabs(full=True),
             smooth_end.num_x_stabs(full=True),
@@ -195,14 +205,14 @@ def test_endpoint_patch():
         ],
         18,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_end.num_x_stabs(full=False),
             rough_end.num_z_stabs(full=False),
         ],
         6,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_end.num_z_stabs(full=False),
             rough_end.num_x_stabs(full=False),
@@ -211,8 +221,9 @@ def test_endpoint_patch():
     )
 
 
-def test_serialization():
+def test_serialization() -> None:
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
+    factory_block = cirq.LineQubit.range(31)
     circuit = cirq.Circuit(
         [
             lsp.Merge(2, True).on(qubit_a, qubit_b),
@@ -223,23 +234,48 @@ def test_serialization():
             lsp.Move(zone="interact").on_each(qubit_a, qubit_b),
             lsp.Move(zone=None).on(qubit_a, qubit_b),
             lsp.Move(zone="measure").on(qubit_a),
+            lsp.Distil("T").on(*factory_block),
+            lsp.Distil("CCZ").on(*factory_block[:23]),
         ]
     )
-    print(circuit)
     json_str = cirq.to_json(circuit)
-    # print(json_str)
     new_circuit = cirq.read_json(
-        json_text=json_str, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
+        json_text=json_str,
+        resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS],
     )
-    print(new_circuit)
-    print(new_circuit == circuit)
     cirq.testing.assert_json_roundtrip_works(
-        circuit, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
+        circuit,
+        resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS],
+    )
+
+    circuit = cirq.Circuit(
+        [
+            lsp.Merge(2, True).on(qubit_a, qubit_b),
+            lsp.Split([1, 1], True).on(qubit_a, qubit_b),
+            lsp.SyndromeExtract(1, 1).on(qubit_a),
+            lsp.ErrorCorrect(1).on(qubit_b),
+            lsp.Distil("T").on(*factory_block),
+            lsp.Distil("CCZ").on(*factory_block[:23]),
+            lsp.Move(zone="interact").on_each(qubit_a, qubit_b),
+            lsp.Move(zone=None).on(qubit_a, qubit_b),
+            lsp.Move(zone="measure").on(qubit_a),
+        ],
+    )
+    json_str = cirq.to_json(circuit)
+    new_circuit = cirq.read_json(
+        json_text=json_str,
+        resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS],
+    )
+    assert new_circuit == circuit
+    cirq.testing.assert_json_roundtrip_works(
+        circuit,
+        resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS],
     )
 
 
-def test_repr():
+def test_repr() -> None:
     qa, qb = cirq.LineQubit.range(2)
+    factory_block = cirq.LineQubit.range(31)
     merge = lsp.Merge(2, smooth=False).on(qa, qb)
     assert (
         repr(merge)
@@ -261,6 +297,17 @@ def test_repr():
     cult = lsp.Cultivate(7).on(qa)
     assert repr(cult) == "lsp.Cultivate(theta=7).on(cirq.LineQubit(0))"
 
+    dist_t = lsp.Distil("T").on(*factory_block)
+    assert (
+        repr(dist_t)
+        == "lsp.Distil(T)(cirq.LineQubit(0), cirq.LineQubit(1), cirq.LineQubit(2), cirq.LineQubit(3), cirq.LineQubit(4), cirq.LineQubit(5), cirq.LineQubit(6), cirq.LineQubit(7), cirq.LineQubit(8), cirq.LineQubit(9), cirq.LineQubit(10), cirq.LineQubit(11), cirq.LineQubit(12), cirq.LineQubit(13), cirq.LineQubit(14), cirq.LineQubit(15), cirq.LineQubit(16), cirq.LineQubit(17), cirq.LineQubit(18), cirq.LineQubit(19), cirq.LineQubit(20), cirq.LineQubit(21), cirq.LineQubit(22), cirq.LineQubit(23), cirq.LineQubit(24), cirq.LineQubit(25), cirq.LineQubit(26), cirq.LineQubit(27), cirq.LineQubit(28), cirq.LineQubit(29), cirq.LineQubit(30))"
+    )
+
+    dist_ccz = lsp.Distil("CCZ").on(*factory_block[:23])
+    assert (
+        repr(dist_ccz)
+        == "lsp.Distil(CCZ)(cirq.LineQubit(0), cirq.LineQubit(1), cirq.LineQubit(2), cirq.LineQubit(3), cirq.LineQubit(4), cirq.LineQubit(5), cirq.LineQubit(6), cirq.LineQubit(7), cirq.LineQubit(8), cirq.LineQubit(9), cirq.LineQubit(10), cirq.LineQubit(11), cirq.LineQubit(12), cirq.LineQubit(13), cirq.LineQubit(14), cirq.LineQubit(15), cirq.LineQubit(16), cirq.LineQubit(17), cirq.LineQubit(18), cirq.LineQubit(19), cirq.LineQubit(20), cirq.LineQubit(21), cirq.LineQubit(22))"
+    )
     move = lsp.Move(zone="interact").on_each(qa, qb)
     assert (
         repr(move)
@@ -274,7 +321,7 @@ def test_repr():
     assert repr(move) == "lsp.Move(zone=measure).on(cirq.LineQubit(0))"
 
 
-def test_patch_eq_and_hash():
+def test_patch_eq_and_hash() -> None:
     patch1 = lsp.RotatedCodePatch(3)
     patch2 = lsp.RotatedCodePatch(5)
     assert patch1 != patch2

@@ -12,22 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import cirq
-from numpy.random import choice
-from math import pi
-import openfermion
 import numpy as np
-from openfermion.circuits import simulate_trotter
-from openfermion.ops import FermionOperator
-from collections import Counter
-from time import time
-from pathlib import Path
-import sys
-from sorger_shor.shor import factoring_circuit
-
-import supermarq as sm
-
-parent_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(parent_dir))
+import openfermion
 
 
 def fermi_hubbard(n, verbose=0):
@@ -39,17 +25,21 @@ def fermi_hubbard(n, verbose=0):
     time = 1
     final_rank = 1
     hubbard_fermion_hamiltonian = openfermion.fermi_hubbard(
-        n, n, tunneling=-J, coulomb=U, periodic=False
+        n,
+        n,
+        tunneling=-J,
+        coulomb=U,
+        periodic=False,
     )
     hubbard_interaction_hamiltonian = openfermion.get_interaction_operator(
-        hubbard_fermion_hamiltonian
+        hubbard_fermion_hamiltonian,
     )
     n_qubits = openfermion.count_qubits(hubbard_interaction_hamiltonian)
     qubits = cirq.LineQubit.range(n_qubits)
     if verbose > 0:
         print("Creating circuit")
     ham_circuit = cirq.Circuit(
-        openfermion.circuits.trotter.simulate_trotter(qubits, hubbard_interaction_hamiltonian, time)
+        openfermion.circuits.simulate_trotter(qubits, hubbard_interaction_hamiltonian, time)
     )
     ham_circuit = cirq.drop_negligible_operations(ham_circuit)
     if verbose > 0:
@@ -94,44 +84,52 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
 
     # Map orbitals to tensor indices
     impurity_sites, bath_sites, all_sites, spins, orbital_map = map_orbitals(
-        n_imp=n_imp, n_b=n_bath, method="paired"
+        n_imp=n_imp,
+        n_b=n_bath,
+        method="paired",
     )
 
     # Diagonal and degenerate impurity energies. For 5-site case, e.g., SrMnO3, will need to include CF splitting
-    h_0 = FermionOperator()
+    h_0 = openfermion.ops.FermionOperator()
     for ii in range(0, n_imp):
         for spin in spins:
             label = f"I{ii}_" + spin
-            h_0 += FermionOperator(f"{orbital_map[label]}^ {orbital_map[label]}", epsilon_imp)
+            h_0 += openfermion.ops.FermionOperator(
+                f"{orbital_map[label]}^ {orbital_map[label]}", epsilon_imp
+            )
 
     # U density-density term
-    h_u = FermionOperator()
+    h_u = openfermion.ops.FermionOperator()
     for ii in range(0, n_imp):
         index_1 = orbital_map[f"I{ii}_up"]
         index_2 = orbital_map[f"I{ii}_down"]
-        h_u += FermionOperator(f"{index_1}^ {index_1} {index_2}^ {index_2}", u)
+        h_u += openfermion.ops.FermionOperator(f"{index_1}^ {index_1} {index_2}^ {index_2}", u)
 
     # U-2J density-density term
-    h_u2j = FermionOperator()
+    h_u2j = openfermion.ops.FermionOperator()
     for ii in range(0, n_imp):
         for jj in range(ii + 1, n_imp):
             for sigma, spin in enumerate(spins):
                 index_1 = orbital_map[f"I{ii}_" + spin]
                 index_2 = orbital_map[f"I{jj}_" + spins[(sigma + 1) % 2]]
-                h_u2j += FermionOperator(f"{index_1}^ {index_1} {index_2}^ {index_2}", u - 2 * j_ex)
+                h_u2j += openfermion.ops.FermionOperator(
+                    f"{index_1}^ {index_1} {index_2}^ {index_2}", u - 2 * j_ex
+                )
 
     # U-3J density-density term
-    h_u3j = FermionOperator()
+    h_u3j = openfermion.ops.FermionOperator()
     for ii in range(0, n_imp):
         for jj in range(ii + 1, n_imp):
             for sigma, spin in enumerate(spins):
                 index_1 = orbital_map[f"I{ii}_" + spin]
                 index_2 = orbital_map[f"I{jj}_" + spin]
-                h_u3j += FermionOperator(f"{index_1}^ {index_1} {index_2}^ {index_2}", u - 3 * j_ex)
+                h_u3j += openfermion.ops.FermionOperator(
+                    f"{index_1}^ {index_1} {index_2}^ {index_2}", u - 3 * j_ex
+                )
 
     # Spin-flip term
     # TODO This is where the problem is for up-down paired orbital ordering
-    h_sf = FermionOperator()
+    h_sf = openfermion.ops.FermionOperator()
     for ii in range(0, n_imp):
         for jj in range(ii + 1, n_imp):
             """
@@ -147,14 +145,18 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
                 index_2 = orbital_map[f"I{jj}_" + spins[(sigma + 1) % 2]]
                 index_3 = orbital_map[f"I{ii}_" + spins[(sigma + 1) % 2]]
                 index_4 = orbital_map[f"I{jj}_" + spin]
-                h_sf += FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex)
+                h_sf += openfermion.ops.FermionOperator(
+                    f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex
+                )
                 h_sf += openfermion.hermitian_conjugated(
-                    FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex)
+                    openfermion.ops.FermionOperator(
+                        f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex
+                    )
                 )
 
     # Pair-hopping term
     # TODO this is where the problem is if using impurity-centered orbital ordering
-    h_ph = FermionOperator()
+    h_ph = openfermion.ops.FermionOperator()
     for ii in range(0, n_imp):
         for jj in range(ii + 1, n_imp):
             """
@@ -170,29 +172,33 @@ def three_orbital_kanamori_hamiltonian(epsilon_imp, epsilon_bath, v, u, j_ex, n_
                 index_2 = orbital_map[f"I{ii}_" + spins[(sigma + 1) % 2]]
                 index_3 = orbital_map[f"I{jj}_" + spins[(sigma + 1) % 2]]
                 index_4 = orbital_map[f"I{jj}_" + spin]
-                h_ph += FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex)
+                h_ph += openfermion.ops.FermionOperator(
+                    f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex
+                )
                 h_ph += openfermion.hermitian_conjugated(
-                    FermionOperator(f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex)
+                    openfermion.ops.FermionOperator(
+                        f"{index_1}^ {index_2}^ {index_3} {index_4}", 0.5 * j_ex
+                    )
                 )
 
     # Diagonal bath
-    h_b0 = FermionOperator()
+    h_b0 = openfermion.ops.FermionOperator()
     for ii in range(0, n_bath):
         for spin in spins:
             index_1 = orbital_map[f"B{ii}_" + spin]
-            h_b0 += FermionOperator(f"{index_1}^ {index_1}", epsilon_bath)
+            h_b0 += openfermion.ops.FermionOperator(f"{index_1}^ {index_1}", epsilon_bath)
     # print("h_b0", h_b0, "\n")
 
     # Hybridization
-    h_hyb = FermionOperator()
+    h_hyb = openfermion.ops.FermionOperator()
     for ii in range(0, n_imp):
         for jj in range(0, n_bath):
             for spin in spins:
                 index_1 = orbital_map[f"I{ii}_" + spin]
                 index_2 = orbital_map[f"B{jj}_" + spin]
-                h_hyb += FermionOperator(f"{index_1}^ {index_2}", v[ii, jj])
+                h_hyb += openfermion.ops.FermionOperator(f"{index_1}^ {index_2}", v[ii, jj])
                 h_hyb += openfermion.hermitian_conjugated(
-                    FermionOperator(f"{index_1}^ {index_2}", v[ii, jj])
+                    openfermion.ops.FermionOperator(f"{index_1}^ {index_2}", v[ii, jj])
                 )
 
     full_hamiltonian = h_0 + h_u + h_u2j + h_u3j + h_ph + h_b0 + h_hyb  # Excludes spin-flip
@@ -210,7 +216,9 @@ def kanamori(n_bath, verbose=0):
     qubits = cirq.LineQubit.range(n_qubits)
 
     circuit = cirq.Circuit(
-        simulate_trotter(qubits=qubits, hamiltonian=kanamori_interaction_hamiltonian, time=1)
+        openfermion.circuits.simulate_trotter(
+            qubits=qubits, hamiltonian=kanamori_interaction_hamiltonian, time=1
+        )
     )
 
     circuit = cirq.drop_negligible_operations(circuit)
@@ -219,37 +227,3 @@ def kanamori(n_bath, verbose=0):
         print("Kanamori Circuit Qubits:", cirq.num_qubits(circuit))
         print("Kanamori Circuit Moments:", len(circuit))
     return circuit
-
-
-def shor(n, verbose=0):
-    while True:
-        try:
-            qc = factoring_circuit(n)
-            break
-        except:
-            continue
-    cirq_circuit = sm.converters.qiskit_to_cirq(qc)
-    cirq_circuit = cirq.drop_negligible_operations(cirq_circuit)
-    if verbose:
-        print(
-            f"Factoring: {n}\nQubits: {cirq.num_qubits(cirq_circuit)}\nMoments: {len(cirq_circuit)}"
-        )
-    return cirq_circuit
-
-
-if __name__ == "__main__":
-    from resource_estimation.estimate import ResourceEstimator
-    from resource_estimation.layout import MovementLayout, ColumnLayout
-    from resource_estimation.architecture import DefaultMovement, DefaultLattice
-    from resource_estimation.compile_ftqc import ft_compile
-    from resource_estimation.cliff_rz import GenericDevice
-    from resource_estimation.clifford_t import compile_cirq_to_clifford_t
-    import warnings
-    import pickle
-    from time import time
-
-    warnings.filterwarnings("ignore", category=RuntimeWarning)
-    tstart = time()
-    shor_circuit = shor(3, 1)
-    tfin = time()
-    print(tfin - tstart)

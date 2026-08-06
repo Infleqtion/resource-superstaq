@@ -4,6 +4,7 @@
     "post_op_correction": true,
     "d": 7,
     "cultivation_repetition": 1,
+    "cultivation_fault_distance": 3,
     "syndrome_rounds": 1,
     "gate_times": {
         "CZ": 99

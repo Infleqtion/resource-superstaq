@@ -63,6 +63,24 @@ jobs:
       - name: Requirements check
         run: |
           python checks/requirements.py
+
+  lint:
+    name: Ruff lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          check-latest: true
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install checks-superstaq
+      - name: Ruff lint
+        run: |
+          python checks/lint_.py
           
   pytest:
     name: Pytest

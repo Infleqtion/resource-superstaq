@@ -12,15 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import cirq
-import resource_estimation.cliff_rz as cliff
-from scripts.circuits import kanamori, fermi_hubbard
+import cirq_superstaq as css
+
+import resource_estimation.compile_gateset as cliff
+from scripts.circuits import fermi_hubbard, kanamori
 
 
-def test_fermi():
+def _compile_cliff_rz(circuit: cirq.Circuit) -> cirq.Circuit:
+    return cliff.compile_gateset(circuit, gateset=cliff.clifford_rz_gateset())
+
+
+def test_fermi() -> None:
     # Test that Fermi-Hubbard circuit is compiled to Clifford + Rz correctly
     # For some reason, I can't do better that 1e-6
     ham_circuit = fermi_hubbard(3, verbose=0)
-    compiled_circuit = cliff.compile_cliff_rz(circuit=ham_circuit)
+    compiled_circuit = _compile_cliff_rz(circuit=ham_circuit)
     cirq.testing.assert_allclose_up_to_global_phase(
         cirq.final_state_vector(ham_circuit),
         cirq.final_state_vector(compiled_circuit),
@@ -36,11 +42,11 @@ def test_fermi():
         assert truth, f"{gate}"
 
 
-def test_kanamori():
+def test_kanamori() -> None:
     # Test that Kanamori circuit is compiled to Clifford + Rz correctly
     # For some reason, I can't do better that 1e-6
     kan_circuit = kanamori(5, verbose=0)
-    compiled_circuit = cliff.compile_cliff_rz(circuit=kan_circuit)
+    compiled_circuit = _compile_cliff_rz(circuit=kan_circuit)
     cirq.testing.assert_allclose_up_to_global_phase(
         cirq.final_state_vector(kan_circuit),
         cirq.final_state_vector(compiled_circuit),
@@ -56,18 +62,76 @@ def test_kanamori():
         assert truth, f"{gate}"
 
 
-def test_already_in_gateset():
+def test_already_in_gateset() -> None:
     op = cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1))
-    gateset = cliff.CliffRzGateset(cirq.LineQubit.range(2))
+    gateset = cliff.CliffRzGateset()
     assert cirq.CNOT in gateset
-    print(gateset._decompose_two_qubit_operation(op))
     same_op = cirq.Circuit(gateset._decompose_two_qubit_operation(op))
-    cirq.testing.assert_circuits_with_terminal_measurements_are_equivalent(
-        actual=same_op, reference=cirq.Circuit(op)
+    cirq.testing.assert_same_circuits(same_op, cirq.Circuit(op))
+
+
+def test_disallowed_ccz() -> None:
+    q0, q1, q2, q3 = cirq.LineQubit.range(4)
+    gateset = cliff.CliffRzGateset(allow_ccz=False)
+
+    assert cirq.CCZ(q0, q1, q2) not in gateset
+    assert cirq.CCX(q2, q3, q0) not in gateset
+
+    circuit = cirq.Circuit(
+        cirq.Z(q2),
+        cirq.H(q0),
+        cirq.CX(q0, q1),
+        css.barrier(q1, q2, q3),
+        cirq.CCX(q0, q1, q2),
+        cirq.CCZ(q2, q3, q0),
+        cirq.measure(q0, q1, q2),
     )
+    compiled = cirq.optimize_for_target_gateset(circuit, gateset=gateset)
+    cirq.testing.assert_circuits_with_terminal_measurements_are_equivalent(compiled, circuit)
+
+    allowed_gates = cirq.Gateset(cirq.H, cirq.ZPowGate, cirq.CX, cirq.MeasurementGate, css.Barrier)
+    assert all(op in allowed_gates for op in compiled.all_operations())
 
 
-def test_phx_to_zhzhz():
+def test_allowed_ccz() -> None:
+    q0, q1, q2, q3 = cirq.LineQubit.range(4)
+    gateset = cliff.CliffRzGateset(allow_ccz=True)
+
+    op = cirq.CCZ(q0, q2, q3)
+    assert op in gateset
+    decomposed = gateset._decompose_multi_qubit_operation(op, -1)
+    assert decomposed == op
+
+    op = cirq.CCX(q0, q1, q3)
+    assert op not in gateset
+    decomposed = gateset._decompose_multi_qubit_operation(op, -1)
+    assert decomposed == [cirq.H(q3), cirq.CCZ(q0, q1, q3), cirq.H(q3)]
+
+    circuit = cirq.Circuit(
+        cirq.Z(q2),
+        cirq.H(q0),
+        cirq.CX(q0, q1),
+        css.barrier(q1, q2, q3),
+        cirq.CCX(q0, q1, q2),
+        cirq.CCZ(q2, q3, q0),
+        cirq.measure(q0, q1, q2),
+    )
+    expected = cirq.Circuit(
+        cirq.Z(q2),
+        cirq.H(q0),
+        cirq.CX(q0, q1),
+        css.barrier(q1, q2, q3),
+        cirq.H(q2),
+        cirq.CCZ(q0, q1, q2),
+        cirq.H(q2),
+        cirq.CCZ(q2, q3, q0),
+        cirq.measure(q0, q1, q2),
+    )
+    compiled = cirq.optimize_for_target_gateset(circuit, gateset=gateset)
+    cirq.testing.assert_same_circuits(compiled, expected)
+
+
+def test_phx_to_zhzhz() -> None:
     q = cirq.GridQubit(0, 0)
     I_circuit = cirq.Circuit(cirq.PhasedXPowGate(exponent=0, phase_exponent=0.5).on(q))
     transformed = cliff.phx_to_zhzhz(circuit=I_circuit)
@@ -98,9 +162,9 @@ def test_phx_to_zhzhz():
     )
 
 
-def test_small_circuit():
+def test_small_circuit() -> None:
     random_circuit = cirq.testing.random_circuit(8, 10, 1, random_state=17)
-    compiled_circuit = cliff.compile_cliff_rz(random_circuit)
+    compiled_circuit = _compile_cliff_rz(random_circuit)
     cirq.testing.assert_allclose_up_to_global_phase(
         cirq.final_state_vector(random_circuit),
         cirq.final_state_vector(compiled_circuit),
