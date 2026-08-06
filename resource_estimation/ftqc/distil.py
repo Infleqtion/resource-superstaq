@@ -17,6 +17,12 @@ import cirq
 from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
 
 
+T_DISTILLATION_PATCHES = 31
+T_DISTILLATION_OUTPUTS = 1
+CCZ_DISTILLATION_PATCHES = 23
+CCZ_DISTILLATION_OUTPUTS = 3
+
+
 def distil_15_to_1() -> cirq.Circuit:
     """Generates a 15-to-1 non-recursive distillation circuit.
     The circuit is a compact version of the one in https://github.com/Infleqtion/client-superstaq/blob/main/cirq-superstaq/cirq_superstaq/circuits/msd.py
