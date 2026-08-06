@@ -16,11 +16,8 @@ from math import pi
 import cirq
 import pytest
 
-from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
-from resource_estimation.ftqc.lattice_surgery_primitives import (
-    Cultivate,
-    MagicStateCodeTeleport,
-)
+from resource_estimation.ftqc.distil import distil_15_to_1
+from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
 
 # Need to add tests here.
 
@@ -102,44 +99,3 @@ def test_15_to_one(base_15_to_one) -> None:
 
     # There should be 7*5 + 15 = 50 CNOT gates
     assert sum(op.gate in cirq.GateFamily(cirq.CNOT) for op in circuit.all_operations()) == 50
-
-
-@pytest.mark.parametrize(
-    ("builder", "expected_inputs"),
-    [(distil_15_to_1, 15), (ccz_8_to_1, 8)],
-)
-def test_adapted_distillation_teleports_each_cultivated_input(builder, expected_inputs) -> None:
-    unadapted = builder()
-    adapted = builder(adapt_cultivated_inputs=True)
-
-    assert not any(
-        isinstance(operation.gate, MagicStateCodeTeleport)
-        for operation in unadapted.all_operations()
-    )
-
-    cultivation_index = next(
-        index
-        for index, moment in enumerate(adapted)
-        if any(isinstance(operation.gate, Cultivate) for operation in moment.operations)
-    )
-    cultivated_qubits = {
-        operation.qubits[0]
-        for operation in adapted[cultivation_index].operations
-        if isinstance(operation.gate, Cultivate)
-    }
-    transfer_operations = [
-        operation
-        for operation in adapted[cultivation_index + 1].operations
-        if isinstance(operation.gate, MagicStateCodeTeleport)
-    ]
-
-    assert len(cultivated_qubits) == expected_inputs
-    assert len(transfer_operations) == expected_inputs
-    assert {operation.qubits[0] for operation in transfer_operations} == cultivated_qubits
-    assert (
-        sum(
-            isinstance(operation.gate, MagicStateCodeTeleport)
-            for operation in adapted.all_operations()
-        )
-        == expected_inputs
-    )

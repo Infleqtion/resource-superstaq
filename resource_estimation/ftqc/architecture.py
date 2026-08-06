@@ -1015,15 +1015,9 @@ class DefaultMovement(Architecture):
     @cache
     def _distil_cost(self, resource) -> dict[str, dict[type[Gate], int] | float]:
         if resource == "T":
-            base_circuit = distil_15_to_1()
-            mapped_circuit = distil_15_to_1(
-                adapt_cultivated_inputs=self.requires_magic_state_code_teleport
-            )
+            mapped_circuit = distil_15_to_1()
         elif resource == "Toffoli":
-            base_circuit = ccz_8_to_1()
-            mapped_circuit = ccz_8_to_1(
-                adapt_cultivated_inputs=self.requires_magic_state_code_teleport
-            )
+            mapped_circuit = ccz_8_to_1()
         else:
             raise ValueError(f"Unknown distillation resource: {resource!r}")
         with_moves = add_moves(
@@ -1032,24 +1026,9 @@ class DefaultMovement(Architecture):
             alley_ops=self.alley_ops if self.alley_ops is not None else cirq.Gateset(),
         )
         estimator = ResourceEstimator(self)
-        # Count every inserted input adapter serially, but add one synchronized adapter stage to
-        # the existing distillation critical path because all raw T inputs transfer in parallel.
-        parallel_circuit = (
-            add_moves(
-                base_circuit,
-                zone_ops=self.zone_ops if self.zone_ops is not None else cirq.Gateset(),
-                alley_ops=self.alley_ops if self.alley_ops is not None else cirq.Gateset(),
-            )
-            if self.requires_magic_state_code_teleport
-            else with_moves
-        )
-        rep_time = estimator.parallel_circuit_time(parallel_circuit)
-        rep_moments = Counter(estimator.parallel_circuit_cost(parallel_circuit))
+        rep_time = estimator.parallel_circuit_time(with_moves)
+        rep_moments = estimator.parallel_circuit_cost(with_moves)
         rep_gates = estimator.serial_circuit_cost(with_moves)
-        if self.requires_magic_state_code_teleport:
-            transfer = lsp.MagicStateCodeTeleport()(cirq.LineQubit(0))
-            rep_time += self.op_time(transfer)
-            rep_moments += Counter(self.moment_cost(transfer))
         op_time = rep_time * self.distillation_repetition
         moment_cost = Counter(
             {key: val * self.distillation_repetition for key, val in rep_moments.items()}

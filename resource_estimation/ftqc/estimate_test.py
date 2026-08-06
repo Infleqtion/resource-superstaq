@@ -21,7 +21,7 @@ from numpy import isclose
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-from resource_estimation.ftqc.layout import MovementDistillery, MovementLayout
+from resource_estimation.ftqc.layout import MovementLayout
 
 
 @pytest.fixture
@@ -288,48 +288,6 @@ def test_movement_layout_physical_qubits_counts_adapter_factory_footprints() -> 
     layout = MovementLayout(logical_circuit, num_t_factories=2)
 
     assert estimator.physical_qubits(layout.mapped_circuit, layout=layout) == 2 * 13 + 2 * 211
-
-
-@pytest.mark.parametrize(
-    ("program_patches", "t_factories", "toffoli_factories", "expected_qubits"),
-    [
-        (1, 1, 0, 2216),  # 1 * 13 + 15 * 133 + 16 * 13
-        (3, 0, 1, 1298),  # 3 * 13 + 8 * 133 + 15 * 13
-        (2, 2, 1, 5691),
-    ],
-)
-def test_movement_distillery_counts_heterogeneous_factory_footprints(
-    program_patches: int,
-    t_factories: int,
-    toffoli_factories: int,
-    expected_qubits: int,
-) -> None:
-    architecture = arch.DefaultMovement(patch=lsp.CodePatch("steane"), patch_span=4)
-    architecture.__dict__["_magic_state_code_teleport_cost"] = {"num_physical_qubits": 133}
-    estimator = est.ResourceEstimator(architecture)
-    logical_circuit = cirq.Circuit(cirq.I.on_each(*cirq.LineQubit.range(program_patches)))
-    layout = MovementDistillery(
-        logical_circuit,
-        num_t_factories=t_factories,
-        num_toff_factories=toffoli_factories,
-    )
-
-    assert estimator.physical_qubits(layout.mapped_circuit, layout=layout) == expected_qubits
-
-
-def test_surface_movement_distillery_footprint_is_unchanged() -> None:
-    architecture = arch.DefaultMovement(d=7)
-    estimator = est.ResourceEstimator(architecture)
-    logical_circuit = cirq.Circuit(cirq.I(cirq.LineQubit(0)))
-    layout = MovementDistillery(
-        logical_circuit,
-        num_t_factories=1,
-        num_toff_factories=1,
-    )
-
-    assert estimator.physical_qubits(layout.mapped_circuit, layout=layout) == (
-        len(layout.layout_graph) * architecture.patch.num_physical_qubits
-    )
 
 
 def test_reaction_depth_uses_default_auto_corrected_t_factory() -> None:

@@ -281,69 +281,6 @@ def test_magic_state_code_teleport_is_movement_only() -> None:
     assert not arch.DefaultLattice().primitives.validate(operation)
 
 
-@pytest.mark.parametrize(
-    ("resource", "factory_qubits", "cultivated_inputs"),
-    [("T", 31, 15), ("Toffoli", 23, 8)],
-)
-def test_generic_css_distillation_counts_parallel_input_adapters(
-    resource: str,
-    factory_qubits: int,
-    cultivated_inputs: int,
-    steane_patch: lsp.CodePatch,
-    steane_operations: CSSLogicalOperations,
-) -> None:
-    architecture = arch.DefaultMovement(
-        patch=steane_patch,
-        logical_operations=steane_operations,
-        patch_span=4,
-        syndrome_rounds=1,
-        t_state_transfer_rounds=1,
-    )
-    # Use a unique physical gate as a marker so the adapter contribution can be isolated from
-    # every pre-existing operation in both distillation protocols.
-    architecture.__dict__["_magic_state_code_teleport_cost"] = {
-        "gate_cost": Counter({cirq.CCZ: 1}),
-        "moment_cost": Counter({cirq.CCZ: 1}),
-        "op_time": 1_000_000.0,
-        "num_physical_qubits": 20,
-    }
-    operation = lsp.Distil(resource).on(*cirq.LineQubit.range(factory_qubits))
-
-    assert architecture.gate_cost(operation)[cirq.CCZ] == cultivated_inputs
-    assert architecture.moment_cost(operation)[cirq.CCZ] == 1
-    assert architecture.op_time(operation) >= 1_000_000.0
-
-
-def test_generic_css_distillation_missing_input_adapter_warns_once(
-    steane_patch: lsp.CodePatch,
-    steane_operations: CSSLogicalOperations,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def unavailable(*args, **kwargs):
-        raise ValueError("no bridge")
-
-    monkeypatch.setattr(arch, "build_joint_logical_pauli_measurement_circuit", unavailable)
-    architecture = arch.DefaultMovement(
-        patch=steane_patch,
-        logical_operations=steane_operations,
-        patch_span=4,
-        syndrome_rounds=1,
-    )
-    operation = lsp.Distil("T").on(*cirq.LineQubit.range(31))
-
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        cost = architecture.gate_cost(operation)
-
-    transfer_warnings = [
-        warning
-        for warning in caught
-        if issubclass(warning.category, arch.MissingMagicStateTransferCostWarning)
-    ]
-    assert len(transfer_warnings) == 1
-    assert cost[cirq.CZ] > 0
-
-
 def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
     # TODO: Brainstorm a better way to test this feature
     actual_op_cost = lattice_architecture.cultivate_cost(
