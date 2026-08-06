@@ -134,6 +134,103 @@ def test_generic_css_movement_compilation_keeps_surface_t_cultivation() -> None:
     assert injection.qubits == (program_qubit, factory_qubit)
 
 
+def test_generic_css_movement_distillery_adapts_surface_t_output() -> None:
+    qubit = cirq.LineQubit(0)
+    circuit = cirq.Circuit(cirq.T(qubit))
+    architecture = arch.DefaultMovement(
+        patch=lsp.CodePatch("steane"),
+        patch_span=4,
+        idling=False,
+        post_op_correction=False,
+        t_state_transfer_rounds=1,
+    )
+    layout = MovementDistillery(circuit, num_t_factories=1)
+
+    compiled = comp.ft_compile(layout, architecture, verbose=0)
+    operations = list(compiled.all_operations())
+    distillation_index = next(
+        index
+        for index, operation in enumerate(operations)
+        if isinstance(operation.gate, lsp.Distil) and operation.gate._resource == "T"
+    )
+    transfer_indices = [
+        index
+        for index, operation in enumerate(operations)
+        if isinstance(operation.gate, lsp.MagicStateCodeTeleport)
+    ]
+
+    assert len(transfer_indices) == 1
+    transfer_index = transfer_indices[0]
+    factory_qubit = operations[transfer_index].qubits[0]
+    injection_index = next(
+        index
+        for index, operation in enumerate(operations)
+        if operation.gate == cirq.CNOT and factory_qubit in operation.qubits
+    )
+    program_qubit = next(iter(layout.mapped_circuit.all_qubits()))
+    assert distillation_index < transfer_index < injection_index
+    assert operations[injection_index].qubits == (program_qubit, factory_qubit)
+
+
+def test_generic_css_movement_ccz_distillery_adapts_three_surface_outputs() -> None:
+    qubits = cirq.LineQubit.range(3)
+    circuit = cirq.Circuit(cirq.TOFFOLI(*qubits))
+    architecture = arch.DefaultMovement(
+        patch=lsp.CodePatch("steane"),
+        patch_span=4,
+        idling=False,
+        post_op_correction=False,
+        t_state_transfer_rounds=1,
+    )
+    layout = MovementDistillery(circuit, num_toff_factories=1)
+
+    compiled = comp.ft_compile(layout, architecture, verbose=0)
+    distillation_index = next(
+        index
+        for index, moment in enumerate(compiled)
+        if any(
+            isinstance(operation.gate, lsp.Distil) and operation.gate._resource == "Toffoli"
+            for operation in moment.operations
+        )
+    )
+    transfer_moments = [
+        (index, moment)
+        for index, moment in enumerate(compiled)
+        if any(
+            isinstance(operation.gate, lsp.MagicStateCodeTeleport)
+            for operation in moment.operations
+        )
+    ]
+
+    assert len(transfer_moments) == 1
+    transfer_index, transfer_moment = transfer_moments[0]
+    transfer_operations = [
+        operation
+        for operation in transfer_moment.operations
+        if isinstance(operation.gate, lsp.MagicStateCodeTeleport)
+    ]
+    assert len(transfer_operations) == 3
+    injection_index = next(
+        index
+        for index, moment in enumerate(compiled)
+        if sum(operation.gate == cirq.CNOT for operation in moment.operations) == 3
+        and index > transfer_index
+    )
+    assert distillation_index < transfer_index < injection_index
+
+
+def test_surface_movement_distillery_does_not_adapt_output() -> None:
+    qubit = cirq.LineQubit(0)
+    layout = MovementDistillery(cirq.Circuit(cirq.T(qubit)), num_t_factories=1)
+
+    compiled = comp.ft_compile(layout, arch.DefaultMovement(d=7), verbose=0)
+
+    assert any(isinstance(op.gate, lsp.Distil) for op in compiled.all_operations())
+    assert not any(
+        isinstance(op.gate, lsp.MagicStateCodeTeleport) for op in compiled.all_operations()
+    )
+
+
 def test_surface_movement_compilation_does_not_adapt_t_state() -> None:
     qubit = cirq.LineQubit(0)
     layout = MovementLayout(cirq.Circuit(cirq.T(qubit)))

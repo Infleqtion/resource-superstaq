@@ -43,7 +43,7 @@ def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
 
 @cirq.value_equality
 class MagicStateCodeTeleport(cirq.Gate):
-    """Transfer a cultivated magic state into the movement architecture's compute code."""
+    """Transfer one surface-code magic-state qubit into the architecture's compute code."""
 
     def _num_qubits_(self) -> int:
         return 1

@@ -738,7 +738,7 @@ class DefaultMovement(Architecture):
 
     @property
     def t_factory_physical_qubits(self) -> int:
-        """Peak physical footprint of one cultivated T-state factory station."""
+        """Peak footprint of one surface magic-state production and transfer station."""
         if not self.requires_magic_state_code_teleport:
             return self.cultivation_patch.num_physical_qubits
         return max(
@@ -758,7 +758,7 @@ class DefaultMovement(Architecture):
 
     @cached_property
     def _magic_state_code_teleport_cost(self) -> dict:
-        """Cost surface-to-compute-code teleportation of one cultivated T state."""
+        """Cost surface-to-compute-code teleportation of one magic-state qubit."""
         if not self.requires_magic_state_code_teleport:
             return {
                 "gate_cost": {},
@@ -780,7 +780,7 @@ class DefaultMovement(Architecture):
             resources = count_stim_resources(resource.circuit)
         except (ImportError, ValueError, NotImplementedError, RuntimeError) as ex:
             warnings.warn(
-                "No physical cost is derivable for transferring a cultivated T state from "
+                "No physical cost is derivable for transferring a surface-code magic state from "
                 f"the distance-{self.cultivation_surface_distance} surface code into the "
                 f"{self.patch.code_type} CodePatch ({ex}); costing this transfer at zero. "
                 "The resource estimate therefore undercounts this operation.",
@@ -1012,6 +1012,23 @@ class DefaultMovement(Architecture):
     def distil_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         return self._distil_cost(op.gate._resource)
 
+    @cached_property
+    def _surface_distillation_architecture(self) -> DefaultMovement:
+        """Return a same-hardware costing context whose compute code is the factory surface code."""
+        factory_architecture = type(self)(
+            idling=self.idling,
+            post_op_correction=self.post_op_correction,
+            d=self.cultivation_surface_distance,
+            fold_cultiv=self.fold_cultiv,
+            cultivation_repetition=self.cultivation_repetition,
+            distillation_repetition=1,
+            cultivation_fault_distance=self.cultivation_fault_distance,
+            syndrome_rounds=self.syndrome_rounds,
+            cultivation_surface_distance=self.cultivation_surface_distance,
+        )
+        factory_architecture._phys_gate_times = self.phys_gate_times.copy()
+        return factory_architecture
+
     @cache
     def _distil_cost(self, resource) -> dict[str, dict[type[Gate], int] | float]:
         if resource == "T":
@@ -1020,12 +1037,21 @@ class DefaultMovement(Architecture):
             mapped_circuit = ccz_8_to_1()
         else:
             raise ValueError(f"Unknown distillation resource: {resource!r}")
+        factory_architecture = self._surface_distillation_architecture
         with_moves = add_moves(
             mapped_circuit,
-            zone_ops=self.zone_ops if self.zone_ops is not None else cirq.Gateset(),
-            alley_ops=self.alley_ops if self.alley_ops is not None else cirq.Gateset(),
+            zone_ops=(
+                factory_architecture.zone_ops
+                if factory_architecture.zone_ops is not None
+                else cirq.Gateset()
+            ),
+            alley_ops=(
+                factory_architecture.alley_ops
+                if factory_architecture.alley_ops is not None
+                else cirq.Gateset()
+            ),
         )
-        estimator = ResourceEstimator(self)
+        estimator = ResourceEstimator(factory_architecture)
         rep_time = estimator.parallel_circuit_time(with_moves)
         rep_moments = estimator.parallel_circuit_cost(with_moves)
         rep_gates = estimator.serial_circuit_cost(with_moves)

@@ -281,6 +281,109 @@ def test_magic_state_code_teleport_is_movement_only() -> None:
     assert not arch.DefaultLattice().primitives.validate(operation)
 
 
+@pytest.mark.parametrize(
+    "architecture_type",
+    [arch.DefaultMovement, arch.DualSpeciesMovement, arch.MeasureZonesOnly],
+)
+def test_generic_css_distillation_uses_same_hardware_surface_factory(
+    architecture_type: type[arch.DefaultMovement],
+    steane_patch: lsp.CodePatch,
+) -> None:
+    css_architecture = architecture_type(
+        patch=steane_patch,
+        patch_span=4,
+        cultivation_surface_distance=7,
+        syndrome_rounds=1,
+    )
+    surface_architecture = architecture_type(
+        d=7,
+        cultivation_surface_distance=7,
+        syndrome_rounds=1,
+    )
+    css_architecture.phys_gate_times[cirq.CZ] = 12.5
+    surface_architecture.phys_gate_times[cirq.CZ] = 12.5
+    operation = lsp.Distil("T").on(*cirq.LineQubit.range(31))
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        css_cost = {
+            "gate_cost": css_architecture.gate_cost(operation),
+            "moment_cost": css_architecture.moment_cost(operation),
+            "op_time": css_architecture.op_time(operation),
+        }
+    surface_cost = {
+        "gate_cost": surface_architecture.gate_cost(operation),
+        "moment_cost": surface_architecture.moment_cost(operation),
+        "op_time": surface_architecture.op_time(operation),
+    }
+
+    factory_architecture = css_architecture._surface_distillation_architecture
+    assert type(factory_architecture) is architecture_type
+    assert factory_architecture.patch.is_surface_code
+    assert factory_architecture.d == css_architecture.cultivation_surface_distance
+    assert factory_architecture.phys_gate_times == css_architecture.phys_gate_times
+    assert css_cost == surface_cost
+    assert not any(
+        issubclass(warning.category, arch.MissingLogicalGateCostWarning) for warning in caught
+    )
+
+
+@pytest.mark.parametrize(("resource", "factory_qubits"), [("T", 31), ("Toffoli", 23)])
+def test_generic_css_distillation_excludes_output_adapter_cost(
+    resource: str,
+    factory_qubits: int,
+    steane_patch: lsp.CodePatch,
+) -> None:
+    architecture = arch.DefaultMovement(
+        patch=steane_patch,
+        patch_span=4,
+        cultivation_surface_distance=7,
+        syndrome_rounds=1,
+    )
+    architecture.__dict__["_magic_state_code_teleport_cost"] = {
+        "gate_cost": Counter({cirq.CCZ: 1}),
+        "moment_cost": Counter({cirq.CCZ: 1}),
+        "op_time": 1_000_000.0,
+        "num_physical_qubits": 211,
+    }
+    distillation = lsp.Distil(resource).on(*cirq.LineQubit.range(factory_qubits))
+    transfer = lsp.MagicStateCodeTeleport()(cirq.LineQubit(0))
+
+    assert cirq.CCZ not in architecture.gate_cost(distillation)
+    assert cirq.CCZ not in architecture.moment_cost(distillation)
+    assert architecture.gate_cost(transfer)[cirq.CCZ] == 1
+    assert architecture.moment_cost(transfer)[cirq.CCZ] == 1
+
+
+def test_generic_css_distillation_survives_missing_output_adapter(
+    steane_patch: lsp.CodePatch,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unavailable(*args, **kwargs):
+        raise ValueError("no bridge")
+
+    monkeypatch.setattr(arch, "build_joint_logical_pauli_measurement_circuit", unavailable)
+    architecture = arch.DefaultMovement(
+        patch=steane_patch,
+        patch_span=4,
+        cultivation_surface_distance=7,
+        syndrome_rounds=1,
+    )
+    distillation = lsp.Distil("T").on(*cirq.LineQubit.range(31))
+    transfer = lsp.MagicStateCodeTeleport()(cirq.LineQubit(0))
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        distillation_cost = architecture.gate_cost(distillation)
+    assert distillation_cost[cirq.CZ] > 0
+    assert not any(
+        issubclass(warning.category, arch.MissingMagicStateTransferCostWarning)
+        for warning in caught
+    )
+    with pytest.warns(arch.MissingMagicStateTransferCostWarning, match="costing.*zero"):
+        assert architecture.gate_cost(transfer) == {}
+
+
 def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
     # TODO: Brainstorm a better way to test this feature
     actual_op_cost = lattice_architecture.cultivate_cost(
