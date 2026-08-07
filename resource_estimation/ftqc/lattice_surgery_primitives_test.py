@@ -309,7 +309,7 @@ def test_code_patch_rejects_unequal_logical_qubit_supports() -> None:
                 return [[1, 0, 0, 0], [0, 1, 0, 0]]
             if pauli == Pauli.Z:
                 return [[0, 1, 0, 0], [0, 0, 1, 1]]
-            raise ValueError(f"Unexpected pauli: {pauli!r}")
+            raise ValueError(f"Unexpected pauli: {pauli!r}") # pragma: no cover
 
     with pytest.raises(ValueError, match="must have the same size"):
         lsp.CodePatch(UnequalLogicalSupportCode)
