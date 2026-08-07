@@ -176,6 +176,11 @@ def _split_cost(smooth: bool, d: int) -> CostDict:
         }
     return CostDict(gate_cost=gate_cost, moment_cost={}, op_time=-1)
 
+def _require_gate_operation(op: cirq.Operation) -> cirq.GateOperation:
+    if not isinstance(op, cirq.GateOperation):
+        raise TypeError(f"Expected GateOperation, got {type(op).__name__}")
+    return op
+
 
 class Architecture(abc.ABC):
     """Class for representing device architectures.
@@ -211,21 +216,24 @@ class Architecture(abc.ABC):
 
     ### Fundamental Cost Counting Methods ###
     # These should never be overwritten
-    def gate_cost(self, op: cirq.GateOperation) -> GateCounts:
+    def gate_cost(self, op: cirq.Operation) -> GateCounts:
+        gate_op = _require_gate_operation(op=op)
         try:
-            return self.op_cost[type(op.gate)](op).gate_cost
+            return self.op_cost[type(gate_op.gate)](gate_op).gate_cost
         except KeyError:
             raise ValueError("Gate not recognized")
 
-    def op_time(self, op: cirq.GateOperation) -> float:
+    def op_time(self, op: cirq.Operation) -> float:
+        gate_op = _require_gate_operation(op=op)
         try:
-            return self.op_cost[type(op.gate)](op).op_time
+            return self.op_cost[type(gate_op.gate)](gate_op).op_time
         except KeyError:
             raise ValueError("Gate not recognized")
 
-    def moment_cost(self, op: cirq.GateOperation) -> GateCounts:
+    def moment_cost(self, op: cirq.Operation) -> GateCounts:
+        gate_op = _require_gate_operation(op=op)
         try:
-            return self.op_cost[type(op.gate)](op).moment_cost
+            return self.op_cost[type(gate_op.gate)](gate_op).moment_cost
         except KeyError:
             raise ValueError("Gate not recognized")
 
