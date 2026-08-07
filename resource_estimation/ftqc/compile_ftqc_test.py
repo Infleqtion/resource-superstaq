@@ -1017,8 +1017,9 @@ def test_different_rounds_distil() -> None:
 
 
 def test_teleport_resource_exceptions():
-    invalid_resource = cirq.CCZ.on(*cirq.LineQubit.range(3))
+    qubits = [cirq.GridQubit(0, i) for i in range(3)]
+    invalid_resource = cirq.CCZ.on(*qubits)
     layout = MovementLayout(cirq.Circuit())
     with pytest.raises(ValueError, match="Invalid resource"):
         _ = comp.teleport_resource(invalid_resource, layout)
-    sometimes_valid_resource = cirq.TOFFOLI.on(*cirq.LineQubit.range(3))
+    sometimes_valid_resource = cirq.TOFFOLI.on(*qubits)

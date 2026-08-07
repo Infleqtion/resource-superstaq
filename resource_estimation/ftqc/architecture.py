@@ -53,12 +53,6 @@ SUPERCOND_GATES: dict[GateKey, float] = {
     cirq.MeasurementGate: 0.5,  # https://arxiv.org/abs/2308.02079
 }
 
-@dataclass
-class CostDict:
-    op_time: float
-    gate_cost: GateCounts
-    moment_cost: GateCounts
-
 @lru_cache(maxsize=128)
 def _merge_cost(
     d: int,

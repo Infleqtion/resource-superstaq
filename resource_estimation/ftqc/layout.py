@@ -36,12 +36,12 @@ class Layout(abc.ABC):
     distil: bool = False
 
     def __post_init__(self) -> None:
-        self.mapped_circuit = None
-        self.layout_graph = None
-        self._available_t_factories = collections.deque()
-        self._available_s_factories = collections.deque()
-        self._available_ccz_factories = collections.deque()
-        self._all_factories = set()
+        self.mapped_circuit: cirq.Circuit = cirq.Circuit()
+        self.layout_graph: nx.Graph = nx.Graph
+        self._available_t_factories: collections.deque = collections.deque()
+        self._available_s_factories: collections.deque = collections.deque()
+        self._available_ccz_factories: collections.deque = collections.deque()
+        self._all_factories: set = set()
         self._generate()
 
     def set_map_circuit(self, qubit_map: dict[cirq.Qid, cirq.GridQubit]) -> None:
@@ -162,7 +162,7 @@ class Layout(abc.ABC):
         self,
         qubits: tuple[cirq.GridQubit, ...] | cirq.GridQubit,
         ftype: typing.Literal["s", "t", "ccz"],
-    ) -> cirq.GridQubit | tuple[cirq.GridQubit, ...]:
+    ) -> tuple[cirq.GridQubit, ...]:
         """Finds the closest factory of desired type according to the Manhattan distance using the GridQubit indices of the factory qubits that do not have the `used` status
         Removes the returned factory from the available options and sets its status to `used`
         """
@@ -535,7 +535,6 @@ class MovementDistillery(MovementLayout):
             num_t_factories=num_t_factories,
             num_ccz_factories=num_ccz_factories,
         )
-        self.distil = True
 
     def _generate(self) -> None:
         # Establish Important Variables
