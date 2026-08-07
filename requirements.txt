@@ -5,6 +5,6 @@ magic-state-cultivation @ git+https://git@github.com/Infleqtion/magic-state-cult
 openfermion>=1.7.1
 pygridsynth>=1.2.0
 qiskit-superstaq~=0.5.66
-qldpc~=0.2.9
+qldpc @ git+https://github.com/junmuthy/qLDPC.git@1e481ee4b4b8f2156d5e74393ca0e122f5e5cfc2
 tqdm~=4.67
 typing_extensions>=4.12
