@@ -32,7 +32,7 @@ DEFAULT_STR2NUM = {
     "Ancilla Patch": 4,
     "Distillation": 5,
     "CNOT": 6,
-    "Toff Factory": 7,
+    "CCZ Factory": 7,
 }
 
 
@@ -67,7 +67,7 @@ def layout_to_array(layout, str2num=None):
         "s": "S Factory",
         "block": "Distillation",
         "CNOT": "CNOT",
-        "toff": "Toff Factory",
+        "ccz": "CCZ Factory",
     }
     for node in G.nodes:
         node_dict = G.nodes[node]

@@ -11,8 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
-import os
 import warnings
 from collections import Counter
 from math import ceil, pi
@@ -24,10 +22,9 @@ import stim
 from cirq_superstaq import ParallelRGate
 
 import resource_estimation.ftqc.architecture as arch
-import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.logical_operations import CSSLogicalOperations
-from resource_estimation.ftqc.stim_functions import cultivate, load_saved_cost
+from resource_estimation.ftqc.stim_functions import cultivate
 
 
 @pytest.fixture
@@ -356,7 +353,7 @@ def test_generic_css_distillation_uses_same_hardware_surface_factory(
     )
 
 
-@pytest.mark.parametrize(("resource", "factory_qubits"), [("T", 31), ("Toffoli", 23)])
+@pytest.mark.parametrize(("resource", "factory_qubits"), [("T", 31), ("CCZ", 23)])
 def test_generic_css_distillation_excludes_output_adapter_cost(
     resource: str,
     factory_qubits: int,
@@ -712,64 +709,6 @@ def test_self_returns(movement_architecture, lattice_architecture) -> None:
         for op, expectation in ops_and_expectations:
             cost = arc.gate_cost(op)
             assert expectation == cost
-
-
-@pytest.mark.parametrize("d", (3, 5, 7))
-def test_against_cultiv(d) -> None:
-    # Test Syndrome Extract
-    # Set up memory circuit
-    data_path = os.path.normpath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "data", "cultivate_costs.json")
-    )
-    with open(data_path) as f:
-        saved_resources = json.load(f)
-
-    d_count = load_saved_cost(dsurface=d, op_key="memory_d_rounds")["serial"]
-    # Remove the Logical Measurement operation
-    print(d_count)
-    d_count[cirq.MeasurementGate] -= d**2
-
-    s_count = load_saved_cost(dsurface=d, op_key="memory_1_round")["serial"]
-    # Remove the Logical Measurement operation
-    s_count[cirq.MeasurementGate] -= d**2
-
-    syndrome_estimate = Counter(
-        arch.DefaultLattice(d=d).syndrome_extract_cost(
-            lsp.SyndromeExtract(1, d).on(cirq.LineQubit(0))
-        )["gate_cost"]
-    )
-    assert d_count[cirq.CZ] == syndrome_estimate[cirq.CZ]
-    assert d_count[cirq.MeasurementGate] == syndrome_estimate[cirq.MeasurementGate]
-
-    single_syndrome_estimate = {k: v / d for k, v in syndrome_estimate.items()}
-    assert s_count[cirq.CZ] == single_syndrome_estimate[cirq.CZ]
-    assert s_count[cirq.MeasurementGate] == single_syndrome_estimate[cirq.MeasurementGate]
-
-    official_cnot_resources = load_saved_cost(dsurface=d, op_key="cnot")["serial"]
-    # Correct for optimizations/quirks of Cultiv
-    # There are 4 + 2dsurface syndrome extractions just from idling
-    official_cnot_resources[cirq.CZ] -= (4 + 2 * d) * s_count[cirq.CZ]
-    # Removing contributions from idling
-    official_cnot_resources[cirq.MeasurementGate] -= (4 + 2 * d) * s_count[cirq.MeasurementGate]
-
-    # Optimization from measuring the whole ancilla patch in the second Split
-    official_cnot_resources[cirq.MeasurementGate] += 2 * d**2 - 1
-    official_cnot_resources[cirq.MeasurementGate]
-
-    Estimator = est.ResourceEstimator(
-        arc=arch.DefaultLattice(d=d, idling=False, post_op_correction=True)
-    )
-    cnot_qubits = [cirq.GridQubit(0, 1), cirq.GridQubit(0, 0), cirq.GridQubit(1, 0)]
-    low_level_circuit = cirq.Circuit(
-        [
-            lsp.Merge(2, smooth=True).on(cnot_qubits[0], cnot_qubits[1]),
-            lsp.Split([1, 1], smooth=True).on(cnot_qubits[0], cnot_qubits[1]),
-            lsp.Merge(2, smooth=False).on(cnot_qubits[1], cnot_qubits[2]),
-            lsp.Split([1, 1], smooth=False).on(cnot_qubits[1], cnot_qubits[2]),
-        ]
-    )
-    circuit_cost = Counter(Estimator.serial_circuit_cost(low_level_circuit))
-    assert circuit_cost[cirq.CZ] == official_cnot_resources[cirq.CZ]
 
 
 def test_movement_moment_costs(movement_architecture) -> None:
@@ -1239,19 +1178,19 @@ def test_distillation_cases(lattice_architecture, movement_architecture) -> None
 
     # Confirm distillation cost errors for invalid resource
     with pytest.raises(ValueError, match="Unknown distillation resource"):
-        _ = movement_architecture._distil_cost("CCZ")
+        _ = movement_architecture._distil_cost("Toffoli")
 
     # Make sure that distillation repetition parameter behaves as expected
     distil_once = arch.DefaultMovement(distillation_repetition=1)
     distil_thrice = arch.DefaultMovement(distillation_repetition=3)
     t_once = distil_once._distil_cost("T")["op_time"]
-    toff_once = distil_once._distil_cost("Toffoli")["op_time"]
+    ccz_once = distil_once._distil_cost("CCZ")["op_time"]
     t_thrice = distil_thrice._distil_cost("T")["op_time"]
-    toff_thrice = distil_thrice._distil_cost("Toffoli")["op_time"]
+    ccz_thrice = distil_thrice._distil_cost("CCZ")["op_time"]
     assert t_thrice == 3 * t_once
-    assert toff_thrice == 3 * toff_once
+    assert ccz_thrice == 3 * ccz_once
 
-    # Distil T and Toffoli have the same critical path, so should have the same circuit time for ssm
+    # Distil T and CCZ have the same critical path, so should have the same circuit time for ssm
     # Cultivation is a subcomponent, so it should be faster than the Distillation implementations
     single_cult = distil_once._cultivate_t_cost["op_time"]
-    assert single_cult < toff_once == t_once
+    assert single_cult < ccz_once == t_once

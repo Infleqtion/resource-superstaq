@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
+
 import abc
 import json
 import warnings
 from collections import Counter
-from functools import cached_property, lru_cache, cache
+from functools import cache, cached_property, lru_cache
 from math import ceil
 from pathlib import Path
 
@@ -24,8 +25,9 @@ import cirq
 import numpy as np
 from cirq_superstaq.ops.qubit_gates import ParallelRGate
 
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.compile_ftqc import add_moves
-from resource_estimation.ftqc.distil import distil_15_to_1, ccz_8_to_1
+from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.logical_operations import (
     CSSLogicalOperations,
@@ -36,8 +38,6 @@ from resource_estimation.ftqc.qldpc_surgery import (
     build_joint_logical_pauli_measurement_circuit,
 )
 from resource_estimation.ftqc.stim_functions import count_stim_resources, cultivate
-
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 
 NEUTRAL_GATES = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.CZ: 0.27,
@@ -725,7 +725,7 @@ class DefaultMovement(Architecture):
                 cirq.H,
                 cirq.MeasurementGate,
                 cirq.ResetChannel,
-            ]
+            ],
         )
         self._phys_gate_times = NEUTRAL_GATES.copy()
         self.__post_init__()
@@ -1033,7 +1033,7 @@ class DefaultMovement(Architecture):
     def _distil_cost(self, resource) -> dict[str, dict[type[Gate], int] | float]:
         if resource == "T":
             mapped_circuit = distil_15_to_1()
-        elif resource == "Toffoli":
+        elif resource == "CCZ":
             mapped_circuit = ccz_8_to_1()
         else:
             raise ValueError(f"Unknown distillation resource: {resource!r}")

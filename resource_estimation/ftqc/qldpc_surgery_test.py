@@ -59,7 +59,7 @@ def test_build_joint_logical_pauli_measurement_circuit_rejects_non_css_code() ->
     non_css_patch = CodePatch(codes.FiveQubitCode)
     surface_patch = CodePatch("surface", d=3)
 
-    with pytest.raises(ValueError, match="requires CSS CodePatch inputs"):
+    with pytest.raises(TypeError, match="requires CSS CodePatch inputs"):
         build_joint_logical_pauli_measurement_circuit(
             non_css_patch,
             surface_patch,

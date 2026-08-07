@@ -83,7 +83,7 @@ def build_joint_logical_pauli_measurement_circuit(
     left_code = left_patch.qldpc_code
     right_code = right_patch.qldpc_code
     if not isinstance(left_code, CSSCode) or not isinstance(right_code, CSSCode):
-        raise ValueError("Logical Pauli measurement requires CSS CodePatch inputs")
+        raise TypeError("Logical Pauli measurement requires CSS CodePatch inputs")
 
     # A CodePatch can be used as the prototype for several logical locations. Clone one code
     # when both operands share that prototype so qLDPC constructs an inter-code adapter.
