@@ -15,13 +15,14 @@ from math import pi
 
 import cirq
 import networkx as nx
-import numpy as np
 import pytest
+from numpy import isclose
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc import ccz_8_to_1, distil_15_to_1
+from resource_estimation.ftqc.layout import MovementDistillery, MovementLayout
 
 
 @pytest.fixture
@@ -103,14 +104,20 @@ def test_all_primitives(estimator) -> None:
 
     # At least verify that there is no randomness in these estimates
     # Still TODO: Make this test better
-    with pytest.warns(UserWarning, match="Returning result for d=7"):
+    if arc.movement:
         c1 = estimator.serial_circuit_cost(circuit)
         t1 = estimator.serial_circuit_time(circuit)
         c2 = estimator.serial_circuit_cost(circuit)
         t2 = estimator.serial_circuit_time(circuit)
+    else:
+        with pytest.warns(UserWarning, match="Returning result for d=7"):
+            c1 = estimator.serial_circuit_cost(circuit)
+            t1 = estimator.serial_circuit_time(circuit)
+            c2 = estimator.serial_circuit_cost(circuit)
+            t2 = estimator.serial_circuit_time(circuit)
     for key in c1.keys():
         assert c1[key] == c2[key]
-    assert np.isclose(t1, t2, atol=0.00001)
+    assert isclose(t1, t2, atol=0.00001)
 
 
 def test_parallel_circuit_cost(lattice_estimator, movement_estimator) -> None:
@@ -210,7 +217,7 @@ def test_critical_path() -> None:
     arc = arch.DefaultMovement()
     estim = est.ResourceEstimator(arc)
     # Should be identical aside from floating point errors
-    assert np.isclose(estim.serial_circuit_time(c1), estim.serial_circuit_time(c2), atol=1e-5)
+    assert isclose(estim.serial_circuit_time(c1), estim.serial_circuit_time(c2), atol=1e-5)
 
     qa, qb = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit(
@@ -271,6 +278,64 @@ def test_physical_qubit_count(lattice_estimator) -> None:
     expected_num_physical_qubits = 98  # 2 * (2 * d**2 - 1)
     num_physical_qubits = lattice_estimator.physical_qubits(test_circuit)
     assert num_physical_qubits == expected_num_physical_qubits
+
+
+def test_movement_layout_physical_qubits_counts_adapter_factory_footprints() -> None:
+    patch = lsp.CodePatch("steane")
+    architecture = arch.DefaultMovement(patch=patch, patch_span=4)
+    architecture.__dict__["_magic_state_code_teleport_cost"] = {"num_physical_qubits": 211}
+    estimator = est.ResourceEstimator(architecture)
+    logical_circuit = cirq.Circuit(cirq.I(cirq.LineQubit(0)), cirq.I(cirq.LineQubit(1)))
+    layout = MovementLayout(logical_circuit, num_t_factories=2)
+
+    assert estimator.physical_qubits(layout.mapped_circuit, layout=layout) == 2 * 13 + 2 * 211
+
+
+@pytest.mark.parametrize(
+    ("program_patches", "t_factories", "ccz_factories", "expected_qubits"),
+    [
+        (1, 1, 0, 3134),  # 1 * 13 + 30 * 97 + 1 * 211
+        (3, 0, 1, 2612),  # 3 * 13 + 20 * 97 + 3 * 211
+        (2, 2, 1, 8841),
+    ],
+)
+def test_movement_distillery_counts_surface_factories_and_output_adapters(
+    program_patches: int,
+    t_factories: int,
+    ccz_factories: int,
+    expected_qubits: int,
+) -> None:
+    architecture = arch.DefaultMovement(
+        patch=lsp.CodePatch("steane"),
+        patch_span=4,
+        cultivation_surface_distance=7,
+    )
+    architecture.__dict__["_magic_state_code_teleport_cost"] = {"num_physical_qubits": 211}
+    estimator = est.ResourceEstimator(architecture)
+    logical_circuit = cirq.Circuit(cirq.I.on_each(*cirq.LineQubit.range(program_patches)))
+    layout = MovementDistillery(
+        logical_circuit,
+        num_t_factories=t_factories,
+        num_ccz_factories=ccz_factories,
+    )
+
+    assert architecture.cultivation_patch.num_physical_qubits == 97
+    assert estimator.physical_qubits(layout.mapped_circuit, layout=layout) == expected_qubits
+
+
+def test_surface_movement_distillery_footprint_is_unchanged() -> None:
+    architecture = arch.DefaultMovement(d=7)
+    estimator = est.ResourceEstimator(architecture)
+    logical_circuit = cirq.Circuit(cirq.I(cirq.LineQubit(0)))
+    layout = MovementDistillery(
+        logical_circuit,
+        num_t_factories=1,
+        num_ccz_factories=1,
+    )
+
+    assert estimator.physical_qubits(layout.mapped_circuit, layout=layout) == (
+        len(layout.layout_graph) * architecture.patch.num_physical_qubits
+    )
 
 
 def local_pauli(pauli: cirq.Pauli, qubit_index: int = 0) -> cirq.PauliString:

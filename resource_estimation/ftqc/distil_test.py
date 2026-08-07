@@ -16,8 +16,11 @@ from math import pi
 import cirq
 import pytest
 
-from resource_estimation.ftqc.distil import distil_15_to_1
-from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
+from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
+from resource_estimation.ftqc.lattice_surgery_primitives import (
+    Cultivate,
+    MagicStateCodeTeleport,
+)
 
 # Need to add tests here.
 
@@ -99,3 +102,12 @@ def test_15_to_one(base_15_to_one) -> None:
 
     # There should be 7*5 + 15 = 50 CNOT gates
     assert sum(op.gate in cirq.GateFamily(cirq.CNOT) for op in circuit.all_operations()) == 50
+
+
+@pytest.mark.parametrize("builder", [distil_15_to_1, ccz_8_to_1])
+def test_distillation_circuits_remain_entirely_surface_encoded(builder) -> None:
+    circuit = builder()
+
+    assert not any(
+        isinstance(operation.gate, MagicStateCodeTeleport) for operation in circuit.all_operations()
+    )

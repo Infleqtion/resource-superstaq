@@ -45,10 +45,7 @@ def format_cost_dict(
 if __name__ == "__main__":
     resources_dict = {}
     for d in tqdm.tqdm(range(3, 26, 2)):
-        # Establish official resources as basis
-        cnot = cultiv.make_surface_code_cnot(distance=d, basis="Z")
-        memory_d_rounds = cultiv.make_surface_code_memory_circuit(dsurface=d, rounds=d, basis="Z")
-        memory_1_round = cultiv.make_surface_code_memory_circuit(dsurface=d, rounds=1, basis="Z")
+        # Generate the cultivation circuits whose costs are cached in the JSON file.
         gidney_cultiv3 = cultiv.make_end2end_cultivation_circuit(
             dcolor=3,
             dsurface=max(7, d),
@@ -75,9 +72,6 @@ if __name__ == "__main__":
         )
 
         # Count up the resources and format the results
-        cnot_costs = format_cost_dict(count_stim_resources(stim_circuit=cnot))
-        memory_d_rounds_costs = format_cost_dict(count_stim_resources(stim_circuit=memory_d_rounds))
-        memory_1_round_costs = format_cost_dict(count_stim_resources(stim_circuit=memory_1_round))
         gidney_cultiv3_costs = format_cost_dict(count_stim_resources(stim_circuit=gidney_cultiv3))
         gidney_cultiv5_costs = format_cost_dict(count_stim_resources(stim_circuit=gidney_cultiv5))
         yale_cultiv3_costs = format_cost_dict(
@@ -89,9 +83,6 @@ if __name__ == "__main__":
 
         # Add the costs to the dictionary
         resources_dict[d] = {
-            "cnot": cnot_costs,
-            "memory_d_rounds": memory_d_rounds_costs,
-            "memory_1_round": memory_1_round_costs,
             "cultivate": {
                 "gidney": {3: gidney_cultiv3_costs, 5: gidney_cultiv5_costs},
                 "yale": {3: yale_cultiv3_costs, 5: yale_cultiv5_costs},

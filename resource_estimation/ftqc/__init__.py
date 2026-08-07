@@ -37,10 +37,13 @@ from resource_estimation.ftqc.estimate import (
 )
 from resource_estimation.ftqc.lattice_surgery_primitives import (
     BufferCodePatch,
+    CodePatch,
     Cultivate,
     EndpointPatch,
     ErrorCorrect,
     IntermediatePatch,
+    LogicalQubit,
+    MagicStateCodeTeleport,
     Merge,
     Move,
     RotatedCodePatch,
@@ -53,6 +56,7 @@ from resource_estimation.ftqc.layout import (
     Embedded,
     FactorySandwich,
     Layout,
+    MovementDistillery,
     MovementLayout,
 )
 from resource_estimation.ftqc.stim_functions import (
@@ -65,6 +69,7 @@ from resource_estimation.ftqc.stim_functions import (
 __all__ = [
     "Architecture",
     "BufferCodePatch",
+    "CodePatch",
     "Column",
     "Cultivate",
     "DefaultLattice",
@@ -76,8 +81,11 @@ __all__ = [
     "FactorySandwich",
     "IntermediatePatch",
     "Layout",
+    "LogicalQubit",
+    "MagicStateCodeTeleport",
     "Merge",
     "MeasureZonesOnly",
+    "MovementDistillery",
     "MovementLayout",
     "Move",
     "ReactionDepthEstimator",

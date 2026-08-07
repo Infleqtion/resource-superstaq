@@ -108,12 +108,89 @@ def test_error_handling() -> None:
     bad_circuit = stim.Circuit("CZSWAP 5 6")
     with pytest.raises(ValueError, match="Unknown Instruction"):
         _ = count_stim_resources(bad_circuit)
+    with pytest.raises(ValueError, match="Unknown Instruction"):
+        _ = count_stim_resources(bad_circuit, scheduling="asap")
     with pytest.raises(ValueError, match="Style cannot be None for cultivation"):
         _ = load_saved_cost(dsurface=7, op_key="cultivate")
     with pytest.raises(ValueError, match="cannot be None"):
         _ = load_saved_cost(dsurface=7, op_key="cultivate", style="yale")
     with pytest.raises(ValueError, match="fault_distance values 3 and 5"):
         _ = cultivate(dsurface=15, fault_distance=7, fold=False, for_test=False)
+
+
+def test_asap_scheduling_for_tick_free_transversal_circuit() -> None:
+    circuit = stim.Circuit(
+        """
+        H 0 1
+        S 0
+        SWAP 1 2
+        X 2
+        """
+    )
+
+    costs = count_stim_resources(circuit, scheduling="asap")
+
+    assert costs["serial"] == {
+        cirq.PhasedXZGate: 4,
+        cirq.QubitPermutationGate: 1,
+    }
+    assert costs["parallel"] == {
+        cirq.PhasedXZGate: 3,
+        cirq.QubitPermutationGate: 1,
+    }
+
+
+def test_tick_scheduling_flushes_final_unterminated_moment() -> None:
+    costs = count_stim_resources(stim.Circuit("H 0"))
+
+    assert costs["serial"] == {cirq.PhasedXZGate: 1}
+    assert costs["parallel"] == {cirq.PhasedXZGate: 1}
+
+
+def test_asap_scheduling_honors_ticks_and_ignores_annotations() -> None:
+    circuit = stim.Circuit(
+        """
+        QUBIT_COORDS(0, 0) 0
+        H 0
+        TICK
+        H 0
+        """
+    )
+
+    costs = count_stim_resources(circuit, scheduling="asap")
+
+    assert costs["serial"] == {cirq.PhasedXZGate: 2}
+    assert costs["parallel"] == {cirq.PhasedXZGate: 2}
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        "H_XY",
+        "H_XZ",
+        "H_YZ",
+        "SQRT_X",
+        "SQRT_X_DAG",
+        "SQRT_Y",
+        "SQRT_Y_DAG",
+        "SQRT_Z",
+        "SQRT_Z_DAG",
+        "C_XYZ",
+        "C_ZYX",
+        "Y",
+        "Z",
+    ],
+)
+def test_qldpc_single_qubit_clifford_aliases(gate: str) -> None:
+    costs = count_stim_resources(stim.Circuit(f"{gate} 0"), scheduling="asap")
+
+    assert costs["serial"] == {cirq.PhasedXZGate: 1}
+    assert costs["parallel"] == {cirq.PhasedXZGate: 1}
+
+
+def test_unknown_scheduling_mode() -> None:
+    with pytest.raises(ValueError, match="Unknown Stim scheduling mode"):
+        count_stim_resources(stim.Circuit(), scheduling="later")  # type: ignore[arg-type]
 
 
 def test_cultivation_low_distance_warning() -> None:

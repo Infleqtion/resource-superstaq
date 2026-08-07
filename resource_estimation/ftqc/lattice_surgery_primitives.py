@@ -13,8 +13,9 @@
 # limitations under the License.
 from __future__ import annotations
 
-import typing
+from collections.abc import Callable, Iterable
 from functools import cached_property
+from typing import Any, Literal, Optional, cast
 
 import cirq
 
@@ -23,6 +24,8 @@ import cirq
 
 def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
     """Tells cirq.json how to deserialize custom gates"""
+    if cirq_type == "lsp.MagicStateCodeTeleport":
+        return MagicStateCodeTeleport
     if cirq_type == "lsp.Merge":
         return Merge
     if cirq_type == "lsp.Split":
@@ -37,6 +40,34 @@ def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
         return Move
     if cirq_type == "lsp.Distil":
         return Distil
+    return None
+
+
+@cirq.value_equality
+class MagicStateCodeTeleport(cirq.Gate):
+    """Transfer one surface-code magic-state qubit into the architecture's compute code."""
+
+    def _num_qubits_(self) -> int:
+        return 1
+
+    def __str__(self) -> str:
+        return "T-CODE-TELEPORT"
+
+    def _circuit_diagram_info_(self, args: cirq.CircuitDiagramInfoArgs) -> str:
+        return "T-CODE-XFER"
+
+    def _json_dict_(self) -> dict[str, object]:
+        return {}
+
+    def __repr__(self) -> str:
+        return "lsp.MagicStateCodeTeleport()"
+
+    @classmethod
+    def _json_namespace_(cls) -> str:
+        return "lsp"
+
+    def _value_equality_values_(self) -> tuple[()]:
+        return ()
 
 
 @cirq.value_equality
@@ -279,7 +310,7 @@ class Move(cirq.Gate):
     logical qubit patches.
     """
 
-    def __init__(self, zone: typing.Optional[typing.Literal["measure", "interact"]] = None) -> None:
+    def __init__(self, zone: Optional[Literal["measure", "interact"]] = None) -> None:
         self._num_qubits = 2 if zone is None else 1
         self._zone = zone
 
@@ -287,7 +318,7 @@ class Move(cirq.Gate):
         return self._num_qubits
 
     @property
-    def zone(self) -> typing.Literal["interact", "measure"] | None:
+    def zone(self) -> Literal["interact", "measure"] | None:
         return self._zone
 
     def __str__(self) -> str:
@@ -295,7 +326,7 @@ class Move(cirq.Gate):
             return "MOVE"
         return "MOVE_MZ" if self.zone == "measure" else "MOVE_IZ"
 
-    def _json_dict_(self) -> dict[str, typing.Literal["interact", "measure"] | None]:
+    def _json_dict_(self) -> dict[str, Literal["interact", "measure"] | None]:
         return {"zone": self._zone}
 
     def __repr__(self) -> str:
@@ -307,6 +338,293 @@ class Move(cirq.Gate):
 
     def _value_equality_values_(self) -> tuple[int, str | None]:
         return (self._num_qubits, self._zone)
+
+
+_QLDPC_FAMILY_ALIASES = {
+    "surface": "SurfaceCode",
+    "surface_code": "SurfaceCode",
+    "rotated_surface": "SurfaceCode",
+    "rotated_surface_code": "SurfaceCode",
+    "toric": "ToricCode",
+    "toric_code": "ToricCode",
+    "five_qubit": "FiveQubitCode",
+    "five_qubit_code": "FiveQubitCode",
+    "steane": "SteaneCode",
+    "steane_code": "SteaneCode",
+    "bb": "BBCode",
+    "bb_code": "BBCode",
+    "bivariate_bicycle": "BBCode",
+    "bivariate_bicycle_code": "BBCode",
+    "hgp": "HGPCode",
+    "hgps": "HGPCode",
+    "hypergraph_product": "HGPCode",
+    "hypergraph_product_code": "HGPCode",
+    "shyps": "SHYPSCode",
+    "shyps_code": "SHYPSCode",
+}
+
+_QLDPC_DISTANCE_FAMILIES = {"SurfaceCode", "ToricCode"}
+
+LogicalQubitLabel = Literal["zero", "one", "plus", "minus", "data"]
+_LOGICAL_QUBIT_LABELS = {"zero", "one", "plus", "minus", "data"}
+PatchLabel = Literal["memory", "compute", "cultivate", "distil"]
+_PATCH_LABELS = {"memory", "compute", "cultivate", "distil"}
+
+
+def _normalize_code_type(code_type: str) -> str:
+    return code_type.lower().replace("-", "_").replace(" ", "_")
+
+
+def _import_qldpc() -> Any:
+    try:
+        from qldpc import codes
+    except ImportError as ex:  # pragma: no cover - exercised only when qLDPC is absent
+        raise ImportError(
+            "qLDPC-backed CodePatch objects require the optional `qldpc` package."
+        ) from ex
+    return codes
+
+
+def _resolve_qldpc_family_name(code_type: str, codes_module: Any) -> str:
+    normalized = _normalize_code_type(code_type)
+    if normalized in _QLDPC_FAMILY_ALIASES:
+        return _QLDPC_FAMILY_ALIASES[normalized]
+    if hasattr(codes_module, code_type):
+        return code_type
+    for name in getattr(codes_module, "__all__", ()):
+        if _normalize_code_type(name) == normalized:
+            return name
+    raise ValueError(f"qLDPC code family not found for code_type={code_type!r}")
+
+
+def _validate_logical_qubit_label(label: str) -> LogicalQubitLabel:
+    if label not in _LOGICAL_QUBIT_LABELS:
+        raise ValueError(
+            f"Logical qubit label must be one of {sorted(_LOGICAL_QUBIT_LABELS)}, not {label!r}"
+        )
+    return cast(LogicalQubitLabel, label)
+
+
+def _validate_patch_label(patch_label: str) -> PatchLabel:
+    if patch_label not in _PATCH_LABELS:
+        raise ValueError(f"Patch label must be one of {sorted(_PATCH_LABELS)}, not {patch_label!r}")
+    return cast(PatchLabel, patch_label)
+
+
+class LogicalQubit:
+    """Metadata for a logical qubit primitive."""
+
+    def __init__(
+        self,
+        x_support: Iterable[int],
+        z_support: Iterable[int],
+        label: LogicalQubitLabel = "zero",
+    ) -> None:
+        self.label = _validate_logical_qubit_label(label)
+        self.x_support = self._validate_support(x_support, "x_support")
+        self.z_support = self._validate_support(z_support, "z_support")
+        self.num_qubits = len(self.x_support | self.z_support)
+        if self.num_qubits < 1:
+            raise ValueError("LogicalQubit supports must include at least one physical qubit.")
+
+    @staticmethod
+    def _validate_support(support: Iterable[int], name: str) -> frozenset[int]:
+        qubits = set()
+        for qubit in support:
+            if not isinstance(qubit, int) or isinstance(qubit, bool):
+                raise TypeError(f"LogicalQubit {name} entries must be integers.")
+            if qubit < 0:
+                raise ValueError(f"LogicalQubit {name} entries must be nonnegative.")
+            qubits.add(qubit)
+        return frozenset(qubits)
+
+
+class CodePatch:
+    """Metadata for a logical code patch.
+
+    A CodePatch represents a qLDPC-backed code block together with the metadata needed
+    to reason about its size and intended use. The patch label indicates whether the
+    patch is intended for memory, computation, cultivation, or distillation.
+    """
+
+    def __init__(
+        self,
+        code_type: str | Callable[..., object],
+        *code_args: object,
+        d: int | None = None,
+        patch_label: PatchLabel = "compute",
+        **code_kwargs: object,
+    ) -> None:
+        codes = _import_qldpc()
+        self.patch_label = _validate_patch_label(patch_label)
+
+        if callable(code_type):
+            code_factory = code_type
+            self.code_type = getattr(code_type, "__name__", repr(code_type))
+        else:
+            self.code_type = code_type
+            code_factory = getattr(codes, _resolve_qldpc_family_name(code_type, codes))
+
+        qldpc_args = tuple(code_args)
+        if (
+            not qldpc_args
+            and d is not None
+            and getattr(code_factory, "__name__", None) in _QLDPC_DISTANCE_FAMILIES
+        ):
+            qldpc_args = (d,)
+
+        self._qldpc_code = code_factory(*qldpc_args, **code_kwargs)
+        self.n, self.k, self.d = self._metadata_from_qldpc_code(self._qldpc_code)
+        if d is not None and self.d is not None and self.d != d:
+            raise ValueError(
+                f"Provided distance d={d} does not match qLDPC code distance {self.d}."
+            )
+        self.num_data_qubits = self.n
+        self.num_measure_qubits = int(getattr(self._qldpc_code, "num_checks"))
+        self.logical_qubits = self._logical_qubits_from_qldpc_code()
+
+    @property
+    def code_params(self) -> tuple[int, int, int | float | None]:
+        """The patch's [n, k, d] code parameters."""
+        return self.n, self.k, self.d
+
+    @property
+    def num_physical_qubits(self) -> int:
+        """The total number of data and measurement qubits in the code patch."""
+        return self.num_data_qubits + self.num_measure_qubits
+
+    @property
+    def is_qldpc_backed(self) -> bool:
+        return True
+
+    @property
+    def is_binary(self) -> bool:
+        """Whether this patch is defined over the binary field."""
+        return getattr(self.qldpc_code.field, "order", None) == 2
+
+    @property
+    def is_css(self) -> bool:
+        """Whether this patch is backed by a qLDPC CSS code."""
+        codes = _import_qldpc()
+        return isinstance(self.qldpc_code, codes.CSSCode)
+
+    @property
+    def is_stabilizer_code(self) -> bool:
+        """Whether all checks of this patch commute."""
+        return not bool(self.qldpc_code.is_subsystem_code)
+
+    @property
+    def is_surface_code(self) -> bool:
+        """Whether this patch uses qLDPC's surface-code family."""
+        codes = _import_qldpc()
+        return isinstance(self.qldpc_code, codes.SurfaceCode)
+
+    @property
+    def qldpc_code(self) -> Any:
+        return self._qldpc_code
+
+    def num_x_stabs(self) -> int:
+        """Return the number of X-type stabilizer checks for CSS qLDPC codes."""
+        return self._qldpc_css_check_count("x")
+
+    def num_z_stabs(self) -> int:
+        """Return the number of Z-type stabilizer checks for CSS qLDPC codes."""
+        return self._qldpc_css_check_count("z")
+
+    def total_x_syndrome_cnots(self) -> int:
+        """Return the data-check interactions needed to measure all X stabilizers."""
+        return self._qldpc_css_interaction_count("x")
+
+    def total_z_syndrome_cnots(self) -> int:
+        """Return the data-check interactions needed to measure all Z stabilizers."""
+        return self._qldpc_css_interaction_count("z")
+
+    def _qldpc_css_check_count(self, pauli: Literal["x", "z"]) -> int:
+        attr = f"num_checks_{pauli}"
+        if hasattr(self.qldpc_code, attr):
+            return int(getattr(self.qldpc_code, attr))
+
+        matrix = getattr(self.qldpc_code, f"matrix_{pauli}", None)
+        if matrix is not None and getattr(matrix, "shape", None) is not None:
+            return int(matrix.shape[0])
+
+        raise self._unsupported_stabilizer_count_error()
+
+    def _qldpc_css_interaction_count(self, pauli: Literal["x", "z"]) -> int:
+        matrix = getattr(self.qldpc_code, f"matrix_{pauli}", None)
+        if matrix is not None and getattr(matrix, "shape", None) is not None:
+            return len(matrix.nonzero()[0])
+
+        raise self._unsupported_stabilizer_count_error()
+
+    def _logical_qubits_from_qldpc_code(self) -> list[LogicalQubit]:
+        from qldpc.objects import Pauli
+
+        logical_xs = self.qldpc_code.get_logical_ops(Pauli.X)
+        logical_zs = self.qldpc_code.get_logical_ops(Pauli.Z)
+        self._validate_logical_ops_count(logical_xs, "X")
+        self._validate_logical_ops_count(logical_zs, "Z")
+
+        supports = [
+            (
+                self._logical_op_support(logical_xs[index]),
+                self._logical_op_support(logical_zs[index]),
+            )
+            for index in range(self.k)
+        ]
+        support_sizes = [len(x_support | z_support) for x_support, z_support in supports]
+        if len(set(support_sizes)) > 1:
+            raise ValueError(
+                "Logical qubit physical supports must have the same size within a CodePatch."
+            )
+        return [
+            LogicalQubit(x_support=x_support, z_support=z_support, label="zero")
+            for x_support, z_support in supports
+        ]
+
+    def _validate_logical_ops_count(self, logical_ops: Any, pauli: str) -> None:
+        if len(logical_ops) != self.k:
+            raise ValueError(
+                f"qLDPC returned {len(logical_ops)} logical {pauli} operators for "
+                f"a CodePatch with k={self.k}."
+            )
+
+    def _logical_op_support(self, logical_op: Any) -> set[int]:
+        row = [int(value) for value in logical_op]
+        width = len(row)
+        if width == self.n:
+            return {index for index, value in enumerate(row) if value}
+        if width == 2 * self.n:
+            return {index for index in range(self.n) if row[index] or row[index + self.n]}
+        raise ValueError(
+            f"Logical operator rows must have length n={self.n} or 2n={2 * self.n}, not {width}."
+        )
+
+    @staticmethod
+    def _unsupported_stabilizer_count_error() -> ValueError:
+        return ValueError(
+            "X/Z stabilizer counts are only available for CSS qLDPC-backed CodePatch objects."
+        )
+
+    @staticmethod
+    def _metadata_from_qldpc_code(qldpc_code: Any) -> tuple[int, int, int | float | None]:
+        try:
+            n, k, d = qldpc_code.get_code_params()
+        except AttributeError:
+            n = len(qldpc_code)
+            k = qldpc_code.dimension
+            d = qldpc_code.get_distance_if_known()
+        return int(n), int(k), d
+
+    def __repr__(self) -> str:
+        args = [
+            f"code_type={self.code_type!r}",
+            f"d={self.d!r}",
+            f"n={self.n!r}",
+            f"k={self.k!r}",
+            f"patch_label={self.patch_label!r}",
+        ]
+        return f"lsp.CodePatch({', '.join(args)})"
 
 
 class RotatedCodePatch:

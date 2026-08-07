@@ -19,10 +19,21 @@ import itertools
 import typing
 from dataclasses import dataclass
 from math import ceil, sqrt
+from typing import TYPE_CHECKING
 
 import cirq
 import networkx as nx
 import numpy as np
+
+from resource_estimation.ftqc.distil import (
+    CCZ_DISTILLATION_OUTPUTS,
+    CCZ_DISTILLATION_PATCHES,
+    T_DISTILLATION_OUTPUTS,
+    T_DISTILLATION_PATCHES,
+)
+
+if TYPE_CHECKING:
+    from resource_estimation.ftqc.architecture import DefaultMovement
 
 
 @dataclass
@@ -234,7 +245,6 @@ class Layout(abc.ABC):
         color_dict = {
             "t": "red",
             "s": "yellow",
-            "ccz": "black",
             "data": "green",
             "ancilla": "blue",
             "block": "pink",
@@ -270,6 +280,26 @@ class MovementLayout(Layout):
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit):
         raise NotImplementedError
+
+    def physical_qubits(self, architecture: DefaultMovement) -> int:
+        """Return the configured movement layout's peak physical-qubit footprint.
+
+        Each T-factory station is sized for the larger of cultivation and code teleportation.
+        Other graph locations retain the architecture's computational-patch footprint.
+        """
+        graph = self.layout_graph
+        t_factory_nodes = {
+            node
+            for node in graph
+            if graph.nodes[node].get("patch_type") == "factory"
+            and graph.nodes[node].get("ftype") == "t"
+        }
+        t_factory_ids = {graph.nodes[node]["fid"] for node in t_factory_nodes}
+        other_locations = len(graph.nodes) - len(t_factory_nodes)
+        return (
+            other_locations * architecture.patch.num_physical_qubits
+            + len(t_factory_ids) * architecture.t_factory_physical_qubits
+        )
 
 
 class Column(Layout):
@@ -540,9 +570,9 @@ class MovementDistillery(MovementLayout):
     def _generate(self) -> None:
         # Establish Important Variables
         program_qubits = len(self.input_circuit.all_qubits())
-        qubits_per_t_distil = 31
-        qubits_per_ccz_distil = 23
-        num_output_qubits = 3
+        qubits_per_t_distil = T_DISTILLATION_PATCHES
+        qubits_per_ccz_distil = CCZ_DISTILLATION_PATCHES
+        num_output_qubits = CCZ_DISTILLATION_OUTPUTS
         distillation_qubits = (
             qubits_per_ccz_distil * self.num_ccz_factories
             + qubits_per_t_distil * self.num_t_factories
@@ -623,3 +653,40 @@ class MovementDistillery(MovementLayout):
             if (G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid)
         ]
         return block_qubits + list(factory)
+
+    def physical_qubits(self, architecture: DefaultMovement) -> int:
+        """Return the peak footprint of surface-code factories and adapted outputs.
+
+        Every distillation location is a cultivation-distance surface-code patch.  During
+        output conversion, an adapter footprint replaces each source output patch because the
+        adapter already contains that source, its compute-code destination, and temporary qubits.
+        """
+        graph = self.layout_graph
+        program_patches = sum(graph.nodes[node].get("patch_type") == "data" for node in graph)
+        t_factory_ids = {
+            graph.nodes[node]["fid"]
+            for node in graph
+            if graph.nodes[node].get("patch_type") == "factory"
+            and graph.nodes[node].get("ftype") == "t"
+        }
+        ccz_factory_ids = {
+            graph.nodes[node]["fid"]
+            for node in graph
+            if graph.nodes[node].get("patch_type") == "factory"
+            and graph.nodes[node].get("ftype") == "ccz"
+        }
+
+        compute_patch_qubits = architecture.patch.num_physical_qubits
+        surface_patch_qubits = architecture.cultivation_patch.num_physical_qubits
+        adapter_qubits = architecture.t_factory_physical_qubits
+        t_factory_qubits = (
+            T_DISTILLATION_PATCHES - T_DISTILLATION_OUTPUTS
+        ) * surface_patch_qubits + T_DISTILLATION_OUTPUTS * adapter_qubits
+        ccz_factory_qubits = (
+            CCZ_DISTILLATION_PATCHES - CCZ_DISTILLATION_OUTPUTS
+        ) * surface_patch_qubits + CCZ_DISTILLATION_OUTPUTS * adapter_qubits
+        return (
+            program_patches * compute_patch_qubits
+            + len(t_factory_ids) * t_factory_qubits
+            + len(ccz_factory_ids) * ccz_factory_qubits
+        )

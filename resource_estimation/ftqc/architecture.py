@@ -14,21 +14,30 @@
 from __future__ import annotations
 
 import abc
-import collections
 import json
-from functools import cached_property, lru_cache
+import warnings
+from collections import Counter
+from functools import cache, cached_property, lru_cache
 from math import ceil
 from pathlib import Path
 
 import cirq
-import cirq_superstaq as css
 import numpy as np
+from cirq_superstaq.ops.qubit_gates import ParallelRGate
 
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.compile_ftqc import add_moves
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
-from resource_estimation.ftqc.stim_functions import cultivate
+from resource_estimation.ftqc.logical_operations import (
+    CSSLogicalOperations,
+    LogicalClifford,
+    validate_k1_css_patch,
+)
+from resource_estimation.ftqc.qldpc_surgery import (
+    build_joint_logical_pauli_measurement_circuit,
+)
+from resource_estimation.ftqc.stim_functions import count_stim_resources, cultivate
 
 NEUTRAL_GATES = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.CZ: 0.27,
@@ -46,6 +55,52 @@ SUPERCOND_GATES = {
     cirq.ResetChannel: 1,  # Based on 1us cycle time assumed by https://arxiv.org/pdf/2505.15917 (Gidney RSA 2025)
     cirq.MeasurementGate: 0.5,  # https://arxiv.org/abs/2308.02079
 }
+
+
+class MissingLogicalGateCostWarning(UserWarning):
+    """A logical gate was retained in the estimate but assigned zero physical cost."""
+
+
+class MissingMagicStateTransferCostWarning(UserWarning):
+    """A magic-state code transfer was retained but assigned zero physical cost."""
+
+
+def _resolve_cultivation_surface_distance(
+    target_distance: int,
+    fault_distance: int,
+    requested_distance: int | None,
+) -> int:
+    minimum_distance = 2 * fault_distance + 1
+    distance = (
+        max(target_distance, minimum_distance) if requested_distance is None else requested_distance
+    )
+    if not isinstance(distance, int) or isinstance(distance, bool):
+        raise TypeError("cultivation_surface_distance must be an integer or None.")
+    if distance < minimum_distance:
+        raise ValueError(
+            "cultivation_surface_distance must be at least "
+            f"2 * cultivation_fault_distance + 1 = {minimum_distance}."
+        )
+    if distance % 2 == 0:
+        if requested_distance is not None:
+            raise ValueError("cultivation_surface_distance must be odd.")
+        distance += 1
+    return distance
+
+
+def _syndrome_entangling_depth(patch: lsp.CodePatch) -> int:
+    """Return a collision-free Tanner-edge schedule depth for one extraction round."""
+    if patch.is_surface_code:
+        # Preserve the existing hand-scheduled surface-code estimate.
+        return 4
+
+    matrix_x = np.asarray(patch.qldpc_code.matrix_x)
+    matrix_z = np.asarray(patch.qldpc_code.matrix_z)
+    check_degrees = np.concatenate(
+        [np.count_nonzero(matrix_x, axis=1), np.count_nonzero(matrix_z, axis=1)]
+    )
+    data_degrees = np.count_nonzero(matrix_x, axis=0) + np.count_nonzero(matrix_z, axis=0)
+    return int(max(np.max(check_degrees, initial=0), np.max(data_degrees, initial=0)))
 
 
 @lru_cache(maxsize=128)
@@ -113,7 +168,7 @@ def _merge_cost(
 def _syndrome_extract_cost(
     rounds: int,
     num_logical_qubits: int,
-    d: int,
+    patch: lsp.CodePatch,
 ) -> dict[str, dict[cirq.Gate, int]]:
     """Calculates the cost of syndrome extraction in terms of physical gates"""
     # This is how SE should look...
@@ -129,26 +184,19 @@ def _syndrome_extract_cost(
     #            CZ  |  |
     #               CZ  |
     #                  CZ
-    patch = lsp.RotatedCodePatch(d)
+    x_syndrome_cnots = patch.total_x_syndrome_cnots()
+    z_syndrome_cnots = patch.total_z_syndrome_cnots()
+    phased_xz_gates = 2 * (x_syndrome_cnots + patch.num_x_stabs() + patch.num_z_stabs())
     gate_cost = {
         cirq.MeasurementGate: patch.num_measure_qubits * num_logical_qubits * rounds,
-        cirq.CZ: (patch.total_z_syndrome_cnots() + patch.total_x_syndrome_cnots())
-        * num_logical_qubits
-        * rounds,
+        cirq.CZ: (x_syndrome_cnots + z_syndrome_cnots) * num_logical_qubits * rounds,
         cirq.ResetChannel: patch.num_measure_qubits * num_logical_qubits * rounds,
-        cirq.PhasedXZGate: num_logical_qubits
-        * rounds
-        * (
-            (10 * patch.num_x_stabs(full=True))  # 5 Hadamards on left and 5 Hadamards on right
-            + (2 * patch.num_z_stabs(full=True))  # 1 Hadamard on left and 1 Hadamard on right
-            + (6 * patch.num_x_stabs(full=False))  # 3 Hadamards on left and 3 Hadamards on right
-            + (2 * patch.num_z_stabs(full=False))  # 1 Hadamard on left and 1 Hadamard on right
-        ),
+        cirq.PhasedXZGate: phased_xz_gates * num_logical_qubits * rounds,
     }
     moment_cost = {
         cirq.MeasurementGate: rounds,
         cirq.ResetChannel: rounds,
-        cirq.CZ: 4 * rounds,  # 4 per stabilizer type
+        cirq.CZ: _syndrome_entangling_depth(patch) * rounds,
         cirq.PhasedXZGate: 2 * rounds,  # 2 per stabilizer type
     }
     return {"gate_cost": gate_cost, "moment_cost": moment_cost}
@@ -185,17 +233,37 @@ class Architecture(abc.ABC):
         idling: bool,
         post_op_correction: bool,
         movement: bool,
-        d: int = 7,
+        d: int | None = 7,
         cultivation_repetition: int = 1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds: int | None = None,
         fold_cultiv: bool = False,
+        patch: lsp.CodePatch | None = None,
+        logical_operations: CSSLogicalOperations | None = None,
     ) -> None:
         self.idling: bool = idling
         self.post_op_correction = post_op_correction
         self.movement = movement
-        self.d = d
-        self.patch = lsp.RotatedCodePatch(self.d)
+        if patch is None:
+            surface_distance = 7 if d is None else d
+            assert (surface_distance - 1) % 2 == 0, "CodePatches must be odd distance"
+            patch = lsp.CodePatch("surface", d=surface_distance, patch_label="compute")
+        elif d is not None and d != patch.d:
+            raise ValueError(
+                f"Architecture distance d={d} does not match patch distance {patch.d}."
+            )
+        if patch.d is None:
+            raise ValueError("Architecture CodePatch must have a known distance.")
+        if patch.is_surface_code:
+            assert (patch.d - 1) % 2 == 0, "CodePatches must be odd distance"
+        if logical_operations is not None and logical_operations.patch is not patch:
+            raise ValueError(
+                "The logical-operation profile must refer to the architecture CodePatch."
+            )
+
+        self.patch = patch
+        self.d = int(patch.d)
+        self.logical_operations = logical_operations
         self.cultivation_repetition = cultivation_repetition
         self.cultivation_fault_distance = cultivation_fault_distance
         self.syndrome_rounds = syndrome_rounds
@@ -219,6 +287,8 @@ class Architecture(abc.ABC):
                 cultivation_fault_distance=d["cultivation_fault_distance"],
                 syndrome_rounds=d["syndrome_rounds"],
                 fold_cultiv=d.get("fold_cultiv", False),
+                cultivation_surface_distance=d.get("cultivation_surface_distance"),
+                t_state_transfer_rounds=d.get("t_state_transfer_rounds"),
             )
         else:
             base_arc = DefaultLattice(
@@ -269,7 +339,7 @@ class Architecture(abc.ABC):
         except KeyError:
             raise ValueError("Gate not recognized")
 
-    def moment_cost(self, op: cirq.Operation) -> dict[type[cirq.Gate], int]:
+    def moment_cost(self, op: cirq.Operation) -> dict[type[Gate], int]:
         try:
             return self.op_cost[type(op.gate)](op)["moment_cost"]
         except KeyError:
@@ -297,7 +367,7 @@ class Architecture(abc.ABC):
         )
 
     @cached_property
-    def _cultivate_y_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def _cultivate_y_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         """Cost estimate for measuring a surface code patch in the Y basis. Measuring in the Y basis facilitates gate teleportation the same way that cultivating T does.
         The procedure is based on [Inplace access to the Surface Code Y Basis](https://arxiv.org/pdf/2302.07395v2).
         The cost estimates were generated by looking carefully at circuits produced from https://doi.org/10.5281/zenodo.7487893.
@@ -306,18 +376,18 @@ class Architecture(abc.ABC):
         reset_moments = 1
         cz_moments = 5
         measure_moments = 1
-        Y_moment_cost = collections.Counter(
+        Y_moment_cost = Counter(
             {
                 cirq.PhasedXZGate: single_qubit_moments,
                 cirq.CZ: cz_moments,
                 cirq.MeasurementGate: measure_moments,
                 cirq.ResetChannel: reset_moments,
-            },
+            }
         )
-        se_moment_cost = collections.Counter(
-            _syndrome_extract_cost(rounds=ceil(self.d / 2), num_logical_qubits=1, d=self.d)[
+        se_moment_cost = Counter(
+            _syndrome_extract_cost(rounds=ceil(self.d / 2), num_logical_qubits=1, patch=self.patch)[
                 "moment_cost"
-            ],
+            ]
         )
 
         # TODO: Perhaps cannonical cost includes SE before and afer for a total of two more units of SE
@@ -325,10 +395,10 @@ class Architecture(abc.ABC):
         op_time = self.total_time(moment_cost_dict=moment_cost)
 
         # For the gate cost, let's just approximate it with one round of syndrome extraction with an additional d-1 diagonal of CZ gates
-        se_gate_cost = collections.Counter(
-            _syndrome_extract_cost(rounds=ceil(self.d / 2), num_logical_qubits=1, d=self.d)[
+        se_gate_cost = Counter(
+            _syndrome_extract_cost(rounds=ceil(self.d / 2), num_logical_qubits=1, patch=self.patch)[
                 "gate_cost"
-            ],
+            ]
         )
         Y_gate_cost = se_gate_cost.copy()
         Y_gate_cost[cirq.CZ] += self.d - 1
@@ -362,7 +432,7 @@ class Architecture(abc.ABC):
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     @cached_property
-    def _measure_cost(self) -> dict[str, dict[type[cirq.MeasurementGate], int] | float]:
+    def _measure_cost(self) -> dict[str, dict[type[MeasurementGate], int] | float]:
         gate_cost = {cirq.MeasurementGate: self.patch.num_data_qubits}
         moment_cost = {cirq.MeasurementGate: 1}
         op_time = self.total_time(moment_cost_dict=moment_cost)
@@ -387,6 +457,11 @@ class Architecture(abc.ABC):
     def primitives(self) -> cirq.Gateset:
         return self._primitives
 
+    @property
+    def requires_magic_state_code_teleport(self) -> bool:
+        """Whether the compiler must adapt cultivated T states into the compute code."""
+        return False
+
     zone_ops = None
 
     alley_ops = None
@@ -404,9 +479,7 @@ class Architecture(abc.ABC):
 
     def syndrome_extract_cost(self, op: cirq.Operation) -> dict:
         cost_dict = _syndrome_extract_cost(
-            rounds=self.rounds,
-            num_logical_qubits=len(op.qubits),
-            d=self.d,
+            rounds=self.rounds, num_logical_qubits=len(op.qubits), patch=self.patch
         )
         cost_dict["op_time"] = self.total_time(moment_cost_dict=cost_dict["moment_cost"])
         return cost_dict
@@ -500,20 +573,20 @@ class DefaultLattice(Architecture):
                 cirq.Z,
                 cirq.MeasurementGate,
                 cirq.ResetChannel,
-            ],
+            ]
         )
         self._phys_gate_times = NEUTRAL_GATES.copy()
         del self._phys_gate_times[cirq.QubitPermutationGate]  # Remove PermutationGate
         self.__post_init__()
 
-    def split_cost(self, op: cirq.Operation) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def split_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         smooth = op.gate.smooth
         cost_dict = _split_cost(smooth, self.d)
         op_time = self.total_time(moment_cost_dict=cost_dict["moment_cost"])
         cost_dict["op_time"] = op_time
         return cost_dict
 
-    def merge_cost(self, op: cirq.Operation) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def merge_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         k = op.gate.num_qubits()
         cost = _merge_cost(self.d, k, op.gate.smooth)
         op_time = self.total_time(moment_cost_dict=cost["moment_cost"])
@@ -521,37 +594,35 @@ class DefaultLattice(Architecture):
         return cost
 
     @cached_property
-    def _h_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def _h_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         # See https://arxiv.org/pdf/2312.11605v1 Fig. 2 for details
         gate_cost = (
-            collections.Counter({cirq.PhasedXZGate: 2 * self.patch.num_data_qubits})
-            + collections.Counter(_merge_cost(d=self.d, k=2, smooth=True)["gate_cost"])
-            + collections.Counter(_merge_cost(d=self.d, k=2, smooth=True)["gate_cost"])
-            + collections.Counter(
+            Counter({cirq.PhasedXZGate: 2 * self.patch.num_data_qubits})
+            + Counter(_merge_cost(d=self.d, k=2, smooth=True)["gate_cost"])
+            + Counter(_merge_cost(d=self.d, k=2, smooth=True)["gate_cost"])
+            + Counter(
                 {
                     cirq.MeasurementGate: self.patch.num_physical_qubits,
                     cirq.ResetChannel: self.patch.num_physical_qubits,
-                },
+                }
             )
         )
         # One Hadamard (GR, Rz, GR), two Merges, two patch-wide Measure/Reset moments
         # Following the prescription in https://arxiv.org/pdf/2312.11605v1 Fig. 2
         moment_cost = dict(
-            collections.Counter({cirq.PhasedXZGate: 1})
-            + collections.Counter(_merge_cost(d=self.d, k=2, smooth=True)["moment_cost"])
-            + collections.Counter(_merge_cost(d=self.d, k=2, smooth=True)["moment_cost"])
-            + collections.Counter({cirq.MeasurementGate: 2, cirq.ResetChannel: 2})
+            Counter({cirq.PhasedXZGate: 1})
+            + Counter(_merge_cost(d=self.d, k=2, smooth=True)["moment_cost"])
+            + Counter(_merge_cost(d=self.d, k=2, smooth=True)["moment_cost"])
+            + Counter({cirq.MeasurementGate: 2, cirq.ResetChannel: 2})
         )
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     @cached_property
-    def _cultivate_t_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def _cultivate_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         # fold should always be false here
         base_cultivation_cost = cultivate(
-            dsurface=self.d,
-            fold=self.fold_cultiv,
-            fault_distance=self.cultivation_fault_distance,
+            dsurface=self.d, fold=self.fold_cultiv, fault_distance=self.cultivation_fault_distance
         ).copy()
 
         # No penalties to any base gates
@@ -586,12 +657,17 @@ class DefaultMovement(Architecture):
         self,
         idling: bool = False,
         post_op_correction: bool = True,
-        d: int = 7,
+        d: int | None = None,
         fold_cultiv: bool = False,
         cultivation_repetition: int = 1,
         distillation_repetition: int = 1,
         cultivation_fault_distance: int = 3,
         syndrome_rounds: int | None = 1,
+        patch: lsp.CodePatch | None = None,
+        logical_operations: CSSLogicalOperations | None = None,
+        patch_span: float | None = None,
+        cultivation_surface_distance: int | None = None,
+        t_state_transfer_rounds: int | None = None,
     ) -> None:
         super().__init__(
             idling=idling,
@@ -602,12 +678,42 @@ class DefaultMovement(Architecture):
             cultivation_fault_distance=cultivation_fault_distance,
             syndrome_rounds=syndrome_rounds,
             fold_cultiv=fold_cultiv,
+            patch=patch,
+            logical_operations=logical_operations,
+        )
+        validate_k1_css_patch(self.patch)
+        if patch_span is not None and patch_span <= 0:
+            raise ValueError("patch_span must be positive.")
+        self.patch_span = (
+            float(self.d) if patch_span is None and self.patch.is_surface_code else patch_span
+        )
+        self.cultivation_surface_distance = _resolve_cultivation_surface_distance(
+            self.d,
+            self.cultivation_fault_distance,
+            cultivation_surface_distance,
+        )
+        if t_state_transfer_rounds is not None and (
+            not isinstance(t_state_transfer_rounds, int)
+            or isinstance(t_state_transfer_rounds, bool)
+            or t_state_transfer_rounds < 1
+        ):
+            raise ValueError("t_state_transfer_rounds must be a positive integer or None.")
+        self.t_state_transfer_rounds = (
+            max(self.cultivation_surface_distance, self.d)
+            if t_state_transfer_rounds is None
+            else t_state_transfer_rounds
+        )
+        self.cultivation_patch = lsp.CodePatch(
+            "surface",
+            d=self.cultivation_surface_distance,
+            patch_label="cultivate",
         )
         self.distillation_repetition = distillation_repetition
         self._primitives = cirq.Gateset(
             *[
                 lsp.Cultivate,
                 lsp.Distil,
+                lsp.MagicStateCodeTeleport,
                 lsp.SyndromeExtract,
                 lsp.ErrorCorrect,
                 lsp.Move,
@@ -626,12 +732,115 @@ class DefaultMovement(Architecture):
 
     zone_ops = cirq.Gateset(cirq.CNOT, cirq.MeasurementGate)
 
-    def cnot_cost(self, op: cirq.Operation) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    @property
+    def requires_magic_state_code_teleport(self) -> bool:
+        return not self.patch.is_surface_code
+
+    @property
+    def t_factory_physical_qubits(self) -> int:
+        """Peak footprint of one surface magic-state production and transfer station."""
+        if not self.requires_magic_state_code_teleport:
+            return self.cultivation_patch.num_physical_qubits
+        return max(
+            self.cultivation_patch.num_physical_qubits,
+            int(self._magic_state_code_teleport_cost["num_physical_qubits"]),
+        )
+
+    def cnot_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         return self._cnot_cost
 
-    def syndrome_extract_cost(
-        self, op: cirq.Operation
-    ) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def magic_state_code_teleport_cost(self, op: cirq.Operation) -> dict:
+        return self._magic_state_code_teleport_cost
+
+    def _magic_state_transfer_movement_penalty(self, moment_cost: Counter) -> int:
+        """Return the physical movement moments required by the adapter circuit."""
+        return 2 * (moment_cost.get(cirq.CZ, 0) + moment_cost.get(cirq.MeasurementGate, 0))
+
+    @cached_property
+    def _magic_state_code_teleport_cost(self) -> dict:
+        """Cost surface-to-compute-code teleportation of one magic-state qubit."""
+        if not self.requires_magic_state_code_teleport:
+            return {
+                "gate_cost": {},
+                "moment_cost": {},
+                "op_time": 0.0,
+                "num_physical_qubits": self.cultivation_patch.num_physical_qubits,
+            }
+
+        lower_bound_qubits = (
+            self.cultivation_patch.num_physical_qubits + self.patch.num_physical_qubits
+        )
+        try:
+            resource = build_joint_logical_pauli_measurement_circuit(
+                self.cultivation_patch,
+                self.patch,
+                basis="Z",
+                rounds=self.t_state_transfer_rounds,
+            )
+            resources = count_stim_resources(resource.circuit)
+        except (ImportError, ValueError, NotImplementedError, RuntimeError) as ex:
+            warnings.warn(
+                "No physical cost is derivable for transferring a surface-code magic state from "
+                f"the distance-{self.cultivation_surface_distance} surface code into the "
+                f"{self.patch.code_type} CodePatch ({ex}); costing this transfer at zero. "
+                "The resource estimate therefore undercounts this operation.",
+                MissingMagicStateTransferCostWarning,
+                stacklevel=3,
+            )
+            return {
+                "gate_cost": {},
+                "moment_cost": {},
+                "op_time": 0.0,
+                "num_physical_qubits": lower_bound_qubits,
+            }
+
+        gate_cost = Counter(resources["serial"])
+        moment_cost = Counter(resources["parallel"])
+
+        # Prepare the destination logical |+>: initialize all data in |+>, then project into
+        # the CSS codespace. The generic syndrome circuit measures both check types.
+        gate_cost.update(
+            {
+                cirq.ResetChannel: self.patch.num_data_qubits,
+                cirq.PhasedXZGate: self.patch.num_data_qubits,
+            }
+        )
+        moment_cost.update({cirq.ResetChannel: 1, cirq.PhasedXZGate: 1})
+        target_syndrome_cost = _syndrome_extract_cost(
+            rounds=self.rounds,
+            num_logical_qubits=1,
+            patch=self.patch,
+        )
+        gate_cost += Counter(target_syndrome_cost["gate_cost"])
+        moment_cost += Counter(target_syndrome_cost["moment_cost"])
+
+        # Complete state teleportation by destructively measuring logical X on the source.
+        gate_cost.update(
+            {
+                cirq.PhasedXZGate: self.cultivation_patch.num_data_qubits,
+                cirq.MeasurementGate: self.cultivation_patch.num_data_qubits,
+            }
+        )
+        moment_cost.update({cirq.PhasedXZGate: 1, cirq.MeasurementGate: 1})
+
+        # qLDPC's cost-only resource circuit stops after measuring the temporary bridge and
+        # gadget qubits. Restore the separated target code before it is consumed.
+        gate_cost += Counter(target_syndrome_cost["gate_cost"])
+        moment_cost += Counter(target_syndrome_cost["moment_cost"])
+
+        movement_penalty = self._magic_state_transfer_movement_penalty(moment_cost)
+        if movement_penalty:
+            gate_cost[cirq.QubitPermutationGate] += movement_penalty
+            moment_cost[cirq.QubitPermutationGate] += movement_penalty
+
+        return {
+            "gate_cost": gate_cost,
+            "moment_cost": moment_cost,
+            "op_time": self.total_time(moment_cost_dict=moment_cost),
+            "num_physical_qubits": resource.circuit.num_qubits,
+        }
+
+    def syndrome_extract_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         # Build from the base cost of Syndrome Extraction by adding movement penalties CZ and Measurement moments
         base_cost = super().syndrome_extract_cost(op).copy()
         moment_cost = base_cost["moment_cost"]
@@ -644,7 +853,7 @@ class DefaultMovement(Architecture):
         return {"moment_cost": moment_cost, "gate_cost": gate_cost, "op_time": op_time}
 
     @cached_property
-    def _cnot_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def _cnot_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         gate_cost = {
             cirq.PhasedXZGate: 2 * self.patch.num_data_qubits,
             cirq.CZ: self.patch.num_data_qubits,
@@ -658,7 +867,10 @@ class DefaultMovement(Architecture):
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     @cached_property
-    def _h_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def _h_cost(self) -> dict[str, dict[type[Gate], int] | float]:
+        if not self.patch.is_surface_code:
+            return self._logical_clifford_cost("H")
+
         gate_cost = {
             cirq.PhasedXZGate: self.patch.num_data_qubits,
             cirq.QubitPermutationGate: 1,
@@ -672,14 +884,17 @@ class DefaultMovement(Architecture):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
-    def s_cost(self, op: cirq.Operation) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def s_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         return self._s_cost
 
     @cached_property
-    def _s_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def _s_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         """Resources the fold transversal S gate from https://arxiv.org/pdf/2412.01391.
         It looks like one Syndrome Extraction round with some CNOT gates across the main diagonal, as well as some physical S/Sdg gates.
         """
+        if not self.patch.is_surface_code:
+            return self._logical_clifford_cost("S")
+
         # precompute syndrome extraction cost
         se_cost = self.syndrome_extract_cost(lsp.SyndromeExtract(1, 1).on(cirq.GridQubit(0, 0)))
         # Add the half-cycle fold to the Syndrome Extract gate cost
@@ -689,36 +904,63 @@ class DefaultMovement(Architecture):
             cirq.PhasedXZGate: self.d,
             cirq.QubitPermutationGate: 2,
         }
-        gate_cost = collections.Counter(gates_from_syndrome) + collections.Counter(
-            gates_from_middle_fold
-        )
+        gate_cost = Counter(gates_from_syndrome) + Counter(gates_from_middle_fold)
 
         # Add the half-cycle fold to the Syndrome Extract moment cost
         moments_from_syndrome = se_cost["moment_cost"]
         moments_from_middle_fold = {cirq.CZ: 1, cirq.PhasedXZGate: 1, cirq.QubitPermutationGate: 2}
-        moment_cost = collections.Counter(moments_from_syndrome) + collections.Counter(
-            moments_from_middle_fold
-        )
+        moment_cost = Counter(moments_from_syndrome) + Counter(moments_from_middle_fold)
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
-    def move_cost(self, op) -> dict[str, dict[type[cirq.QubitPermutationGate], int] | float]:
+    def _logical_clifford_cost(
+        self, gate: LogicalClifford
+    ) -> dict[str, dict[type[Gate], int] | float]:
+        profile = self.logical_operations
+        circuit = None if profile is None else profile.circuit_for(gate)
+        if circuit is None:
+            reason = (
+                "no logical-operation profile was provided"
+                if profile is None
+                else profile.missing_reason_for(gate)
+            )
+            warnings.warn(
+                f"No physical cost is derivable for logical {gate} on the "
+                f"{self.patch.code_type} CodePatch ({reason}); costing this gate at zero. "
+                "The resource estimate therefore undercounts this operation.",
+                MissingLogicalGateCostWarning,
+                stacklevel=3,
+            )
+            return {"gate_cost": {}, "moment_cost": {}, "op_time": 0.0}
+
+        resources = count_stim_resources(circuit, scheduling="asap")
+        gate_cost = resources["serial"]
+        moment_cost = resources["parallel"]
+        op_time = self.total_time(moment_cost_dict=moment_cost)
+        return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
+
+    def move_cost(self, op) -> dict[str, dict[type[PermutationGate], int] | float]:
         """Method to handle both types of movement
         The maximum move time should be 500us, which corresponds to travelling to a zone
         Everything else should be penalized by distance away up to a distance of 500us
         This reference says something about .55um/us (https://www.nature.com/articles/s41586-022-04592-6.pdf)
         To make things easier, I'm going to call that .5um/us
-        A surface code patch has a side length of ~d physical qubits
-        If we assume qubits are spaced by ~1um, it takes about 2*d us to move a qubit to an adjacent patch
-        So if the L1 distance between logical qubits A and B is C, then we penalize Move(A, B) with time 2*C*d (up to a maximum of 500us)
+        If qubits are spaced by ~1um, it takes about 2*patch_span us to move a qubit to an
+        adjacent patch. Surface-code patches default to patch_span=d; other codes require an
+        explicit span for alleyway moves. An L1 distance C is therefore penalized by
+        2*C*patch_span (up to a maximum of 500us).
         This feels a little too weighted in favor of alleyway movement, but it is at least a rule, and it's something worth debating
         """
         gate_cost = {cirq.QubitPermutationGate: 1}
         moment_cost = {cirq.QubitPermutationGate: 1}
         if op.gate.zone is None:
+            if self.patch_span is None:
+                raise ValueError(
+                    "Alleyway movement for a non-surface CodePatch requires patch_span."
+                )
             ctrl, trgt = op.qubits
             distance = abs(trgt.row - ctrl.row) + abs(trgt.col - ctrl.col)
-            penalty_factor = 2 * self.d * distance
+            penalty_factor = 2 * self.patch_span * distance
             time_cap = self.phys_gate_times[cirq.QubitPermutationGate]
             op_time = min(penalty_factor, time_cap)
         else:
@@ -728,9 +970,9 @@ class DefaultMovement(Architecture):
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     @cached_property
-    def _cultivate_t_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def _cultivate_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         base_cultivation_cost = cultivate(
-            dsurface=self.d,
+            dsurface=self.cultivation_surface_distance,
             fold=self.fold_cultiv,
             fault_distance=self.cultivation_fault_distance,
         ).copy()
@@ -754,7 +996,7 @@ class DefaultMovement(Architecture):
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     @cached_property
-    def _cultivate_y_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def _cultivate_y_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         base_cultivation_cost = super()._cultivate_y_cost.copy()
         # To get the updated cost for the zoned architecture, just add movement where necessary
         new_moment_cost = base_cultivation_cost["moment_cost"].copy()
@@ -767,30 +1009,57 @@ class DefaultMovement(Architecture):
         new_time = self.total_time(new_moment_cost)
         return {"op_time": new_time, "gate_cost": new_gate_cost, "moment_cost": new_moment_cost}
 
-    def distil_cost(self, op: cirq.Operation) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def distil_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         return self._distil_cost(op.gate._resource)
 
-    def _distil_cost(self, resource) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    @cached_property
+    def _surface_distillation_architecture(self) -> DefaultMovement:
+        """Return a same-hardware costing context whose compute code is the factory surface code."""
+        factory_architecture = type(self)(
+            idling=self.idling,
+            post_op_correction=self.post_op_correction,
+            d=self.cultivation_surface_distance,
+            fold_cultiv=self.fold_cultiv,
+            cultivation_repetition=self.cultivation_repetition,
+            distillation_repetition=1,
+            cultivation_fault_distance=self.cultivation_fault_distance,
+            syndrome_rounds=self.syndrome_rounds,
+            cultivation_surface_distance=self.cultivation_surface_distance,
+        )
+        factory_architecture._phys_gate_times = self.phys_gate_times.copy()
+        return factory_architecture
+
+    @cache
+    def _distil_cost(self, resource) -> dict[str, dict[type[Gate], int] | float]:
         if resource == "T":
             mapped_circuit = distil_15_to_1()
         elif resource == "CCZ":
             mapped_circuit = ccz_8_to_1()
         else:
             raise ValueError(f"Unknown distillation resource: {resource!r}")
+        factory_architecture = self._surface_distillation_architecture
         with_moves = add_moves(
             mapped_circuit,
-            zone_ops=self.zone_ops if self.zone_ops is not None else cirq.Gateset(),
-            alley_ops=self.alley_ops if self.alley_ops is not None else cirq.Gateset(),
+            zone_ops=(
+                factory_architecture.zone_ops
+                if factory_architecture.zone_ops is not None
+                else cirq.Gateset()
+            ),
+            alley_ops=(
+                factory_architecture.alley_ops
+                if factory_architecture.alley_ops is not None
+                else cirq.Gateset()
+            ),
         )
-        estimator = ResourceEstimator(self)
+        estimator = ResourceEstimator(factory_architecture)
         rep_time = estimator.parallel_circuit_time(with_moves)
         rep_moments = estimator.parallel_circuit_cost(with_moves)
         rep_gates = estimator.serial_circuit_cost(with_moves)
         op_time = rep_time * self.distillation_repetition
-        moment_cost = collections.Counter(
+        moment_cost = Counter(
             {key: val * self.distillation_repetition for key, val in rep_moments.items()}
         )
-        gate_cost = collections.Counter(
+        gate_cost = Counter(
             {key: val * self.distillation_repetition for key, val in rep_gates.items()}
         )
         return {"op_time": op_time, "moment_cost": moment_cost, "gate_cost": gate_cost}
@@ -801,6 +1070,7 @@ class DefaultMovement(Architecture):
         self.op_cost[type(cirq.S)] = self.s_cost
         self.op_cost[lsp.Move] = self.move_cost
         self.op_cost[lsp.Distil] = self.distil_cost
+        self.op_cost[lsp.MagicStateCodeTeleport] = self.magic_state_code_teleport_cost
 
     @property
     def __name__(self) -> str:
@@ -822,25 +1092,26 @@ class DualSpeciesMovement(DefaultMovement):
     zone_ops = None
     alley_ops = cirq.Gateset(cirq.CNOT)
 
+    def _magic_state_transfer_movement_penalty(self, moment_cost: Counter) -> int:
+        return 0
+
     # Syndrome Extract from Lattice Surgery
     def syndrome_extract_cost(self, op: cirq.Operation) -> dict:
         # Get the syndrome extraction cost without the atom shuttling
         cost_dict = _syndrome_extract_cost(
-            rounds=self.rounds,
-            num_logical_qubits=len(op.qubits),
-            d=self.d,
+            rounds=self.rounds, num_logical_qubits=len(op.qubits), patch=self.patch
         )
         cost_dict["op_time"] = self.total_time(cost_dict["moment_cost"])
         return cost_dict
 
     # Cultivate from Lattice Surgery
     @cached_property
-    def _cultivate_t_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def _cultivate_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         """Cached property for the cultivation circuit having the relevant parameters: code distance (d) and movement
         Values are multiplied by the repeat factor for the architecture instance
         """
         base_cultivation_cost = cultivate(
-            dsurface=self.d,
+            dsurface=self.cultivation_surface_distance,
             fold=self.fold_cultiv,
             fault_distance=self.cultivation_fault_distance,
         ).copy()
@@ -858,13 +1129,13 @@ class DualSpeciesMovement(DefaultMovement):
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     @cached_property
-    def _cultivate_y_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def _cultivate_y_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         # Nearest neighbor Gidney style, so no movement penalty
         return Architecture._cultivate_y_cost.__get__(self, type(self))
 
     # Measurement from Lattice Surgery
     @cached_property
-    def _measure_cost(self) -> dict[str, dict[type[cirq.MeasurementGate], int] | float]:
+    def _measure_cost(self) -> dict[str, dict[type[MeasurementGate], int] | float]:
         gate_cost = {cirq.MeasurementGate: self.patch.num_data_qubits}
         moment_cost = {cirq.MeasurementGate: 1}
         op_time = self.total_time(moment_cost_dict=moment_cost)
@@ -888,21 +1159,20 @@ class MeasureZonesOnly(DefaultMovement):
     zone_ops = cirq.Gateset(cirq.MeasurementGate)
     alley_ops = cirq.Gateset(cirq.CNOT)
 
+    def _magic_state_transfer_movement_penalty(self, moment_cost: Counter) -> int:
+        return 2 * moment_cost.get(cirq.MeasurementGate, 0)
+
     # TODO: How do we do S gates here?
     #       a) Perform S with fold transversal S gate enabled by motion
     #       b) Cultivate S with "inplace" procedure (Class must inherit from Lattice)
     # For now, I am going with option a), which is the same as DefaultMovement
 
-    def syndrome_extract_cost(
-        self, op: cirq.Operation
-    ) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def syndrome_extract_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         """Uses lattice surgery Syndrome Extraction but adds moves associated with the measurements.
         Since this class is a Movement architecture, its rounds should be low, in accordance with the promise of correlated decoding.
         """
         base_cost = _syndrome_extract_cost(
-            rounds=self.rounds,
-            num_logical_qubits=len(op.qubits),
-            d=self.d,
+            rounds=self.rounds, num_logical_qubits=len(op.qubits), patch=self.patch
         )
         moment_cost = base_cost["moment_cost"]
         gate_cost = base_cost["gate_cost"]
@@ -912,9 +1182,9 @@ class MeasureZonesOnly(DefaultMovement):
         return {"moment_cost": moment_cost, "gate_cost": gate_cost, "op_time": op_time}
 
     @cached_property
-    def _cultivate_t_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def _cultivate_t_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         base_cultivation_cost = cultivate(
-            dsurface=self.d,
+            dsurface=self.cultivation_surface_distance,
             fold=self.fold_cultiv,
             fault_distance=self.cultivation_fault_distance,
         ).copy()
@@ -940,7 +1210,7 @@ class MeasureZonesOnly(DefaultMovement):
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     @cached_property
-    def _cultivate_y_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:
+    def _cultivate_y_cost(self) -> dict[str, dict[type[Gate], int] | float]:
         base_cultivation_cost = super()._cultivate_y_cost.copy()
         # Penalize measurements but not entangling gates
         new_moment_cost = base_cultivation_cost["moment_cost"].copy()
@@ -993,7 +1263,7 @@ class Superconductor(DefaultLattice):
                 cirq.Z,
                 cirq.MeasurementGate,
                 cirq.ResetChannel,
-            ],
+            ]
         )
         self._phys_gate_times = SUPERCOND_GATES.copy()
         self.__post_init__()
@@ -1007,16 +1277,16 @@ class Superconductor(DefaultLattice):
 def convert_globals_to_phasedxz(architecture: Architecture, cost_with_globals: dict) -> dict:
     """Converts costs defined by GR and Rz into PhasedXZ by removing GR and replacing Rz with PhasedXZ to represent arbitrary single qubit rotations"""
     gate_cost = cost_with_globals["gate_cost"].copy()
-    if css.ParallelRGate in gate_cost:
-        del gate_cost[css.ParallelRGate]
+    if ParallelRGate in gate_cost:
+        del gate_cost[ParallelRGate]
     rz_gates = gate_cost.get(cirq.Rz, 0)
     if rz_gates:
         gate_cost[cirq.PhasedXZGate] = rz_gates
         del gate_cost[cirq.Rz]
 
     moment_cost = cost_with_globals["moment_cost"].copy()
-    if css.ParallelRGate in moment_cost:
-        del moment_cost[css.ParallelRGate]
+    if ParallelRGate in moment_cost:
+        del moment_cost[ParallelRGate]
     rz_moments = moment_cost.get(cirq.Rz, 0)
     if rz_moments:
         moment_cost[cirq.PhasedXZGate] = moment_cost.get(cirq.Rz, 0)

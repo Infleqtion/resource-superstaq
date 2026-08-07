@@ -11,13 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import collections
 import textwrap
+from collections import Counter
 from math import pi
 
 import cirq
-import cirq_superstaq as css
 import pytest
+from cirq_superstaq import Barrier
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.compile_ftqc as comp
@@ -94,7 +94,7 @@ def test_end2end(with_barriers) -> None:
         compiled = comp.ft_compile(test_layout, arc, with_barriers=with_barriers)
         for op in compiled.all_operations():
             is_primitive = False
-            if arc.primitives.validate(op) or op in cirq.GateFamily(css.Barrier):
+            if arc.primitives.validate(op) or op in cirq.GateFamily(Barrier):
                 is_primitive = True
             assert is_primitive
 
@@ -108,6 +108,158 @@ def test_end2end_distillery():
     arc = arch.DefaultMovement(post_op_correction=False, idling=False)
     compiled = comp.ft_compile(layout, arc, with_barriers=False)
     assert all(arc.primitives.validate(op) for op in compiled.all_operations())
+
+
+def test_generic_css_movement_compilation_keeps_surface_t_cultivation() -> None:
+    q0, q1 = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
+    circuit = cirq.Circuit(
+        cirq.H(q0),
+        cirq.CNOT(q0, q1),
+        cirq.T(q1),
+        cirq.S(q0),
+        cirq.measure(q0, q1),
+    )
+    architecture = arch.DefaultMovement(patch=lsp.CodePatch("steane"), patch_span=4, idling=False)
+    layout = MovementLayout(input_circuit=circuit, num_t_factories=1)
+
+    compiled = comp.ft_compile(layout, architecture, with_barriers=False)
+
+    operations = list(compiled.all_operations())
+    assert all(architecture.primitives.validate(op) for op in operations)
+    assert any(isinstance(op.gate, lsp.Cultivate) for op in operations)
+    assert sum(isinstance(op.gate, lsp.MagicStateCodeTeleport) for op in operations) == 1
+    assert any(op in cirq.GateFamily(cirq.S) for op in operations)
+
+    transfer_index = next(
+        index
+        for index, op in enumerate(operations)
+        if isinstance(op.gate, lsp.MagicStateCodeTeleport)
+    )
+    factory_qubit = operations[transfer_index].qubits[0]
+    injection = next(
+        op
+        for op in operations[transfer_index + 1 :]
+        if op.gate == cirq.CNOT and factory_qubit in op.qubits
+    )
+    program_qubit = next(iter(layout.mapped_circuit.all_qubits() - {cirq.GridQubit(0, 0)}))
+    assert injection.qubits == (program_qubit, factory_qubit)
+
+
+def test_generic_css_magic_state_transfer_rejects_nonmovement_layout() -> None:
+    qubit = cirq.LineQubit(0)
+    architecture = arch.DefaultMovement(patch=lsp.CodePatch("steane"), patch_span=4)
+    layout = Column(cirq.Circuit(cirq.T(qubit)))
+
+    with pytest.raises(ValueError, match="supported only with MovementLayout"):
+        comp.ft_compile(layout, architecture)
+
+
+def test_generic_css_movement_distillery_adapts_surface_t_output() -> None:
+    qubit = cirq.LineQubit(0)
+    circuit = cirq.Circuit(cirq.T(qubit))
+    architecture = arch.DefaultMovement(
+        patch=lsp.CodePatch("steane"),
+        patch_span=4,
+        idling=False,
+        post_op_correction=False,
+        t_state_transfer_rounds=1,
+    )
+    layout = MovementDistillery(circuit, num_t_factories=1)
+
+    compiled = comp.ft_compile(layout, architecture, verbose=0)
+    operations = list(compiled.all_operations())
+    distillation_index = next(
+        index
+        for index, operation in enumerate(operations)
+        if isinstance(operation.gate, lsp.Distil) and operation.gate._resource == "T"
+    )
+    transfer_indices = [
+        index
+        for index, operation in enumerate(operations)
+        if isinstance(operation.gate, lsp.MagicStateCodeTeleport)
+    ]
+
+    assert len(transfer_indices) == 1
+    transfer_index = transfer_indices[0]
+    factory_qubit = operations[transfer_index].qubits[0]
+    injection_index = next(
+        index
+        for index, operation in enumerate(operations)
+        if operation.gate == cirq.CNOT and factory_qubit in operation.qubits
+    )
+    program_qubit = next(iter(layout.mapped_circuit.all_qubits()))
+    assert distillation_index < transfer_index < injection_index
+    assert operations[injection_index].qubits == (program_qubit, factory_qubit)
+
+
+def test_generic_css_movement_ccz_distillery_adapts_three_surface_outputs() -> None:
+    qubits = cirq.LineQubit.range(3)
+    circuit = cirq.Circuit(cirq.CCZ(*qubits))
+    architecture = arch.DefaultMovement(
+        patch=lsp.CodePatch("steane"),
+        patch_span=4,
+        idling=False,
+        post_op_correction=False,
+        t_state_transfer_rounds=1,
+    )
+    layout = MovementDistillery(circuit, num_ccz_factories=1)
+
+    compiled = comp.ft_compile(layout, architecture, verbose=0)
+    distillation_index = next(
+        index
+        for index, moment in enumerate(compiled)
+        if any(
+            isinstance(operation.gate, lsp.Distil) and operation.gate._resource == "CCZ"
+            for operation in moment.operations
+        )
+    )
+    transfer_moments = [
+        (index, moment)
+        for index, moment in enumerate(compiled)
+        if any(
+            isinstance(operation.gate, lsp.MagicStateCodeTeleport)
+            for operation in moment.operations
+        )
+    ]
+
+    assert len(transfer_moments) == 1
+    transfer_index, transfer_moment = transfer_moments[0]
+    transfer_operations = [
+        operation
+        for operation in transfer_moment.operations
+        if isinstance(operation.gate, lsp.MagicStateCodeTeleport)
+    ]
+    assert len(transfer_operations) == 3
+    injection_index = next(
+        index
+        for index, moment in enumerate(compiled)
+        if sum(operation.gate == cirq.CNOT for operation in moment.operations) == 3
+        and index > transfer_index
+    )
+    assert distillation_index < transfer_index < injection_index
+
+
+def test_surface_movement_distillery_does_not_adapt_output() -> None:
+    qubit = cirq.LineQubit(0)
+    layout = MovementDistillery(cirq.Circuit(cirq.T(qubit)), num_t_factories=1)
+
+    compiled = comp.ft_compile(layout, arch.DefaultMovement(d=7), verbose=0)
+
+    assert any(isinstance(op.gate, lsp.Distil) for op in compiled.all_operations())
+    assert not any(
+        isinstance(op.gate, lsp.MagicStateCodeTeleport) for op in compiled.all_operations()
+    )
+
+
+def test_surface_movement_compilation_does_not_adapt_t_state() -> None:
+    qubit = cirq.LineQubit(0)
+    layout = MovementLayout(cirq.Circuit(cirq.T(qubit)))
+
+    compiled = comp.ft_compile(layout, arch.DefaultMovement(), verbose=0)
+
+    assert not any(
+        isinstance(op.gate, lsp.MagicStateCodeTeleport) for op in compiled.all_operations()
+    )
 
 
 def test_direct_substitution() -> None:
@@ -174,9 +326,7 @@ def test_replace_cirq_op_movement(bell_circuit) -> None:
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
     returned_ops = comp.replace_cirq_op(
-        op=op_to_replace,
-        layout=movement_layout,
-        transversal_cnot=True,
+        op=op_to_replace, layout=movement_layout, transversal_cnot=True
     )
     ops_flattened = (
         returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
@@ -192,6 +342,31 @@ def test_replace_cirq_op_movement(bell_circuit) -> None:
     assert len(expected_types) == len(ops_flattened)
     for op, expected_type in zip(ops_flattened, expected_types):
         assert op in cirq.GateFamily(expected_type)
+
+
+def test_replace_cirq_op_adapts_non_surface_movement_t_state(bell_circuit) -> None:
+    movement_layout = MovementLayout(bell_circuit, num_t_factories=1)
+    program_qubit = cirq.GridQubit(0, 0)
+
+    returned_ops = comp.replace_cirq_op(
+        op=cirq.T(program_qubit),
+        layout=movement_layout,
+        transversal_cnot=True,
+        movement=True,
+        magic_state_code_teleport=True,
+    )
+    flattened = []
+    for item in returned_ops:
+        flattened.extend(item if isinstance(item, cirq.Moment) else [item])
+
+    transfer_index = next(
+        index
+        for index, op in enumerate(flattened)
+        if isinstance(op.gate, lsp.MagicStateCodeTeleport)
+    )
+    factory_qubit = flattened[transfer_index].qubits[0]
+    injection = flattened[transfer_index + 1]
+    assert injection == cirq.CNOT(program_qubit, factory_qubit)
 
 
 @pytest.mark.parametrize("op_type", (cirq.S, cirq.T, cirq.CNOT))
@@ -286,26 +461,26 @@ def test_other_passes(random_circ) -> None:
     arc = arch.DefaultLattice(idling=True, post_op_correction=True)
     compiled_circuit = comp.ft_compile(lay, arc)
     idling_corrected_resources = dict(
-        collections.Counter(
+        Counter(
             str(op.gate) if op not in cirq.GateFamily(cirq.MeasurementGate) else "Measure"
             for op in compiled_circuit.all_operations()
-        ),
+        )
     )
     arc = arch.DefaultLattice(idling=False, post_op_correction=True)
     compiled_circuit = comp.ft_compile(lay, arc)
     corrected_resources = dict(
-        collections.Counter(
+        Counter(
             str(op.gate) if op not in cirq.GateFamily(cirq.MeasurementGate) else "Measure"
             for op in compiled_circuit.all_operations()
-        ),
+        )
     )
     arc = arch.DefaultLattice(idling=False, post_op_correction=False)
     compiled_circuit = comp.ft_compile(lay, arc)
     uncorrected_resources = dict(
-        collections.Counter(
+        Counter(
             str(op.gate) if op not in cirq.GateFamily(cirq.MeasurementGate) else "Measure"
             for op in compiled_circuit.all_operations()
-        ),
+        )
     )
     assert (
         idling_corrected_resources["MERGE"]
@@ -581,11 +756,11 @@ def test_t_movement_FF(t_circuit) -> None:
             """
             (0, 0): ───SE(1)─────────H───MOVE───@───#2───────────────────────────────────────────────────────
                                          │      │   │
-            (0, 1): ───SE(1)─────────────#2─────X───MOVE───#2─────X───MOVE───S───────────────────────────────
+            (0, 1): ───SE(1)─────────────#2─────X───MOVE───MOVE───@───#2─────S───────────────────────────────
                                                            │      │   │
             (1, 0): ───CULT(0.785)─────────────────────────┼──────┼───┼──────────────────────────────────────
                                                            │      │   │
-            (1, 1): ───CULT(0.785)─────────────────────────MOVE───@───#2─────MOVE_MZ───M('')───MOVE_MZ───R───
+            (1, 1): ───CULT(0.785)─────────────────────────#2─────X───MOVE───MOVE_MZ───M('')───MOVE_MZ───R───
             """,
         ),
     )
@@ -609,11 +784,11 @@ def test_t_movement_FT(t_circuit) -> None:
             """
             (0, 0): ───SE(1)─────────H───SE(1)───MOVE───@───#2─────SE(1)─────────────────────────────────────────────────────────────────────
                                                  │      │   │
-            (0, 1): ───SE(1)─────────────────────#2─────X───MOVE───SE(1)───#2─────X───MOVE───SE(1)───S─────────SE(1)─────────────────────────
+            (0, 1): ───SE(1)─────────────────────#2─────X───MOVE───SE(1)───MOVE───@───#2─────SE(1)───S─────────SE(1)─────────────────────────
                                                                            │      │   │
             (1, 0): ───CULT(0.785)─────────────────────────────────────────┼──────┼───┼──────────────────────────────────────────────────────
                                                                            │      │   │
-            (1, 1): ───CULT(0.785)─────────────────────────────────────────MOVE───@───#2─────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
+            (1, 1): ───CULT(0.785)─────────────────────────────────────────#2─────X───MOVE───SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
             """,
         ),
     )
@@ -638,11 +813,11 @@ def test_t_movement_TF(t_circuit) -> None:
             """
             (0, 0): ───SE(1)─────────H───────MOVE────@───────#2──────SE(1)───SE(1)───SE(1)───────────────────────────────────
                                              │       │       │
-            (0, 1): ───SE(1)─────────SE(1)───#2──────X───────MOVE────#2──────X───────MOVE────S─────────SE(1)─────────────────
+            (0, 1): ───SE(1)─────────SE(1)───#2──────X───────MOVE────MOVE────@───────#2──────S─────────SE(1)─────────────────
                                                                      │       │       │
             (1, 0): ───CULT(0.785)───SE(1)───SE(1)───SE(1)───SE(1)───┼───────┼───────┼───────────────────────────────────────
                                                                      │       │       │
-            (1, 1): ───CULT(0.785)───SE(1)───────────────────────────MOVE────@───────#2──────MOVE_MZ───M('')───MOVE_MZ───R───
+            (1, 1): ───CULT(0.785)───SE(1)───────────────────────────#2──────X───────MOVE────MOVE_MZ───M('')───MOVE_MZ───R───
 
             """,
         ),
@@ -670,11 +845,11 @@ def test_t_movement_TT(t_circuit) -> None:
                                                                                      ┌──────────┐   ┌──────────┐
             (0, 0): ───SE(1)─────────H───────SE(1)───MOVE────@───────#2──────SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───────────────────────────────────
                                                      │       │       │
-            (0, 1): ───SE(1)─────────SE(1)───SE(1)───#2──────X───────MOVE────SE(1)────#2─────────────X─────────────MOVE────SE(1)───S─────────SE(1)───SE(1)─────────────────
+            (0, 1): ───SE(1)─────────SE(1)───SE(1)───#2──────X───────MOVE────SE(1)────MOVE───────────@─────────────#2──────SE(1)───S─────────SE(1)───SE(1)─────────────────
                                                                                       │              │             │
             (1, 0): ───CULT(0.785)───SE(1)───SE(1)───SE(1)───SE(1)───SE(1)───SE(1)────┼────SE(1)─────┼────SE(1)────┼───────────────────────────────────────────────────────
                                                                                       │              │             │
-            (1, 1): ───CULT(0.785)───SE(1)───SE(1)───SE(1)────────────────────────────MOVE───────────@─────────────#2──────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
+            (1, 1): ───CULT(0.785)───SE(1)───SE(1)───SE(1)────────────────────────────#2─────────────X─────────────MOVE────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
                                                                                      └──────────┘   └──────────┘
             """,
         ),
@@ -1023,3 +1198,5 @@ def test_teleport_resource_exceptions():
     with pytest.raises(ValueError, match="Invalid resource"):
         _ = comp.teleport_resource(invalid_resource, layout)
     sometimes_valid_resource = cirq.TOFFOLI.on(*cirq.LineQubit.range(3))
+    with pytest.raises(ValueError, match="Invalid resource"):
+        _ = comp.teleport_resource(sometimes_valid_resource, layout)
