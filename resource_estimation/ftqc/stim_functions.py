@@ -11,19 +11,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 import collections
+from dataclasses import dataclass
 import json
 import typing
 import warnings
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import cirq
 import cultiv
 import stim
 
+from .cost_types import GateKey, CountsDict
+
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
-STR2GATE = {
+STR2GATE: dict[str, GateKey] = {
     "PhasedXZGate": cirq.PhasedXZGate,
     "QubitPermutationGate": cirq.QubitPermutationGate,
     "MeasurementGate": cirq.MeasurementGate,
@@ -32,10 +38,9 @@ STR2GATE = {
     "CCZ": cirq.CCZ,
 }
 
-
 def count_stim_resources(
     stim_circuit: stim.Circuit,
-) -> dict[str, collections.Counter[cirq.Gate, int]]:
+) -> CountsDict:
     """
     Parses stim circuit to count relevant operations and returns both parallel and serial costs
     """
@@ -78,8 +83,8 @@ def count_stim_resources(
         elif instr.name == "REPEAT":
             repeats = instr.repeat_count
             one_round = count_stim_resources(instr.body_copy())
-            total_serial += {k: v * repeats for k, v in one_round["serial"].items()}
-            total_parallel += {k: v * repeats for k, v in one_round["parallel"].items()}
+            total_serial += {k: v * repeats for k, v in one_round.serial.items()}
+            total_parallel += {k: v * repeats for k, v in one_round.parallel.items()}
         elif instr.name not in op_map:
             raise ValueError(f"Unknown Instruction: {instr.name}")
         else:
@@ -94,7 +99,9 @@ def count_stim_resources(
                 for gate_type in replacement
                 if STR2GATE[gate_type] not in tick_total
             }
-    return {"serial": total_serial, "parallel": total_parallel}
+    total_serial = dict(total_serial)
+    total_parallel = dict(total_parallel)
+    return CountsDict(serial=total_serial, parallel=total_parallel)
 
 
 def load_saved_cost(
@@ -102,7 +109,7 @@ def load_saved_cost(
     op_key: typing.Literal["cultivate"],
     style: typing.Literal[None, "gidney", "yale"] = None,
     fault_distance: typing.Literal[None, 3, 5] = None,
-) -> dict[typing.Literal["serial", "parallel"], collections.Counter[cirq.Gate, int]]:
+) -> CountsDict:
     """
     Gets saved serial and parallel costs from the `cultivate_costs.json` file
     Converts saved strings to proper cirq gate objects
@@ -119,7 +126,7 @@ def load_saved_cost(
     assert all(k in STR2GATE for k in loaded_costs.get("parallel"))
     serial_cost = {STR2GATE[k]: v for k, v in loaded_costs["serial"].items()}
     parallel_cost = {STR2GATE[k]: v for k, v in loaded_costs["parallel"].items()}
-    return {"serial": serial_cost, "parallel": parallel_cost}
+    return CountsDict(serial=serial_cost, parallel=parallel_cost)
 
 
 def cultivate(
@@ -127,7 +134,7 @@ def cultivate(
     fault_distance: int,
     fold: bool = False,
     for_test: bool = False,
-) -> dict[typing.Literal["serial", "parallel"], collections.Counter[cirq.Gate, int]]:
+) -> CountsDict:
     """
     Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
     If the final patch size is less than 25 it reads from saved resources instead of calling the functions directly
@@ -162,6 +169,7 @@ def cultivate(
                 fault_distance=fault_distance,
             ),
         )
+        resources = CountsDict(serial=resources.get("serial"), parallel=resources.get("parallel"))
     else:
         stim_circuit = cultiv.make_end2end_cultivation_circuit(
             dcolor=fault_distance,

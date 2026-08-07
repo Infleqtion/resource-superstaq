@@ -919,8 +919,8 @@ def test_mzo_moves() -> None:
 def test_hm_moves() -> None:
     arch_type = arch.DualSpeciesMovement
     arch_info = {
-        "zone_ops": arch_type.zone_ops if arch_type.zone_ops is not None else cirq.Gateset(),
-        "alley_ops": arch_type.alley_ops if arch_type.alley_ops is not None else cirq.Gateset(),
+        "zone_ops": arch_type.zone_ops,
+        "alley_ops": arch_type.alley_ops,
     }
     a, b, c = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
     input_circuit = cirq.Circuit(
@@ -980,7 +980,6 @@ def test_replace_cirq_op_distil_ccz(random_circ) -> None:
     returned_ops = comp.replace_cirq_op(
         op=op_to_replace, layout=distillery_layout, transversal_cnot=True
     )
-    print(returned_ops)
     # We flatten them here to be explicit about the order the operations should be in
     ops_flattened = (
         returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]

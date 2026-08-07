@@ -25,9 +25,10 @@ from tqdm import tqdm
 
 if TYPE_CHECKING:
     from resource_estimation.ftqc.architecture import Architecture
+    from .cost_types import GateCounts, StrCounts
+
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-
 
 class ResourceEstimator:
     """Class for resource estimator objects defined by the given architecture"""
@@ -55,7 +56,7 @@ class ResourceEstimator:
         circuit: cirq.Circuit,
         verbose: int = 0,
         pretty: bool = False,
-    ) -> dict[cirq.Gate | str, int]:
+    ) -> GateCounts | StrCounts:
         """Counts up the total physical gates from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
         cost = collections.Counter()
@@ -128,7 +129,7 @@ class ResourceEstimator:
         circuit: cirq.Circuit,
         verbose: int = 0,
         pretty: bool = False,
-    ) -> dict[cirq.Gate | str, int]:
+    ) -> GateCounts | StrCounts:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
         qubit_paths = {qubit: collections.Counter() for qubit in circuit.all_qubits()}
         qubit_times = dict.fromkeys(circuit.all_qubits(), 0)

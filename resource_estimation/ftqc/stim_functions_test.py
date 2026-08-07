@@ -37,16 +37,6 @@ def gidney5() -> cirq.Circuit:
     )
 
 
-@pytest.fixture
-def yale3() -> cirq.Circuit:
-    return cultiv.make_cirq_circuits.make_cirq_circuit(code_distance=7, fault_distance=3)
-
-
-@pytest.fixture
-def yale5() -> cirq.Circuit:
-    return cultiv.make_cirq_circuits.make_cirq_circuit(code_distance=11, fault_distance=5)
-
-
 def test_known_gidney(gidney3) -> None:
     costs = count_stim_resources(gidney3)
     expected_parallel_costs = {
@@ -61,8 +51,8 @@ def test_known_gidney(gidney3) -> None:
         cirq.MeasurementGate: 472,
         cirq.PhasedXZGate: 535,
     }
-    assert costs["parallel"] == expected_parallel_costs
-    assert costs["serial"] == expected_serial_costs
+    assert costs.parallel == expected_parallel_costs
+    assert costs.serial == expected_serial_costs
 
 
 @pytest.mark.parametrize("fault_distance", (3, 5))
@@ -87,7 +77,7 @@ def test_saved_gidney(gidney3, gidney5, fault_distance) -> None:
 
 
 @pytest.mark.parametrize("fault_distance", (3, 5))
-def test_saved_yale(yale3, yale5, fault_distance) -> None:
+def test_saved_yale(fault_distance) -> None:
     # There is no stim circuit for this cultivation circuit, so there are only saved and generated costs
     saved_cost = load_saved_cost(
         dsurface=2 * fault_distance + 1,
