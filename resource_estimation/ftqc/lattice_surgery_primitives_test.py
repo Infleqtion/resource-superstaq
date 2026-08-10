@@ -80,17 +80,9 @@ def test_move() -> None:
 def test_logical_qubit() -> None:
     qubit = lsp.LogicalQubit(x_support={0, 2}, z_support={2, 3})
 
-    assert qubit.label == "zero"
     assert qubit.x_support == frozenset({0, 2})
     assert qubit.z_support == frozenset({2, 3})
     assert qubit.num_qubits == 3
-
-
-@pytest.mark.parametrize("label", ["zero", "one", "plus", "minus", "data"])
-def test_logical_qubit_labels(label: lsp.LogicalQubitLabel) -> None:
-    qubit = lsp.LogicalQubit(x_support={0}, z_support={0}, label=label)
-
-    assert qubit.label == label
 
 
 def test_logical_qubit_rejects_missing_supports() -> None:
@@ -101,11 +93,6 @@ def test_logical_qubit_rejects_missing_supports() -> None:
 def test_logical_qubit_rejects_empty_supports() -> None:
     with pytest.raises(ValueError, match="supports must include"):
         lsp.LogicalQubit(x_support=set(), z_support=set())
-
-
-def test_logical_qubit_rejects_invalid_label() -> None:
-    with pytest.raises(ValueError, match="Logical qubit label must be one of"):
-        lsp.LogicalQubit(x_support={0}, z_support={0}, label="bad")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("support", [{-1}, {0, -1}])
@@ -123,9 +110,8 @@ def test_logical_qubit_rejects_noninteger_support_entries(support: set[object]) 
 def test_code_patch_surface_metadata() -> None:
     pytest.importorskip("qldpc")
 
-    patch = lsp.CodePatch("surface", d=7)
+    patch = lsp.CodePatch(d=7)
 
-    assert patch.code_type == "surface"
     assert patch.code_params == (49, 1, 7)
     assert patch.num_data_qubits == 49
     assert patch.num_measure_qubits == 48
@@ -134,27 +120,18 @@ def test_code_patch_surface_metadata() -> None:
     assert patch.num_z_stabs() == 24
     assert patch.total_x_syndrome_cnots() == 84
     assert patch.total_z_syndrome_cnots() == 84
-    assert patch.patch_label == "compute"
-    assert patch.is_qldpc_backed
     assert len(patch.logical_qubits) == 1
-    assert [qubit.label for qubit in patch.logical_qubits] == ["zero"]
-    assert (
-        repr(patch) == "lsp.CodePatch(code_type='surface', d=7, n=49, k=1, patch_label='compute')"
-    )
+    assert repr(patch) == "lsp.CodePatch(d=7, n=49, k=1)"
 
-    patch = lsp.CodePatch("surface", d=5, patch_label="cultivate")
+    patch = lsp.CodePatch(d=5)
 
     assert patch.code_params == (25, 1, 5)
     assert patch.num_data_qubits == 25
     assert patch.num_measure_qubits == 24
     assert patch.total_x_syndrome_cnots() == 40
     assert patch.total_z_syndrome_cnots() == 40
-    assert patch.patch_label == "cultivate"
-    assert patch.is_qldpc_backed
     assert len(patch.logical_qubits) == 1
-    assert (
-        repr(patch) == "lsp.CodePatch(code_type='surface', d=5, n=25, k=1, patch_label='cultivate')"
-    )
+    assert repr(patch) == "lsp.CodePatch(d=5, n=25, k=1)"
 
 
 def test_code_patch_surface_stabilizer_metadata_matches_qldpc() -> None:
@@ -162,7 +139,7 @@ def test_code_patch_surface_stabilizer_metadata_matches_qldpc() -> None:
     from qldpc import codes
 
     for d in [3, 5, 7]:
-        patch = lsp.CodePatch("surface", d=d)
+        patch = lsp.CodePatch(d=d)
         qldpc_code = codes.SurfaceCode(d)
 
         assert patch.num_x_stabs() == qldpc_code.num_checks_x
@@ -174,179 +151,17 @@ def test_code_patch_surface_stabilizer_metadata_matches_qldpc() -> None:
 def test_code_patch_logical_qubits_from_css_logical_support() -> None:
     pytest.importorskip("qldpc")
 
-    patch = lsp.CodePatch("surface", d=3)
+    patch = lsp.CodePatch(d=3)
 
     assert len(patch.logical_qubits) == 1
-    assert patch.logical_qubits[0].label == "zero"
     assert patch.logical_qubits[0].num_qubits == 5
     assert patch.logical_qubits[0].x_support == frozenset({6, 7, 8})
     assert patch.logical_qubits[0].z_support == frozenset({0, 4, 8})
 
-    patch = lsp.CodePatch("toric", d=2)
 
-    assert len(patch.logical_qubits) == 2
-    assert [qubit.label for qubit in patch.logical_qubits] == ["zero"] * 2
-    assert [qubit.num_qubits for qubit in patch.logical_qubits] == [3, 3]
-    assert [qubit.x_support for qubit in patch.logical_qubits] == [
-        frozenset({1, 2}),
-        frozenset({1, 3}),
-    ]
-    assert [qubit.z_support for qubit in patch.logical_qubits] == [
-        frozenset({0, 2}),
-        frozenset({0, 3}),
-    ]
-
-
-def test_code_patch_rejects_mismatched_distance() -> None:
-    pytest.importorskip("qldpc")
-
-    with pytest.raises(ValueError, match="does not match qLDPC code distance"):
-        lsp.CodePatch("surface", 3, d=5)
-
-
-def test_code_patch_requires_qldpc_code_type() -> None:
-    pytest.importorskip("qldpc")
-
-    with pytest.raises(ValueError, match="qLDPC code family not found"):
-        lsp.CodePatch("color", d=3)
-
-    with pytest.raises(ValueError, match="Patch label must be one of"):
-        lsp.CodePatch("surface", d=3, patch_label="bad")  # type: ignore[arg-type]
-
+def test_code_patch_requires_distance() -> None:
     with pytest.raises(TypeError):
         lsp.CodePatch()  # type: ignore[call-arg]
-
-
-def test_code_patch_non_css_stabilizer_metadata_errors() -> None:
-    qldpc = pytest.importorskip("qldpc")
-    from qldpc import codes
-
-    patch = lsp.CodePatch(codes.FiveQubitCode, patch_label="distil")
-
-    assert qldpc.__version__
-    assert patch.code_type == "FiveQubitCode"
-    assert patch.code_params == (5, 1, 3)
-    assert patch.num_data_qubits == 5
-    assert patch.num_measure_qubits == 4
-    assert patch.is_qldpc_backed
-    assert patch.patch_label == "distil"
-    assert len(patch.logical_qubits) == 1
-    assert patch.logical_qubits[0].label == "zero"
-    assert patch.logical_qubits[0].num_qubits == 5
-    assert patch.logical_qubits[0].x_support == frozenset({1, 2, 4})
-    assert patch.logical_qubits[0].z_support == frozenset({0, 1, 2, 3, 4})
-    with pytest.raises(ValueError, match="X/Z stabilizer counts"):
-        patch.num_x_stabs()
-    with pytest.raises(ValueError, match="X/Z stabilizer counts"):
-        patch.num_z_stabs()
-    with pytest.raises(ValueError, match="X/Z stabilizer counts"):
-        patch.total_x_syndrome_cnots()
-    with pytest.raises(ValueError, match="X/Z stabilizer counts"):
-        patch.total_z_syndrome_cnots()
-
-
-def test_code_patch_qldpc_css_stabilizer_metadata() -> None:
-    pytest.importorskip("qldpc")
-    from qldpc import codes
-
-    simplex = codes.SimplexCode(3)
-    patch = lsp.CodePatch("hgp", simplex, simplex, d=4)
-
-    assert patch.num_x_stabs() == 49
-    assert patch.num_z_stabs() == 49
-    assert patch.num_physical_qubits == 196
-    assert len(patch.logical_qubits) == 18
-    assert [qubit.label for qubit in patch.logical_qubits] == ["zero"] * 18
-    assert [qubit.num_qubits for qubit in patch.logical_qubits] == [7] * 18
-
-
-def test_code_patch_rejects_unequal_logical_qubit_supports() -> None:
-    pytest.importorskip("qldpc")
-    from qldpc.objects import Pauli
-
-    class UnequalLogicalSupportCode:
-        num_checks = 0
-
-        def get_code_params(self) -> tuple[int, int, int]:
-            return 4, 2, 2
-
-        def get_logical_ops(self, pauli: object) -> list[list[int]]:
-            if pauli == Pauli.X:
-                return [[1, 0, 0, 0], [0, 1, 0, 0]]
-            if pauli == Pauli.Z:
-                return [[0, 1, 0, 0], [0, 0, 1, 1]]
-            raise ValueError(f"Unexpected pauli: {pauli!r}")
-
-    with pytest.raises(ValueError, match="must have the same size"):
-        lsp.CodePatch(UnequalLogicalSupportCode)
-    with pytest.raises(ValueError, match="Unexpected pauli"):
-        UnequalLogicalSupportCode().get_logical_ops(object())
-
-
-def test_code_patch_qldpc_family_alias() -> None:
-    pytest.importorskip("qldpc")
-
-    patch = lsp.CodePatch("toric", d=2)
-
-    assert patch.code_type == "toric"
-    assert patch.code_params == (4, 2, 2)
-    assert patch.patch_label == "compute"
-
-
-def test_qldpc_family_resolution_fallbacks() -> None:
-    class ExactNameCodes:
-        CustomCode = object()
-
-    class ExportedCodes:
-        __all__ = ("Mixed_Case_Code",)
-
-    assert lsp._resolve_qldpc_family_name("CustomCode", ExactNameCodes) == "CustomCode"
-    assert lsp._resolve_qldpc_family_name("mixed case code", ExportedCodes) == "Mixed_Case_Code"
-
-
-def test_code_patch_qldpc_compatibility_fallbacks() -> None:
-    class LegacyCode:
-        dimension = 1
-
-        def __len__(self) -> int:
-            return 5
-
-        def get_distance_if_known(self) -> int:
-            return 3
-
-    class CheckMatrix:
-        shape = (4, 9)
-
-    class MatrixOnlyCode:
-        matrix_x = CheckMatrix()
-
-    assert lsp.CodePatch._metadata_from_qldpc_code(LegacyCode()) == (5, 1, 3)
-
-    patch = object.__new__(lsp.CodePatch)
-    patch._qldpc_code = MatrixOnlyCode()
-    assert patch._qldpc_css_check_count("x") == 4
-
-    patch.k = 2
-    with pytest.raises(ValueError, match="returned 1 logical X operators"):
-        patch._validate_logical_ops_count([[1, 0]], "X")
-
-    patch.n = 3
-    with pytest.raises(ValueError, match="must have length n=3 or 2n=6"):
-        patch._logical_op_support([1, 0])
-
-
-def test_code_patch_callable_factory() -> None:
-    pytest.importorskip("qldpc")
-    from qldpc import codes
-
-    def custom_five_qubit_code() -> object:
-        return codes.FiveQubitCode()
-
-    patch = lsp.CodePatch(custom_five_qubit_code, patch_label="memory")
-
-    assert patch.code_type == "custom_five_qubit_code"
-    assert patch.code_params == (5, 1, 3)
-    assert patch.patch_label == "memory"
 
 
 def test_distil() -> None:

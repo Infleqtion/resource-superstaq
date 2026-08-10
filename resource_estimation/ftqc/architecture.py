@@ -189,7 +189,7 @@ class Architecture(abc.ABC):
         self.movement = movement
         self.d = d
         assert (d - 1) % 2 == 0, "CodePatches must be odd distance"
-        self.patch = lsp.CodePatch("surface", d=self.d, patch_label="compute")
+        self.patch = lsp.CodePatch(d=self.d)
         self.cultivation_repetition = cultivation_repetition
         self.cultivation_fault_distance = cultivation_fault_distance
         self.syndrome_rounds = syndrome_rounds

@@ -46,7 +46,6 @@ def test_architecture_uses_surface_code_patch(
     for architecture in (lattice_architecture, movement_architecture):
         assert isinstance(architecture.patch, lsp.CodePatch)
         assert architecture.patch.code_params == (49, 1, 7)
-        assert architecture.patch.patch_label == "compute"
         assert len(architecture.patch.logical_qubits) == 1
 
 
@@ -79,7 +78,7 @@ def _legacy_surface_syndrome_cost(d: int, rounds: int, num_logical_qubits: int) 
 
 @pytest.mark.parametrize("d", (3, 5, 7))
 def test_surface_code_patch_counts_match_legacy(d: int) -> None:
-    patch = lsp.CodePatch("surface", d=d)
+    patch = lsp.CodePatch(d=d)
 
     assert patch.num_data_qubits == d**2
     assert patch.num_measure_qubits == d**2 - 1
