@@ -13,13 +13,14 @@
 # limitations under the License.
 from __future__ import annotations
 
+import collections
 import warnings
-from collections import Counter, defaultdict
-from collections.abc import Callable
-from functools import partial
-from typing import TYPE_CHECKING, ClassVar, Literal
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, ClassVar
 
 import cirq
+import networkx as nx
 from tqdm import tqdm
 
 if TYPE_CHECKING:
@@ -38,7 +39,9 @@ class ResourceEstimator:
         """Checks that the input circuit contains only valid operations and warns of operations still in progress"""
         unrecognized = [
             op
-            for op in dict(Counter([op_.gate for op_ in circuit.all_operations()])).keys()
+            for op in dict(
+                collections.Counter([op_.gate for op_ in circuit.all_operations()])
+            ).keys()
             if op not in self.arc.primitives
         ]
         if unrecognized:
@@ -48,18 +51,21 @@ class ResourceEstimator:
             raise ValueError(error_message)
 
     def serial_circuit_cost(
-        self, circuit: cirq.Circuit, verbose: int = 0, pretty: bool = False
+        self,
+        circuit: cirq.Circuit,
+        verbose: int = 0,
+        pretty: bool = False,
     ) -> dict[cirq.Gate | str, int]:
         """Counts up the total physical gates from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
-        cost = Counter()
+        cost = collections.Counter()
         for op in tqdm(
             circuit.all_operations(),
             total=len(list(circuit.all_operations())),
             colour="cyan",
             disable=not bool(verbose),
         ):
-            cost += Counter(self.arc.gate_cost(op))
+            cost += collections.Counter(self.arc.gate_cost(op))
         if pretty:
             return {
                 obj.__name__ if hasattr(obj, "__name__") else str(obj): val
@@ -71,12 +77,12 @@ class ResourceEstimator:
         """Adds up the total physical time from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
         return sum(
-            map(lambda x: self.arc.total_time(self.arc.gate_cost(x)), circuit.all_operations())
+            map(lambda x: self.arc.total_time(self.arc.gate_cost(x)), circuit.all_operations()),
         )
 
     def parallel_circuit_time(self, circuit: cirq.Circuit, verbose: int = 0) -> float:
         """Estimation of the critical path in the input circuit according to the most expensive operation per moment"""
-        qubit_times = {qubit: 0 for qubit in circuit.all_qubits()}
+        qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
             circuit.all_operations(), disable=not verbose, total=total_ops, colour="cyan"
@@ -92,10 +98,10 @@ class ResourceEstimator:
         Is very slow and expensive
         """
         warnings.warn(
-            "This function can be very expensive.\nIf you just want the physical operations or circuit time, use `critical_path_ops` or `parallel_circuit_time` instead."
+            "This function can be very expensive.\nIf you just want the physical operations or circuit time, use `critical_path_ops` or `parallel_circuit_time` instead.",
         )
         qubit_paths = {qubit: [] for qubit in circuit.all_qubits()}
-        qubit_times = {qubit: 0 for qubit in circuit.all_qubits()}
+        qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
             circuit.all_operations(),
@@ -118,11 +124,14 @@ class ResourceEstimator:
         return critical_path
 
     def parallel_circuit_cost(
-        self, circuit: cirq.Circuit, verbose: int = 0, pretty: bool = False
+        self,
+        circuit: cirq.Circuit,
+        verbose: int = 0,
+        pretty: bool = False,
     ) -> dict[cirq.Gate | str, int]:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
-        qubit_paths = {qubit: Counter() for qubit in circuit.all_qubits()}
-        qubit_times = {qubit: 0 for qubit in circuit.all_qubits()}
+        qubit_paths = {qubit: collections.Counter() for qubit in circuit.all_qubits()}
+        qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
             circuit.all_operations(), disable=not verbose, total=total_ops, colour="cyan"
@@ -131,7 +140,7 @@ class ResourceEstimator:
             # This qubit currently has the longest path
             big_qubit = max(op_qubits, key=qubit_times.get)
             big_time = qubit_times[big_qubit] + self.arc.op_time(op)
-            big_path = qubit_paths[big_qubit] + Counter(self.arc.moment_cost(op))
+            big_path = qubit_paths[big_qubit] + collections.Counter(self.arc.moment_cost(op))
             for qubit in op_qubits:
                 qubit_paths[qubit] = big_path
                 qubit_times[qubit] = big_time
@@ -152,184 +161,314 @@ class ResourceEstimator:
         return cirq.num_qubits(circuit) * self.arc.patch.num_physical_qubits
 
 
-ReactionDepth = dict[Literal["X", "Z"], int]
-_ReactionDepthState = list[ReactionDepth]
-_ReactionDynamic = Callable[[_ReactionDepthState], _ReactionDepthState]
+ReactionTreeNode = tuple[int, int]
+
+
+@dataclass(frozen=True)
+class ReactionDynamics:
+    """Reaction dynamic for each delayed choice measurement in a factory.
+
+    Attributes:
+        dependency_paulis: Paulis which create a dependency when any one of them
+            anti-commutes with a propagated Pauli.
+        outputs: Pauli corrections output by the vertex. Dynamics should
+            use `cirq.LineQubit(i)` for operation-local qubit `i`.
+    """
+
+    dependency_paulis: tuple[cirq.PauliString, ...]
+    outputs: tuple[cirq.PauliString, ...]
 
 
 class ReactionDepthEstimator:
-    """Estimator for logical reaction depth in a Clifford+T circuit.
+    """Estimator for logical reaction depth in a Clifford+factory circuit.
 
-    The factory map defines which gates are factory-backed. Operations whose
-    gates are absent from that map are treated as Clifford operations and
-    propagate tracked Pauli reaction depths.
-
-    Attributes:
-        factories: Gate-to-bool map selecting factory-backed gates and whether
-            each factory dynamic is auto-corrected (`True`) or
-            non-auto-corrected (`False`).
+    Factory operations become graph vertices. Their output Paulis propagate
+    through later Clifford operations. An output creates a dependency when it
+    anti-commutes with any of the target vertex's dependency Paulis.
     """
 
-    @staticmethod
-    def _t_reaction_dynamic(
-        old_depths: _ReactionDepthState,
-        auto_corrected: bool,
-    ) -> _ReactionDepthState:
-        """Return reaction-depth updates for T factories.
-
-        Args:
-            old_depths: Single-qubit reaction-depth state before the T
-                correction.
-            auto_corrected: Whether to use auto-corrected T dynamics.
-
-        Returns:
-            Single-qubit update applying `newZ = max(oldZ, oldX + 1)` for
-            auto-corrected T dynamics or `newX = oldX + 1` and
-            `newZ = oldZ + 1` for non-auto-corrected T dynamics.
-        """
-        old_depth = old_depths[0]
-        if auto_corrected:
-            return [{"Z": max(old_depth.get("X", 0) + 1, old_depth.get("Z", 0))}]
-        return [{"X": old_depth.get("X", 0) + 1, "Z": old_depth.get("Z", 0) + 1}]
-
-    @staticmethod
-    def _s_reaction_dynamic(old_depths: _ReactionDepthState) -> _ReactionDepthState:
-        """Return reaction-depth updates for standard S factories.
-
-        Args:
-            old_depths: Single-qubit reaction-depth state before the S
-                correction.
-
-        Returns:
-            Single-qubit update applying `newZ = max(oldZ, oldX + 1)`.
-        """
-        old_depth = old_depths[0]
-        return [{"Z": max(old_depth.get("X", 0) + 1, old_depth.get("Z", 0))}]
-
-    _FACTORY_REACTION_DYNAMICS: ClassVar[dict[tuple[cirq.Gate, bool], _ReactionDynamic]] = {
-        (cirq.T, True): partial(_t_reaction_dynamic.__func__, auto_corrected=True),
-        (cirq.T, False): partial(_t_reaction_dynamic.__func__, auto_corrected=False),
-        (cirq.S, False): _s_reaction_dynamic.__func__,
+    _DEFAULT_FACTORIES: ClassVar[dict[cirq.Gate, bool]] = {
+        cirq.T: True,
+        cirq.S: True,
+        cirq.CCZ: True,
     }
+    _NON_CLIFFORD_ERROR: ClassVar[str] = (
+        "Reaction-depth estimator encountered a non-Clifford operation without "
+        "factory reaction dynamics: {operation!r}."
+    )
 
     def __init__(
         self,
         factories: dict[cirq.Gate, bool] | None = None,
+        factory_reaction_dynamics: Mapping[
+            tuple[cirq.Gate, bool],
+            Sequence[ReactionDynamics],
+        ]
+        | None = None,
     ) -> None:
-        """Initialize reaction-depth dynamics for a factory-backed gate set.
+        """Configure factory gates and their reaction dynamics.
 
         Args:
-            factories: Optional gate-to-bool map. Each key is treated as a
-                factory-backed gate, and each value selects auto-corrected
-                (`True`) or non-auto-corrected (`False`) dynamics. When omitted,
-                defaults are T auto-corrected and S non-auto-corrected.
+            factories: Factory gates mapped to their auto-correction setting.
+                Defaults to auto-corrected T, S, and CCZ gates.
+            factory_reaction_dynamics: Factory reaction dynamics keyed by
+                `(gate, auto_corrected)`. Entries override defaults;
+                `factories` still determines which gates are factory-backed.
+                Pauli qubits are operation-local `cirq.LineQubit` indices from
+                zero through the gate's arity minus one.
 
         Raises:
-            ValueError: If any supplied `(gate, auto_corrected)` pair has no
-                defined reaction dynamic.
+            ValueError: If a configured factory has no reaction dynamics or a
+                dynamic uses a qubit index outside the factory gate's arity.
         """
-        if factories is None:
-            self.factories = {cirq.T: True, cirq.S: False}
-        else:
-            self.factories = factories
+        self.factories = dict(self._DEFAULT_FACTORIES if factories is None else factories)
+        local_qubits = cirq.LineQubit.range(3)
+        local_x = cirq.PauliString(cirq.X(local_qubits[0]))
+        local_z = tuple(cirq.PauliString(cirq.Z(qubit)) for qubit in local_qubits)
+        self._factory_reaction_dynamics: dict[
+            tuple[cirq.Gate, bool], tuple[ReactionDynamics, ...]
+        ] = {
+            (cirq.T, True): (ReactionDynamics((local_z[0],), (local_z[0],)),),
+            (cirq.T, False): (ReactionDynamics((local_x, local_z[0]), (local_x, local_z[0])),),
+            (cirq.S, True): (ReactionDynamics((local_z[0],), (local_z[0],)),),
+            (cirq.CCZ, True): (
+                ReactionDynamics((local_z[0],), (local_z[1] * local_z[2],)),
+                ReactionDynamics((local_z[1],), (local_z[0] * local_z[2],)),
+                ReactionDynamics((local_z[2],), (local_z[0] * local_z[1],)),
+            ),
+        }
+        if factory_reaction_dynamics is not None:
+            self._factory_reaction_dynamics.update(
+                {
+                    key: tuple(factory_dynamics)
+                    for key, factory_dynamics in factory_reaction_dynamics.items()
+                }
+            )
 
         unsupported_pairs = [
             (gate, auto_corrected)
             for gate, auto_corrected in self.factories.items()
-            if (gate, auto_corrected) not in self._FACTORY_REACTION_DYNAMICS
+            if (gate, auto_corrected) not in self._factory_reaction_dynamics
         ]
         if unsupported_pairs:
             raise ValueError(
-                "No reaction-depth factory dynamic is defined for: "
+                "No factory reaction dynamics are defined for: "
                 + ", ".join(
                     f"({gate!r}, {auto_corrected!r})" for gate, auto_corrected in unsupported_pairs
-                )
+                ),
             )
 
-    def reaction_depth(self, circuit: cirq.Circuit) -> dict[cirq.Qid, ReactionDepth]:
-        """Compute reaction depth for a logical circuit.
+        for gate, auto_corrected in self.factories.items():
+            local_qubits = tuple(cirq.LineQubit.range(cirq.num_qubits(gate)))
+            for reaction_dynamics in self._factory_reaction_dynamics[(gate, auto_corrected)]:
+                for pauli in (
+                    *reaction_dynamics.dependency_paulis,
+                    *reaction_dynamics.outputs,
+                ):
+                    if not set(pauli.qubits).issubset(local_qubits):
+                        raise ValueError(
+                            f"Reaction Pauli {pauli!r} must use only operation-local qubits "
+                            f"{local_qubits} for factory gate {gate!r}."
+                        )
+
+    def reaction_depth(self, circuit: cirq.Circuit) -> int:
+        """Compute the logical factory reaction depth for a circuit.
 
         Args:
             circuit: Logical circuit whose factory-backed operations and
                 Clifford propagation should be tracked.
 
         Returns:
-            Per-qubit reaction-depth state keyed by the original circuit qubits.
-            Each value contains the current `"X"` and `"Z"` reaction depths.
+            Longest factory-vertex dependency chain. Circuits with no factory
+            vertices have depth zero.
         """
-        reaction_depth: defaultdict[cirq.Qid, ReactionDepth] = defaultdict(lambda: {"X": 0, "Z": 0})
+        tracked_paulis: dict[cirq.PauliString, int] = {}
+        reaction_depth = 0
 
-        for input_op in circuit.all_operations():
-            if input_op.gate not in self.factories:
-                self._apply_clifford_reaction_depth(input_op, reaction_depth)
+        for operation in circuit.all_operations():
+            factory_dynamics = self._factory_dynamics(operation)
+            if factory_dynamics is not None:
+                node_depths = tuple(
+                    max(
+                        (
+                            source_depth
+                            for source_pauli, source_depth in tracked_paulis.items()
+                            if self._creates_reaction_dependency(
+                                source_pauli, reaction_dynamics.dependency_paulis
+                            )
+                        ),
+                        default=0,
+                    )
+                    + 1
+                    for reaction_dynamics in factory_dynamics
+                )
+                reaction_depth = max((reaction_depth, *node_depths))
+
+                for reaction_dynamics, node_depth in zip(
+                    factory_dynamics, node_depths, strict=True
+                ):
+                    for output in reaction_dynamics.outputs:
+                        phase_free_output = output.with_coefficient(1)
+                        tracked_paulis[phase_free_output] = max(
+                            tracked_paulis.get(phase_free_output, 0), node_depth
+                        )
                 continue
 
-            reaction_dynamic = self._FACTORY_REACTION_DYNAMICS[
-                (input_op.gate, self.factories[input_op.gate])
-            ]
-            old_depths = [dict(reaction_depth[qubit]) for qubit in input_op.qubits]
-            new_depths = reaction_dynamic(old_depths)
-            if len(new_depths) != len(input_op.qubits):
-                raise ValueError(
-                    "Reaction dynamic returned "
-                    f"{len(new_depths)} updates for {len(input_op.qubits)} qubits."
+            propagated_paulis: dict[cirq.PauliString, int] = {}
+            for pauli, depth in tracked_paulis.items():
+                phase_free_pauli = self._propagate_pauli(pauli, operation).with_coefficient(1)
+                propagated_paulis[phase_free_pauli] = max(
+                    propagated_paulis.get(phase_free_pauli, 0), depth
                 )
-            for qubit, new_depth in zip(input_op.qubits, new_depths, strict=True):
-                reaction_depth[qubit].update(new_depth)
+            tracked_paulis = propagated_paulis
 
-        return {qubit: dict(depth) for qubit, depth in reaction_depth.items()}
+        return reaction_depth
 
-    def _apply_clifford_reaction_depth(
-        self,
-        input_op: cirq.Operation,
-        reaction_depth: defaultdict[cirq.Qid, ReactionDepth],
-    ) -> None:
-        """Propagate tracked Pauli reaction depths through a Clifford operation.
+    def reaction_tree(self, circuit: cirq.Circuit) -> nx.DiGraph:
+        """Build the transitively reduced factory-vertex dependency graph.
+
+        Nodes are `(operation_index, vertex_index)` tuples. Edges point from a
+        source factory vertex to a later factory vertex when a propagated source
+        output anti-commutes with a target vertex dependency Pauli.
 
         Args:
-            input_op: Non-factory operation to treat as a Clifford.
-            reaction_depth: Mutable per-qubit reaction-depth state to update.
+            circuit: Logical circuit whose factory-backed operations and
+                Clifford propagation should be tracked.
 
-        Raises:
-            ValueError: If `input_op` is not Clifford in the supported Cirq
-                model.
+        Returns:
+            NetworkX DAG with operation metadata in `graph["operations"]` and
+            per-node longest-chain depths in node attribute `"depth"`.
         """
-        non_clifford_message = (
-            "Reaction-depth estimator encountered a non-Clifford operation without a "
-            f"factory dynamic: {input_op!r}."
+        operations = tuple(circuit.all_operations())
+        reaction_tree = nx.DiGraph(operations=operations)
+        factory_nodes: dict[int, tuple[ReactionTreeNode, ...]] = {}
+        for operation_index, operation in enumerate(operations):
+            self._add_reaction_node(
+                operation_index,
+                operation,
+                reaction_tree,
+                factory_nodes,
+            )
+        self._add_reaction_edges(operations, reaction_tree, factory_nodes)
+
+        for depth, nodes in enumerate(nx.topological_generations(reaction_tree), start=1):
+            for node in nodes:
+                reaction_tree.nodes[node]["depth"] = depth
+
+        return reaction_tree
+
+    def _factory_dynamics(self, operation: cirq.Operation) -> tuple[ReactionDynamics, ...] | None:
+        if operation.gate not in self.factories:
+            if not cirq.has_stabilizer_effect(operation.gate):
+                raise ValueError(self._NON_CLIFFORD_ERROR.format(operation=operation))
+            return None
+
+        local_qubit_map = dict(
+            zip(cirq.LineQubit.range(len(operation.qubits)), operation.qubits, strict=True)
         )
-        if not cirq.has_stabilizer_effect(input_op.gate):
-            raise ValueError(non_clifford_message)
+        return tuple(
+            ReactionDynamics(
+                tuple(
+                    pauli.map_qubits(local_qubit_map)
+                    for pauli in reaction_dynamics.dependency_paulis
+                ),
+                tuple(output.map_qubits(local_qubit_map) for output in reaction_dynamics.outputs),
+            )
+            for reaction_dynamics in self._factory_reaction_dynamics[
+                (operation.gate, self.factories[operation.gate])
+            ]
+        )
 
-        old_depths: dict[cirq.Qid, ReactionDepth] = {}
-        new_depths: defaultdict[cirq.Qid, ReactionDepth] = defaultdict(lambda: {"X": 0, "Z": 0})
-        for qubit in input_op.qubits:
-            old_depth = reaction_depth.get(qubit, {"X": 0, "Z": 0})
-            if not any(old_depth.values()):
-                continue
-            old_depths[qubit] = dict(old_depth)
-            new_depths[qubit] = {"X": 0, "Z": 0}
+    def _add_reaction_node(
+        self,
+        operation_index: int,
+        operation: cirq.Operation,
+        reaction_tree: nx.DiGraph,
+        factory_nodes: dict[int, tuple[ReactionTreeNode, ...]],
+    ) -> None:
+        factory_dynamics = self._factory_dynamics(operation)
+        if factory_dynamics is None:
+            return
 
-        for source_qubit, source_depth in old_depths.items():
-            for source_basis, depth in source_depth.items():
-                source_pauli = cirq.PauliString(
-                    cirq.X(source_qubit) if source_basis == "X" else cirq.Z(source_qubit)
-                )
-                try:
-                    propagated_pauli = source_pauli.conjugated_by(input_op)
-                except ValueError as exc:
-                    raise ValueError(non_clifford_message) from exc
+        nodes: list[ReactionTreeNode] = []
+        for vertex_index, reaction_dynamics in enumerate(factory_dynamics):
+            node = (operation_index, vertex_index)
+            nodes.append(node)
+            reaction_tree.add_node(
+                node,
+                dependency_paulis=reaction_dynamics.dependency_paulis,
+                outputs=reaction_dynamics.outputs,
+            )
+        factory_nodes[operation_index] = tuple(nodes)
 
-                for target_qubit in propagated_pauli.qubits:
-                    target_pauli = propagated_pauli.get(target_qubit)
-                    target_bases = {
-                        cirq.X: ("X",),
-                        cirq.Z: ("Z",),
-                        cirq.Y: ("X", "Z"),
-                    }[target_pauli]
-                    target_depth = new_depths[target_qubit]
-                    for target_basis in target_bases:
-                        target_depth[target_basis] = max(target_depth[target_basis], depth)
+    def _add_reaction_edges(
+        self,
+        operations: tuple[cirq.Operation, ...],
+        reaction_tree: nx.DiGraph,
+        factory_nodes: dict[int, tuple[ReactionTreeNode, ...]],
+    ) -> None:
+        node_masks = {node: 1 << index for index, node in enumerate(reaction_tree)}
+        operation_masks = {
+            operation_index: sum(node_masks[node] for node in nodes)
+            for operation_index, nodes in factory_nodes.items()
+        }
+        closure_masks: dict[ReactionTreeNode, int] = {}
+        future_mask = 0
 
-        for qubit, new_depth in new_depths.items():
-            reaction_depth[qubit].update(new_depth)
+        for source_operation_index in reversed(factory_nodes):
+            for source_node in factory_nodes[source_operation_index]:
+                covered_mask = 0
+                propagated_paulis = reaction_tree.nodes[source_node]["outputs"]
+                search_mask = future_mask if propagated_paulis else 0
+                for target_operation_index in range(source_operation_index + 1, len(operations)):
+                    if covered_mask == search_mask:
+                        break
+
+                    target_operation = operations[target_operation_index]
+                    target_nodes = factory_nodes.get(target_operation_index)
+                    if target_nodes is None:
+                        propagated_paulis = tuple(
+                            self._propagate_pauli(pauli, target_operation)
+                            for pauli in propagated_paulis
+                        )
+                        continue
+
+                    operation_mask = operation_masks[target_operation_index]
+                    if covered_mask & operation_mask == operation_mask:
+                        continue
+
+                    for target_node in target_nodes:
+                        target_mask = node_masks[target_node]
+                        if covered_mask & target_mask:
+                            continue
+                        dependency_paulis = reaction_tree.nodes[target_node]["dependency_paulis"]
+                        if any(
+                            self._creates_reaction_dependency(propagated_pauli, dependency_paulis)
+                            for propagated_pauli in propagated_paulis
+                        ):
+                            reaction_tree.add_edge(source_node, target_node)
+                            covered_mask |= closure_masks[target_node]
+
+                closure_masks[source_node] = node_masks[source_node] | covered_mask
+
+            future_mask |= operation_masks[source_operation_index]
+
+    @staticmethod
+    def _creates_reaction_dependency(
+        pauli: cirq.PauliString,
+        dependency_paulis: tuple[cirq.PauliString, ...],
+    ) -> bool:
+        return any(
+            not cirq.commutes(pauli, dependency_pauli) for dependency_pauli in dependency_paulis
+        )
+
+    @staticmethod
+    def _propagate_pauli(
+        pauli: cirq.PauliString,
+        operation: cirq.Operation,
+    ) -> cirq.PauliString:
+        return (
+            pauli.conjugated_by(operation)
+            if any(qubit in pauli for qubit in operation.qubits)
+            else pauli
+        )

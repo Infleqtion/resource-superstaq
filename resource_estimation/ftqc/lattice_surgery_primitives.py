@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from collections.abc import Callable, Iterable
+
+import typing
 from functools import cached_property
-from typing import Any, Literal, Optional, cast
+
 import cirq
 
 # TODO: Add cirq diagram info
@@ -241,14 +242,14 @@ class Distil(cirq.Gate):
     Noisy T gates are assumed to come from cultivation, resulting in 15 additional logical patches.
     Distil|0^31> --> (|0> + e^(1j*pi/4)|1>)/√2 |0^30>
 
-    Toffoli leads to a CCZ state
+    CCZ leads to a CCZ state
     """
 
-    def __init__(self, resource: Literal["T", "Toffoli"]) -> None:
-        if resource not in ("T", "Toffoli"):
+    def __init__(self, resource: Literal["T", "CCZ"]) -> None:
+        if resource not in ("T", "CCZ"):
             raise ValueError(f"Invalid resource for Distil gate: {resource!r}")
         self._resource = resource
-        self._num_qubits = 23 if resource == "Toffoli" else 31
+        self._num_qubits = 23 if resource == "CCZ" else 31
 
     def num_qubits(self) -> int:
         return self._num_qubits
@@ -278,7 +279,7 @@ class Move(cirq.Gate):
     logical qubit patches.
     """
 
-    def __init__(self, zone: Optional[Literal["measure", "interact"]] = None) -> None:
+    def __init__(self, zone: typing.Optional[typing.Literal["measure", "interact"]] = None) -> None:
         self._num_qubits = 2 if zone is None else 1
         self._zone = zone
 
@@ -286,7 +287,7 @@ class Move(cirq.Gate):
         return self._num_qubits
 
     @property
-    def zone(self) -> Literal["interact", "measure"] | None:
+    def zone(self) -> typing.Literal["interact", "measure"] | None:
         return self._zone
 
     def __str__(self) -> str:
@@ -294,7 +295,7 @@ class Move(cirq.Gate):
             return "MOVE"
         return "MOVE_MZ" if self.zone == "measure" else "MOVE_IZ"
 
-    def _json_dict_(self) -> dict[str, Literal["interact", "measure"] | None]:
+    def _json_dict_(self) -> dict[str, typing.Literal["interact", "measure"] | None]:
         return {"zone": self._zone}
 
     def __repr__(self) -> str:

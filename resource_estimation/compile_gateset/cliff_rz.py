@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
-from cirq.ops.raw_types import Operation
-from cirq.ops.pauli_string import SingleQubitPauliStringGateOperation
+
 import cirq
 import cirq_superstaq as css
 import numpy as np
@@ -28,7 +27,7 @@ def eject_z(
     atol: float = 1e-8,
 ) -> cirq.Circuit:
     """Pushes Z gates towards the end of the circuit"""
-    backlog = {q: 0.0 for q in circuit.all_qubits()}
+    backlog = dict.fromkeys(circuit.all_qubits(), 0.0)
 
     def _map_fn(op):
         if isinstance(op.gate, cirq.ZPowGate):
@@ -114,17 +113,19 @@ def phx_to_zhzhz(
 
 @cirq.transformer
 def zpow_to_rz(
-    circuit: cirq.Circuit, context: cirq.TransformerContext | None = None
+    circuit: cirq.Circuit,
+    context: cirq.TransformerContext | None = None,
 ) -> cirq.Circuit:
     """Converts ZPOW gates to Rz gates minding special angle cases and including the angle factor"""
 
     # Maybe this should be a transformer or something?
     def _map_fn(
-        op: cirq.Operation, _: int
+        op: cirq.Operation,
+        _: int,
     ) -> (
-        Operation
-        | SingleQubitPauliStringGateOperation
-        | list[Operation | SingleQubitPauliStringGateOperation]
+        cirq.Operation
+        | cirq.SingleQubitPauliStringGateOperation
+        | list[cirq.Operation | cirq.SingleQubitPauliStringGateOperation]
     ):
         if not isinstance(op.gate, cirq.ZPowGate):
             return op
@@ -150,20 +151,33 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
     A Gateset for a Clifford + Rz
     """
 
-    def __init__(self, atol: float = 1e-8) -> None:
+    def __init__(self, atol: float = 1e-8, allow_ccz: bool = False) -> None:
         self._atol = atol
-        super().__init__(
+        gateset = [
             cirq.GateFamily(cirq.CX, ignore_global_phase=False),
             cirq.MeasurementGate,
             cirq.PhasedXZGate,
             cirq.GlobalPhaseGate,
             css.Barrier,
+        ]
+        if allow_ccz:
+            gateset.append(cirq.GateFamily(cirq.CCZ, ignore_global_phase=False))
+
+        super().__init__(
+            *gateset,
             preserve_moment_structure=False,
             reorder_operations=False,  # Enabling makes a shorter circuit but probably way too slow
         )
+        self._allow_ccz = allow_ccz
+
+    @property
+    def num_qubits(self) -> int:
+        return 3 if self._allow_ccz else 2
 
     def _decompose_two_qubit_operation(
-        self, op: cirq.Operation, moment_idx: int = -1
+        self,
+        op: cirq.Operation,
+        moment_idx: int = -1,
     ) -> cirq.OP_TREE:
         if op in self:  # Had to re-add this line because CXPowGate made its way in here
             return op
@@ -173,8 +187,27 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
             return [cirq.H.on(q1), cirq.CNOT.on(q0, q1), cirq.H.on(q1)]
         mat = cirq.unitary(op)
         return cirq.two_qubit_matrix_to_cz_operations(
-            q0, q1, mat, allow_partial_czs=False, atol=self._atol
+            q0,
+            q1,
+            mat,
+            allow_partial_czs=False,
+            atol=self._atol,
         )
+
+    def _decompose_multi_qubit_operation(
+        self, op: cirq.Operation, moment_idx: int = -1
+    ) -> cirq.OP_TREE:
+        if op in self:
+            return op
+
+        if op.gate == cirq.CCX:
+            return [
+                cirq.H(op.qubits[2]),
+                cirq.CCZ(*op.qubits),
+                cirq.H(op.qubits[2]),
+            ]
+
+        return super()._decompose_multi_qubit_operation(op, moment_idx)
 
     @property
     def preprocess_transformers(self) -> list[cirq.TRANSFORMER]:

@@ -11,13 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import collections
 import textwrap
-from collections import Counter
 from math import pi
 
 import cirq
+import cirq_superstaq as css
 import pytest
-from cirq_superstaq import Barrier
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.compile_ftqc as comp
@@ -75,7 +75,7 @@ def test_end2end(with_barriers) -> None:
             cirq.S.on(q1),
             cirq.I.on_each(q0, q1),
             cirq.MeasurementGate(2, key="end").on(q0, q1),
-        ]
+        ],
     )
     for arc in [
         arch.DefaultLattice(idling=False, post_op_correction=True),
@@ -94,9 +94,20 @@ def test_end2end(with_barriers) -> None:
         compiled = comp.ft_compile(test_layout, arc, with_barriers=with_barriers)
         for op in compiled.all_operations():
             is_primitive = False
-            if arc.primitives.validate(op) or op in cirq.GateFamily(Barrier):
+            if arc.primitives.validate(op) or op in cirq.GateFamily(css.Barrier):
                 is_primitive = True
             assert is_primitive
+
+
+def test_end2end_distillery():
+    q1, q2, q3 = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
+    circuit = cirq.Circuit(
+        [cirq.CNOT.on(q1, q2), cirq.CCZ.on(q1, q2, q3), cirq.T.on_each(q1, q2, q3)]
+    )
+    layout = MovementDistillery(input_circuit=circuit, num_t_factories=1, num_ccz_factories=1)
+    arc = arch.DefaultMovement(post_op_correction=False, idling=False)
+    compiled = comp.ft_compile(layout, arc, with_barriers=False)
+    assert all(arc.primitives.validate(op) for op in compiled.all_operations())
 
 
 def test_direct_substitution() -> None:
@@ -163,9 +174,13 @@ def test_replace_cirq_op_movement(bell_circuit) -> None:
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
     returned_ops = comp.replace_cirq_op(
-        op=op_to_replace, layout=movement_layout, transversal_cnot=True
+        op=op_to_replace,
+        layout=movement_layout,
+        transversal_cnot=True,
     )
-    ops_flattened = returned_ops[:2] + [op for moment in returned_ops[2:] for op in moment]
+    ops_flattened = (
+        returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
+    )
     expected_types = [
         lsp.Cultivate,
         lsp.Cultivate,
@@ -188,7 +203,11 @@ def test_replace_cirq_op_lattice(op_type, bell_circuit) -> None:
     if op_type == cirq.CNOT:
         ops_flattened = returned_ops  # Already flat
     else:
-        ops_flattened = returned_ops[:2] + [op for moment in returned_ops[2:] for op in moment]
+        ops_flattened = (
+            returned_ops[:2]
+            + [op for moment in returned_ops[2:5] for op in moment]
+            + returned_ops[5:]
+        )
     if op_type == cirq.S:
         expected_types = [
             lsp.Cultivate,
@@ -267,26 +286,26 @@ def test_other_passes(random_circ) -> None:
     arc = arch.DefaultLattice(idling=True, post_op_correction=True)
     compiled_circuit = comp.ft_compile(lay, arc)
     idling_corrected_resources = dict(
-        Counter(
+        collections.Counter(
             str(op.gate) if op not in cirq.GateFamily(cirq.MeasurementGate) else "Measure"
             for op in compiled_circuit.all_operations()
-        )
+        ),
     )
     arc = arch.DefaultLattice(idling=False, post_op_correction=True)
     compiled_circuit = comp.ft_compile(lay, arc)
     corrected_resources = dict(
-        Counter(
+        collections.Counter(
             str(op.gate) if op not in cirq.GateFamily(cirq.MeasurementGate) else "Measure"
             for op in compiled_circuit.all_operations()
-        )
+        ),
     )
     arc = arch.DefaultLattice(idling=False, post_op_correction=False)
     compiled_circuit = comp.ft_compile(lay, arc)
     uncorrected_resources = dict(
-        Counter(
+        collections.Counter(
             str(op.gate) if op not in cirq.GateFamily(cirq.MeasurementGate) else "Measure"
             for op in compiled_circuit.all_operations()
-        )
+        ),
     )
     assert (
         idling_corrected_resources["MERGE"]
@@ -356,7 +375,7 @@ def test_bell_movement_FF(bell_circuit) -> None:
                 (0, 0): ───SE(1)───H───MOVE───@───#2─────
                                        │      │   │
                 (0, 1): ───SE(1)───────#2─────X───MOVE───
-            """
+            """,
         ),
     )
 
@@ -379,7 +398,7 @@ def test_bell_movement_FT(bell_circuit) -> None:
                 (0, 0): ───SE(1)───H───SE(1)───MOVE───@───#2─────SE(1)───
                                                │      │   │
                 (0, 1): ───SE(1)───────────────#2─────X───MOVE───SE(1)───
-            """
+            """,
         ),
     )
 
@@ -394,7 +413,9 @@ def test_bell_movement_TF(bell_circuit) -> None:
         post_op_correction=False,
     )
     compiled_bell_circuit = comp.ft_compile(
-        layout=movement_layout, arc=movement_architecture, with_barriers=False
+        layout=movement_layout,
+        arc=movement_architecture,
+        with_barriers=False,
     )
     # yes idling, no post-op correction
     cirq.testing.assert_has_diagram(
@@ -404,7 +425,7 @@ def test_bell_movement_TF(bell_circuit) -> None:
                 (0, 0): ───SE(1)───H───────MOVE───@───#2─────
                                            │      │   │
                 (0, 1): ───SE(1)───SE(1)───#2─────X───MOVE───
-            """
+            """,
         ),
     )
 
@@ -428,7 +449,7 @@ def test_bell_movement_TT(bell_circuit) -> None:
                 (0, 0): ───SE(1)───H───────SE(1)───MOVE───@───#2─────SE(1)───
                                                    │      │   │
                 (0, 1): ───SE(1)───SE(1)───SE(1)───#2─────X───MOVE───SE(1)───
-            """
+            """,
         ),
     )
 
@@ -455,7 +476,7 @@ def test_bell_lattice_FF(bell_circuit) -> None:
                 (0, 3): ───────────────#2──────#2──────MERGE───SPLIT───
                                                        │       │
                 (0, 4): ───SE(1)───────────────────────#2──────#2──────
-            """
+            """,
         ),
     )
 
@@ -482,7 +503,7 @@ def test_bell_lattice_FT(bell_circuit) -> None:
                 (0, 3): ───────────────#2──────#2──────MERGE───SPLIT───
                                                        │       │
                 (0, 4): ───SE(1)───────────────────────#2──────#2──────
-            """
+            """,
         ),
     )
 
@@ -510,7 +531,7 @@ def test_bell_lattice_TF(bell_circuit) -> None:
                 (0, 3): ───────────────────#2──────#2──────MERGE───SPLIT───
                                                            │       │
                 (0, 4): ───SE(1)───SE(1)───SE(1)───────────#2──────#2──────
-            """
+            """,
         ),
     )
 
@@ -537,7 +558,7 @@ def test_bell_lattice_TT(bell_circuit) -> None:
                 (0, 3): ───────────────────#2──────#2──────MERGE───SPLIT───
                                                            │       │
                 (0, 4): ───SE(1)───SE(1)───SE(1)───────────#2──────#2──────
-            """
+            """,
         ),
     )
 
@@ -565,7 +586,7 @@ def test_t_movement_FF(t_circuit) -> None:
             (1, 0): ───CULT(0.785)─────────────────────────┼──────┼───┼──────────────────────────────────────
                                                            │      │   │
             (1, 1): ───CULT(0.785)─────────────────────────MOVE───@───#2─────MOVE_MZ───M('')───MOVE_MZ───R───
-            """
+            """,
         ),
     )
 
@@ -593,7 +614,7 @@ def test_t_movement_FT(t_circuit) -> None:
             (1, 0): ───CULT(0.785)─────────────────────────────────────────┼──────┼───┼──────────────────────────────────────────────────────
                                                                            │      │   │
             (1, 1): ───CULT(0.785)─────────────────────────────────────────MOVE───@───#2─────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
-            """
+            """,
         ),
     )
 
@@ -623,7 +644,7 @@ def test_t_movement_TF(t_circuit) -> None:
                                                                      │       │       │
             (1, 1): ───CULT(0.785)───SE(1)───────────────────────────MOVE────@───────#2──────MOVE_MZ───M('')───MOVE_MZ───R───
 
-            """
+            """,
         ),
     )
 
@@ -655,7 +676,7 @@ def test_t_movement_TT(t_circuit) -> None:
                                                                                       │              │             │
             (1, 1): ───CULT(0.785)───SE(1)───SE(1)───SE(1)────────────────────────────MOVE───────────@─────────────#2──────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
                                                                                      └──────────┘   └──────────┘
-            """
+            """,
         ),
     )
 
@@ -694,7 +715,7 @@ def test_t_lattice_FF(t_circuit) -> None:
                 (1, 5): ─────────────────#2──────#2──────────────────────────────MERGE───SPLIT───────────────────────────────────────
                                          │       │
                 (1, 6): ───CULT(0.785)───MERGE───SPLIT───M('')───R───────────────────────────────────────────────────────────────────
-            """
+            """,
         ),
     )
 
@@ -733,7 +754,7 @@ def test_t_lattice_FT(t_circuit) -> None:
                 (1, 5): ─────────────────#2──────#2──────────────────────────────MERGE───SPLIT───────────────────────────────────────
                                          │       │
                 (1, 6): ───CULT(0.785)───MERGE───SPLIT───M('')───SE(1)───R───────────────────────────────────────────────────────────
-            """
+            """,
         ),
     )
 
@@ -928,13 +949,17 @@ def test_hm_moves() -> None:
 
 
 def test_replace_cirq_op_distil_t(bell_circuit) -> None:
-    distillery_layout = MovementDistillery(bell_circuit, num_t_factories=2, num_toff_factories=0)
+    distillery_layout = MovementDistillery(bell_circuit, num_t_factories=2, num_ccz_factories=0)
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
     returned_ops = comp.replace_cirq_op(
-        op=op_to_replace, layout=distillery_layout, transversal_cnot=True
+        op=op_to_replace,
+        layout=distillery_layout,
+        transversal_cnot=True,
     )
-    ops_flattened = returned_ops[:2] + [op for moment in returned_ops[2:] for op in moment]
+    ops_flattened = (
+        returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
+    )
     expected_types = [
         lsp.Distil("T"),
         lsp.Distil("T"),
@@ -948,31 +973,27 @@ def test_replace_cirq_op_distil_t(bell_circuit) -> None:
         assert op in cirq.GateFamily(expected_type)
 
 
-def test_replace_cirq_op_distil_toff(random_circ) -> None:
-    distillery_layout = MovementDistillery(random_circ, num_toff_factories=2, num_t_factories=0)
+def test_replace_cirq_op_distil_ccz(random_circ) -> None:
+    distillery_layout = MovementDistillery(random_circ, num_ccz_factories=2, num_t_factories=0)
 
-    op_to_replace = cirq.TOFFOLI.on(
-        cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
-    )
+    op_to_replace = cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
     returned_ops = comp.replace_cirq_op(
         op=op_to_replace, layout=distillery_layout, transversal_cnot=True
     )
-    # The first two elements are Distil operations, while the rest are moments in order to be nicely aligned
+    print(returned_ops)
     # We flatten them here to be explicit about the order the operations should be in
-    ops_flattened = returned_ops[:2] + [op for moment in returned_ops[2:] for op in moment]
+    ops_flattened = (
+        returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
+    )
     expected_types = [
-        lsp.Distil("Toffoli"),
-        lsp.Distil("Toffoli"),
-        cirq.CNOT,
-        cirq.CNOT,
-        cirq.CNOT,
-        cirq.MeasurementGate,
-        cirq.MeasurementGate,
-        cirq.MeasurementGate,
-        cirq.ResetChannel,
-        cirq.ResetChannel,
-        cirq.ResetChannel,
-        lsp.ErrorCorrect,
+        *([lsp.Distil("CCZ")] * 2),
+        *([cirq.CNOT] * 3),
+        *([cirq.MeasurementGate] * 3),
+        *([cirq.ResetChannel] * 3),
+        *([cirq.H] * 3),
+        *([cirq.X] * 3),
+        *([cirq.CNOT] * 3),
+        *([cirq.H] * 3),
     ]
     assert len(expected_types) == len(ops_flattened)
     for op, expected_type in zip(ops_flattened, expected_types):
@@ -1002,5 +1023,3 @@ def test_teleport_resource_exceptions():
     with pytest.raises(ValueError, match="Invalid resource"):
         _ = comp.teleport_resource(invalid_resource, layout)
     sometimes_valid_resource = cirq.TOFFOLI.on(*cirq.LineQubit.range(3))
-    with pytest.raises(NotImplementedError, match="distillation layout"):
-        _ = comp.teleport_resource(sometimes_valid_resource, layout)

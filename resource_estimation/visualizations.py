@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
-from itertools import chain
+import itertools
 
 import cirq
 import matplotlib.animation as animation
@@ -26,12 +26,14 @@ from .ftqc.layout import Layout
 
 
 def visualize_layout_moment(
-    G: nx.Graph, moment_paths: list[list[str]], column_layout: Layout
+    G: nx.Graph,
+    moment_paths: list[list[str]],
+    column_layout: Layout,
 ) -> None:  # pragma: no cover
     """
     This probably does not work anymore without a significant amount of changes.
     """
-    moment_paths_flat = list(chain.from_iterable(moment_paths))
+    moment_paths_flat = list(itertools.chain.from_iterable(moment_paths))
     diction = {}
     for qubit in column_layout.qubits:
         diction[qubit["name"]] = (qubit["qubit"].col, -qubit["qubit"].row)
@@ -168,13 +170,19 @@ def display_move_moments(ops: list[list[cirq.Operation]], lay: Layout) -> None: 
 
     fig, ax = plt.subplots()
     anim = animation.FuncAnimation(
-        fig, animate, frames=len(ops), interval=1000, blit=False, repeat=False
+        fig,
+        animate,
+        frames=len(ops),
+        interval=1000,
+        blit=False,
+        repeat=False,
     )
     plt.show()
 
 
 def display_lattice_moments(
-    ops: list[list[cirq.Operation]], lay: Layout
+    ops: list[list[cirq.Operation]],
+    lay: Layout,
 ) -> None:  # pragma: no cover
     """
     Little animation for tracking factory usage in the (slow) lattice surgery layout. The new fast
@@ -227,18 +235,25 @@ def display_lattice_moments(
 
     fig, ax = plt.subplots()
     anim = animation.FuncAnimation(
-        fig, animate, frames=len(ops), interval=1000, blit=False, repeat=False
+        fig,
+        animate,
+        frames=len(ops),
+        interval=1000,
+        blit=False,
+        repeat=False,
     )
     plt.show()
 
 
 def animate_layout_moment(
-    G: nx.Graph, moment_paths: list[list[str]], column_layout: Layout
+    G: nx.Graph,
+    moment_paths: list[list[str]],
+    column_layout: Layout,
 ) -> None:  # pragma: no cover
     """
     Not sure if this visualization works anymore, hard to get the moment_paths
     """
-    moment_paths_flat = list(chain.from_iterable(moment_paths))
+    moment_paths_flat = list(itertools.chain.from_iterable(moment_paths))
     diction = {}
     for qubit in column_layout.qubits:
         diction[qubit["name"]] = (qubit["qubit"].col, -qubit["qubit"].row)
@@ -268,7 +283,7 @@ def animate_layout_moment(
         nx.draw(G, pos=diction, node_color=colors, edge_color=edge_colors, with_labels=True)
 
     fig, ax = plt.subplots()
-    anim = FuncAnimation(
+    anim = animation.FuncAnimation(
         fig,
         animate,
         frames=len(moment_paths_flat),
