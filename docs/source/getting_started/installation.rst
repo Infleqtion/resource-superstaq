@@ -1,9 +1,6 @@
 Installation
 ============
 
-resource-superstaq is currently installed directly from its Git repository.
-It is not distributed as a package on PyPI.
-
 Requirements
 ------------
 Python 3.14 is recommended because it is the version used by the project's

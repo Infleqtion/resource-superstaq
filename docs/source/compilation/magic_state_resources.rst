@@ -1,10 +1,6 @@
 Magic-State Resources
 =====================
 
-Some logical operations cannot be implemented using only inexpensive
-Clifford operations. Resource Superstaq models these operations using
-specially prepared ancillary states known as *magic states*.
-
 The current resource-estimation workflow supports magic-state resources
 for:
 

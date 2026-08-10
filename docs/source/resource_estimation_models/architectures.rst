@@ -10,9 +10,6 @@ The models also provide assumptions used when estimating error-corrected
 operations, including code distance, syndrome-extraction rounds, logical-patch
 size, movement costs, and magic-state preparation costs.
 
-These classes are resource-estimation models. They should not be interpreted
-as complete descriptions of existing hardware systems.
-
 What an architecture controls
 -----------------------------
 
@@ -28,19 +25,8 @@ Every architecture model provides:
 * Policies for idling and post-operation correction.
 * Movement assumptions, where applicable.
 
-The architecture must be used consistently for both compilation and resource
-estimation:
-
-.. code-block:: python
-
-   architecture = res.ftqc.DefaultMovement(d=11)
-
-   primitive_circuit = res.ftqc.ft_compile(
-       layout=layout,
-       arc=architecture,
-   )
-
-   estimator = res.ftqc.ResourceEstimator(arc=architecture)
+NOTE: The architecture must be used consistently for both compilation and resource
+estimation
 
 Common configuration
 --------------------

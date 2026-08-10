@@ -40,53 +40,12 @@ The current compilation flow is:
            v
    Resource estimation
 
-The gate-set compilation stages affect the final estimate. In particular,
-rotation-synthesis accuracy affects the number of T gates, and T gates require
-magic-state resources in the architecture model.
-
-Target gate sets
-----------------
-
-A target gate set defines the operations that should remain after a compilation
-stage. Operations outside the target are decomposed or synthesized into
-supported operations.
-
-The main target-gate-set constructors are:
-
-``clifford_rz_gateset``
-   Constructs the target used for the first compilation stage.
-
-``clifford_t_gateset``
-   Constructs the target used for Clifford+T synthesis.
-
-Both targets are passed to ``compile_gateset``:
-
-.. code-block:: python
-
-   compiled_circuit = res.compile_gateset.compile_gateset(
-       circuit,
-       gateset=target_gateset,
-   )
-
-For target gate sets other than the repository's Clifford+T target,
-``compile_gateset`` delegates to Cirq's
-``optimize_for_target_gateset`` function. The Clifford+T target is handled by
-the repository's custom Rz-synthesis implementation.
 
 Compile to Clifford+Rz
 ----------------------
 
 The first stage converts a general Cirq circuit into an intermediate
-Clifford+Rz representation:
-
-.. code-block:: python
-
-   clifford_rz_circuit = res.compile_gateset.compile_gateset(
-       circuit,
-       gateset=res.compile_gateset.clifford_rz_gateset(),
-   )
-
-This stage uses ``CliffRzGateset``, a Cirq two-qubit compilation target.
+Clifford+Rz representation using ``CliffRzGateset``, a Cirq two-qubit compilation target.
 
 Its compilation and postprocessing steps include:
 
@@ -113,23 +72,7 @@ built from the following operations:
 
 Measurements and supported non-unitary operations can also be retained.
 
-Why use an intermediate representation?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Separating general decomposition from rotation synthesis makes the two
-problems easier to reason about.
-
-The first stage normalizes high-level circuit operations into a small basis
-containing arbitrary Z rotations. The second stage can then focus exclusively
-on approximating those rotations.
-
-This also makes it possible to inspect the Clifford+Rz circuit before choosing
-a rotation-synthesis tolerance.
-
-Clifford+Rz tolerance
-~~~~~~~~~~~~~~~~~~~~~
-
-The Clifford+Rz target accepts an absolute tolerance:
+NOTE: The Clifford+Rz target accepts an absolute tolerance:
 
 .. code-block:: python
 
@@ -184,65 +127,6 @@ The generated sequence may contain:
 Global-phase operations returned by the synthesizer do not need to be added to
 the circuit.
 
-Approximation tolerance
-~~~~~~~~~~~~~~~~~~~~~~~
-
-The ``atol`` passed to ``clifford_t_gateset`` is the maximum approximation
-error for each synthesized Rz rotation:
-
-.. code-block:: python
-
-   target = res.compile_gateset.clifford_t_gateset(atol=1e-3)
-
-This is a per-rotation tolerance, not a bound on the error of the complete
-circuit.
-
-A smaller tolerance generally requires longer synthesis sequences and more T
-gates. Because T gates consume magic states, this can increase:
-
-* The number of magic-state preparations.
-* Factory demand.
-* Circuit execution time.
-* Physical operation counts.
-
-A larger tolerance generally produces shorter sequences but less accurate
-rotation approximations.
-
-When selecting a tolerance for a complete program, the number of synthesized
-rotations should also be considered. The tutorial demonstrates one way to
-derive a per-rotation tolerance from a target program fidelity.
-
-Complete example
-----------------
-
-The two compilation stages can be used together as follows:
-
-.. code-block:: python
-
-   import cirq
-   import resource_estimation as res
-
-   q0, q1 = cirq.LineQubit.range(2)
-
-   circuit = cirq.Circuit(
-       cirq.rx(0.2).on(q0),
-       cirq.CNOT(q0, q1),
-       cirq.rz(0.3).on(q1),
-   )
-
-   clifford_rz_circuit = res.compile_gateset.compile_gateset(
-       circuit,
-       gateset=res.compile_gateset.clifford_rz_gateset(),
-   )
-
-   clifford_t_circuit = res.compile_gateset.compile_gateset(
-       clifford_rz_circuit,
-       gateset=res.compile_gateset.clifford_t_gateset(atol=1e-3),
-       verbose=False,
-   )
-
-The resulting ``clifford_t_circuit`` is suitable for the standard
-architecture-and-layout workflow.
 
 Toffoli decomposition
 ---------------------
@@ -271,66 +155,8 @@ This helper is implemented and tested, but it has important limitations:
 Therefore, ``toffoli_decompose`` should currently be treated as a separate,
 explicit transformation rather than part of the default compilation pipeline.
 
-Toffoli and CCZ
----------------
-
-Toffoli and CCZ are related by Hadamards on the target qubit:
-
-.. code-block:: text
-
-   Toffoli = H(target) * CCZ * H(target)
-
-This relationship allows a compiler to choose between decomposing a Toffoli
-into Clifford+T gates or preserving an equivalent CCZ operation for a
-CCZ-specific resource model.
-
-The downstream ``ft_compile`` function currently validates circuits over:
-
-* Clifford operations
-* T
-* CCZ
-* Measurement
-* Reset
-
-It does not accept Toffoli directly.
-
-CCZ resource teleportation and CCZ-distillation logic are present in the
-fault-tolerant compiler. However, direct end-to-end CCZ support is not yet
-available through the standard gate-set and public-layout workflow:
-
-* ``clifford_t_gateset`` does not preserve CCZ.
-* The standard ``MovementLayout`` does not currently generate CCZ-factory
-  nodes.
-* The CCZ distillation path requires a compatible distillation layout.
-* The internal movement-distillation layout is not currently exported as part
-  of the public ``resource_estimation.ftqc`` interface.
-
-.. note::
-
-   A public compilation target that preserves Toffoli or CCZ operations is not
-   currently implemented. Documentation should distinguish this planned
-   direction from the existing Clifford+T pipeline.
-
-Choosing whether to preserve Toffoli or CCZ
--------------------------------------------
-
-The choice between decomposition and preservation can have a significant
-effect on a resource estimate.
-
-Decomposing Toffoli into Clifford+T:
-
-* Uses the existing T-state resource path.
-* Increases the number of T gates.
-* May increase T-factory demand and execution time.
-
-Preserving an equivalent CCZ operation:
-
-* Requires a CCZ-aware compiler and layout.
-* Requires a compatible CCZ-state preparation or distillation model.
-* May provide a different space-time tradeoff than a T-only decomposition.
-
-Until the public CCZ workflow is complete, the default supported approach is
-to compile or explicitly decompose the circuit into Clifford+T.
+NOTE: Work is being done to consider a clifford+T+CCZ pass which keeps CCZ gates in
+the circuit and turns Toffolis into CCZs by wrapping the target in hadimard gates.
 
 Effect on resource estimates
 ----------------------------

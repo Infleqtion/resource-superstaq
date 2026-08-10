@@ -17,31 +17,6 @@ A layout may contain:
 Layouts operate at the logical-patch level. They do not describe the
 individual physical qubits inside each code patch.
 
-Architecture and layout responsibilities
-----------------------------------------
-
-An architecture determines the available logical primitives and their physical
-costs. A layout determines where logical patches and factories are placed and
-how the compiler maps or routes operations between them.
-
-The same compiled Clifford+T circuit is supplied to the layout:
-
-.. code-block:: python
-
-   layout = res.ftqc.MovementLayout(
-       input_circuit=clifford_t_circuit,
-       num_t_factories=5,
-   )
-
-The layout and architecture are then passed to the compiler together:
-
-.. code-block:: python
-
-   primitive_circuit = res.ftqc.ft_compile(
-       layout=layout,
-       arc=architecture,
-   )
-
 Common layout behavior
 ----------------------
 
