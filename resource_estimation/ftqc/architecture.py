@@ -30,8 +30,6 @@ from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.stim_functions import cultivate
 
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-
 NEUTRAL_GATES = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.CZ: 0.27,
     cirq.PhasedXZGate: 5.0,  # Based on single qubit gate times
@@ -133,9 +131,7 @@ def _syndrome_extract_cost(
     #                  CZ
     x_syndrome_cnots = patch.total_x_syndrome_cnots()
     z_syndrome_cnots = patch.total_z_syndrome_cnots()
-    phased_xz_gates = 2 * (
-        x_syndrome_cnots + patch.num_x_stabs() + patch.num_z_stabs()
-    )
+    phased_xz_gates = 2 * (x_syndrome_cnots + patch.num_x_stabs() + patch.num_z_stabs())
     gate_cost = {
         cirq.MeasurementGate: patch.num_measure_qubits * num_logical_qubits * rounds,
         cirq.CZ: (x_syndrome_cnots + z_syndrome_cnots) * num_logical_qubits * rounds,
@@ -312,10 +308,10 @@ class Architecture(abc.ABC):
                 cirq.ResetChannel: reset_moments,
             },
         )
-        se_moment_cost = Counter(
-            _syndrome_extract_cost(
-                rounds=ceil(self.d / 2), num_logical_qubits=1, patch=self.patch
-            )["moment_cost"]
+        se_moment_cost = collections.Counter(
+            _syndrome_extract_cost(rounds=ceil(self.d / 2), num_logical_qubits=1, patch=self.patch)[
+                "moment_cost"
+            ]
         )
 
         # TODO: Perhaps cannonical cost includes SE before and afer for a total of two more units of SE
@@ -323,10 +319,10 @@ class Architecture(abc.ABC):
         op_time = self.total_time(moment_cost_dict=moment_cost)
 
         # For the gate cost, let's just approximate it with one round of syndrome extraction with an additional d-1 diagonal of CZ gates
-        se_gate_cost = Counter(
-            _syndrome_extract_cost(
-                rounds=ceil(self.d / 2), num_logical_qubits=1, patch=self.patch
-            )["gate_cost"]
+        se_gate_cost = collections.Counter(
+            _syndrome_extract_cost(rounds=ceil(self.d / 2), num_logical_qubits=1, patch=self.patch)[
+                "gate_cost"
+            ]
         )
         Y_gate_cost = se_gate_cost.copy()
         Y_gate_cost[cirq.CZ] += self.d - 1

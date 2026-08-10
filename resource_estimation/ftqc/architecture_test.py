@@ -20,7 +20,6 @@ import numpy as np
 import pytest
 
 import resource_estimation.ftqc.architecture as arch
-import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.stim_functions import cultivate
 
@@ -54,6 +53,73 @@ def test_architecture_uses_surface_code_patch(
 def test_architecture_rejects_even_code_distance() -> None:
     with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
         arch.DefaultLattice(d=4)
+
+
+def _legacy_surface_syndrome_cost(d: int, rounds: int, num_logical_qubits: int) -> dict[str, dict]:
+    full_stabilizers = (d - 1) ** 2
+    partial_stabilizers = 4 * (d // 2)
+    gate_cost = {
+        cirq.CZ: (4 * full_stabilizers + 2 * partial_stabilizers) * num_logical_qubits * rounds,
+        cirq.MeasurementGate: (full_stabilizers + partial_stabilizers)
+        * num_logical_qubits
+        * rounds,
+        cirq.PhasedXZGate: (12 * (full_stabilizers // 2) + 8 * (partial_stabilizers // 2))
+        * num_logical_qubits
+        * rounds,
+        cirq.ResetChannel: (full_stabilizers + partial_stabilizers) * num_logical_qubits * rounds,
+    }
+    moment_cost = {
+        cirq.CZ: 4 * rounds,
+        cirq.PhasedXZGate: 2 * rounds,
+        cirq.MeasurementGate: rounds,
+        cirq.ResetChannel: rounds,
+    }
+    return {"gate_cost": gate_cost, "moment_cost": moment_cost}
+
+
+@pytest.mark.parametrize("d", (3, 5, 7))
+def test_surface_code_patch_counts_match_legacy(d: int) -> None:
+    patch = lsp.CodePatch("surface", d=d)
+
+    assert patch.num_data_qubits == d**2
+    assert patch.num_measure_qubits == d**2 - 1
+    assert patch.num_physical_qubits == 2 * d**2 - 1
+    assert patch.num_x_stabs() == (d**2 - 1) // 2
+    assert patch.num_z_stabs() == (d**2 - 1) // 2
+    assert patch.total_x_syndrome_cnots() == 2 * d * (d - 1)
+    assert patch.total_z_syndrome_cnots() == 2 * d * (d - 1)
+
+
+@pytest.mark.parametrize(
+    ("architecture_type", "permutation_moments_per_round"),
+    [
+        (arch.DefaultLattice, 0),
+        (arch.DefaultMovement, 10),
+        (arch.DualSpeciesMovement, 0),
+        (arch.MeasureZonesOnly, 2),
+        (arch.Superconductor, 0),
+    ],
+)
+@pytest.mark.parametrize(("d", "rounds", "num_logical_qubits"), [(3, 1, 1), (5, 2, 2), (7, 3, 1)])
+def test_architecture_syndrome_counts_match_legacy(
+    architecture_type: type[arch.Architecture],
+    permutation_moments_per_round: int,
+    d: int,
+    rounds: int,
+    num_logical_qubits: int,
+) -> None:
+    architecture = architecture_type(d=d, syndrome_rounds=rounds)
+    qubits = cirq.LineQubit.range(num_logical_qubits)
+    operation = lsp.SyndromeExtract(num_logical_qubits, rounds).on(*qubits)
+    expected = _legacy_surface_syndrome_cost(d, rounds, num_logical_qubits)
+
+    if permutation_moments_per_round:
+        permutations = permutation_moments_per_round * rounds
+        expected["gate_cost"][cirq.QubitPermutationGate] = permutations
+        expected["moment_cost"][cirq.QubitPermutationGate] = permutations
+
+    assert architecture.gate_cost(operation) == expected["gate_cost"]
+    assert architecture.moment_cost(operation) == expected["moment_cost"]
 
 
 def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
@@ -140,9 +206,7 @@ def test_movement_gate_costs(d) -> None:
     op = lsp.SyndromeExtract(1, 1).on(qubit_a)
     cost = arc.gate_cost(op)
     phased_xz_gates = 2 * (
-        arc.patch.total_x_syndrome_cnots()
-        + arc.patch.num_x_stabs()
-        + arc.patch.num_z_stabs()
+        arc.patch.total_x_syndrome_cnots() + arc.patch.num_x_stabs() + arc.patch.num_z_stabs()
     )
     assert cost == {
         cirq.CZ: arc.patch.total_z_syndrome_cnots() + arc.patch.total_x_syndrome_cnots(),

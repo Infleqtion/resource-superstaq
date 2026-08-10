@@ -14,6 +14,7 @@
 from math import pi
 
 import cirq
+
 from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
 
 
