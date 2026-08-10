@@ -322,8 +322,7 @@ class LogicalQubit:
     ) -> None:
         self.x_support = self._validate_support(x_support, "x_support")
         self.z_support = self._validate_support(z_support, "z_support")
-        self.num_qubits = len(self.x_support | self.z_support)
-        if self.num_qubits < 1:
+        if not self.x_support | self.z_support:
             raise ValueError("LogicalQubit supports must include at least one physical qubit.")
 
     @staticmethod

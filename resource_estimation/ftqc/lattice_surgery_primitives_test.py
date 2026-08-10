@@ -82,7 +82,6 @@ def test_logical_qubit() -> None:
 
     assert qubit.x_support == frozenset({0, 2})
     assert qubit.z_support == frozenset({2, 3})
-    assert qubit.num_qubits == 3
 
 
 def test_logical_qubit_rejects_missing_supports() -> None:
@@ -154,7 +153,6 @@ def test_code_patch_logical_qubits_from_css_logical_support() -> None:
     patch = lsp.CodePatch(d=3)
 
     assert len(patch.logical_qubits) == 1
-    assert patch.logical_qubits[0].num_qubits == 5
     assert patch.logical_qubits[0].x_support == frozenset({6, 7, 8})
     assert patch.logical_qubits[0].z_support == frozenset({0, 4, 8})
 
