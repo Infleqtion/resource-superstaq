@@ -39,7 +39,7 @@ def gidney5() -> cirq.Circuit:
     )
 
 
-def test_known_gidney(gidney3: cirq.Circuit) -> None:
+def test_known_gidney(gidney3: stim.Circuit) -> None:
     costs = count_stim_resources(gidney3)
     expected_parallel_costs = {
         cirq.ResetChannel: 13,
@@ -59,7 +59,7 @@ def test_known_gidney(gidney3: cirq.Circuit) -> None:
 
 @pytest.mark.parametrize("fault_distance", (3, 5))
 def test_saved_gidney(
-    gidney3: cirq.Circuit, gidney5: cirq.Circuit, fault_distance: Literal[3, 5]
+    gidney3: stim.Circuit, gidney5: stim.Circuit, fault_distance: Literal[3, 5]
 ) -> None:
     example_gidney = gidney3 if fault_distance == 3 else gidney5
     dsurface = 2 * fault_distance + 1

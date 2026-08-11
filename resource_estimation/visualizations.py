@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, LiteralString
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     pass
@@ -39,7 +39,7 @@ def boxed_header(title: str, width: int = 40) -> str:
     return f"{'=' * left} {title} {'=' * right}"
 
 
-def hr(width: int = 40) -> LiteralString:  # pragma: no cover
+def hr(width: int = 40) -> str:  # pragma: no cover
     return "=" * width
 
 
