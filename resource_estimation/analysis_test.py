@@ -144,8 +144,9 @@ def test_line_dict(report: analysis.Report) -> None:
     assert "1.00e+00" in line_dict
     assert "2.00e+00" in line_dict
 
+
 def test_sub_report_raises_type_error(report: analysis.Report) -> None:
-    report.load_time = (1, 2, 3)
+    setattr(report, "load_time", (1, 2, 3))
     with pytest.raises(TypeError, match="Expected numeric time"):
         _ = report.sub_report(header="Inputs")
 

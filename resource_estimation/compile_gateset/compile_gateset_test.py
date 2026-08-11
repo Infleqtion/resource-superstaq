@@ -42,11 +42,7 @@ def test_compile_clifford_t_gateset() -> None:
 
     assert all(op in allowed for op in compiled.all_operations())
 
+
 def test_bad_gateset_raises_type_error() -> None:
     with pytest.raises(TypeError, match="must be CompilationTargetGateset"):
-        _ = compile_gateset(
-            circuit=cirq.Circuit(), 
-            gateset=cirq.Gateset(
-                cirq.H, cirq.CNOT
-            )
-        )
+        _ = compile_gateset(circuit=cirq.Circuit(), gateset=cirq.Gateset(cirq.H, cirq.CNOT))
