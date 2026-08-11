@@ -38,7 +38,7 @@ class Layout(abc.ABC):
 
     def __post_init__(self) -> None:
         self.mapped_circuit: cirq.Circuit = cirq.Circuit()
-        self.layout_graph: nx.Graph = nx.Graph
+        self.layout_graph: nx.Graph = nx.Graph()
         self._available_t_factories: collections.deque[tuple[cirq.GridQubit, ...]] = (
             collections.deque()
         )

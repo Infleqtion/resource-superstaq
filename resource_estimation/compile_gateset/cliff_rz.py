@@ -23,8 +23,7 @@ if TYPE_CHECKING:
     from types import NotImplementedType
     from typing import Iterator
 
-    from resource_estimation.ftqc.cost_types import GateKey
-
+    from resource_estimation.typing import GateKey
 # warnings.filterwarnings(category=FutureWarning, action="ignore")
 
 

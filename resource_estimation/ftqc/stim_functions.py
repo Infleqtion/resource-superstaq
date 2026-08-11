@@ -166,7 +166,7 @@ def cultivate(
                 fault_distance=fault_distance,
             ),
         )
-        resources = CountsDict(serial=resources.get("serial"), parallel=resources.get("parallel"))
+        resources = CountsDict(serial=resources["serial"], parallel=resources["parallel"])
     else:
         stim_circuit = cultiv.make_end2end_cultivation_circuit(
             dcolor=fault_distance,
