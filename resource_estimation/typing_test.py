@@ -14,7 +14,7 @@
 import cirq
 import pytest
 
-from resource_estimation.ftqc.cost_types import _require_gate_operation
+from resource_estimation.typing import _require_gate_operation
 
 
 def test_require_gate_operation() -> None:
