@@ -55,8 +55,8 @@ class Layout(abc.ABC):
         """Apply a given mapping from qubits in the input circuit to GridQubits used for compilation"""
         # Ignoring the type is ok because cirq doesn't recognize the desired type as a subclass of dict[Qid, Qid]
         mapped_circuit = cirq.Circuit(
-            moment.transform_qubits(qubit_map)
-            for moment in self.input_circuit  # type: ignore[arg-type]
+            moment.transform_qubits(qubit_map)  # type: ignore[arg-type]
+            for moment in self.input_circuit
         )
         self.mapped_circuit = mapped_circuit
 
