@@ -22,13 +22,13 @@ import pytest
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.compile_ftqc as comp
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-from resource_estimation.ftqc.cost_types import GateKey
 from resource_estimation.ftqc.layout import (
     Column,
     Embedded,
     MovementDistillery,
     MovementLayout,
 )
+from resource_estimation.typing import GateKey
 
 
 @pytest.fixture

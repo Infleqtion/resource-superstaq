@@ -20,8 +20,8 @@ import pytest
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-from resource_estimation.ftqc.cost_types import GateCounts
 from resource_estimation.ftqc.stim_functions import cultivate
+from resource_estimation.typing import GateCounts
 
 
 @pytest.fixture

@@ -25,9 +25,9 @@ from tqdm import tqdm
 
 if TYPE_CHECKING:
     from resource_estimation.ftqc.architecture import Architecture
+    from resource_estimation.typing import GateCounts, GateKey, StrCounts
 
-    from .cost_types import GateCounts, GateKey, StrCounts
-from .cost_types import _require_gate_operation
+from resource_estimation.typing import _require_gate_operation
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 

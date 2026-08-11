@@ -19,11 +19,11 @@ from pathlib import Path
 import cultiv
 import tqdm
 
-from resource_estimation.ftqc.cost_types import (
+from resource_estimation.ftqc.stim_functions import STR2GATE, count_stim_resources
+from resource_estimation.typing import (
     CountsDict,
     StrCounts,
 )
-from resource_estimation.ftqc.stim_functions import STR2GATE, count_stim_resources
 
 parent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(parent_dir))

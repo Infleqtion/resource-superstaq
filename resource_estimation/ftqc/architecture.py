@@ -28,8 +28,7 @@ from resource_estimation.ftqc.compile_ftqc import add_moves
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.stim_functions import cultivate
-
-from .cost_types import CostDict, GateCounts, GateKey, _require_gate_operation
+from resource_estimation.typing import CostDict, GateCounts, GateKey, _require_gate_operation
 
 NEUTRAL_GATES: dict[GateKey, float] = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.CZ: 0.27,

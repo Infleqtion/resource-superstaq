@@ -27,7 +27,7 @@ import cirq
 import cultiv
 import stim
 
-from .cost_types import CountsDict, GateKey
+from resource_estimation.typing import CountsDict, GateKey
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
