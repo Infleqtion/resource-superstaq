@@ -57,12 +57,6 @@ def clifford_t_gateset(atol: float) -> CliffordTGateset:
     return gateset
 
 
-def _is_clifford_t_gateset(gateset: cirq.Gateset) -> bool:
-    """Returns whether a gateset matches the supported Clifford + T gate families."""
-    gate_families = gateset.gates
-    return _CLIFFORD_T_REQUIRED_FAMILIES <= gate_families <= _CLIFFORD_T_ALLOWED_FAMILIES
-
-
 def compile_gateset(
     circuit: cirq.Circuit,
     gateset: cirq.Gateset = clifford_rz_gateset(),

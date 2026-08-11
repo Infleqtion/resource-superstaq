@@ -415,7 +415,7 @@ class Report:
         report_string += self.header_line(title=header) + "\n"
         time_value = info.pop("Time")
         if not isinstance(time_value, (int, float)):
-            raise TypeError(f"Expected numeric Time, got {type(time_value).__name__}")
+            raise TypeError(f"Expected numeric time, got {type(time_value).__name__}")
         report_string += self.time_line(name=header, seconds=time_value) + "\n"
         for name, value in info.items():
             if not isinstance(value, dict):

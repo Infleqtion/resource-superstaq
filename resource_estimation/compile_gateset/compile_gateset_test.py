@@ -14,6 +14,7 @@
 from math import pi
 
 import cirq
+import pytest
 
 from resource_estimation.compile_gateset import (
     CliffRzGateset,
@@ -40,3 +41,12 @@ def test_compile_clifford_t_gateset() -> None:
     allowed = cirq.Gateset(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.T)
 
     assert all(op in allowed for op in compiled.all_operations())
+
+def test_bad_gateset_raises_type_error() -> None:
+    with pytest.raises(TypeError, match="must be CompilationTargetGateset"):
+        _ = compile_gateset(
+            circuit=cirq.Circuit(), 
+            gateset=cirq.Gateset(
+                cirq.H, cirq.CNOT
+            )
+        )

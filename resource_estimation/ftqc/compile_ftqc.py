@@ -410,8 +410,6 @@ def ft_compile(
     G = layout.layout_graph
 
     circuit = layout.mapped_circuit
-    if verbose > 1:
-        print("Validating Circuit Operations")
     if skip_validation:  # pragma: no cover
         print("Validation Turned Off")
     else:
