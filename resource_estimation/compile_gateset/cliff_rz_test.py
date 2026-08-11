@@ -34,7 +34,9 @@ def test_fermi() -> None:
     )
 
     # assert only legal gates in compiled circuit
-    allowed_ops = cirq.Gateset(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz)
+    allowed_ops = cirq.Gateset(
+        cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz
+    )
     assert all(op in allowed_ops for op in compiled_circuit.all_operations())
 
 
@@ -50,7 +52,9 @@ def test_kanamori() -> None:
     )
 
     # assert only legal gates in compiled circuit
-    allowed_ops = cirq.Gateset(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz)
+    allowed_ops = cirq.Gateset(
+        cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.MeasurementGate, cirq.T, cirq.Rz
+    )
     assert all(op in allowed_ops for op in compiled_circuit.all_operations())
 
 

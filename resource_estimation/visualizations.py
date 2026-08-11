@@ -262,30 +262,30 @@ if TYPE_CHECKING:
 #     for edge in G.edges:
 #         G.edges[edge]["color"] = "black"
 
-    # def animate(i: int) -> None:
-    #     if i != 0:
-    #         if G.nodes[moment_paths_flat[i]]["color"] == "yellow":
-    #             G.nodes[moment_paths_flat[i]]["color"] = "magenta"
-    #         else:
-    #             G.nodes[moment_paths_flat[i]]["color"] = "yellow"
-    #         if moment_paths_flat[i - 1][0] == "a" or moment_paths_flat[i][0] == "a":
-    #             G.edges[moment_paths_flat[i - 1], moment_paths_flat[i]]["color"] = "yellow"
-    #     else:
-    #         G.nodes[moment_paths_flat[i]]["color"] = "yellow"
-    #     colors = [node_data["color"] for node_id, node_data in G.nodes(data=True)]
-    #     edge_colors = [G.edges[edge]["color"] for edge in G.edges()]
-    #     nx.draw(G, pos=diction, node_color=colors, edge_color=edge_colors, with_labels=True)
+# def animate(i: int) -> None:
+#     if i != 0:
+#         if G.nodes[moment_paths_flat[i]]["color"] == "yellow":
+#             G.nodes[moment_paths_flat[i]]["color"] = "magenta"
+#         else:
+#             G.nodes[moment_paths_flat[i]]["color"] = "yellow"
+#         if moment_paths_flat[i - 1][0] == "a" or moment_paths_flat[i][0] == "a":
+#             G.edges[moment_paths_flat[i - 1], moment_paths_flat[i]]["color"] = "yellow"
+#     else:
+#         G.nodes[moment_paths_flat[i]]["color"] = "yellow"
+#     colors = [node_data["color"] for node_id, node_data in G.nodes(data=True)]
+#     edge_colors = [G.edges[edge]["color"] for edge in G.edges()]
+#     nx.draw(G, pos=diction, node_color=colors, edge_color=edge_colors, with_labels=True)
 
-    # fig, ax = plt.subplots()
-    # anim = animation.FuncAnimation(
-    #     fig,
-    #     animate,
-    #     frames=len(moment_paths_flat),
-    #     interval=1000,
-    #     blit=False,
-    #     repeat=False,
-    # )
-    # plt.show()
+# fig, ax = plt.subplots()
+# anim = animation.FuncAnimation(
+#     fig,
+#     animate,
+#     frames=len(moment_paths_flat),
+#     interval=1000,
+#     blit=False,
+#     repeat=False,
+# )
+# plt.show()
 
 
 # def draw_2d_array_ascii(arr: npt.NDArray[np.int_]) -> None:  # pragma: no cover

@@ -20,6 +20,7 @@ from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
 
 # Need to add tests here.
 
+
 def test_15_to_one() -> None:
     """Check to confirm that the compression technique agrees with the standard circuit"""
     circuit = distil_15_to_1()

@@ -116,7 +116,9 @@ def test_all_primitives(estimator: est.ResourceEstimator) -> None:
     assert np.isclose(t1, t2, atol=0.00001)
 
 
-def test_parallel_circuit_cost(lattice_estimator: est.ResourceEstimator, movement_estimator: est.ResourceEstimator) -> None:
+def test_parallel_circuit_cost(
+    lattice_estimator: est.ResourceEstimator, movement_estimator: est.ResourceEstimator
+) -> None:
     # TODO: This test could (should?) be considerably more thorough than the coverage requirement would imply
     qubit_a, qubit_b, qubit_c, qubit_d = (
         cirq.GridQubit(0, 0),
@@ -157,7 +159,9 @@ def test_parallel_circuit_cost(lattice_estimator: est.ResourceEstimator, movemen
     }
 
 
-def test_self_returns(movement_estimator: est.ResourceEstimator, lattice_estimator: est.ResourceEstimator) -> None:
+def test_self_returns(
+    movement_estimator: est.ResourceEstimator, lattice_estimator: est.ResourceEstimator
+) -> None:
     # TODO: There are no self-returns anymore so this function is not well named
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit(
@@ -180,7 +184,9 @@ def test_self_returns(movement_estimator: est.ResourceEstimator, lattice_estimat
     }
 
 
-def test_error_handling(lattice_estimator: est.ResourceEstimator, movement_estimator: est.ResourceEstimator) -> None:
+def test_error_handling(
+    lattice_estimator: est.ResourceEstimator, movement_estimator: est.ResourceEstimator
+) -> None:
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     # Check Bad Lattice Surgery Circuit
     bad_circuit = cirq.Circuit([lsp.Cultivate(pi / 2).on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b)])
@@ -333,7 +339,9 @@ def test_default_ccz_dynamics_schedule_expanded_toffolis() -> None:
         for vertex_index in range(3)
     }
 
-    z_paulis: dict[cirq.Qid, cirq.PauliString[cirq.Qid]] = {qubit: cirq.PauliString(cirq.Z(qubit)) for qubit in (q1, q2, q3)}
+    z_paulis: dict[cirq.Qid, cirq.PauliString[cirq.Qid]] = {
+        qubit: cirq.PauliString(cirq.Z(qubit)) for qubit in (q1, q2, q3)
+    }
     first_ccz_dynamics = (
         ((z_paulis[q1],), (z_paulis[q2] * z_paulis[q3],)),
         ((z_paulis[q2],), (z_paulis[q1] * z_paulis[q3],)),
@@ -438,7 +446,7 @@ def test_reaction_depth_factory_dict_keys_define_factory_gates() -> None:
 
 @pytest.mark.parametrize("factories", [{cirq.S: False}, {cirq.TOFFOLI: True}])
 def test_reaction_depth_rejects_undefined_factory_corrections(
-    factories:dict[GateKey, bool],
+    factories: dict[GateKey, bool],
 ) -> None:
     with pytest.raises(ValueError, match="No factory reaction dynamics are defined"):
         est.ReactionDepthEstimator(factories=factories)

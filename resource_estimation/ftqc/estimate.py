@@ -31,6 +31,7 @@ from .cost_types import _require_gate_operation
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
+
 class ResourceEstimator:
     """Class for resource estimator objects defined by the given architecture"""
 
@@ -39,11 +40,7 @@ class ResourceEstimator:
 
     def validate_circuit_ops(self, circuit: cirq.Circuit) -> None:
         """Checks that the input circuit contains only valid operations and warns of operations still in progress"""
-        unrecognized = [
-            op
-            for op in circuit.all_operations()
-            if op not in self.arc.primitives
-        ]
+        unrecognized = [op for op in circuit.all_operations() if op not in self.arc.primitives]
         if unrecognized:
             error_message = """This circuit has gates that are incompatible with the input architecture parameters.\nThe following gates in this circuit are not recognized:"""
             for op in unrecognized:
@@ -76,10 +73,7 @@ class ResourceEstimator:
     def serial_circuit_time(self, circuit: cirq.Circuit) -> float:
         """Adds up the total physical time from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
-        return sum(
-            self.arc.total_time(self.arc.gate_cost(op))
-            for op in circuit.all_operations()
-        )
+        return sum(self.arc.total_time(self.arc.gate_cost(op)) for op in circuit.all_operations())
 
     def parallel_circuit_time(self, circuit: cirq.Circuit, verbose: int = 0) -> float:
         """Estimation of the critical path in the input circuit according to the most expensive operation per moment"""
@@ -133,7 +127,9 @@ class ResourceEstimator:
         pretty: bool = False,
     ) -> GateCounts | StrCounts:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
-        qubit_paths: dict[cirq.Qid, collections.Counter[GateKey]] = {qubit: collections.Counter() for qubit in circuit.all_qubits()}
+        qubit_paths: dict[cirq.Qid, collections.Counter[GateKey]] = {
+            qubit: collections.Counter() for qubit in circuit.all_qubits()
+        }
         qubit_times: dict[cirq.Qid, float] = dict.fromkeys(circuit.all_qubits(), 0.0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
@@ -166,6 +162,7 @@ class ResourceEstimator:
 
 ReactionTreeNode = tuple[int, int]
 Q = TypeVar("Q", bound=cirq.Qid)
+
 
 @dataclass(frozen=True)
 class ReactionDynamics(Generic[Q]):
@@ -227,7 +224,9 @@ class ReactionDepthEstimator:
         self.factories = dict(self._DEFAULT_FACTORIES if factories is None else factories)
         local_qubits = cirq.LineQubit.range(3)
         local_x: cirq.PauliString[cirq.LineQubit] = cirq.PauliString(cirq.X(local_qubits[0]))
-        local_z: tuple[cirq.PauliString[cirq.LineQubit], ...] = tuple(cirq.PauliString(cirq.Z(qubit)) for qubit in local_qubits)
+        local_z: tuple[cirq.PauliString[cirq.LineQubit], ...] = tuple(
+            cirq.PauliString(cirq.Z(qubit)) for qubit in local_qubits
+        )
         self._factory_reaction_dynamics: dict[
             tuple[GateKey, bool], tuple[ReactionDynamics[cirq.LineQubit], ...]
         ] = {
@@ -360,7 +359,9 @@ class ReactionDepthEstimator:
 
         return reaction_tree
 
-    def _factory_dynamics(self, operation: cirq.Operation) -> tuple[ReactionDynamics[cirq.Qid], ...] | None:
+    def _factory_dynamics(
+        self, operation: cirq.Operation
+    ) -> tuple[ReactionDynamics[cirq.Qid], ...] | None:
         operation = _require_gate_operation(operation)
         if operation.gate not in self.factories:
             if not cirq.has_stabilizer_effect(operation.gate):

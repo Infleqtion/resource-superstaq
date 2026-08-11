@@ -114,12 +114,14 @@ def phx_to_zhzhz(
             cirq.ZPowGate(exponent=p).on(q),
         ]
 
-    return cirq.Circuit(cirq.map_operations_and_unroll(
-        circuit,
-        _map_fn,
-        tags_to_ignore=context.tags_to_ignore if context else (),
-        deep=context.deep if context else False,
-    ))
+    return cirq.Circuit(
+        cirq.map_operations_and_unroll(
+            circuit,
+            _map_fn,
+            tags_to_ignore=context.tags_to_ignore if context else (),
+            deep=context.deep if context else False,
+        )
+    )
 
 
 @cirq.transformer
@@ -150,12 +152,14 @@ def zpow_to_rz(
             return cirq.S.on(op.qubits[0])
         return cirq.Rz(rads=op.gate.exponent * np.pi).on(op.qubits[0])
 
-    return cirq.Circuit(cirq.map_operations_and_unroll(
-        circuit,
-        _map_fn,
-        tags_to_ignore=context.tags_to_ignore if context else (),
-        deep=context.deep if context else False,
-    ))
+    return cirq.Circuit(
+        cirq.map_operations_and_unroll(
+            circuit,
+            _map_fn,
+            tags_to_ignore=context.tags_to_ignore if context else (),
+            deep=context.deep if context else False,
+        )
+    )
 
 
 class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
@@ -244,6 +248,7 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
         ]
 
     # TODO: add a special decomposition for toffoli
+
 
 _CLIFFORD_T_REQUIRED_GATES = (cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.T)
 _CLIFFORD_T_OPTIONAL_GATES = (cirq.I, cirq.MeasurementGate, cirq.ResetChannel)

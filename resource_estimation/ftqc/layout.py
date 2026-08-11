@@ -39,9 +39,15 @@ class Layout(abc.ABC):
     def __post_init__(self) -> None:
         self.mapped_circuit: cirq.Circuit = cirq.Circuit()
         self.layout_graph: nx.Graph = nx.Graph
-        self._available_t_factories: collections.deque[tuple[cirq.GridQubit, ...]] = collections.deque()
-        self._available_s_factories: collections.deque[tuple[cirq.GridQubit, ...]] = collections.deque()
-        self._available_ccz_factories: collections.deque[tuple[cirq.GridQubit, ...]] = collections.deque()
+        self._available_t_factories: collections.deque[tuple[cirq.GridQubit, ...]] = (
+            collections.deque()
+        )
+        self._available_s_factories: collections.deque[tuple[cirq.GridQubit, ...]] = (
+            collections.deque()
+        )
+        self._available_ccz_factories: collections.deque[tuple[cirq.GridQubit, ...]] = (
+            collections.deque()
+        )
         self._all_factories: set[cirq.GridQubit] = set()
         self._generate()
 
@@ -49,7 +55,8 @@ class Layout(abc.ABC):
         """Apply a given mapping from qubits in the input circuit to GridQubits used for compilation"""
         # Ignoring the type is ok because cirq doesn't recognize the desired type as a subclass of dict[Qid, Qid]
         mapped_circuit = cirq.Circuit(
-            moment.transform_qubits(qubit_map) for moment in self.input_circuit  # type: ignore[arg-type]
+            moment.transform_qubits(qubit_map)
+            for moment in self.input_circuit  # type: ignore[arg-type]
         )
         self.mapped_circuit = mapped_circuit
 
@@ -137,7 +144,9 @@ class Layout(abc.ABC):
             return self._available_ccz_factories
         raise ValueError(f"No factories available with type {ftype}")
 
-    def all_factories(self, ftype: typing.Literal["t", "s", "ccz"]) -> list[tuple[cirq.GridQubit, ...]]:
+    def all_factories(
+        self, ftype: typing.Literal["t", "s", "ccz"]
+    ) -> list[tuple[cirq.GridQubit, ...]]:
         G = self.layout_graph
 
         def is_ftype_factory(node: cirq.GridQubit) -> bool:
@@ -178,7 +187,9 @@ class Layout(abc.ABC):
 
         def movement_heuristic(factory: tuple[cirq.GridQubit, ...]) -> int:
             """Heuristic based on the closest qubit within the factory by Manhattan distance"""
-            return min(abs(f.row - q.row) + abs(f.col - q.col) for q in target_qubits for f in factory)
+            return min(
+                abs(f.row - q.row) + abs(f.col - q.col) for q in target_qubits for f in factory
+            )
 
         def lattice_heuristic(factory: tuple[cirq.GridQubit, ...]) -> int:
             """Heuristic based on the lattice surgery routing distance between the first qubit in the factory and the first qubit in the set of target qubits"""
@@ -210,7 +221,9 @@ class Layout(abc.ABC):
         # TODO: See if there is a way to maximize parallelism, or port over work that already does this maximization
         G = self.layout_graph
 
-        def custom_weight(u: cirq.GridQubit, v: cirq.GridQubit, attr: dict[str, object]) -> int | None:
+        def custom_weight(
+            u: cirq.GridQubit, v: cirq.GridQubit, attr: dict[str, object]
+        ) -> int | None:
             # First condition not covered because Distillation has not been implemented for lattice layouts
             if (
                 G.nodes[v]["patch_type"] == "block" or G.nodes[u]["patch_type"] == "block"

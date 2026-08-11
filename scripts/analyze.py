@@ -207,13 +207,16 @@ def main(args: argparse.Namespace | None = None) -> int:
         # Fault distance limited by 1e-6 at distance 3 for both
         cultivation_fault_distance = 3 if args.error_per_cult >= 2e-7 else 5
         distance = args.code_distance
-        expected_fidelity = float(1 - res.analysis.error_estimate(
-            code_distance=distance,
-            error_per_rz=eps,
-            error_per_cult=args.error_per_cult,
-            num_rz_gates=rz_gates,
-            num_clifford=other_gates,
-        ))
+        expected_fidelity = float(
+            1
+            - res.analysis.error_estimate(
+                code_distance=distance,
+                error_per_rz=eps,
+                error_per_cult=args.error_per_cult,
+                num_rz_gates=rz_gates,
+                num_clifford=other_gates,
+            )
+        )
     else:
         cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance = (
             res.analysis.get_important_information(
@@ -265,16 +268,21 @@ def main(args: argparse.Namespace | None = None) -> int:
 
     t1 = time.time()
     est = res.ftqc.ResourceEstimator(arc=arch)
-    serial_gate_counts = cast(GateCounts, est.serial_circuit_cost(primitive_circuit, pretty=False, verbose=verbose))
+    serial_gate_counts = cast(
+        GateCounts, est.serial_circuit_cost(primitive_circuit, pretty=False, verbose=verbose)
+    )
     serial_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in serial_gate_counts.items()
     }
     total_time_serial = sum(serial_gate_times.values())
-    parallel_gate_counts = cast(GateCounts, est.parallel_circuit_cost(
-        primitive_circuit,
-        pretty=False,
-        verbose=verbose,
-    ), )
+    parallel_gate_counts = cast(
+        GateCounts,
+        est.parallel_circuit_cost(
+            primitive_circuit,
+            pretty=False,
+            verbose=verbose,
+        ),
+    )
     parallel_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in parallel_gate_counts.items()
     }

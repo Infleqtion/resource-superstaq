@@ -118,6 +118,7 @@ def process_cirq_str(
             raise ValueError(f"{g} is not in [H, S, T, W, X, I, Z]")
     return None
 
+
 def cin_cliffs(gate: cirq.Gate) -> bool:
     """
     Helper function for checking Cliffordness

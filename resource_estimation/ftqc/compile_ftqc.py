@@ -187,7 +187,7 @@ def handle_idling(
     layout: Layout,
     with_barriers: bool,
     rounds: int,
-    verbose: int=0,
+    verbose: int = 0,
 ) -> cirq.Circuit:
     """Helper function for the compiler that handles idling. This way we can experiment with different kinds of idling or even turn it off entirely.
     This function is still a work in progress, but it is likely to take the form of various compiler passes.
@@ -195,7 +195,9 @@ def handle_idling(
     # TODO: This pass is a main bottleneck for larger experiments, so make it faster
     # Assemble Qubits that will be subject to Idling
     G = layout.layout_graph
-    logical_qubits: list[cirq.GridQubit] = list(node for node in G.nodes if G.nodes[node]["patch_type"] == "data")
+    logical_qubits: list[cirq.GridQubit] = list(
+        node for node in G.nodes if G.nodes[node]["patch_type"] == "data"
+    )
     t_factories: list[cirq.GridQubit] = list(
         node
         for node in G.nodes
@@ -209,7 +211,9 @@ def handle_idling(
     non_ancillas_candidates: set[cirq.GridQubit] = set(logical_qubits + s_factories + t_factories)
     # Ensures no idling happens on qubits that are not used in the circuit
     # This is a bit faster
-    non_ancillas: set[cirq.Qid] = {q for op in circuit.all_operations() for q in op.qubits if q in non_ancillas_candidates}
+    non_ancillas: set[cirq.Qid] = {
+        q for op in circuit.all_operations() for q in op.qubits if q in non_ancillas_candidates
+    }
 
     # Build circuit where Syndrome Extract is performed on Idling qubits that are not being acted upon
     # Split moments are treated separately because they can always get absorbed into the previous moment

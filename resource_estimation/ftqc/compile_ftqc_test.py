@@ -857,7 +857,9 @@ def test_ssm_moves() -> None:
         lsp.Move(zone="measure").on(c),
     )
     # Aligning left avoids ambiguity
-    output_circuit = cirq.align_left(comp.add_moves(input_circuit, zone_ops=arch_type.zone_ops, alley_ops=arch_type.alley_ops))
+    output_circuit = cirq.align_left(
+        comp.add_moves(input_circuit, zone_ops=arch_type.zone_ops, alley_ops=arch_type.alley_ops)
+    )
     cirq.testing.assert_has_diagram(
         output_circuit,
         str(expected_output_circuit),
@@ -887,7 +889,9 @@ def test_mzo_moves() -> None:
         cirq.MeasurementGate(1, key="").on(c),
         lsp.Move(zone="measure").on(c),
     )
-    output_circuit = comp.add_moves(input_circuit, zone_ops=arch_type.zone_ops, alley_ops=arch_type.alley_ops)
+    output_circuit = comp.add_moves(
+        input_circuit, zone_ops=arch_type.zone_ops, alley_ops=arch_type.alley_ops
+    )
     cirq.testing.assert_has_diagram(
         output_circuit,
         str(expected_output_circuit),
@@ -915,7 +919,9 @@ def test_hm_moves() -> None:
         lsp.Move(zone=None).on(b, a),
         cirq.MeasurementGate(1, key="").on(c),
     )
-    output_circuit = comp.add_moves(input_circuit, zone_ops=arch_type.zone_ops, alley_ops=arch_type.alley_ops)
+    output_circuit = comp.add_moves(
+        input_circuit, zone_ops=arch_type.zone_ops, alley_ops=arch_type.alley_ops
+    )
     cirq.testing.assert_has_diagram(
         output_circuit,
         str(expected_output_circuit),
@@ -952,9 +958,11 @@ def test_replace_cirq_op_distil_ccz(random_circ: cirq.Circuit) -> None:
     distillery_layout = MovementDistillery(random_circ, num_ccz_factories=2, num_t_factories=0)
 
     op_to_replace = cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
-    returned_ops = list(cirq.flatten_to_ops(comp.replace_cirq_op(
-        op=op_to_replace, layout=distillery_layout, transversal_cnot=True
-    )))
+    returned_ops = list(
+        cirq.flatten_to_ops(
+            comp.replace_cirq_op(op=op_to_replace, layout=distillery_layout, transversal_cnot=True)
+        )
+    )
     # We flatten them here to be explicit about the order the operations should be in
     ops_flattened = list(cirq.flatten_to_ops(returned_ops))
     expected_types: list[GateKey] = [

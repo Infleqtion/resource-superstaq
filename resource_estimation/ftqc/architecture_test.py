@@ -34,7 +34,9 @@ def movement_architecture() -> arch.DefaultMovement:
     return arch.DefaultMovement()
 
 
-def test_architecture_exceptions(lattice_architecture: arch.DefaultLattice, movement_architecture: arch.DefaultMovement) -> None:
+def test_architecture_exceptions(
+    lattice_architecture: arch.DefaultLattice, movement_architecture: arch.DefaultMovement
+) -> None:
     with pytest.raises(ValueError, match="Cultivation cost"):
         bad_cult = arch._require_gate_operation(lsp.Cultivate(1).on(cirq.GridQubit(0, 0)))
         _ = lattice_architecture.cultivate_cost(bad_cult)
@@ -337,7 +339,9 @@ def test_lattice_gate_costs(d: int) -> None:
         assert expectation == cost
 
 
-def test_self_returns(movement_architecture: arch.DefaultMovement, lattice_architecture: arch.DefaultLattice) -> None:
+def test_self_returns(
+    movement_architecture: arch.DefaultMovement, lattice_architecture: arch.DefaultLattice
+) -> None:
     # TODO: There are no self-returns anymore so this function is not well named
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     ops_and_expectations = [
@@ -493,7 +497,9 @@ def test_lattice_moment_costs(lattice_architecture: arch.DefaultLattice) -> None
         _ = lattice_architecture.gate_cost(cirq.Rx(rads=7).on(cirq.GridQubit(0, 0)))
 
 
-def test_timing(movement_architecture: arch.DefaultMovement, lattice_architecture: arch.DefaultLattice) -> None:
+def test_timing(
+    movement_architecture: arch.DefaultMovement, lattice_architecture: arch.DefaultLattice
+) -> None:
     # This test should break first when we introduce real gate times
     gates_with_time = [
         (cirq.PhasedXZGate, 5.0),
@@ -551,9 +557,7 @@ def test_dual_species_with_movement() -> None:
     assert hm._cnot_cost == mv._cnot_cost
     assert hm._measure_cost == ls._measure_cost
     op = lsp.SyndromeExtract(1, rounds=1).on(cirq.GridQubit(0, 0))
-    assert (
-        hm.syndrome_extract_cost(op).moment_cost == ls.syndrome_extract_cost(op).moment_cost
-    )
+    assert hm.syndrome_extract_cost(op).moment_cost == ls.syndrome_extract_cost(op).moment_cost
     assert hm.syndrome_extract_cost(op).gate_cost == ls.syndrome_extract_cost(op).gate_cost
 
     hm_folded = arch.DualSpeciesMovement(
@@ -726,7 +730,9 @@ def test_y_cult_on_movement() -> None:
     assert cost3.op_time < cost2.op_time < cost1.op_time
 
 
-def test_distillation_cases(lattice_architecture: arch.DefaultLattice, movement_architecture: arch.DefaultMovement) -> None:
+def test_distillation_cases(
+    lattice_architecture: arch.DefaultLattice, movement_architecture: arch.DefaultMovement
+) -> None:
     # Confirm that distil is only available to movement archs
     with pytest.raises(NotImplementedError, match="movement architectures only"):
         _ = lattice_architecture._distil_cost(resource="T")
@@ -734,7 +740,7 @@ def test_distillation_cases(lattice_architecture: arch.DefaultLattice, movement_
 
     # Confirm distillation cost errors for invalid resource
     with pytest.raises(ValueError, match="Unknown distillation resource"):
-        _ = movement_architecture._distil_cost("Toffoli") # type: ignore[arg-type]
+        _ = movement_architecture._distil_cost("Toffoli")  # type: ignore[arg-type]
 
     # Make sure that distillation repetition parameter behaves as expected
     distil_once = arch.DefaultMovement(distillation_repetition=1)

@@ -40,6 +40,7 @@ STR2GATE: dict[str, GateKey] = {
     "CCZ": cirq.CCZ,
 }
 
+
 def count_stim_resources(
     stim_circuit: stim.Circuit,
 ) -> CountsDict:
