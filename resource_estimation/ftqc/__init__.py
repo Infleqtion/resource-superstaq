@@ -20,6 +20,7 @@ from resource_estimation.ftqc.architecture import (
     Superconductor,
     convert_globals_to_phasedxz,
 )
+from resource_estimation.ftqc.codepatch import CodePatch, LogicalQubit
 from resource_estimation.ftqc.compile_ftqc import (
     add_moves,
     ft_compile,
@@ -37,12 +38,10 @@ from resource_estimation.ftqc.estimate import (
 )
 from resource_estimation.ftqc.lattice_surgery_primitives import (
     BufferCodePatch,
-    CodePatch,
     Cultivate,
     EndpointPatch,
     ErrorCorrect,
     IntermediatePatch,
-    LogicalQubit,
     Merge,
     Move,
     RotatedCodePatch,

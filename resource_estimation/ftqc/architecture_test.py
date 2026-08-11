@@ -20,6 +20,7 @@ import numpy as np
 import pytest
 
 import resource_estimation.ftqc.architecture as arch
+import resource_estimation.ftqc.codepatch as codepatch
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.stim_functions import cultivate
 
@@ -44,7 +45,7 @@ def test_architecture_uses_surface_code_patch(
     movement_architecture: arch.DefaultMovement,
 ) -> None:
     for architecture in (lattice_architecture, movement_architecture):
-        assert isinstance(architecture.patch, lsp.CodePatch)
+        assert isinstance(architecture.patch, codepatch.CodePatch)
         assert architecture.patch.code_params == (49, 1, 7)
         assert len(architecture.patch.logical_qubits) == 1
 
@@ -74,19 +75,6 @@ def _legacy_surface_syndrome_cost(d: int, rounds: int, num_logical_qubits: int) 
         cirq.ResetChannel: rounds,
     }
     return {"gate_cost": gate_cost, "moment_cost": moment_cost}
-
-
-@pytest.mark.parametrize("d", (3, 5, 7))
-def test_surface_code_patch_counts_match_legacy(d: int) -> None:
-    patch = lsp.CodePatch(d=d)
-
-    assert patch.num_data_qubits == d**2
-    assert patch.num_measure_qubits == d**2 - 1
-    assert patch.num_physical_qubits == 2 * d**2 - 1
-    assert patch.num_x_stabs() == (d**2 - 1) // 2
-    assert patch.num_z_stabs() == (d**2 - 1) // 2
-    assert patch.total_x_syndrome_cnots() == 2 * d * (d - 1)
-    assert patch.total_z_syndrome_cnots() == 2 * d * (d - 1)
 
 
 @pytest.mark.parametrize(

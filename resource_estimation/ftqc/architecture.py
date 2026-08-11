@@ -24,6 +24,7 @@ import cirq
 import cirq_superstaq as css
 import numpy as np
 
+import resource_estimation.ftqc.codepatch as codepatch
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.compile_ftqc import add_moves
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
@@ -113,7 +114,7 @@ def _merge_cost(
 def _syndrome_extract_cost(
     rounds: int,
     num_logical_qubits: int,
-    patch: lsp.CodePatch,
+    patch: codepatch.CodePatch,
 ) -> dict[str, dict[cirq.Gate, int]]:
     """Calculates the cost of syndrome extraction in terms of physical gates"""
     # This is how SE should look...
@@ -189,7 +190,7 @@ class Architecture(abc.ABC):
         self.movement = movement
         self.d = d
         assert (d - 1) % 2 == 0, "CodePatches must be odd distance"
-        self.patch = lsp.CodePatch(d=self.d)
+        self.patch = codepatch.CodePatch(d=self.d)
         self.cultivation_repetition = cultivation_repetition
         self.cultivation_fault_distance = cultivation_fault_distance
         self.syndrome_rounds = syndrome_rounds
