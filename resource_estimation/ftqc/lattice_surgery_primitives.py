@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import typing
 from functools import cached_property
-import typing
 
 import cirq
 
