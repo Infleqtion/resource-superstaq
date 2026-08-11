@@ -1,0 +1,5 @@
+myst-parser
+nbsphinx
+nbsphinx-link
+sphinx~=8.2
+sphinx-rtd-theme
