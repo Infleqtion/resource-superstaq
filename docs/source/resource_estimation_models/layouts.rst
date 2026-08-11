@@ -30,18 +30,6 @@ Every layout produces:
    A NetworkX graph containing data, ancilla, factory, and supporting block
    nodes.
 
-Layouts also track which factories are available. During compilation, a
-factory can be selected using a routing-distance or Manhattan-distance
-heuristic and then marked as used. Factories can be reloaded when another
-round of magic states becomes available.
-
-For lattice-style layouts, CNOT routing uses the shortest path through the
-layout graph. The route must pass through at least one ancilla patch and cannot
-use unrelated data or factory patches as intermediate routing space.
-
-The current routing method processes operations independently. It does not
-optimize multiple simultaneous CNOT routes for global parallelism.
-
 Available layouts
 -----------------
 
@@ -74,30 +62,6 @@ Available layouts
      - Nearest-neighbor graph
      - Derived from layout boundary
      - Interleaved ancilla paths
-
-Typical pairings
-----------------
-
-Movement-based architecture models generally use ``MovementLayout``:
-
-* ``DefaultMovement``
-* ``DualSpeciesMovement``
-* ``MeasureZonesOnly``
-
-Lattice-surgery architecture models generally use one of the lattice layouts:
-
-* ``DefaultLattice``
-* ``Superconductor``
-
-with:
-
-* ``Column``
-* ``FactorySandwich``
-* ``Embedded``
-
-These are intended pairings based on the primitives and routing behavior in
-the current implementation. The code does not provide a comprehensive
-architecture-layout compatibility validator.
 
 MovementLayout
 --------------
@@ -145,17 +109,13 @@ Its repeating structure is:
 
 where:
 
-``q``
-   Data patch.
+``q`` = Data patch
 
-``a``
-   Ancilla patch.
+``a`` = Ancilla patch
 
-``S``
-   S-state factory.
+``S`` = S-state factory
 
-``T``
-   T-state factory.
+``T`` = T-state factory
 
 For ``n`` input-circuit qubits, the implementation creates
 ``2 * ceil(n / 2)`` factories of each type. If the circuit contains an odd
@@ -169,8 +129,6 @@ through the shortest valid ancilla path.
    layout = res.ftqc.Column(
        input_circuit=clifford_t_circuit,
    )
-
-.. autoclass:: resource_estimation.ftqc.Column
 
 FactorySandwich
 ---------------
@@ -204,8 +162,6 @@ access are routed through the two ancilla rows.
        num_s_factories=2,
        num_t_factories=4,
    )
-
-.. autoclass:: resource_estimation.ftqc.FactorySandwich
 
 Embedded
 --------
