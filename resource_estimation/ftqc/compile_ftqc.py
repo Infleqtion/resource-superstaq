@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import collections
 import copy
 import functools
 import itertools
@@ -22,15 +21,15 @@ import sys
 import time
 from math import pi
 from typing import TYPE_CHECKING, cast
-from warnings import warn
 
 import cirq
 import cirq_superstaq as css
 import tqdm
 
 if TYPE_CHECKING:
+    from typing import Iterator, Literal, Sequence
+
     from resource_estimation.ftqc.architecture import Architecture
-    from typing import Sequence, Iterator, Literal
 from . import lattice_surgery_primitives as lsp
 from .layout import Layout, MovementDistillery
 
@@ -91,7 +90,7 @@ def replace_cirq_op(
     op: cirq.Operation,
     layout: Layout,
     transversal_cnot: bool,
-) -> cirq.OP_TREE:
+) -> list[cirq.Operation | cirq.Moment]:
     """Replacement logic similar to decomposition for cirq operations to be converted to primitives.
 
     op: cirq operation to be unrolled
@@ -393,9 +392,8 @@ def ft_compile(
     arc: Architecture,
     verbose: int = 1,
     with_barriers: bool = False,
-    num_threads: int = 1,
     skip_validation: bool = False,
-) -> cirq.Circuit | tuple[list[list[cirq.Operation]], cirq.Circuit]:
+) -> cirq.Circuit:
     """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T + CCZ gateset to a cirq circuit of primitives.
     The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
     The architecture input contains information about what primtives are accessible to the compiler and which extra passes should be added to the primitive circuit.
@@ -416,8 +414,6 @@ def ft_compile(
         validate_ops(circuit, verbose=verbose)
 
     circuit = _decompose_to_primitives(circuit, layout=layout, arc=arc)
-    if verbose > 1:
-        verbose_list = [list(moment.operations) for moment in circuit.moments]
 
     # Handling State Prep
     # In a more optimized world this could happen the moment before the first logical operation
@@ -437,24 +433,13 @@ def ft_compile(
         )
 
     if arc.idling:
-        if num_threads == 1:
-            circuit = handle_idling(
-                circuit=circuit,
-                layout=layout,
-                with_barriers=with_barriers,
-                rounds=arc.rounds,
-                verbose=verbose,
-            )
-        else:  # pragma: no cover
-            warn("Parallelization is untested. Use at your own peril")
-            from resource_estimation.ftqc.compile_ftqc_parallel import handle_idling_parallel
-
-            circuit = handle_idling_parallel(
-                circuit=circuit,
-                layout=layout,
-                rounds=arc.rounds,
-                num_threads=num_threads,
-            )
+        circuit = handle_idling(
+            circuit=circuit,
+            layout=layout,
+            with_barriers=with_barriers,
+            rounds=arc.rounds,
+            verbose=verbose,
+        )
 
     if arc.zone_ops.gates or arc.alley_ops.gates:
         circuit = add_moves(
@@ -463,8 +448,5 @@ def ft_compile(
             zone_ops=arc.zone_ops,
             alley_ops=arc.alley_ops,
         )
-
-    if verbose > 1:
-        return (verbose_list, circuit)
 
     return circuit

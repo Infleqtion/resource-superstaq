@@ -16,16 +16,12 @@ from __future__ import annotations
 import abc
 import collections
 from copy import copy
-from dataclasses import dataclass
-import json
 from functools import cached_property, lru_cache
 from math import ceil
-from pathlib import Path
+from typing import Callable, Literal, cast
 
 import cirq
-import cirq_superstaq as css
 import numpy as np
-from typing import Literal, Callable, cast, TYPE_CHECKING
 
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.compile_ftqc import add_moves
@@ -33,8 +29,7 @@ from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.stim_functions import cultivate
 
-from .cost_types import GateCounts, CostDict, GateKey
-
+from .cost_types import CostDict, GateCounts, GateKey, _require_gate_operation
 
 NEUTRAL_GATES: dict[GateKey, float] = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.CZ: 0.27,
@@ -176,11 +171,6 @@ def _split_cost(smooth: bool, d: int) -> CostDict:
         }
     return CostDict(gate_cost=gate_cost, moment_cost={}, op_time=-1)
 
-def _require_gate_operation(op: cirq.Operation) -> cirq.GateOperation:
-    if not isinstance(op, cirq.GateOperation):
-        raise TypeError(f"Expected GateOperation, got {type(op).__name__}")
-    return op
-
 
 class Architecture(abc.ABC):
     """Class for representing device architectures.
@@ -196,7 +186,7 @@ class Architecture(abc.ABC):
         movement: bool,
         d: int = 7,
         cultivation_repetition: int = 1,
-        cultivation_fault_distance: int = 3,
+        cultivation_fault_distance: Literal[3, 5] = 3,
         syndrome_rounds: int | None = None,
         fold_cultiv: bool = False,
     ) -> None:
@@ -206,7 +196,7 @@ class Architecture(abc.ABC):
         self.d: int = d
         self.patch: lsp.RotatedCodePatch = lsp.RotatedCodePatch(self.d)
         self.cultivation_repetition: int = cultivation_repetition
-        self.cultivation_fault_distance: int = cultivation_fault_distance
+        self.cultivation_fault_distance: Literal[3, 5] = cultivation_fault_distance
         self.syndrome_rounds: int | None = syndrome_rounds
         self.fold_cultiv: bool = fold_cultiv
 
@@ -420,7 +410,7 @@ class DefaultLattice(Architecture):
         post_op_correction: bool = True,
         d: int = 7,
         cultivation_repetition: int = 1,
-        cultivation_fault_distance: int = 3,
+        cultivation_fault_distance: Literal[3, 5] = 3,
         syndrome_rounds: int | None = None,
     ) -> None:
         super().__init__(
@@ -536,7 +526,7 @@ class DefaultMovement(Architecture):
         fold_cultiv: bool = False,
         cultivation_repetition: int = 1,
         distillation_repetition: int = 1,
-        cultivation_fault_distance: int = 3,
+        cultivation_fault_distance: Literal[3, 5] = 3,
         syndrome_rounds: int | None = 1,
     ) -> None:
         super().__init__(
@@ -915,7 +905,7 @@ class Superconductor(DefaultLattice):
         post_op_correction: bool = True,
         d: int = 7,
         cultivation_repetition: int = 1,
-        cultivation_fault_distance: int = 3,
+        cultivation_fault_distance: Literal[3, 5] = 3,
         syndrome_rounds: int | None = None,
     ) -> None:
         super().__init__(

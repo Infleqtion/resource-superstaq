@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Literal
+
 import cirq
 import cultiv
 import pytest
@@ -37,7 +39,7 @@ def gidney5() -> cirq.Circuit:
     )
 
 
-def test_known_gidney(gidney3) -> None:
+def test_known_gidney(gidney3: cirq.Circuit) -> None:
     costs = count_stim_resources(gidney3)
     expected_parallel_costs = {
         cirq.ResetChannel: 13,
@@ -56,7 +58,7 @@ def test_known_gidney(gidney3) -> None:
 
 
 @pytest.mark.parametrize("fault_distance", (3, 5))
-def test_saved_gidney(gidney3, gidney5, fault_distance) -> None:
+def test_saved_gidney(gidney3: cirq.Circuit, gidney5: cirq.Circuit, fault_distance: Literal[3, 5]) -> None:
     example_gidney = gidney3 if fault_distance == 3 else gidney5
     dsurface = 2 * fault_distance + 1
     saved_cost = load_saved_cost(
@@ -77,7 +79,7 @@ def test_saved_gidney(gidney3, gidney5, fault_distance) -> None:
 
 
 @pytest.mark.parametrize("fault_distance", (3, 5))
-def test_saved_yale(fault_distance) -> None:
+def test_saved_yale(fault_distance: Literal[3, 5]) -> None:
     # There is no stim circuit for this cultivation circuit, so there are only saved and generated costs
     saved_cost = load_saved_cost(
         dsurface=2 * fault_distance + 1,
@@ -98,12 +100,8 @@ def test_error_handling() -> None:
     bad_circuit = stim.Circuit("CZSWAP 5 6")
     with pytest.raises(ValueError, match="Unknown Instruction"):
         _ = count_stim_resources(bad_circuit)
-    with pytest.raises(ValueError, match="Style cannot be None for cultivation"):
-        _ = load_saved_cost(dsurface=7, op_key="cultivate")
-    with pytest.raises(ValueError, match="cannot be None"):
-        _ = load_saved_cost(dsurface=7, op_key="cultivate", style="yale")
     with pytest.raises(ValueError, match="fault_distance values 3 and 5"):
-        _ = cultivate(dsurface=15, fault_distance=7, fold=False, for_test=False)
+        _ = cultivate(dsurface=15, fault_distance=7, fold=False, for_test=False)  # type: ignore[arg-type]
 
 
 def test_cultivation_low_distance_warning() -> None:

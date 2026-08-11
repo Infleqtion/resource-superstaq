@@ -13,22 +13,10 @@
 # limitations under the License.
 from __future__ import annotations
 
-import itertools
-
-import cirq
-import matplotlib.animation as animation
-import matplotlib.pyplot as plt
-import networkx as nx
-
 from typing import TYPE_CHECKING, LiteralString
 
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-
-from .ftqc.layout import Layout
-
 if TYPE_CHECKING:
-    import numpy as np
-    import numpy.typing as npt
+    pass
 
 
 # def visualize_layout_moment(

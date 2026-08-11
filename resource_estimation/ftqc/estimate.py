@@ -17,7 +17,7 @@ import collections
 import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, TypeVar, Generic
+from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar
 
 import cirq
 import networkx as nx
@@ -25,8 +25,9 @@ from tqdm import tqdm
 
 if TYPE_CHECKING:
     from resource_estimation.ftqc.architecture import Architecture
-    from .cost_types import GateCounts, StrCounts, GateKey
 
+    from .cost_types import GateCounts, GateKey, StrCounts
+from .cost_types import _require_gate_operation
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -201,7 +202,7 @@ class ReactionDepthEstimator:
 
     def __init__(
         self,
-        factories: dict[cirq.Gate, bool] | None = None,
+        factories: dict[GateKey, bool] | None = None,
         factory_reaction_dynamics: Mapping[
             tuple[cirq.Gate, bool],
             Sequence[ReactionDynamics[cirq.LineQubit]],
@@ -228,7 +229,7 @@ class ReactionDepthEstimator:
         local_x: cirq.PauliString[cirq.LineQubit] = cirq.PauliString(cirq.X(local_qubits[0]))
         local_z: tuple[cirq.PauliString[cirq.LineQubit], ...] = tuple(cirq.PauliString(cirq.Z(qubit)) for qubit in local_qubits)
         self._factory_reaction_dynamics: dict[
-            tuple[cirq.Gate, bool], tuple[ReactionDynamics[cirq.LineQubit], ...]
+            tuple[GateKey, bool], tuple[ReactionDynamics[cirq.LineQubit], ...]
         ] = {
             (cirq.T, True): (ReactionDynamics((local_z[0],), (local_z[0],)),),
             (cirq.T, False): (ReactionDynamics((local_x, local_z[0]), (local_x, local_z[0])),),
@@ -360,6 +361,7 @@ class ReactionDepthEstimator:
         return reaction_tree
 
     def _factory_dynamics(self, operation: cirq.Operation) -> tuple[ReactionDynamics[cirq.Qid], ...] | None:
+        operation = _require_gate_operation(operation)
         if operation.gate not in self.factories:
             if not cirq.has_stabilizer_effect(operation.gate):
                 raise ValueError(self._NON_CLIFFORD_ERROR.format(operation=operation))

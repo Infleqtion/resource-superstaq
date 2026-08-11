@@ -23,6 +23,7 @@ from math import ceil, sqrt
 import cirq
 import networkx as nx
 import numpy as np
+import numpy.typing as npt
 
 
 @dataclass
@@ -38,16 +39,17 @@ class Layout(abc.ABC):
     def __post_init__(self) -> None:
         self.mapped_circuit: cirq.Circuit = cirq.Circuit()
         self.layout_graph: nx.Graph = nx.Graph
-        self._available_t_factories: collections.deque = collections.deque()
-        self._available_s_factories: collections.deque = collections.deque()
-        self._available_ccz_factories: collections.deque = collections.deque()
-        self._all_factories: set = set()
+        self._available_t_factories: collections.deque[tuple[cirq.GridQubit, ...]] = collections.deque()
+        self._available_s_factories: collections.deque[tuple[cirq.GridQubit, ...]] = collections.deque()
+        self._available_ccz_factories: collections.deque[tuple[cirq.GridQubit, ...]] = collections.deque()
+        self._all_factories: set[cirq.GridQubit] = set()
         self._generate()
 
     def set_map_circuit(self, qubit_map: dict[cirq.Qid, cirq.GridQubit]) -> None:
         """Apply a given mapping from qubits in the input circuit to GridQubits used for compilation"""
+        # Ignoring the type is ok because cirq doesn't recognize the desired type as a subclass of dict[Qid, Qid]
         mapped_circuit = cirq.Circuit(
-            moment.transform_qubits(qubit_map) for moment in self.input_circuit
+            moment.transform_qubits(qubit_map) for moment in self.input_circuit  # type: ignore[arg-type]
         )
         self.mapped_circuit = mapped_circuit
 
@@ -135,17 +137,17 @@ class Layout(abc.ABC):
             return self._available_ccz_factories
         raise ValueError(f"No factories available with type {ftype}")
 
-    def all_factories(self, ftype: typing.Literal["t", "s", "ccz"]):
+    def all_factories(self, ftype: typing.Literal["t", "s", "ccz"]) -> list[tuple[cirq.GridQubit, ...]]:
         G = self.layout_graph
 
-        def is_ftype_factory(node):
+        def is_ftype_factory(node: cirq.GridQubit) -> bool:
             return "ftype" in G.nodes[node] and G.nodes[node]["ftype"] == ftype
 
         unique_fids = np.unique(
             [G.nodes[node]["fid"] for node in G.nodes if is_ftype_factory(node)]
         )
 
-        def has_fid(node, fid):
+        def has_fid(node: cirq.GridQubit, fid: int) -> bool:
             return "fid" in G.nodes[node] and G.nodes[node]["fid"] == fid
 
         return [
@@ -166,19 +168,21 @@ class Layout(abc.ABC):
         """Finds the closest factory of desired type according to the Manhattan distance using the GridQubit indices of the factory qubits that do not have the `used` status
         Removes the returned factory from the available options and sets its status to `used`
         """
-        single_qubit = isinstance(qubits, cirq.GridQubit)
-        qubits = (qubits,) if single_qubit else qubits
+        target_qubits: tuple[cirq.GridQubit, ...] = (
+            (qubits,) if isinstance(qubits, cirq.GridQubit) else qubits
+        )
+
         available_factories = self.available_factories(ftype=ftype)
         if not available_factories:
             raise ValueError(f"No {ftype} factories available!")
 
-        def movement_heuristic(factory):
+        def movement_heuristic(factory: tuple[cirq.GridQubit, ...]) -> int:
             """Heuristic based on the closest qubit within the factory by Manhattan distance"""
-            return min(abs(f.row - q.row) + abs(f.col - q.col) for q in qubits for f in factory)
+            return min(abs(f.row - q.row) + abs(f.col - q.col) for q in target_qubits for f in factory)
 
-        def lattice_heuristic(factory):
+        def lattice_heuristic(factory: tuple[cirq.GridQubit, ...]) -> int:
             """Heuristic based on the lattice surgery routing distance between the first qubit in the factory and the first qubit in the set of target qubits"""
-            return len(self.route_cnot(factory[0], qubits[0]))
+            return len(self.route_cnot(factory[0], target_qubits[0]))
 
         factories = self.available_factories(ftype=ftype)
         try:
@@ -196,7 +200,6 @@ class Layout(abc.ABC):
             self._available_t_factories = available_factories
         else:
             self._available_ccz_factories = available_factories
-        closest_factory = closest_factory[0] if single_qubit else closest_factory
         return closest_factory
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit) -> list[cirq.GridQubit]:
@@ -207,7 +210,7 @@ class Layout(abc.ABC):
         # TODO: See if there is a way to maximize parallelism, or port over work that already does this maximization
         G = self.layout_graph
 
-        def custom_weight(u: cirq.GridQubit, v: cirq.GridQubit, attr: dict) -> int | None:
+        def custom_weight(u: cirq.GridQubit, v: cirq.GridQubit, attr: dict[str, object]) -> int | None:
             # First condition not covered because Distillation has not been implemented for lattice layouts
             if (
                 G.nodes[v]["patch_type"] == "block" or G.nodes[u]["patch_type"] == "block"
@@ -268,7 +271,7 @@ class MovementLayout(Layout):
             num_s_factories=0,
         )
 
-    def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit):
+    def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit) -> list[cirq.GridQubit]:
         raise NotImplementedError
 
 
@@ -436,17 +439,19 @@ class Embedded(Layout):
         stage1 = np.array([col for col in stage1.T if not all(col == 0)]).T
 
         # Add ancilla space between logical qubits
-        stage2 = [[0] * stage1.shape[1]]
+        stage2_rows: list[list[int]] = [[0] * stage1.shape[1]]
         for row in stage1:
-            stage2.append(row.tolist())
-            stage2.append([0] * len(row))
-        stage2 = np.array(stage2)
+            stage2_rows.append(row.tolist())
+            stage2_rows.append([0] * len(row))
 
-        stage3 = [[0] * stage2.shape[0]]
+        stage2: npt.NDArray[np.int_] = np.array(stage2_rows)
+
+        stage3_cols: list[list[int]] = [[0] * stage2.shape[0]]
         for col in stage2.T:
-            stage3.append(col.tolist())
-            stage3.append([0] * len(col))
-        stage3 = np.array(stage3).T
+            stage3_cols.append(col.tolist())
+            stage3_cols.append([0] * len(col))
+
+        stage3: npt.NDArray[np.int_] = np.array(stage3_cols).T
 
         # Wrap the resulting array in factory qubits
         factory_row = np.array([2 if i % 2 else 3 for i in range(stage3.shape[1])])
@@ -613,7 +618,7 @@ class MovementDistillery(MovementLayout):
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
 
-    def distillation_block(self, factory: tuple[cirq.GridQubit]) -> list[cirq.GridQubit]:
+    def distillation_block(self, factory: tuple[cirq.GridQubit, ...]) -> list[cirq.GridQubit]:
         G = self.layout_graph
         fid = G.nodes[factory[0]]["fid"]
         block_qubits = [

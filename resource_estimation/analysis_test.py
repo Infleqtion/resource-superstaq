@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
+from pathlib import Path
 
 import cirq
 import numpy as np
@@ -35,7 +36,7 @@ def report() -> analysis.Report:
 
 
 @pytest.fixture
-def populated_report(report):
+def populated_report(report: analysis.Report) -> analysis.Report:
     report.load_time = 1.0
     report.rz_width = 10
     report.rz_depth = 10
@@ -81,7 +82,7 @@ def test_get_eps() -> None:
     assert other_gates == 0
 
 
-def test_save_and_load_round_trip(report, tmp_path) -> None:
+def test_save_and_load_round_trip(report: analysis.Report, tmp_path: Path) -> None:
     filepath = report.save(tmp_path)
 
     assert filepath.exists()
@@ -91,7 +92,7 @@ def test_save_and_load_round_trip(report, tmp_path) -> None:
     assert loaded_report.info_dict == report.info_dict
 
 
-def test_save_increments_filename(report, tmp_path) -> None:
+def test_save_increments_filename(report: analysis.Report, tmp_path: Path) -> None:
     filepath1 = report.save(tmp_path)
     filepath2 = report.save(tmp_path)
 
@@ -101,7 +102,7 @@ def test_save_increments_filename(report, tmp_path) -> None:
     assert filepath2.name == "re_dummy_file-99-ssm-10-1_1.json"
 
 
-def test_arch(report) -> None:
+def test_arch(report: analysis.Report) -> None:
     architecture = report.arch
     assert isinstance(architecture, arc.DefaultMovement)
     assert architecture.fold_cultiv
@@ -113,7 +114,7 @@ def test_arch(report) -> None:
     assert not architecture.fold_cultiv
 
 
-def test_report_contains_expected_sections(populated_report) -> None:
+def test_report_contains_expected_sections(populated_report: analysis.Report) -> None:
     report_str = populated_report.report()
 
     assert "Inputs" in report_str
@@ -126,7 +127,7 @@ def test_report_contains_expected_sections(populated_report) -> None:
     assert "1.00e+01" in report_str
 
 
-def test_line_dict(report) -> None:
+def test_line_dict(report: analysis.Report) -> None:
     info_dict = {
         "key1": (10, 1.0),
         "key2": (100, 2.0),
@@ -167,7 +168,7 @@ def test_break_up_ops() -> None:
 
 
 @pytest.mark.parametrize("fold_cultiv", (True, False))
-def test_get_important_information_t_paths(fold_cultiv) -> None:
+def test_get_important_information_t_paths(fold_cultiv: bool) -> None:
     q = cirq.LineQubit(0)
     circuit = cirq.Circuit(
         cirq.T.on(q),

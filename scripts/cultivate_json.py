@@ -14,13 +14,15 @@
 import json
 import os
 import sys
-import typing
 from pathlib import Path
 
-import cirq
 import cultiv
 import tqdm
 
+from resource_estimation.ftqc.cost_types import (
+    CountsDict,
+    StrCounts,
+)
 from resource_estimation.ftqc.stim_functions import STR2GATE, count_stim_resources
 
 parent_dir = Path(__file__).parent.parent
@@ -30,14 +32,14 @@ GATE2STR = {v: k for k, v in STR2GATE.items()}
 
 
 def format_cost_dict(
-    cost_dict: dict[typing.Literal["serial", "parallel"], dict[cirq.Gate, int]],
-) -> dict[typing.Literal["serial", "parallel"], dict[str, int]]:
+    cost_dict: CountsDict,
+) -> dict[str, StrCounts]:
     """
     Converts cost dictionaries from `count_stim_resources` from cirq gate to string format
     """
     reformatted = {
-        "serial": {GATE2STR[k]: v for k, v in cost_dict["serial"].items()},
-        "parallel": {GATE2STR[k]: v for k, v in cost_dict["parallel"].items()},
+        "serial": {GATE2STR[k]: v for k, v in cost_dict.serial.items()},
+        "parallel": {GATE2STR[k]: v for k, v in cost_dict.parallel.items()},
     }
     return reformatted
 

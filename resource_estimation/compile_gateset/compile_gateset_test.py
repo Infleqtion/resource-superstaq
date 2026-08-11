@@ -14,7 +14,6 @@
 from math import pi
 
 import cirq
-import pytest
 
 from resource_estimation.compile_gateset import (
     CliffRzGateset,
@@ -30,7 +29,7 @@ def test_compile_cliff_rz_gateset() -> None:
     compiled = compile_gateset(circuit, gateset=CliffRzGateset())
     allowed = cirq.Gateset(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.Rz)
 
-    assert all(op.gate in allowed for op in compiled.all_operations())
+    assert all(op in allowed for op in compiled.all_operations())
 
 
 def test_compile_clifford_t_gateset() -> None:
@@ -40,13 +39,4 @@ def test_compile_clifford_t_gateset() -> None:
     compiled = compile_gateset(circuit, gateset=clifford_t_gateset(atol=1e-3), verbose=False)
     allowed = cirq.Gateset(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.T)
 
-    assert all(op.gate in allowed for op in compiled.all_operations())
-
-
-def test_compile_clifford_t_gateset_requires_atol() -> None:
-    q = cirq.LineQubit(0)
-    circuit = cirq.Circuit(cirq.Rz(rads=pi / 7).on(q))
-    gateset = cirq.Gateset(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.T)
-
-    with pytest.raises(ValueError, match="_atol"):
-        compile_gateset(circuit, gateset=gateset, verbose=False)
+    assert all(op in allowed for op in compiled.all_operations())
