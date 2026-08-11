@@ -141,6 +141,7 @@ docstring-code-format = true
 [tool.ruff.lint.per-file-ignores]
 "*.ipynb" = ["D101", "D102", "D103", "E501", "ERA001", "T201"]
 "*test.py" = ["D101", "D102", "D103"]
+"docs/source/conf.py" = ["A001"]   
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
