@@ -343,13 +343,13 @@ def add_moves(
 
     if layout.inplace_cnot and layout.interaction_zones:
         raise ValueError("Invalid configuration: inplace entanglement & interaction zones")
-    interaction_cycle = itertools.cycle(layout.zone_qubits('interact'))
-    measurement_cycle = itertools.cycle(layout.zone_qubits('measure'))
+    interaction_cycle = itertools.cycle(layout.zone_qubits("interact"))
+    measurement_cycle = itertools.cycle(layout.zone_qubits("measure"))
     ops_to_replace = [cirq.CNOT]
     if layout.measure_zones:
         ops_to_replace.append(cirq.MeasurementGate)
     ops_to_replace = cirq.Gateset(*ops_to_replace)
-    
+
     def map_func(op, moment_idx):
         if verbose:
             knock_off_tqdm(
@@ -375,8 +375,8 @@ def add_moves(
                     css.MovementGate({0: 1}).on(ctrl, zone_qubit),
                     css.MovementGate({0: 1}).on(trgt, zone_qubit),
                     op,
-                    css.MovementGate({1: 0}).on(trgt, zone_qubit),     
-                    css.MovementGate({1: 0}).on(ctrl, zone_qubit),        
+                    css.MovementGate({1: 0}).on(trgt, zone_qubit),
+                    css.MovementGate({1: 0}).on(ctrl, zone_qubit),
                 ]
             elif layout.measure_zones and cirq.is_measurement(op):
                 q = op.qubits[0]  # There should really only be one qubit
@@ -384,12 +384,13 @@ def add_moves(
                 op_sequece = [
                     css.MovementGate({0: 1}).on(q, zone_qubit),
                     op,
-                    css.MovementGate({1: 0}).on(q, zone_qubit),                
+                    css.MovementGate({1: 0}).on(q, zone_qubit),
                 ]
             else:
                 raise ValueError(f"Unexpected gate found: {op.gate}")
             for op in op_sequece:
                 yield op
+
     return cirq.map_operations_and_unroll(circuit, map_func, raise_if_add_qubits=False)
 
 
@@ -408,7 +409,9 @@ def ft_compile(
     The architecture is also the source of information for how many rounds of syndrome extraction should be performed when syndrome extraction is called for.
     """
 
-    if arc.zone_ops and not (hasattr(layout, 'measure_zones') or hasattr(layout, 'interaction_zones')):
+    if arc.zone_ops and not (
+        hasattr(layout, "measure_zones") or hasattr(layout, "interaction_zones")
+    ):
         raise ValueError("Architecture has zone operations, but Layout does not have any zones")
     # TODO: Aligning left results in circuits that have are more expensive in terms of circuit time than not aligning left. This is probably the result of requesting a layer of parallel cultivations but realigning so the expensive cultivation operations become spread out over multiple moments. It is currently unclear if aligning left is correct or not in general, but the specific tests for ft_compile very much rely on it...
     layout = copy.deepcopy(layout)

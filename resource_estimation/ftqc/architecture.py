@@ -172,13 +172,14 @@ def _split_cost(smooth: bool, d: int) -> dict[str, dict[cirq.Gate, int]]:
     moment_cost = {}
     return {"gate_cost": gate_cost, "moment_cost": moment_cost}
 
+
 def _move_time(l: int, a: float = 5500):
     """
     l: physical distance in microns
     a: acceleration for constant acceleration profile in  m/s^2
     """
     l *= 10**6  # convert microns to meters
-    return 2*np.sqrt(l / a)
+    return 2 * np.sqrt(l / a)
 
 
 class Architecture(abc.ABC):
@@ -710,7 +711,9 @@ class DefaultMovement(Architecture):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
-    def move_cost(self, op, layout) -> dict[str, dict[type[cirq.QubitPermutationGate], int] | float]:
+    def move_cost(
+        self, op, layout
+    ) -> dict[str, dict[type[cirq.QubitPermutationGate], int] | float]:
         """
         Costs for pre-compiled movement patterns for types of logical moves
         - Moves to/from an interaction zone to accomplish a logical CNOT
@@ -723,49 +726,61 @@ class DefaultMovement(Architecture):
             a b c d
             e f g h
             In the small array above, the distance between e and d is (3 + 1) * SITE_SPACING
-        
+
         """
         SITE_SPACING = 12  # 12 microns between sites
-        
+
         ctrl, trgt = op.qubits
         logical_distance = layout.distance(ctrl, trgt)
-        sites_per_patch = 2*self.d  # number of physical sites in qubit array on one side of a surface code patch
+        sites_per_patch = (
+            2 * self.d
+        )  # number of physical sites in qubit array on one side of a surface code patch
         if layout.layout_graph.nodes[trgt]["patch_type"] == "izone":
             # A logical CNOT performed within an interaction zone
             # Assumes Shift - Move Qubit - Squeeze
             # The other logical qubit in the zoned CNOT is covered in a separate operation
-            l1 = 1*SITE_SPACING
-            l2 = logical_distance*sites_per_patch*SITE_SPACING
-            l3 = .25*SITE_SPACING  # Based on the idea of moving moving sites a little closer to be ready to interact
+            l1 = 1 * SITE_SPACING
+            l2 = logical_distance * sites_per_patch * SITE_SPACING
+            l3 = (
+                0.25 * SITE_SPACING
+            )  # Based on the idea of moving moving sites a little closer to be ready to interact
             op_time = sum(map(_move_time, [l1, l2, l3]))
             return {
-                'gate_cost': {css.MovementGate: 3},
-                'moment_cost': {css.MovementGate: 3},
-                'op_time': op_time
+                "gate_cost": {css.MovementGate: 3},
+                "moment_cost": {css.MovementGate: 3},
+                "op_time": op_time,
             }
         if layout.layout_graph.nodes[trgt]["patch_type"] == "mzone":
             # A logical Measurement operation performed within a measurement zone
             # Assuming Shift - Move Measures to Zone
-            l1 = 1*SITE_SPACING
-            l2 = logical_distance*sites_per_patch*SITE_SPACING
+            l1 = 1 * SITE_SPACING
+            l2 = logical_distance * sites_per_patch * SITE_SPACING
             op_time = sum(map(_move_time, [l1, l2]))
             return {
-                'gate_cost': {css.MovementGate: 2},
-                'moment_cost': {css.MovementGate: 2},
-                'op_time': op_time
+                "gate_cost": {css.MovementGate: 2},
+                "moment_cost": {css.MovementGate: 2},
+                "op_time": op_time,
             }
         # A logical CNOT operation performed inplace using movement
         # Assuming Shift - Punt - Interact
-        bottom_right = max(layout.layout_graph.nodes)  # Scratch space for moving measure qubits out of the way
-        distance_to_edge = layout.distance(trgt, bottom_right) + 2  # Accounts for one more diagonal jump to the corner
+        bottom_right = max(
+            layout.layout_graph.nodes
+        )  # Scratch space for moving measure qubits out of the way
+        distance_to_edge = (
+            layout.distance(trgt, bottom_right) + 2
+        )  # Accounts for one more diagonal jump to the corner
         # Shift -- align columns
-        l1 = 1*SITE_SPACING
+        l1 = 1 * SITE_SPACING
         # Punt -- Move measure qubits to logical corner
-        l2 = 2*self.d*distance_to_edge*SITE_SPACING
+        l2 = 2 * self.d * distance_to_edge * SITE_SPACING
         # Interact -- Move datas from ctrl to trgt
-        l3 = 2*self.d*layout.distance(ctrl, trgt)*SITE_SPACING
+        l3 = 2 * self.d * layout.distance(ctrl, trgt) * SITE_SPACING
         op_time = sum(map(_move_time, [l1, l2, l3]))
-        return {"op_time": op_time, "gate_cost": {css.MovementGate: 3}, "moment_cost": {css.MovementGate: 3}}
+        return {
+            "op_time": op_time,
+            "gate_cost": {css.MovementGate: 3},
+            "moment_cost": {css.MovementGate: 3},
+        }
 
     @cached_property
     def _cultivate_t_cost(self) -> dict[str, dict[type[cirq.Gate], int] | float]:

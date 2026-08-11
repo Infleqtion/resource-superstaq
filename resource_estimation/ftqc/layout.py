@@ -224,7 +224,7 @@ class Layout(abc.ABC):
 
         path = nx.dijkstra_path(G=G, source=ctrl, target=trgt, weight=custom_weight)
         return path
-    
+
     def distance(self, q1: cirq.GridQubit, q2: cirq.GridQubit) -> int:
         """Calculates the Manhattan distance between two logical qubits with defined grid coordinates"""
         if q1 not in self.layout_graph.nodes or q2 not in self.layout_graph.nodes:
@@ -245,7 +245,7 @@ class Layout(abc.ABC):
             "block": "pink",
             "ccz": "orange",
             "mzone": "gray",
-            "izone": "lightgray"
+            "izone": "lightgray",
         }
         G = self.layout_graph
         node_color = []
@@ -266,9 +266,9 @@ class MovementLayout(Layout):
 
     # TODO: build this implementation
     def __init__(
-        self, 
-        input_circuit: cirq.Circuit, 
-        num_t_factories: int = 1, 
+        self,
+        input_circuit: cirq.Circuit,
+        num_t_factories: int = 1,
         num_ccz_factories: int = 0,
         measure_zones: bool = False,
         interaction_zones: bool = False,
@@ -286,11 +286,11 @@ class MovementLayout(Layout):
             num_ccz_factories=num_ccz_factories,
             num_s_factories=0,
         )
-    
+
     def _add_zones(self):
         G = self.layout_graph
-        cols = max(node.col for node in G.nodes)+1
-        rows = max(node.row for node in G.nodes)+1
+        cols = max(node.col for node in G.nodes) + 1
+        rows = max(node.row for node in G.nodes) + 1
         if self.interaction_zones:  # Place an interaction zone in the -1 row
             G.add_nodes_from(
                 [
@@ -313,13 +313,22 @@ class MovementLayout(Layout):
             )
         self.layout_graph = G
 
-    def zone_qubits(self, zone_type: Literal['measure', 'interact']):
-        if zone_type == 'measure':
-            return [node for node in self.layout_graph.nodes if self.layout_graph.nodes[node]["patch_type"] == "mzone"]
-        if zone_type == 'interact':
-            return [node for node in self.layout_graph.nodes if self.layout_graph.nodes[node]["patch_type"] == "izone"]
+    def zone_qubits(self, zone_type: Literal["measure", "interact"]):
+        if zone_type == "measure":
+            return [
+                node
+                for node in self.layout_graph.nodes
+                if self.layout_graph.nodes[node]["patch_type"] == "mzone"
+            ]
+        if zone_type == "interact":
+            return [
+                node
+                for node in self.layout_graph.nodes
+                if self.layout_graph.nodes[node]["patch_type"] == "izone"
+            ]
         else:
             raise ValueError(f"Not a recognized zone type: {zone_type}")
+
     def __post_init__(self):
         super().__post_init__()
         self._add_zones()
@@ -584,10 +593,13 @@ class MovementDistillery(MovementLayout):
     """
 
     def __init__(
-        self, input_circuit: cirq.Circuit, num_t_factories: int = 0, num_ccz_factories: int = 0,
+        self,
+        input_circuit: cirq.Circuit,
+        num_t_factories: int = 0,
+        num_ccz_factories: int = 0,
         measure_zones: bool = False,
         interaction_zones: bool = False,
-        inplace_cnot: bool = False, 
+        inplace_cnot: bool = False,
     ) -> None:
         super().__init__(
             input_circuit=input_circuit,
@@ -595,7 +607,7 @@ class MovementDistillery(MovementLayout):
             num_ccz_factories=num_ccz_factories,
             measure_zones=measure_zones,
             interaction_zones=interaction_zones,
-            inplace_cnot=inplace_cnot, 
+            inplace_cnot=inplace_cnot,
         )
         self.distil = True
 

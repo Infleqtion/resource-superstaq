@@ -20,9 +20,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 import cirq
+import cirq_superstaq as css
 import networkx as nx
 from tqdm import tqdm
-import cirq_superstaq as css
 
 if TYPE_CHECKING:
     from resource_estimation.ftqc.architecture import Architecture
@@ -150,7 +150,9 @@ class ResourceEstimator:
             big_qubit = max(op_qubits, key=qubit_times.get)
             if isinstance(op.gate, css.MovementGate):
                 big_time = qubit_times[big_qubit] + self.arc.op_time(op, layout=self.layout)
-                big_path = qubit_paths[big_qubit] + collections.Counter(self.arc.moment_cost(op, layout=self.layout))
+                big_path = qubit_paths[big_qubit] + collections.Counter(
+                    self.arc.moment_cost(op, layout=self.layout)
+                )
             else:
                 big_time = qubit_times[big_qubit] + self.arc.op_time(op)
                 big_path = qubit_paths[big_qubit] + collections.Counter(self.arc.moment_cost(op))
