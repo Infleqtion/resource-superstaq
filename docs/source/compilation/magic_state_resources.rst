@@ -2,17 +2,7 @@ Magic-State Resources
 =====================
 
 The current resource-estimation workflow supports magic-state resources
-for:
-
-* :math:`T` gates,
-* :math:`S` gates when they are not implemented natively by the selected
-  architecture, and
-* :math:`CCZ` gates.
-
-These resource states are prepared using either cultivation or
-distillation and are then consumed through gate teleportation.
-
-For information about how circuits are compiled into the supported logical
+shown below. For information about how circuits are compiled into the supported logical
 gate set, see :doc:`gate_set_compilation`.
 
 
@@ -32,30 +22,20 @@ logical operation and the selected layout.
      - Current preparation method
    * - :math:`T`
      - Always
-     - :math:`T` state
+     - .. math:: 
+          \lvert T \rangle =
+          \frac{\lvert 0 \rangle + e^{i\pi/4}\lvert 1 \rangle}{\sqrt{2}}.
      - Cultivation or 15-to-1 distillation
    * - :math:`S`
-     - When the architecture does not support the operation directly
-     - :math:`Y` state
+     - When architecture doesn't support the op directly
+     - .. math::
+          \lvert Y \rangle =
+          \frac{\lvert 0 \rangle + e^{i\pi/2}\lvert 1 \rangle}{\sqrt{2}}.
      - Cultivation
    * - :math:`CCZ`
      - Always
      - :math:`CCZ` state
      - 8-to-1 distillation
-
-A :math:`T` resource state is represented by
-
-.. math::
-
-   \lvert T \rangle =
-   \frac{\lvert 0 \rangle + e^{i\pi/4}\lvert 1 \rangle}{\sqrt{2}}.
-
-The cultivated resource used for an :math:`S` operation is represented by
-
-.. math::
-
-   \lvert Y \rangle =
-   \frac{\lvert 0 \rangle + e^{i\pi/2}\lvert 1 \rangle}{\sqrt{2}}.
 
 
 Cultivation
@@ -94,8 +74,8 @@ Distillation
 ------------
 
 Distillation consumes several lower-quality input magic states to produce a
-higher-quality output resource. Resource Superstaq currently contains two
-distillation circuits.
+higher-quality output resource. Below is a collection of distillation methods
+supported by resource superstaq.
 
 15-to-1 T-state distillation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

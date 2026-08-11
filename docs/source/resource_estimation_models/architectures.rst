@@ -265,39 +265,27 @@ Physical timing assumptions
 
 Physical operation times are represented in microseconds.
 
-The current neutral-atom defaults are:
+The table below details the current operation time defaults 
+for each modality:
 
 .. list-table::
    :header-rows: 1
 
    * - Physical operation
-     - Duration
+     - Neutral Atom Duration
+     - Superconducting Duration
    * - CZ
      - 0.27 microseconds
-   * - Single-qubit operation
-     - 5 microseconds
-   * - Reset
-     - 400 microseconds
-   * - Measurement
-     - 1000 microseconds
-   * - Maximum movement operation
-     - 500 microseconds
-
-The current superconducting defaults are:
-
-.. list-table::
-   :header-rows: 1
-
-   * - Physical operation
-     - Duration
-   * - CZ
      - 0.040 microseconds
    * - Single-qubit operation
+     - 5 microseconds
      - 0.020 microseconds
    * - Reset
+     - 400 microseconds
      - 1 microsecond
    * - Measurement
+     - 1000 microseconds
      - 0.5 microseconds
-
-These values are model inputs and may change as the implementation is refined.
-They should not be interpreted as guarantees for a particular device.
+   * - Maximum movement operation
+     - 500 microseconds
+     - N/A
