@@ -199,28 +199,3 @@ The correction depends on the resource being consumed:
 Whether the correction is physically required depends on the measurement
 outcome. The current logical resource model includes the correction
 operations directly so that their cost is represented.
-
-
-Current limitations
--------------------
-
-Magic-state support is still developing. The following limitations are
-important when interpreting current estimates:
-
-* The estimator calculates logical resource costs but does not propagate
-  state fidelities or simulate logical error probabilities.
-* Cultivation and distillation repetition counts are modeled as fixed cost
-  multipliers.
-* Measurement-conditioned corrections inside the implemented distillation
-  circuits are currently represented unconditionally.
-* Cultivation costs are currently implemented only for
-  :math:`\theta=\pi/4` and :math:`\theta=\pi/2` resource states.
-* There is no cultivated :math:`CCZ` preparation path; :math:`CCZ`
-  resources use distillation.
-* The layout used for distillation is currently an internal implementation
-  rather than part of the main exported layout API.
-* End-to-end :math:`CCZ` compilation and factory placement are not yet
-  available through every standard compilation and layout path.
-
-These restrictions should be considered when comparing estimates produced
-using different gate sets, layouts, or architectures.

@@ -251,24 +251,3 @@ The current color mapping is:
 * Yellow for S factories.
 * Orange for CCZ factories.
 * Pink for supporting distillation blocks.
-
-Implementation limitations
---------------------------
-
-The current layout implementations have several limitations:
-
-* ``MovementLayout`` assumes all-to-all logical connectivity and does not
-  optimize data placement for travel distance.
-* ``MovementLayout.route_cnot`` is intentionally unimplemented because
-  movement architecture models retain transversal CNOT as a primitive.
-* The public lattice layouts route each CNOT independently and do not optimize
-  a collection of routes for parallel execution.
-* ``Embedded`` derives factory counts from its boundary and does not allow
-  those counts to be selected directly.
-* ``Column`` derives its S- and T-factory counts from the input-circuit size.
-* Although the base layout contains CCZ-factory bookkeeping and
-  ``MovementLayout`` accepts ``num_ccz_factories``, the standard
-  ``MovementLayout`` generator does not currently place CCZ factory nodes.
-* ``MovementDistillery`` exists as an internal implementation for T and CCZ
-  distillation layouts but is not exported as part of the public
-  ``resource_estimation.ftqc`` interface.

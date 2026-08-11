@@ -178,21 +178,3 @@ When comparing architecture or layout models, the same gate-set compilation
 policy should be used for each estimate. Otherwise, differences in the
 compiled circuits may be mistaken for differences caused by the resource
 models.
-
-Current limitations
--------------------
-
-The current implementation has the following limitations:
-
-* The standard public pipeline targets Clifford+T rather than
-  Clifford+T+CCZ.
-* Toffoli decomposition is available only as a separate helper.
-* The Toffoli helper applies a fixed decomposition and does not perform
-  follow-up optimization.
-* The Clifford+Rz target has no specialized Toffoli decomposition.
-* The Clifford+T approximation tolerance applies separately to each Rz
-  operation.
-* The implementation does not automatically select a synthesis tolerance from
-  a complete-program error budget.
-* Different decompositions of the same input circuit may produce different
-  resource estimates.

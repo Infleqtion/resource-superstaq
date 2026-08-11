@@ -301,21 +301,3 @@ The current superconducting defaults are:
 
 These values are model inputs and may change as the implementation is refined.
 They should not be interpreted as guarantees for a particular device.
-
-Implementation limitations
---------------------------
-
-The architecture models contain approximations and provisional assumptions:
-
-* They estimate operation cost and duration but do not directly calculate a
-  logical failure probability for the complete circuit.
-* Several cultivation costs are based on precomputed or approximate circuit
-  models.
-* Correlated decoding is represented through architecture assumptions such as
-  reduced syndrome-round counts rather than a decoding simulation.
-* Movement costs use simplified zone and Manhattan-distance models.
-* Some logical-operation implementations are marked as future work in the
-  source.
-* ``Superconductor`` currently accepts ``cultivation_fault_distance`` in its
-  constructor but does not forward that value to ``DefaultLattice``; the
-  inherited default is therefore used.
