@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
-from typing import Iterable
+import typing
 
 from qldpc import codes
 from qldpc.objects import Pauli
@@ -24,8 +24,8 @@ class LogicalQubit:
 
     def __init__(
         self,
-        x_support: Iterable[int],
-        z_support: Iterable[int],
+        x_support: typing.Iterable[int],
+        z_support: typing.Iterable[int],
     ) -> None:
         self.x_support = self._validate_support(x_support, "x_support")
         self.z_support = self._validate_support(z_support, "z_support")
@@ -33,7 +33,7 @@ class LogicalQubit:
             raise ValueError("LogicalQubit supports must include at least one physical qubit.")
 
     @staticmethod
-    def _validate_support(support: Iterable[int], name: str) -> frozenset[int]:
+    def _validate_support(support: typing.Iterable[int], name: str) -> frozenset[int]:
         qubits = set()
         for qubit in support:
             if not isinstance(qubit, int) or isinstance(qubit, bool):
@@ -98,7 +98,7 @@ class CodePatch:
         ]
 
     @staticmethod
-    def _logical_op_support(logical_op: Iterable[int]) -> set[int]:
+    def _logical_op_support(logical_op: typing.Iterable[int]) -> set[int]:
         return {index for index, value in enumerate(logical_op) if value}
 
     def __repr__(self) -> str:

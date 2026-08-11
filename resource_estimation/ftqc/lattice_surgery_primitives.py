@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import typing
 from functools import cached_property
-from typing import Literal
+import typing
 
 import cirq
 
@@ -246,7 +246,7 @@ class Distil(cirq.Gate):
     CCZ leads to a CCZ state
     """
 
-    def __init__(self, resource: Literal["T", "CCZ"]) -> None:
+    def __init__(self, resource: typing.Literal["T", "CCZ"]) -> None:
         if resource not in ("T", "CCZ"):
             raise ValueError(f"Invalid resource for Distil gate: {resource!r}")
         self._resource = resource
