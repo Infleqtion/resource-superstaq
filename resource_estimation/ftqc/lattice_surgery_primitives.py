@@ -42,7 +42,6 @@ def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
     return None
 
 
-LogicalPauliProduct = typing.Literal["XX", "ZZ"]
 _LOGICAL_PAULI_PRODUCTS = ("XX", "ZZ")
 
 
@@ -50,7 +49,7 @@ _LOGICAL_PAULI_PRODUCTS = ("XX", "ZZ")
 class LogicalPPM(cirq.Gate):
     """Opaque logical XX- or ZZ-product measurement primitive."""
 
-    def __init__(self, pauli_product: LogicalPauliProduct) -> None:
+    def __init__(self, pauli_product: typing.Literal["XX", "ZZ"]) -> None:
         if pauli_product not in _LOGICAL_PAULI_PRODUCTS:
             raise ValueError(
                 f"pauli_product must be one of {_LOGICAL_PAULI_PRODUCTS}, not {pauli_product!r}",
@@ -58,7 +57,7 @@ class LogicalPPM(cirq.Gate):
         self._pauli_product = pauli_product
 
     @property
-    def pauli_product(self) -> LogicalPauliProduct:
+    def pauli_product(self) -> typing.Literal["XX", "ZZ"]:
         return self._pauli_product
 
     def _num_qubits_(self) -> int:
