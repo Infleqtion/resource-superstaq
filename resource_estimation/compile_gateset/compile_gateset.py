@@ -16,19 +16,10 @@ from __future__ import annotations
 import cirq
 
 from resource_estimation.compile_gateset.cliff_rz import (
-    _CLIFFORD_T_OPTIONAL_GATES,
-    _CLIFFORD_T_REQUIRED_GATES,
     CliffordTGateset,
     CliffRzGateset,
 )
 from resource_estimation.compile_gateset.clifford_t import compile_cirq_to_clifford_t
-
-_CLIFFORD_T_REQUIRED_FAMILIES = frozenset(
-    cirq.GateFamily(gate) for gate in _CLIFFORD_T_REQUIRED_GATES
-)
-_CLIFFORD_T_ALLOWED_FAMILIES = _CLIFFORD_T_REQUIRED_FAMILIES | frozenset(
-    cirq.GateFamily(gate) for gate in _CLIFFORD_T_OPTIONAL_GATES
-)
 
 
 def clifford_rz_gateset(atol: float = 1e-8) -> cirq.Gateset:

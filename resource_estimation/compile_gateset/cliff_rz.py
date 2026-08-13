@@ -251,5 +251,15 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
 
 class CliffordTGateset(cirq.Gateset):
     def __init__(self, atol: float) -> None:
-        super().__init__(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.T, cirq.I, cirq.MeasurementGate, cirq.ResetChannel)
+        super().__init__(
+            cirq.H,
+            cirq.S,
+            cirq.Z,
+            cirq.X,
+            cirq.CNOT,
+            cirq.T,
+            cirq.I,
+            cirq.MeasurementGate,
+            cirq.ResetChannel,
+        )
         self.atol = atol
