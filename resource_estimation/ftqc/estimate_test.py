@@ -260,40 +260,35 @@ def test_critical_path() -> None:
         assert all(op in cirq.GateFamily(expected) for op, expected in zip(path2, expected_types))
 
 
-def test_dynamic_resource_counts() -> None:
+def test_dynamic_T_resource_counts() -> None:
     # If this test is flaky double check that `random.seed` actually makes randint calls
     # deterministic, or if it always fails maybe change the seed
     # Expected sequence of calls: 1,0,1,0,1,1 (1 is no cost, 0 is cost)
     # There may be a better way of doing this than just testing numbers in ipython lol
-    # Could also just divide things by 2
     # This is not the most ideal test ever
     random.seed(73)
     arc = arch.DefaultMovement()
     qubit = cirq.GridQubit(0, 0)
-    op: cirq.Operation = cirq.S.on(qubit)
-    normal_s_cost = arc.gate_cost(op)
-    ops_and_expectations = [(op.with_tags(*["Dynamic"]), {}), (op, normal_s_cost)]
-    for op, expectation in ops_and_expectations:
-        cost = arc.gate_cost(op)
-        assert expectation == cost
-    ops_and_expectations = [(op.with_tags(*["Dynamic"]), normal_s_cost), (op, normal_s_cost)]
+    normal_op: cirq.Operation = cirq.S.on(qubit)
+    dynamic_op: cirq.Operation = lsp.ResourceCorrection("T").on(qubit)
+    normal_s_cost = arc.gate_cost(normal_op)
+    ops_and_expectations = [(dynamic_op, {}), (normal_op, normal_s_cost)]
     for op, expectation in ops_and_expectations:
         cost = arc.gate_cost(op)
         assert expectation == cost
 
-    normal_s_time = arc.op_time(op)
-    ops_and_times = [(op.with_tags(*["Dynamic"]), 0.0), (op, normal_s_time)]
-    for (
-        op,
-        expectation,
-    ) in ops_and_times:
+    ops_and_expectations = [(dynamic_op, normal_s_cost), (normal_op, normal_s_cost)]
+    for op, expectation in ops_and_expectations:
+        cost = arc.gate_cost(op)
+        assert expectation == cost
+
+    normal_s_time = arc.op_time(normal_op)
+    ops_and_times = [(dynamic_op, 0.0), (normal_op, normal_s_time)]
+    for op, expectation in ops_and_times:
         time = arc.op_time(op)
         assert isclose(time, expectation)
-    ops_and_times = [(op.with_tags(*["Dynamic"]), normal_s_time), (op, normal_s_time)]
-    for (
-        op,
-        expectation,
-    ) in ops_and_times:
+    ops_and_times = [(dynamic_op, normal_s_time), (normal_op, normal_s_time)]
+    for op, expectation in ops_and_times:
         time = arc.op_time(op)
         assert isclose(time, expectation)
 

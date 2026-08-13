@@ -260,7 +260,7 @@ class Architecture(abc.ABC):
     # These should never be overwritten
     def gate_cost(self, op: cirq.Operation) -> dict[type[cirq.Gate], int]:
         try:
-            return self.op_cost[type(op.untagged.gate)](op)["gate_cost"]
+            return self.op_cost[type(op.gate)](op)["gate_cost"]
         except KeyError:
             raise ValueError("Gate not recognized")
 
@@ -608,6 +608,7 @@ class DefaultMovement(Architecture):
                 lsp.SyndromeExtract,
                 lsp.ErrorCorrect,
                 lsp.Move,
+                lsp.ResourceCorrection,
                 cirq.CNOT,
                 cirq.S,
                 cirq.I,
@@ -667,11 +668,59 @@ class DefaultMovement(Architecture):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
+    def correction_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
+        # Since CNOT is the logical primitve, we use conjugation here
+        # Total time for CCZ correction: t(H) + t(X) + 3 * t(CNOT) + t(H) (can parallelize H gates,
+        # X gates, but 3 pairwise CNOTS means we have to do each one sequentially) This means that
+        # the moment cost of this correction is one H moment cost, one X moment cost, 3 CNOT coment
+        # costs, and one H moment cost, while the overall gate cost is 3 hadamards, 3 X gates, 3
+        # CNOT gates, and 3 hadamards
+        # Also flip a coin for both corrections
+        # Correction circuit after compilation:
+        # 0: H, SE(n), X, SE(n), IZ, CNOT(0, 1), IZ, SE(n), IZ, CNOT(0, 2), IZ, SE(n), H, SE(n)
+        # 1: H, SE(n), X, SE(n), IZ, CNOT(0, 1), IZ, SE(n), IZ, CNOT(1, 2), IZ, SE(n), H, SE(n)
+        # 2: H, SE(n), X, SE(n), IZ, CNOT(0, 2), IZ, SE(n), IZ, CNOT(1, 2), IZ, SE(n), H, SE(n)
+        # I can drop one round of the syndrome extract cost since the post-op correction pass will
+        # add one round of idling after the "ResourceCorrection" gate. Now whether we want to do
+        # that or not is a separate question, especially because we don't have to run the post-op
+        # correction pass, and also may vary the number of rounds of syndrome extraction so yeah.
+        # The (most I can envision) correct option is to update those passes to treat
+        # ResourceCorrection("CCZ") as requiring like 4 times as much syndrome extraction
+        if op.gate.resource == "T":
+            if randint(0, 1):
+                return {"op_time": 0.0, "gate_cost": {}, "moment_cost": {}}
+            else:
+                return self._s_cost
+        elif op.gate.resource == "CCZ":
+            if randint(0, 1):
+                return {"op_time": 0.0, "gate_cost": {}, "moment_cost": {}}
+            else:
+                h_gate_cost = Counter(self._h_cost["gate_cost"])
+                x_gate_cost = Counter(self._x_cost["gate_cost"])
+                cnot_gate_cost = Counter(self._cnot_cost["gate_cost"])
+                overall_gate_cost = h_gate_cost + x_gate_cost + cnot_gate_cost + h_gate_cost
+                for gate, count in overall_gate_cost.items():
+                    overall_gate_cost[gate] *= 3
+
+                h_moment_cost = Counter(self._h_cost["moment_cost"])
+                x_moment_cost = Counter(self._x_cost["moment_cost"])
+                cnot_moment_cost = Counter(self._cnot_cost["moment_cost"])
+                for gate, count in cnot_moment_cost.items():
+                    overall_gate_cost[gate] *= 3
+                overall_moment_cost = (
+                    h_moment_cost + x_moment_cost + cnot_moment_cost + h_moment_cost
+                )
+                h_time = self._h_cost["op_time"]
+                x_time = self._x_cost["op_time"]
+                cnot_time = self._cnot_cost["op_time"]
+                total_time = h_time + x_time + 3 * cnot_time + h_time
+                return {
+                    "op_time": total_time,
+                    "gate_cost": overall_gate_cost,
+                    "moment_cost": overall_moment_cost,
+                }
+
     def s_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
-        # 50% of the time, it works every time
-        # Could also just divide by 2 every time and have no randint
-        if op.tags and op.tags[0] == "Dynamic" and randint(0, 1):
-            return {"op_time": 0.0, "gate_cost": {}, "moment_cost": {}}
         return self._s_cost
 
     @cached_property
@@ -795,6 +844,7 @@ class DefaultMovement(Architecture):
         self.op_cost[type(cirq.S)] = self.s_cost
         self.op_cost[lsp.Move] = self.move_cost
         self.op_cost[lsp.Distil] = self.distil_cost
+        self.op_cost[lsp.ResourceCorrection] = self.correction_cost
 
     @property
     def __name__(self) -> str:
