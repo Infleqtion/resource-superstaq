@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from typing import Iterator
 
     from resource_estimation.typing import GateKey
-# warnings.filterwarnings(category=FutureWarning, action="ignore")
 
 
 @cirq.transformer
