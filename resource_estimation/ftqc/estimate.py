@@ -17,7 +17,7 @@ import collections
 import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar
 
 import cirq
 import networkx as nx
@@ -25,6 +25,9 @@ from tqdm import tqdm
 
 if TYPE_CHECKING:
     from resource_estimation.ftqc.architecture import Architecture
+    from resource_estimation.typing import GateCounts, GateKey, StrCounts
+
+from resource_estimation.typing import _require_gate_operation
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -37,13 +40,7 @@ class ResourceEstimator:
 
     def validate_circuit_ops(self, circuit: cirq.Circuit) -> None:
         """Checks that the input circuit contains only valid operations and warns of operations still in progress"""
-        unrecognized = [
-            op
-            for op in dict(
-                collections.Counter([op_.gate for op_ in circuit.all_operations()])
-            ).keys()
-            if op not in self.arc.primitives
-        ]
+        unrecognized = [op for op in circuit.all_operations() if op not in self.arc.primitives]
         if unrecognized:
             error_message = """This circuit has gates that are incompatible with the input architecture parameters.\nThe following gates in this circuit are not recognized:"""
             for op in unrecognized:
@@ -55,10 +52,10 @@ class ResourceEstimator:
         circuit: cirq.Circuit,
         verbose: int = 0,
         pretty: bool = False,
-    ) -> dict[cirq.Gate | str, int]:
+    ) -> GateCounts | StrCounts:
         """Counts up the total physical gates from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
-        cost = collections.Counter()
+        cost: collections.Counter[GateKey] = collections.Counter()
         for op in tqdm(
             circuit.all_operations(),
             total=len(list(circuit.all_operations())),
@@ -76,13 +73,11 @@ class ResourceEstimator:
     def serial_circuit_time(self, circuit: cirq.Circuit) -> float:
         """Adds up the total physical time from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
-        return sum(
-            map(lambda x: self.arc.total_time(self.arc.gate_cost(x)), circuit.all_operations()),
-        )
+        return sum(self.arc.total_time(self.arc.gate_cost(op)) for op in circuit.all_operations())
 
     def parallel_circuit_time(self, circuit: cirq.Circuit, verbose: int = 0) -> float:
         """Estimation of the critical path in the input circuit according to the most expensive operation per moment"""
-        qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
+        qubit_times: dict[cirq.Qid, float] = dict.fromkeys(circuit.all_qubits(), 0.0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
             circuit.all_operations(), disable=not verbose, total=total_ops, colour="cyan"
@@ -100,8 +95,10 @@ class ResourceEstimator:
         warnings.warn(
             "This function can be very expensive.\nIf you just want the physical operations or circuit time, use `critical_path_ops` or `parallel_circuit_time` instead.",
         )
-        qubit_paths = {qubit: [] for qubit in circuit.all_qubits()}
-        qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
+        qubit_paths: dict[cirq.Qid, list[cirq.Operation]] = {
+            qubit: [] for qubit in circuit.all_qubits()
+        }
+        qubit_times: dict[cirq.Qid, float] = dict.fromkeys(circuit.all_qubits(), 0.0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
             circuit.all_operations(),
@@ -111,7 +108,7 @@ class ResourceEstimator:
         ):
             op_qubits = op.qubits
             # This qubit currently has the longest path
-            big_qubit = max(op_qubits, key=qubit_times.get)
+            big_qubit = max(op_qubits, key=qubit_times.__getitem__)
             big_path = qubit_paths[big_qubit]
             big_time = qubit_times[big_qubit]
             big_path.append(op)
@@ -119,7 +116,7 @@ class ResourceEstimator:
             for qubit in op_qubits:
                 qubit_paths[qubit] = big_path.copy()
                 qubit_times[qubit] = big_time
-        critical_qubit = max(qubit_times, key=qubit_times.get)
+        critical_qubit = max(qubit_times, key=qubit_times.__getitem__)
         critical_path = qubit_paths[critical_qubit]
         return critical_path
 
@@ -128,29 +125,31 @@ class ResourceEstimator:
         circuit: cirq.Circuit,
         verbose: int = 0,
         pretty: bool = False,
-    ) -> dict[cirq.Gate | str, int]:
+    ) -> GateCounts | StrCounts:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
-        qubit_paths = {qubit: collections.Counter() for qubit in circuit.all_qubits()}
-        qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
+        qubit_paths: dict[cirq.Qid, collections.Counter[GateKey]] = {
+            qubit: collections.Counter() for qubit in circuit.all_qubits()
+        }
+        qubit_times: dict[cirq.Qid, float] = dict.fromkeys(circuit.all_qubits(), 0.0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
             circuit.all_operations(), disable=not verbose, total=total_ops, colour="cyan"
         ):
             op_qubits = op.qubits
             # This qubit currently has the longest path
-            big_qubit = max(op_qubits, key=qubit_times.get)
+            big_qubit = max(op_qubits, key=qubit_times.__getitem__)
             big_time = qubit_times[big_qubit] + self.arc.op_time(op)
             big_path = qubit_paths[big_qubit] + collections.Counter(self.arc.moment_cost(op))
             for qubit in op_qubits:
                 qubit_paths[qubit] = big_path
                 qubit_times[qubit] = big_time
 
-        big_qubit = max(op_qubits, key=qubit_times.get)
+        big_qubit = max(op_qubits, key=qubit_times.__getitem__)
         big_time = qubit_times[big_qubit]
         big_path = qubit_paths[big_qubit]
 
         if pretty:
-            big_path = {
+            return {
                 obj.__name__ if hasattr(obj, "__name__") else str(obj): val
                 for obj, val in big_path.items()
             }
@@ -162,10 +161,11 @@ class ResourceEstimator:
 
 
 ReactionTreeNode = tuple[int, int]
+Q = TypeVar("Q", bound=cirq.Qid)
 
 
 @dataclass(frozen=True)
-class ReactionDynamics:
+class ReactionDynamics(Generic[Q]):
     """Reaction dynamic for each delayed choice measurement in a factory.
 
     Attributes:
@@ -175,8 +175,8 @@ class ReactionDynamics:
             use `cirq.LineQubit(i)` for operation-local qubit `i`.
     """
 
-    dependency_paulis: tuple[cirq.PauliString, ...]
-    outputs: tuple[cirq.PauliString, ...]
+    dependency_paulis: tuple[cirq.PauliString[Q], ...]
+    outputs: tuple[cirq.PauliString[Q], ...]
 
 
 class ReactionDepthEstimator:
@@ -199,10 +199,10 @@ class ReactionDepthEstimator:
 
     def __init__(
         self,
-        factories: dict[cirq.Gate, bool] | None = None,
+        factories: dict[GateKey, bool] | None = None,
         factory_reaction_dynamics: Mapping[
             tuple[cirq.Gate, bool],
-            Sequence[ReactionDynamics],
+            Sequence[ReactionDynamics[cirq.LineQubit]],
         ]
         | None = None,
     ) -> None:
@@ -223,10 +223,12 @@ class ReactionDepthEstimator:
         """
         self.factories = dict(self._DEFAULT_FACTORIES if factories is None else factories)
         local_qubits = cirq.LineQubit.range(3)
-        local_x = cirq.PauliString(cirq.X(local_qubits[0]))
-        local_z = tuple(cirq.PauliString(cirq.Z(qubit)) for qubit in local_qubits)
+        local_x: cirq.PauliString[cirq.LineQubit] = cirq.PauliString(cirq.X(local_qubits[0]))
+        local_z: tuple[cirq.PauliString[cirq.LineQubit], ...] = tuple(
+            cirq.PauliString(cirq.Z(qubit)) for qubit in local_qubits
+        )
         self._factory_reaction_dynamics: dict[
-            tuple[cirq.Gate, bool], tuple[ReactionDynamics, ...]
+            tuple[GateKey, bool], tuple[ReactionDynamics[cirq.LineQubit], ...]
         ] = {
             (cirq.T, True): (ReactionDynamics((local_z[0],), (local_z[0],)),),
             (cirq.T, False): (ReactionDynamics((local_x, local_z[0]), (local_x, local_z[0])),),
@@ -259,16 +261,16 @@ class ReactionDepthEstimator:
             )
 
         for gate, auto_corrected in self.factories.items():
-            local_qubits = tuple(cirq.LineQubit.range(cirq.num_qubits(gate)))
+            factory_local_qubits = tuple(cirq.LineQubit.range(cirq.num_qubits(gate)))
             for reaction_dynamics in self._factory_reaction_dynamics[(gate, auto_corrected)]:
                 for pauli in (
                     *reaction_dynamics.dependency_paulis,
                     *reaction_dynamics.outputs,
                 ):
-                    if not set(pauli.qubits).issubset(local_qubits):
+                    if not set(pauli.qubits).issubset(factory_local_qubits):
                         raise ValueError(
                             f"Reaction Pauli {pauli!r} must use only operation-local qubits "
-                            f"{local_qubits} for factory gate {gate!r}."
+                            f"{factory_local_qubits} for factory gate {gate!r}."
                         )
 
     def reaction_depth(self, circuit: cirq.Circuit) -> int:
@@ -282,7 +284,7 @@ class ReactionDepthEstimator:
             Longest factory-vertex dependency chain. Circuits with no factory
             vertices have depth zero.
         """
-        tracked_paulis: dict[cirq.PauliString, int] = {}
+        tracked_paulis: dict[cirq.PauliString[cirq.Qid], int] = {}
         reaction_depth = 0
 
         for operation in circuit.all_operations():
@@ -314,7 +316,7 @@ class ReactionDepthEstimator:
                         )
                 continue
 
-            propagated_paulis: dict[cirq.PauliString, int] = {}
+            propagated_paulis: dict[cirq.PauliString[cirq.Qid], int] = {}
             for pauli, depth in tracked_paulis.items():
                 phase_free_pauli = self._propagate_pauli(pauli, operation).with_coefficient(1)
                 propagated_paulis[phase_free_pauli] = max(
@@ -357,13 +359,16 @@ class ReactionDepthEstimator:
 
         return reaction_tree
 
-    def _factory_dynamics(self, operation: cirq.Operation) -> tuple[ReactionDynamics, ...] | None:
+    def _factory_dynamics(
+        self, operation: cirq.Operation
+    ) -> tuple[ReactionDynamics[cirq.Qid], ...] | None:
+        operation = _require_gate_operation(operation)
         if operation.gate not in self.factories:
             if not cirq.has_stabilizer_effect(operation.gate):
                 raise ValueError(self._NON_CLIFFORD_ERROR.format(operation=operation))
             return None
 
-        local_qubit_map = dict(
+        local_qubit_map: dict[cirq.LineQubit, cirq.Qid] = dict(
             zip(cirq.LineQubit.range(len(operation.qubits)), operation.qubits, strict=True)
         )
         return tuple(
@@ -455,8 +460,8 @@ class ReactionDepthEstimator:
 
     @staticmethod
     def _creates_reaction_dependency(
-        pauli: cirq.PauliString,
-        dependency_paulis: tuple[cirq.PauliString, ...],
+        pauli: cirq.PauliString[cirq.Qid],
+        dependency_paulis: tuple[cirq.PauliString[cirq.Qid], ...],
     ) -> bool:
         return any(
             not cirq.commutes(pauli, dependency_pauli) for dependency_pauli in dependency_paulis
@@ -464,9 +469,9 @@ class ReactionDepthEstimator:
 
     @staticmethod
     def _propagate_pauli(
-        pauli: cirq.PauliString,
+        pauli: cirq.PauliString[cirq.Qid],
         operation: cirq.Operation,
-    ) -> cirq.PauliString:
+    ) -> cirq.PauliString[cirq.Qid]:
         return (
             pauli.conjugated_by(operation)
             if any(qubit in pauli for qubit in operation.qubits)
