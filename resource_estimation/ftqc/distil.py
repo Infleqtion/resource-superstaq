@@ -91,7 +91,7 @@ def distil_15_to_1() -> cirq.Circuit:
     exp.append(cirq.Moment(cirq.measure_each(*qubits[:-1])))
 
     # Remap circuit to a logical grid
-    qmap = {qubits[-1]: cirq.GridQubit(7, 2)}
+    qmap: dict[cirq.Qid, cirq.Qid] = {qubits[-1]: cirq.GridQubit(7, 2)}
     for idx, (q, f) in enumerate(zip(qubits, cults)):
         row = idx if idx < 8 else idx - 8
         col1 = 1 if idx < 8 else 2
@@ -145,7 +145,7 @@ def ccz_8_to_1() -> cirq.Circuit:
 
     # Remap circuit to a logical grid
     # the out qubits
-    qmap = {
+    qmap: dict[cirq.Qid, cirq.Qid] = {
         qubits[0]: cirq.GridQubit(5, 0),
         qubits[1]: cirq.GridQubit(5, 1),
         qubits[2]: cirq.GridQubit(5, 2),
