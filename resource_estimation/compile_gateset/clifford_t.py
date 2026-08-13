@@ -91,12 +91,13 @@ def approx_rz(theta: float, epsilon: float) -> str:
 
 def process_cirq_str(
     circ: cirq.Circuit,
-    gates: list[str],
+    gates: str | list[str],
     q: cirq.GridQubit | cirq.LineQubit | cirq.NamedQubit,
-) -> cirq.Operation:
+) -> None:
     """
     Maps list of strings representing an Rz angle decomposition to a cirq gate
     The list is reversed because gridsynth returns gates in matrix order instead of circuit operation order
+    Alters the original circuit in place so does not have a return value
     """
     for g in gates[::-1]:
         if g == "H":
@@ -115,6 +116,7 @@ def process_cirq_str(
             circ += cirq.Z.on(q)
         else:
             raise ValueError(f"{g} is not in [H, S, T, W, X, I, Z]")
+    return None
 
 
 def cin_cliffs(gate: cirq.Gate) -> bool:
@@ -160,7 +162,7 @@ def toffoli_decompose(circuit: cirq.Circuit) -> cirq.Circuit:
     """
 
     # TODO: Pretty sure there is a faster way to do this like the way we do ft compile now
-    def mapper(op, idx):
+    def mapper(op: cirq.Operation, idx: int) -> cirq.OP_TREE:
         if op in cirq.GateFamily(cirq.TOFFOLI):
             a, b, c = op.qubits
             return cirq.Circuit(
