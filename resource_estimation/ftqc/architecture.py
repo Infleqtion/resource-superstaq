@@ -449,7 +449,7 @@ class DefaultLattice(Architecture):
     def split_cost(self, op: cirq.GateOperation) -> CostDict:
         assert isinstance(op.gate, lsp.Split)
         smooth = op.gate.smooth
-        cost_dict = _split_cost(smooth, self.d)
+        cost_dict = copy(_split_cost(smooth, self.d))
         op_time = self.total_time(moment_cost_dict=cost_dict.moment_cost)
         cost_dict.op_time = op_time
         return cost_dict
