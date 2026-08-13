@@ -18,7 +18,6 @@ from resource_estimation.ftqc.architecture import (
     DualSpeciesMovement,
     MeasureZonesOnly,
     Superconductor,
-    convert_globals_to_phasedxz,
 )
 from resource_estimation.ftqc.compile_ftqc import (
     add_moves,
