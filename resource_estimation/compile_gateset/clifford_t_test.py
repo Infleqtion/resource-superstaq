@@ -27,7 +27,7 @@ from resource_estimation.compile_gateset import (
 
 @pytest.mark.parametrize("theta", (1, pi / 3, pi + 1, 2 * pi - pi / 7, pi / 4))
 @pytest.mark.parametrize("eps", (1e-1, 1e-3, 1e-5, 1e-7))
-def test_compile_cirq_to_clifford_t(theta, eps) -> None:
+def test_compile_cirq_to_clifford_t(theta: float, eps: float) -> None:
     circuit = cirq.Circuit(cirq.Rz(rads=theta).on(cirq.GridQubit(0, 0)))
     comp_circuit = compile_cirq_to_clifford_t(circuit, eps=eps, verbose=False)
     u_expected = cirq.unitary(circuit)
@@ -58,7 +58,7 @@ def test_compile_cirq_to_clifford_t(theta, eps) -> None:
         2 * pi,
     ),
 )
-def test_special_cases(theta) -> None:
+def test_special_cases(theta: float) -> None:
     eps = 0.0001
     circuit = cirq.Circuit(cirq.Rz(rads=theta).on(cirq.GridQubit(0, 0)))
     comp_circuit = compile_cirq_to_clifford_t(circuit, eps=eps, verbose=False)
@@ -78,7 +78,7 @@ def test_error_handling() -> None:
         _ = compile_cirq_to_clifford_t(bad_circuit, eps=0.01)
 
     with pytest.raises(ValueError):
-        _ = process_cirq_str(bad_circuit, gates=["P"], q=cirq.GridQubit(0, 0))
+        process_cirq_str(bad_circuit, gates=["P"], q=cirq.GridQubit(0, 0))
 
 
 def test_measure() -> None:
@@ -135,9 +135,9 @@ def test_misc() -> None:
     illegal_circuit = cirq.Circuit(cirq.Rx(rads=2).on(cirq.LineQubit(0)))
     with pytest.raises(ValueError):
         _ = compile_cirq_to_clifford_t(circ=illegal_circuit, eps=1e-4)
-    assert process_cirq_str(cirq.Circuit(), "I", cirq.LineQubit(0)) is None
+    assert process_cirq_str(cirq.Circuit(), ["I"], cirq.LineQubit(0)) is None  # type: ignore[func-returns-value]
     with pytest.raises(ValueError):
-        _ = process_cirq_str(cirq.Circuit(), "M", cirq.LineQubit(0))
+        process_cirq_str(cirq.Circuit(), ["M"], cirq.LineQubit(0))
     M_circuit = cirq.Circuit(cirq.MeasurementGate(1, key="").on(cirq.LineQubit(0)))
     synthesized_M = compile_cirq_to_clifford_t(circ=M_circuit, eps=1e-2)
     assert synthesized_M == M_circuit

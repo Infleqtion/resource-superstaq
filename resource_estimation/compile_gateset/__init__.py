@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from resource_estimation import typing
 from resource_estimation.compile_gateset.cliff_rz import (
     CliffRzGateset,
     eject_z,
@@ -43,4 +44,5 @@ __all__ = [
     "process_cirq_str",
     "toffoli_decompose",
     "zpow_to_rz",
+    "typing",
 ]
