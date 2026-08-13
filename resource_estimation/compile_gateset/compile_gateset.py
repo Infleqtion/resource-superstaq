@@ -15,17 +15,11 @@ from __future__ import annotations
 
 import cirq
 
-from resource_estimation.compile_gateset.cliff_rz import CliffRzGateset
+from resource_estimation.compile_gateset.cliff_rz import (
+    CliffordTGateset,
+    CliffRzGateset,
+)
 from resource_estimation.compile_gateset.clifford_t import compile_cirq_to_clifford_t
-
-_CLIFFORD_T_REQUIRED_GATES = (cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.T)
-_CLIFFORD_T_OPTIONAL_GATES = (cirq.I, cirq.MeasurementGate, cirq.ResetChannel)
-_CLIFFORD_T_REQUIRED_FAMILIES = frozenset(
-    cirq.GateFamily(gate) for gate in _CLIFFORD_T_REQUIRED_GATES
-)
-_CLIFFORD_T_ALLOWED_FAMILIES = _CLIFFORD_T_REQUIRED_FAMILIES | frozenset(
-    cirq.GateFamily(gate) for gate in _CLIFFORD_T_OPTIONAL_GATES
-)
 
 
 def clifford_rz_gateset(atol: float = 1e-8) -> cirq.Gateset:
@@ -40,25 +34,18 @@ def clifford_rz_gateset(atol: float = 1e-8) -> cirq.Gateset:
     return CliffRzGateset(atol=atol)
 
 
-def clifford_t_gateset(atol: float) -> cirq.Gateset:
+def clifford_t_gateset(atol: float) -> CliffordTGateset:
     """Returns the default Clifford + T gateset.
 
     Args:
         atol: Maximum allowable approximation error for each synthesized Rz rotation.
 
     Returns:
-        A Cirq gateset for Clifford + T compilation. The gateset carries `_atol` so
+        A Cirq gateset for Clifford + T compilation. The gateset carries `atol` so
         `compile_gateset` can dispatch to the custom Rz synthesis path.
     """
-    gateset = cirq.Gateset(*_CLIFFORD_T_REQUIRED_GATES, *_CLIFFORD_T_OPTIONAL_GATES)
-    gateset._atol = atol
+    gateset = CliffordTGateset(atol=atol)
     return gateset
-
-
-def _is_clifford_t_gateset(gateset: cirq.Gateset) -> bool:
-    """Returns whether a gateset matches the supported Clifford + T gate families."""
-    gate_families = gateset.gates
-    return _CLIFFORD_T_REQUIRED_FAMILIES <= gate_families <= _CLIFFORD_T_ALLOWED_FAMILIES
 
 
 def compile_gateset(
@@ -79,13 +66,12 @@ def compile_gateset(
         A compiled Cirq circuit using operations from the requested gateset.
 
     Raises:
-        ValueError: If `gateset` is Clifford + T but does not carry an `_atol`
+        ValueError: If `gateset` is Clifford + T but does not carry an `atol`
             attribute. Use `clifford_t_gateset(atol=...)` to construct the
             default Clifford + T target.
     """
-    if _is_clifford_t_gateset(gateset):
-        if not hasattr(gateset, "_atol"):
-            raise ValueError("Clifford + T gatesets must define an `_atol` attribute.")
-        return compile_cirq_to_clifford_t(circuit, eps=gateset._atol, verbose=verbose)
-
+    if isinstance(gateset, CliffordTGateset):
+        return compile_cirq_to_clifford_t(circuit, eps=gateset.atol, verbose=verbose)
+    if not isinstance(gateset, cirq.CompilationTargetGateset):
+        raise TypeError("Non Clifford+T gatesets must be CompilationTargetGateset instances")
     return cirq.optimize_for_target_gateset(circuit, gateset=gateset)
