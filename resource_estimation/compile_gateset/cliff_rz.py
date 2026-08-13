@@ -249,14 +249,7 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
     # TODO: add a special decomposition for toffoli
 
 
-_CLIFFORD_T_REQUIRED_GATES = (cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.T)
-_CLIFFORD_T_OPTIONAL_GATES = (cirq.I, cirq.MeasurementGate, cirq.ResetChannel)
-
-
 class CliffordTGateset(cirq.Gateset):
     def __init__(self, atol: float) -> None:
-        super().__init__(
-            *_CLIFFORD_T_REQUIRED_GATES,
-            *_CLIFFORD_T_OPTIONAL_GATES,
-        )
+        super().__init__(cirq.H, cirq.S, cirq.Z, cirq.X, cirq.CNOT, cirq.T, cirq.I, cirq.MeasurementGate, cirq.ResetChannel)
         self.atol = atol
