@@ -28,12 +28,18 @@ try:
 except ImportError:  # pragma: no cover
     from typing_extensions import Self, overload
 
+
 import cirq
 import numpy as np
 import numpy.typing as npt
 
 import resource_estimation.ftqc.architecture as arch
 from resource_estimation.visualizations import C, boxed_header
+from resource_estimation.typing import _require_gate_operation
+
+InfoValue = float | int | str | bool | dict[str, tuple[int, float]]
+InfoSection = dict[str, InfoValue]
+InfoDict = dict[str, InfoSection]
 
 STR2ARCH: dict[str, collections.abc.Callable[..., arch.Architecture]] = {
     "ssm": functools.partial(arch.DefaultMovement, idling=False, post_op_correction=True),
@@ -89,16 +95,17 @@ def surface_code_fidelity(
     return 1 - A_arr * (p / pth) ** ((d_arr + 1) // 2)
 
 
-def get_t_path(circuit: cirq.Circuit, verbose: bool = True) -> list[cirq.Operation]:
+def get_t_path(circuit: cirq.Circuit, verbose: bool = True) -> list[cirq.GateOperation]:
     """
     Get the T Path of a logical circuit
     Good for comparing with cost model resource estimations
     """
-    qubit_paths: dict[cirq.Qid, list[cirq.Operation]] = {
+    qubit_paths: dict[cirq.Qid, list[cirq.GateOperation]] = {
         qubit: [] for qubit in circuit.all_qubits()
     }
     qubit_times: dict[cirq.Qid, float] = dict.fromkeys(circuit.all_qubits(), 0)
     for op in tqdm.tqdm(list(circuit.all_operations()), disable=not verbose, colour="cyan"):
+        op = _require_gate_operation(op)
         op_qubits = op.qubits
         big_qubit = max(op_qubits, key=lambda qubit: qubit_times[qubit])
         big_path = qubit_paths[big_qubit]
@@ -307,8 +314,8 @@ class Report:
     # Final Resource Estimates
     time_serial: float = np.inf
     time_parallel: float = np.inf
-    gates_serial: dict[str, dict[cirq.Gate, int]] = field(default_factory=dict)
-    gates_parallel: dict[str, dict[cirq.Gate, int]] = field(default_factory=dict)
+    gates_serial: dict[str, tuple[int, float]] = field(default_factory=dict)
+    gates_parallel: dict[str, tuple[int, float]] = field(default_factory=dict)
     physical_qubits: int = -1
     volume: float = np.inf
     resource_time: float = np.inf
@@ -316,7 +323,7 @@ class Report:
     total_time: float = np.inf
 
     @property
-    def info_dict(self) -> dict[str, dict[str, str | float | bool]]:
+    def info_dict(self) -> InfoDict:
         # This dictionary will be useful for generating organized reports about the data
         return {
             "Inputs": {
@@ -395,7 +402,7 @@ class Report:
         return filepath
 
     @classmethod
-    def load(cls, filename: str) -> Self:
+    def load(cls, filename: Path | str) -> Self:
         with open(filename, "r") as f:
             configs = json.load(f)
         return cls(**configs)
@@ -406,7 +413,7 @@ class Report:
     def time_line(self, name: str, seconds: float) -> str:
         return f"{C.OKGREEN}Generated {name} in {C.END}{C.YELLOW}{seconds:.3e}{C.END}{C.OKGREEN} seconds{C.END}"
 
-    def line(self, name: str, value: float | str | bool, sep: int = 29) -> str:
+    def line(self, name: str, value: float | str | bool | int, sep: int = 29) -> str:
         if isinstance(value, bool):
             c, v = "", str(value)
         elif isinstance(value, int):
@@ -435,7 +442,10 @@ class Report:
         info = self.info_dict[header].copy()
         report_string = """"""
         report_string += self.header_line(title=header) + "\n"
-        report_string += self.time_line(name=header, seconds=info.pop("Time")) + "\n"
+        time_value = info.pop("Time")
+        if not isinstance(time_value, (int, float)):
+            raise TypeError(f"Expected numeric time, got {type(time_value).__name__}")
+        report_string += self.time_line(name=header, seconds=time_value) + "\n"
         for name, value in info.items():
             if not isinstance(value, dict):
                 report_string += self.line(name=name, value=value) + "\n"
