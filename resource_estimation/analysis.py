@@ -34,8 +34,8 @@ import numpy as np
 import numpy.typing as npt
 
 import resource_estimation.ftqc.architecture as arch
-from resource_estimation.visualizations import C, boxed_header
 from resource_estimation.typing import _require_gate_operation
+from resource_estimation.visualizations import C, boxed_header
 
 InfoValue = float | int | str | bool | dict[str, tuple[int, float]]
 InfoSection = dict[str, InfoValue]
