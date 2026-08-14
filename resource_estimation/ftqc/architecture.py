@@ -114,7 +114,7 @@ def _merge_cost(
 def _syndrome_extract_cost(
     rounds: int,
     num_logical_qubits: int,
-    patch: codepatch.RotatedSurfaceCodePatch,
+    patch: codepatch.CSSCodePatch,
 ) -> dict[str, dict[cirq.Gate, int]]:
     """Calculates the cost of syndrome extraction in terms of physical gates"""
     # This is how SE should look...
@@ -130,12 +130,12 @@ def _syndrome_extract_cost(
     #            CZ  |  |
     #               CZ  |
     #                  CZ
-    x_syndrome_cnots = patch.total_x_syndrome_cnots()
-    z_syndrome_cnots = patch.total_z_syndrome_cnots()
-    phased_xz_gates = 2 * (x_syndrome_cnots + patch.num_x_stabs() + patch.num_z_stabs())
+    x_check_weight = patch.total_x_check_weight()
+    z_check_weight = patch.total_z_check_weight()
+    phased_xz_gates = 2 * (x_check_weight + patch.num_x_stabilizers() + patch.num_z_stabilizers())
     gate_cost = {
         cirq.MeasurementGate: patch.num_measure_qubits * num_logical_qubits * rounds,
-        cirq.CZ: (x_syndrome_cnots + z_syndrome_cnots) * num_logical_qubits * rounds,
+        cirq.CZ: (x_check_weight + z_check_weight) * num_logical_qubits * rounds,
         cirq.ResetChannel: patch.num_measure_qubits * num_logical_qubits * rounds,
         cirq.PhasedXZGate: phased_xz_gates * num_logical_qubits * rounds,
     }

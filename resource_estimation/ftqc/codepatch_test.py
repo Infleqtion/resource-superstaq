@@ -114,15 +114,16 @@ def test_code_patch_metadata() -> None:
 def test_rotated_surface_code_patch_metadata() -> None:
     patch = codepatch.RotatedSurfaceCodePatch(patch_id=7, d=7)
 
+    assert isinstance(patch, codepatch.CSSCodePatch)
     assert patch.patch_id == 7
     assert patch.code_params == (49, 1, 7)
     assert patch.num_data_qubits == 49
     assert patch.num_measure_qubits == 48
     assert patch.num_physical_qubits == 97
-    assert patch.num_x_stabs() == 24
-    assert patch.num_z_stabs() == 24
-    assert patch.total_x_syndrome_cnots() == 84
-    assert patch.total_z_syndrome_cnots() == 84
+    assert patch.num_x_stabilizers() == 24
+    assert patch.num_z_stabilizers() == 24
+    assert patch.total_x_check_weight() == 84
+    assert patch.total_z_check_weight() == 84
     assert len(patch.logical_qubits) == 1
     assert repr(patch) == ("codepatch.RotatedSurfaceCodePatch(patch_id=7, d=7, n=49, k=1)")
 
@@ -131,8 +132,8 @@ def test_rotated_surface_code_patch_metadata() -> None:
     assert patch.code_params == (25, 1, 5)
     assert patch.num_data_qubits == 25
     assert patch.num_measure_qubits == 24
-    assert patch.total_x_syndrome_cnots() == 40
-    assert patch.total_z_syndrome_cnots() == 40
+    assert patch.total_x_check_weight() == 40
+    assert patch.total_z_check_weight() == 40
     assert len(patch.logical_qubits) == 1
     assert repr(patch) == ("codepatch.RotatedSurfaceCodePatch(patch_id=5, d=5, n=25, k=1)")
 
@@ -142,10 +143,10 @@ def test_code_patch_surface_stabilizer_metadata_matches_qldpc() -> None:
         patch = codepatch.RotatedSurfaceCodePatch(patch_id=d, d=d)
         qldpc_code = codes.SurfaceCode(d)
 
-        assert patch.num_x_stabs() == qldpc_code.num_checks_x
-        assert patch.num_z_stabs() == qldpc_code.num_checks_z
-        assert patch.total_x_syndrome_cnots() == len(qldpc_code.matrix_x.nonzero()[0])
-        assert patch.total_z_syndrome_cnots() == len(qldpc_code.matrix_z.nonzero()[0])
+        assert patch.num_x_stabilizers() == qldpc_code.num_checks_x
+        assert patch.num_z_stabilizers() == qldpc_code.num_checks_z
+        assert patch.total_x_check_weight() == len(qldpc_code.matrix_x.nonzero()[0])
+        assert patch.total_z_check_weight() == len(qldpc_code.matrix_z.nonzero()[0])
 
 
 def test_code_patch_logical_qubits_from_css_logical_support() -> None:
@@ -177,7 +178,7 @@ def test_surface_code_patch_counts_match_legacy(d: int) -> None:
     assert patch.num_data_qubits == d**2
     assert patch.num_measure_qubits == d**2 - 1
     assert patch.num_physical_qubits == 2 * d**2 - 1
-    assert patch.num_x_stabs() == (d**2 - 1) // 2
-    assert patch.num_z_stabs() == (d**2 - 1) // 2
-    assert patch.total_x_syndrome_cnots() == 2 * d * (d - 1)
-    assert patch.total_z_syndrome_cnots() == 2 * d * (d - 1)
+    assert patch.num_x_stabilizers() == (d**2 - 1) // 2
+    assert patch.num_z_stabilizers() == (d**2 - 1) // 2
+    assert patch.total_x_check_weight() == 2 * d * (d - 1)
+    assert patch.total_z_check_weight() == 2 * d * (d - 1)

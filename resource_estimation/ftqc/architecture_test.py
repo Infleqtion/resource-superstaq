@@ -193,10 +193,12 @@ def test_movement_gate_costs(d) -> None:
     op = lsp.SyndromeExtract(1, 1).on(qubit_a)
     cost = arc.gate_cost(op)
     phased_xz_gates = 2 * (
-        arc.patch.total_x_syndrome_cnots() + arc.patch.num_x_stabs() + arc.patch.num_z_stabs()
+        arc.patch.total_x_check_weight()
+        + arc.patch.num_x_stabilizers()
+        + arc.patch.num_z_stabilizers()
     )
     assert cost == {
-        cirq.CZ: arc.patch.total_z_syndrome_cnots() + arc.patch.total_x_syndrome_cnots(),
+        cirq.CZ: arc.patch.total_z_check_weight() + arc.patch.total_x_check_weight(),
         cirq.QubitPermutationGate: 10,
         cirq.MeasurementGate: arc.patch.num_measure_qubits,
         cirq.ResetChannel: arc.patch.num_measure_qubits,
@@ -207,7 +209,7 @@ def test_movement_gate_costs(d) -> None:
     op = lsp.SyndromeExtract(2, 1).on(qubit_a, qubit_b)
     cost = arc.gate_cost(op)
     assert cost == {
-        cirq.CZ: 2 * (arc.patch.total_z_syndrome_cnots() + arc.patch.total_x_syndrome_cnots()),
+        cirq.CZ: 2 * (arc.patch.total_z_check_weight() + arc.patch.total_x_check_weight()),
         cirq.QubitPermutationGate: 10,
         cirq.MeasurementGate: arc.patch.num_measure_qubits * 2,
         cirq.ResetChannel: arc.patch.num_measure_qubits * 2,

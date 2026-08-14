@@ -121,12 +121,11 @@ class CodePatch:
         return self.num_data_qubits + self.num_measure_qubits
 
 
-class RotatedSurfaceCodePatch(CodePatch):
-    """A rotated surface-code patch backed by qLDPC metadata."""
+class CSSCodePatch(CodePatch):
+    """Metadata shared by qLDPC CSS code patches."""
 
-    def __init__(self, patch_id: int, d: int) -> None:
-        assert (d - 1) % 2 == 0, "CodePatches must be odd distance"
-        self._qldpc_code = codes.SurfaceCode(d)
+    def __init__(self, patch_id: int, qldpc_code: codes.CSSCode) -> None:
+        self._qldpc_code = qldpc_code
         n, k, code_distance = self._qldpc_code.get_code_params()
         super().__init__(
             patch_id=patch_id,
@@ -138,23 +137,23 @@ class RotatedSurfaceCodePatch(CodePatch):
         )
 
     @property
-    def qldpc_code(self) -> codes.SurfaceCode:
+    def qldpc_code(self) -> codes.CSSCode:
         return self._qldpc_code
 
-    def num_x_stabs(self) -> int:
+    def num_x_stabilizers(self) -> int:
         """Return the number of X-type stabilizer checks."""
         return int(self.qldpc_code.num_checks_x)
 
-    def num_z_stabs(self) -> int:
+    def num_z_stabilizers(self) -> int:
         """Return the number of Z-type stabilizer checks."""
         return int(self.qldpc_code.num_checks_z)
 
-    def total_x_syndrome_cnots(self) -> int:
-        """Return the data-check interactions needed to measure all X stabilizers."""
+    def total_x_check_weight(self) -> int:
+        """Return the total weight of all X-type stabilizer checks."""
         return len(self.qldpc_code.matrix_x.nonzero()[0])
 
-    def total_z_syndrome_cnots(self) -> int:
-        """Return the data-check interactions needed to measure all Z stabilizers."""
+    def total_z_check_weight(self) -> int:
+        """Return the total weight of all Z-type stabilizer checks."""
         return len(self.qldpc_code.matrix_z.nonzero()[0])
 
     def _logical_qubits_from_qldpc_code(self, patch_id: int) -> list[LogicalQubit]:
@@ -173,6 +172,14 @@ class RotatedSurfaceCodePatch(CodePatch):
     @staticmethod
     def _logical_op_support(logical_op: typing.Iterable[int]) -> set[int]:
         return {index for index, value in enumerate(logical_op) if value}
+
+
+class RotatedSurfaceCodePatch(CSSCodePatch):
+    """A rotated surface-code patch backed by qLDPC metadata."""
+
+    def __init__(self, patch_id: int, d: int) -> None:
+        assert (d - 1) % 2 == 0, "CodePatches must be odd distance"
+        super().__init__(patch_id=patch_id, qldpc_code=codes.SurfaceCode(d))
 
     def __repr__(self) -> str:
         args = [
