@@ -17,14 +17,15 @@ from __future__ import annotations
 import argparse
 import textwrap
 import time
-from typing import cast
+import typing
 
 import cirq
 import cirq_superstaq as css
 
 import resource_estimation as res
 from resource_estimation.analysis import STR2ARCH
-from resource_estimation.typing import GateCounts
+if typing.TYPE_CHECKING:
+    from resource_estimation.typing import GateCounts
 from resource_estimation.visualizations import C, make_pretty
 
 
