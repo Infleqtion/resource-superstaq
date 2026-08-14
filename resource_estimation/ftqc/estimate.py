@@ -14,16 +14,16 @@
 from __future__ import annotations
 
 import collections
+import typing
 import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar
 
 import cirq
 import networkx as nx
 from tqdm import tqdm
 
-if TYPE_CHECKING:
+if typing.TYPE_CHECKING:
     from resource_estimation.ftqc.architecture import Architecture
     from resource_estimation.typing import GateCounts, GateKey, StrCounts
 
@@ -161,11 +161,11 @@ class ResourceEstimator:
 
 
 ReactionTreeNode = tuple[int, int]
-Q = TypeVar("Q", bound=cirq.Qid)
+Q = typing.TypeVar("Q", bound=cirq.Qid)
 
 
 @dataclass(frozen=True)
-class ReactionDynamics(Generic[Q]):
+class ReactionDynamics(typing.Generic[Q]):
     """Reaction dynamic for each delayed choice measurement in a factory.
 
     Attributes:
@@ -187,12 +187,12 @@ class ReactionDepthEstimator:
     anti-commutes with any of the target vertex's dependency Paulis.
     """
 
-    _DEFAULT_FACTORIES: ClassVar[dict[cirq.Gate, bool]] = {
+    _DEFAULT_FACTORIES: typing.ClassVar[dict[cirq.Gate, bool]] = {
         cirq.T: True,
         cirq.S: True,
         cirq.CCZ: True,
     }
-    _NON_CLIFFORD_ERROR: ClassVar[str] = (
+    _NON_CLIFFORD_ERROR: typing.ClassVar[str] = (
         "Reaction-depth estimator encountered a non-Clifford operation without "
         "factory reaction dynamics: {operation!r}."
     )

@@ -13,8 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
+import typing
 from math import pi
-from typing import cast
 
 import cirq
 import networkx as nx
@@ -701,7 +701,7 @@ def test_reaction_depth_rejects_concrete_qubits_in_dynamics_at_construction(
     custom_gate = cirq.XPowGate(exponent=0.25)
     concrete_pauli: cirq.PauliString[cirq.Qid] = cirq.PauliString(cirq.X(operation_qubit))
     # invalid input is cast explicitly to catch error and satisfy type checker
-    invalid_pauli = cast(cirq.PauliString[cirq.LineQubit], concrete_pauli)
+    invalid_pauli = typing.cast(cirq.PauliString[cirq.LineQubit], concrete_pauli)
     with pytest.raises(ValueError, match="must use only operation-local qubits"):
         est.ReactionDepthEstimator(
             factories={custom_gate: True},
