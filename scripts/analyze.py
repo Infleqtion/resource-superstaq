@@ -17,14 +17,12 @@ from __future__ import annotations
 import argparse
 import textwrap
 import time
-from typing import cast
 
 import cirq
 import cirq_superstaq as css
 
 import resource_estimation as res
 from resource_estimation.analysis import STR2ARCH, C, make_pretty
-from resource_estimation.typing import GateCounts
 
 
 def parse_args() -> argparse.Namespace:
@@ -269,19 +267,14 @@ def main(args: argparse.Namespace | None = None) -> int:
 
     t1 = time.time()
     est = res.ftqc.ResourceEstimator(arc=arch)
-    serial_gate_counts = cast(
-        GateCounts, est.serial_circuit_cost(primitive_circuit, verbose=verbose)
-    )
+    serial_gate_counts = est.serial_circuit_cost(primitive_circuit, verbose=verbose)
     serial_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in serial_gate_counts.items()
     }
     total_time_serial = sum(serial_gate_times.values())
-    parallel_gate_counts = cast(
-        GateCounts,
-        est.parallel_circuit_cost(
-            primitive_circuit,
-            verbose=verbose,
-        ),
+    parallel_gate_counts = est.parallel_circuit_cost(
+        primitive_circuit,
+        verbose=verbose,
     )
     parallel_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in parallel_gate_counts.items()
