@@ -14,9 +14,11 @@
 from . import (
     compile_gateset,
     ftqc,
+    analysis,
 )
 
 __all__ = [
     "compile_gateset",
     "ftqc",
+    "analysis",
 ]
