@@ -700,17 +700,20 @@ class DefaultMovement(Architecture):
         Everything else should be penalized by distance away up to a distance of 500us
         This reference says something about .55um/us (https://www.nature.com/articles/s41586-022-04592-6.pdf)
         To make things easier, I'm going to call that .5um/us
-        A surface code patch has a side length of ~d physical qubits
-        If we assume qubits are spaced by ~1um, it takes about 2*d us to move a qubit to an adjacent patch
-        So if the L1 distance between logical qubits A and B is C, then we penalize Move(A, B) with time 2*C*d (up to a maximum of 500us)
+        Movement-layout compilation records distance in units of the interleaved physical-qubit grid.
+        At 0.5um/us, a Move operation is penalized by twice that distance, up to 500us.
+        Legacy operations without an explicit distance continue to derive it from GridQubit separation and d.
         This feels a little too weighted in favor of alleyway movement, but it is at least a rule, and it's something worth debating
         """
         gate_cost = {cirq.QubitPermutationGate: 1}
         moment_cost = {cirq.QubitPermutationGate: 1}
         if op.gate.zone is None:
-            ctrl, trgt = op.qubits
-            distance = abs(trgt.row - ctrl.row) + abs(trgt.col - ctrl.col)
-            penalty_factor = 2 * self.d * distance
+            distance = op.gate.distance
+            if distance is None:
+                ctrl, trgt = op.qubits
+                grid_distance = abs(trgt.row - ctrl.row) + abs(trgt.col - ctrl.col)
+                distance = self.d * grid_distance
+            penalty_factor = 2 * distance
             time_cap = self.phys_gate_times[cirq.QubitPermutationGate]
             op_time = min(penalty_factor, time_cap)
         else:

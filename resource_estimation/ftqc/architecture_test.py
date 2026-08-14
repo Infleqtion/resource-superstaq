@@ -891,11 +891,13 @@ def test_logical_move() -> None:
     arc = arch.DualSpeciesMovement()
     one_hop = lsp.Move(zone=None).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 0))
     two_hop = lsp.Move(zone=None).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 1))
+    explicit_distance = lsp.Move(zone=None, distance=13).on(cirq.LineQubit(0), cirq.LineQubit(1))
 
     one_cost = arc.op_time(one_hop)
     two_cost = arc.op_time(two_hop)
 
     assert two_cost == 2 * one_cost
+    assert arc.op_time(explicit_distance) == 26
 
 
 def test_y_cult_on_movement() -> None:

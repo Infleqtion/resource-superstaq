@@ -279,9 +279,14 @@ class Move(cirq.Gate):
     logical qubit patches.
     """
 
-    def __init__(self, zone: typing.Optional[typing.Literal["measure", "interact"]] = None) -> None:
+    def __init__(
+        self,
+        zone: typing.Optional[typing.Literal["measure", "interact"]] = None,
+        distance: int | None = None,
+    ) -> None:
         self._num_qubits = 2 if zone is None else 1
         self._zone = zone
+        self._distance = distance
 
     def num_qubits(self) -> int:
         return self._num_qubits
@@ -290,23 +295,30 @@ class Move(cirq.Gate):
     def zone(self) -> typing.Literal["interact", "measure"] | None:
         return self._zone
 
+    @property
+    def distance(self) -> int | None:
+        return self._distance
+
     def __str__(self) -> str:
         if self.zone is None:
             return "MOVE"
         return "MOVE_MZ" if self.zone == "measure" else "MOVE_IZ"
 
-    def _json_dict_(self) -> dict[str, typing.Literal["interact", "measure"] | None]:
-        return {"zone": self._zone}
+    def _json_dict_(
+        self,
+    ) -> dict[str, typing.Literal["interact", "measure"] | int | None]:
+        return {"zone": self._zone, "distance": self._distance}
 
     def __repr__(self) -> str:
-        return f"lsp.Move(zone={self._zone})"
+        distance = "" if self.distance is None else f", distance={self.distance}"
+        return f"lsp.Move(zone={self._zone}{distance})"
 
     @classmethod
     def _json_namespace_(cls) -> str:
         return "lsp"
 
-    def _value_equality_values_(self) -> tuple[int, str | None]:
-        return (self._num_qubits, self._zone)
+    def _value_equality_values_(self) -> tuple[int, str | None, int | None]:
+        return (self._num_qubits, self._zone, self._distance)
 
 
 class RotatedCodePatch:

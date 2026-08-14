@@ -120,6 +120,8 @@ def test_rotated_surface_code_patch_metadata() -> None:
     assert patch.num_data_qubits == 49
     assert patch.num_measure_qubits == 48
     assert patch.num_physical_qubits == 97
+    assert patch.width == 13
+    assert patch.height == 13
     assert patch.num_x_stabilizers() == 24
     assert patch.num_z_stabilizers() == 24
     assert patch.total_x_check_weight() == 84
@@ -132,6 +134,8 @@ def test_rotated_surface_code_patch_metadata() -> None:
     assert patch.code_params == (25, 1, 5)
     assert patch.num_data_qubits == 25
     assert patch.num_measure_qubits == 24
+    assert patch.width == 9
+    assert patch.height == 9
     assert patch.total_x_check_weight() == 40
     assert patch.total_z_check_weight() == 40
     assert len(patch.logical_qubits) == 1

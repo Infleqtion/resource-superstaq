@@ -181,6 +181,16 @@ class RotatedSurfaceCodePatch(CSSCodePatch):
         assert (d - 1) % 2 == 0, "CodePatches must be odd distance"
         super().__init__(patch_id=patch_id, qldpc_code=codes.SurfaceCode(d))
 
+    @property
+    def width(self) -> int:
+        """The width of the patch's interleaved data-and-measurement grid."""
+        return 2 * int(self.d) - 1
+
+    @property
+    def height(self) -> int:
+        """The height of the patch's interleaved data-and-measurement grid."""
+        return 2 * int(self.d) - 1
+
     def __repr__(self) -> str:
         args = [
             f"patch_id={self.patch_id!r}",
