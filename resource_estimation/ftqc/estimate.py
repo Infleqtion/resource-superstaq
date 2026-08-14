@@ -23,7 +23,7 @@ import cirq
 import networkx as nx
 from tqdm import tqdm
 
-if typing.TYPE_CHECKING:
+if typing.TYPE_CHECKING: # pragma: no cover
     from resource_estimation.ftqc.architecture import Architecture
     from resource_estimation.typing import GateCounts, GateKey, StrCounts
 
