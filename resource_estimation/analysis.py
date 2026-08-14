@@ -35,7 +35,6 @@ import numpy.typing as npt
 
 import resource_estimation.ftqc.architecture as arch
 from resource_estimation.typing import _require_gate_operation
-from resource_estimation.visualizations import C, boxed_header
 
 InfoValue = float | int | str | bool | dict[str, tuple[int, float]]
 InfoSection = dict[str, InfoValue]
@@ -239,6 +238,39 @@ def error_estimate(
 
     final_fidelity = synthesis_fidelity * logical_op_fidelity * cultivation_fidelity
     return 1 - final_fidelity
+
+
+class C:
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    BOLD = "\033[1m"
+    END = "\033[0m"
+    YELLOW = "\033[93m"
+    MAGENTA = "\033[95m"
+
+
+def boxed_header(title: str, width: int = 40) -> str:
+    pad = width - len(title) - 2
+    left = pad // 2
+    right = pad - left
+    return f"{'=' * left} {title} {'=' * right}"
+
+
+def hr(width: int = 40) -> str:  # pragma: no cover
+    return "=" * width
+
+
+def make_pretty(obj: object) -> str:  # pragma: no cover
+    """
+    Pulling out the pretty functionality from the ResourceEstimator class to avoid doubling resource calls
+    """
+    if hasattr(obj, "__name__"):
+        return obj.__name__
+    return str(obj)
 
 
 @dataclass
