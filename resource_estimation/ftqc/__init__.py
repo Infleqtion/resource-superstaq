@@ -20,7 +20,7 @@ from resource_estimation.ftqc.architecture import (
     Superconductor,
     convert_globals_to_phasedxz,
 )
-from resource_estimation.ftqc.codepatch import CodePatch, LogicalQubit
+from resource_estimation.ftqc.codepatch import CodePatch, LogicalQubit, RotatedSurfaceCodePatch
 from resource_estimation.ftqc.compile_ftqc import (
     add_moves,
     ft_compile,
@@ -42,7 +42,6 @@ from resource_estimation.ftqc.lattice_surgery_primitives import (
     EndpointPatch,
     ErrorCorrect,
     IntermediatePatch,
-    LogicalPPM,
     Merge,
     Move,
     RotatedCodePatch,
@@ -80,7 +79,6 @@ __all__ = [
     "IntermediatePatch",
     "Layout",
     "LogicalQubit",
-    "LogicalPPM",
     "Merge",
     "MeasureZonesOnly",
     "MovementLayout",
@@ -89,6 +87,7 @@ __all__ = [
     "ReactionDynamics",
     "ResourceEstimator",
     "RotatedCodePatch",
+    "RotatedSurfaceCodePatch",
     "Split",
     "Superconductor",
     "SyndromeExtract",

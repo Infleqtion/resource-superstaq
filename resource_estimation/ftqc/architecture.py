@@ -19,7 +19,6 @@ import json
 from functools import cached_property, lru_cache
 from math import ceil
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import cirq
 import cirq_superstaq as css
@@ -30,11 +29,7 @@ import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.compile_ftqc import add_moves
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
-from resource_estimation.ftqc.qldpc_surgery import logical_ppm_resource_cost
 from resource_estimation.ftqc.stim_functions import cultivate
-
-if TYPE_CHECKING:
-    from qldpc.codes import CSSCode
 
 NEUTRAL_GATES = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.CZ: 0.27,
@@ -119,7 +114,7 @@ def _merge_cost(
 def _syndrome_extract_cost(
     rounds: int,
     num_logical_qubits: int,
-    patch: codepatch.CodePatch,
+    patch: codepatch.RotatedSurfaceCodePatch,
 ) -> dict[str, dict[cirq.Gate, int]]:
     """Calculates the cost of syndrome extraction in terms of physical gates"""
     # This is how SE should look...
@@ -194,8 +189,7 @@ class Architecture(abc.ABC):
         self.post_op_correction = post_op_correction
         self.movement = movement
         self.d = d
-        assert (d - 1) % 2 == 0, "CodePatches must be odd distance"
-        self.patch = codepatch.CodePatch(d=self.d)
+        self.patch = codepatch.RotatedSurfaceCodePatch(patch_id=0, d=self.d)
         self.cultivation_repetition = cultivation_repetition
         self.cultivation_fault_distance = cultivation_fault_distance
         self.syndrome_rounds = syndrome_rounds
@@ -623,32 +617,6 @@ class DefaultMovement(Architecture):
         self.__post_init__()
 
     zone_ops = cirq.Gateset(cirq.CNOT, cirq.MeasurementGate)
-
-    def logical_ppm_cost(
-        self,
-        op: cirq.Operation,
-        left_code: CSSCode,
-        right_code: CSSCode,
-        *,
-        rounds: int,
-        left_logical_index: int = 0,
-        right_logical_index: int = 0,
-    ) -> dict[str, object]:
-        """Cost a LogicalPPM from explicitly supplied qLDPC code data."""
-        cost = logical_ppm_resource_cost(
-            op,
-            left_code,
-            right_code,
-            rounds=rounds,
-            left_logical_index=left_logical_index,
-            right_logical_index=right_logical_index,
-        )
-        return {
-            "gate_cost": cost["gate_cost"],
-            "moment_cost": cost["moment_cost"],
-            "op_time": self.total_time(moment_cost_dict=cost["moment_cost"]),
-            "num_physical_qubits": cost["num_physical_qubits"],
-        }
 
     def cnot_cost(self, op: cirq.Operation) -> dict[str, dict[type[cirq.Gate], int] | float]:
         return self._cnot_cost

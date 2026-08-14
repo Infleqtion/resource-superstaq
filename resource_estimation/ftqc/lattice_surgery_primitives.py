@@ -23,8 +23,6 @@ import cirq
 
 def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
     """Tells cirq.json how to deserialize custom gates"""
-    if cirq_type == "lsp.LogicalPPM":
-        return LogicalPPM
     if cirq_type == "lsp.Merge":
         return Merge
     if cirq_type == "lsp.Split":
@@ -39,49 +37,6 @@ def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
         return Move
     if cirq_type == "lsp.Distil":
         return Distil
-    return None
-
-
-_LOGICAL_PAULI_PRODUCTS = ("XX", "ZZ")
-
-
-@cirq.value_equality
-class LogicalPPM(cirq.Gate):
-    """Opaque logical XX- or ZZ-product measurement primitive."""
-
-    def __init__(self, pauli_product: typing.Literal["XX", "ZZ"]) -> None:
-        if pauli_product not in _LOGICAL_PAULI_PRODUCTS:
-            raise ValueError(
-                f"pauli_product must be one of {_LOGICAL_PAULI_PRODUCTS}, not {pauli_product!r}",
-            )
-        self._pauli_product = pauli_product
-
-    @property
-    def pauli_product(self) -> typing.Literal["XX", "ZZ"]:
-        return self._pauli_product
-
-    def _num_qubits_(self) -> int:
-        return 2
-
-    def __str__(self) -> str:
-        return f"PPM({self.pauli_product})"
-
-    def _circuit_diagram_info_(self, _args: cirq.CircuitDiagramInfoArgs) -> tuple[str, str]:
-        symbol = f"PPM-{self.pauli_product}"
-        return symbol, symbol
-
-    def _json_dict_(self) -> dict[str, str]:
-        return {"pauli_product": self.pauli_product}
-
-    def __repr__(self) -> str:
-        return f"lsp.LogicalPPM(pauli_product={self.pauli_product!r})"
-
-    @classmethod
-    def _json_namespace_(cls) -> str:
-        return "lsp"
-
-    def _value_equality_values_(self) -> str:
-        return self.pauli_product
 
 
 @cirq.value_equality

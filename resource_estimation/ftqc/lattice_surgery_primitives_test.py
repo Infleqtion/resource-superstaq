@@ -20,28 +20,6 @@ import pytest
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 
 
-@pytest.mark.parametrize("pauli_product", ("XX", "ZZ"))
-def test_logical_ppm(pauli_product: lsp.LogicalPauliProduct) -> None:
-    gate = lsp.LogicalPPM(pauli_product)
-    q0, q1 = cirq.LineQubit.range(2)
-    operation = gate.on(q0, q1)
-
-    assert gate.pauli_product == pauli_product
-    assert gate.num_qubits() == 2
-    assert str(gate) == f"PPM({pauli_product})"
-    assert not cirq.has_unitary(operation)
-    assert f"PPM-{pauli_product}" in cirq.Circuit(operation).to_text_diagram()
-
-
-def test_logical_ppm_validation_and_equality() -> None:
-    with pytest.raises(ValueError, match="pauli_product must be one of"):
-        lsp.LogicalPPM("XZ")  # type: ignore[arg-type]
-
-    equality_group = cirq.testing.EqualsTester()
-    equality_group.add_equality_group(lsp.LogicalPPM("XX"), lsp.LogicalPPM("XX"))
-    equality_group.add_equality_group(lsp.LogicalPPM("ZZ"))
-
-
 def test_merge() -> None:
     merge_gate = lsp.Merge(2, smooth=True)
     assert merge_gate.smooth
@@ -249,7 +227,6 @@ def test_serialization() -> None:
     circuit = cirq.Circuit(
         [
             lsp.Merge(2, True).on(qubit_a, qubit_b),
-            lsp.LogicalPPM("ZZ").on(qubit_a, qubit_b),
             lsp.Split([1, 1], True).on(qubit_a, qubit_b),
             lsp.SyndromeExtract(1, 1).on(qubit_a),
             lsp.ErrorCorrect(1).on(qubit_b),
@@ -303,11 +280,6 @@ def test_repr() -> None:
     assert (
         repr(merge)
         == "lsp.Merge(num_qubits=2, smooth=False).on(cirq.LineQubit(0), cirq.LineQubit(1))"
-    )
-
-    ppm = lsp.LogicalPPM("XX").on(qa, qb)
-    assert (
-        repr(ppm) == "lsp.LogicalPPM(pauli_product='XX').on(cirq.LineQubit(0), cirq.LineQubit(1))"
     )
 
     split = lsp.Split([1, 1], smooth=False).on(qa, qb)
