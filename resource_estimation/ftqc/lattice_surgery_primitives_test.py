@@ -246,7 +246,7 @@ def test_serialization() -> None:
             lsp.Distil("T").on(*factory_block),
             lsp.Distil("CCZ").on(*factory_block[:23]),
             lsp.ResourceCorrection("T").on(qubit_a),
-            lsp.ResourceCorrection("CCZ").on(qubit_a, qubit_b),
+            lsp.ResourceCorrection("CCZ").on(qubit_a, qubit_b, cirq.GridQubit(0, 2)),
         ]
     )
     json_str = cirq.to_json(circuit)

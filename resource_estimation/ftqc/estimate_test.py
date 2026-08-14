@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from resource_estimation.ftqc import distil_15_to_1, ccz_8_to_1
+from resource_estimation.ftqc import ResourceEstimator, distil_15_to_1, ccz_8_to_1
 from math import pi
 
 import cirq
@@ -21,6 +21,7 @@ import random
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+from unittest import mock
 
 
 @pytest.fixture
@@ -260,17 +261,13 @@ def test_critical_path() -> None:
         assert all(op in cirq.GateFamily(expected) for op, expected in zip(path2, expected_types))
 
 
-def test_dynamic_T_resource_counts() -> None:
-    # If this test is flaky double check that `random.seed` actually makes randint calls
-    # deterministic, or if it always fails maybe change the seed
-    # Expected sequence of calls: 1,0,1,0,1,1 (1 is no cost, 0 is cost)
-    # There may be a better way of doing this than just testing numbers in ipython lol
-    # This is not the most ideal test ever
-    random.seed(73)
+@mock.patch("resource_estimation.ftqc.architecture.randint")
+def test_dynamic_T_resource_counts(mock_randint) -> None:
     arc = arch.DefaultMovement()
     qubit = cirq.GridQubit(0, 0)
     normal_op: cirq.Operation = cirq.S.on(qubit)
     dynamic_op: cirq.Operation = lsp.ResourceCorrection("T").on(qubit)
+    mock_randint.side_effect = [1, 0, 1, 0]
     normal_s_cost = arc.gate_cost(normal_op)
     ops_and_expectations = [(dynamic_op, {}), (normal_op, normal_s_cost)]
     for op, expectation in ops_and_expectations:
@@ -291,6 +288,44 @@ def test_dynamic_T_resource_counts() -> None:
     for op, expectation in ops_and_times:
         time = arc.op_time(op)
         assert isclose(time, expectation)
+
+
+@mock.patch("resource_estimation.ftqc.architecture.randint")
+def test_dynamic_CCZ_resource_counts(mock_randint) -> None:
+    arc = arch.DefaultMovement()
+    qubit_a, qubit_b, qubit_c = (cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
+    correction_circuit = cirq.Circuit()
+    # The circuit excludes syndrome extraction costs since those are handled during compilation, so
+    # the CCZ correction cost should be identical to just doing these gates with no syndrome
+    # extraction
+    correction_circuit.append(cirq.H.on_each(*(qubit_a, qubit_b, qubit_c)))
+    correction_circuit.append(cirq.X.on_each(*(qubit_a, qubit_b, qubit_c)))
+    correction_circuit.append(cirq.CNOT.on(qubit_a, qubit_b))
+    correction_circuit.append(cirq.CNOT.on(qubit_a, qubit_c))
+    correction_circuit.append(cirq.CNOT.on(qubit_b, qubit_c))
+    correction_circuit.append(cirq.H.on_each(*(qubit_a, qubit_b, qubit_c)))
+    dynamic_op: cirq.Operation = lsp.ResourceCorrection("CCZ").on(qubit_a, qubit_b, qubit_c)
+    mock_randint.side_effect = [1, 0, 1, 0, 1, 0]
+    est = ResourceEstimator(arc)
+    normal_correction_cost = est.serial_circuit_cost(correction_circuit)
+    operation_dynamic_cost = arc.gate_cost(dynamic_op)
+    assert {} == operation_dynamic_cost
+    # Should be correction applied on second flip
+    operation_dynamic_cost = arc.gate_cost(dynamic_op)
+    assert normal_correction_cost == operation_dynamic_cost
+
+    normal_correction_time = est.parallel_circuit_time(correction_circuit)
+    operation_dynamic_time = arc.op_time(dynamic_op)
+    assert 0.0 == operation_dynamic_time
+    operation_dynamic_time = arc.op_time(dynamic_op)
+    assert isclose(normal_correction_time, operation_dynamic_time)
+
+    parallel_correction_cost = est.parallel_circuit_cost(correction_circuit)
+    moment_dynamic_cost = arc.moment_cost(dynamic_op)
+    assert {} == moment_dynamic_cost
+    # Should be correction applied on second flip
+    moment_dynamic_cost = arc.moment_cost(dynamic_op)
+    assert parallel_correction_cost == moment_dynamic_cost
 
 
 def test_physical_qubit_count(lattice_estimator) -> None:

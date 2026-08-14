@@ -669,7 +669,6 @@ class DefaultMovement(Architecture):
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
     def correction_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
-        # Since CNOT is the logical primitve, we use conjugation here
         # Total time for CCZ correction: t(H) + t(X) + 3 * t(CNOT) + t(H) (can parallelize H gates,
         # X gates, but 3 pairwise CNOTS means we have to do each one sequentially) This means that
         # the moment cost of this correction is one H moment cost, one X moment cost, 3 CNOT coment
@@ -680,12 +679,9 @@ class DefaultMovement(Architecture):
         # 0: H, SE(n), X, SE(n), IZ, CNOT(0, 1), IZ, SE(n), IZ, CNOT(0, 2), IZ, SE(n), H, SE(n)
         # 1: H, SE(n), X, SE(n), IZ, CNOT(0, 1), IZ, SE(n), IZ, CNOT(1, 2), IZ, SE(n), H, SE(n)
         # 2: H, SE(n), X, SE(n), IZ, CNOT(0, 2), IZ, SE(n), IZ, CNOT(1, 2), IZ, SE(n), H, SE(n)
-        # I can drop one round of the syndrome extract cost since the post-op correction pass will
-        # add one round of idling after the "ResourceCorrection" gate. Now whether we want to do
-        # that or not is a separate question, especially because we don't have to run the post-op
-        # correction pass, and also may vary the number of rounds of syndrome extraction so yeah.
-        # The (most I can envision) correct option is to update those passes to treat
-        # ResourceCorrection("CCZ") as requiring like 4 times as much syndrome extraction
+        # We don't account for syndrome extraction differences here but rather handle it in the
+        # compilation correction pass. However, I think the idling pass may still need some work to
+        # correctly handle the difference in moment scale
         if op.gate.resource == "T":
             if randint(0, 1):
                 return {"op_time": 0.0, "gate_cost": {}, "moment_cost": {}}
@@ -696,20 +692,28 @@ class DefaultMovement(Architecture):
                 return {"op_time": 0.0, "gate_cost": {}, "moment_cost": {}}
             else:
                 h_gate_cost = Counter(self._h_cost["gate_cost"])
+                print(h_gate_cost)
                 x_gate_cost = Counter(self._x_cost["gate_cost"])
                 cnot_gate_cost = Counter(self._cnot_cost["gate_cost"])
-                overall_gate_cost = h_gate_cost + x_gate_cost + cnot_gate_cost + h_gate_cost
-                for gate, count in overall_gate_cost.items():
+                overall_gate_cost = Counter()
+                overall_gate_cost += h_gate_cost
+                overall_gate_cost += x_gate_cost
+                overall_gate_cost += cnot_gate_cost
+                overall_gate_cost += h_gate_cost
+                # We do 3 of each of these gates
+                for gate in overall_gate_cost:
                     overall_gate_cost[gate] *= 3
 
                 h_moment_cost = Counter(self._h_cost["moment_cost"])
                 x_moment_cost = Counter(self._x_cost["moment_cost"])
                 cnot_moment_cost = Counter(self._cnot_cost["moment_cost"])
-                for gate, count in cnot_moment_cost.items():
-                    overall_gate_cost[gate] *= 3
+                # CNOT cost is multiplied by 3 since those gates must happen serially
+                for gate in cnot_moment_cost:
+                    cnot_moment_cost[gate] *= 3
                 overall_moment_cost = (
                     h_moment_cost + x_moment_cost + cnot_moment_cost + h_moment_cost
                 )
+                # CNOT cost is multiplied by 3 since those gates must happen serially
                 h_time = self._h_cost["op_time"]
                 x_time = self._x_cost["op_time"]
                 cnot_time = self._cnot_cost["op_time"]
