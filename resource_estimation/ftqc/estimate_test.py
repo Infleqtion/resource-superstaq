@@ -152,10 +152,10 @@ def test_parallel_circuit_cost(
     expected_moment_cost = movement_estimator.arc.moment_cost(cirq.CNOT.on(qubit_a, qubit_b))
     assert estimated_moment_cost == expected_moment_cost
 
-    estimated_moment_cost = movement_estimator.parallel_circuit_cost(circuit=circuit, pretty=True)
+    estimated_moment_cost = movement_estimator.parallel_circuit_cost(circuit=circuit)
     assert estimated_moment_cost == {
-        "CZ": 1,
-        "PhasedXZGate": 2,
+        cirq.CZ: 1,
+        cirq.PhasedXZGate: 2,
     }
 
 
@@ -167,9 +167,9 @@ def test_self_returns(
     circuit = cirq.Circuit(
         [lsp.ErrorCorrect(2).on(qubit_a, qubit_b), cirq.ResetChannel().on(qubit_a)],
     )
-    cost = movement_estimator.serial_circuit_cost(circuit=circuit, pretty=True)
+    cost = movement_estimator.serial_circuit_cost(circuit=circuit)
     assert cost == {
-        "ResetChannel": 49,
+        cirq.ResetChannel: 49,
     }
 
     circuit = cirq.Circuit(
@@ -178,9 +178,9 @@ def test_self_returns(
             cirq.ResetChannel().on_each(qubit_a, qubit_b),
         ],
     )
-    cost = lattice_estimator.serial_circuit_cost(circuit=circuit, pretty=True)
+    cost = lattice_estimator.serial_circuit_cost(circuit=circuit)
     assert cost == {
-        "ResetChannel": 2 * 49,
+        cirq.ResetChannel: 2 * 49,
     }
 
 

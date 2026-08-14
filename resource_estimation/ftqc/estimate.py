@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 if typing.TYPE_CHECKING:  # pragma: no cover
     from resource_estimation.ftqc.architecture import Architecture
-    from resource_estimation.typing import GateCounts, GateKey, StrCounts
+    from resource_estimation.typing import GateKey
 
 from resource_estimation.typing import _require_gate_operation
 
@@ -51,8 +51,7 @@ class ResourceEstimator:
         self,
         circuit: cirq.Circuit,
         verbose: int = 0,
-        pretty: bool = False,
-    ) -> GateCounts | StrCounts:
+    ) -> dict[cirq.Gate, int]:
         """Counts up the total physical gates from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
         cost: collections.Counter[GateKey] = collections.Counter()
@@ -63,11 +62,6 @@ class ResourceEstimator:
             disable=not bool(verbose),
         ):
             cost += collections.Counter(self.arc.gate_cost(op))
-        if pretty:
-            return {
-                obj.__name__ if hasattr(obj, "__name__") else str(obj): val
-                for obj, val in cost.items()
-            }
         return {op: val for op, val in cost.items()}
 
     def serial_circuit_time(self, circuit: cirq.Circuit) -> float:
@@ -124,8 +118,7 @@ class ResourceEstimator:
         self,
         circuit: cirq.Circuit,
         verbose: int = 0,
-        pretty: bool = False,
-    ) -> GateCounts | StrCounts:
+    ) -> dict[cirq.Gate, int]:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
         qubit_paths: dict[cirq.Qid, collections.Counter[GateKey]] = {
             qubit: collections.Counter() for qubit in circuit.all_qubits()
@@ -148,11 +141,6 @@ class ResourceEstimator:
         big_time = qubit_times[big_qubit]
         big_path = qubit_paths[big_qubit]
 
-        if pretty:
-            return {
-                obj.__name__ if hasattr(obj, "__name__") else str(obj): val
-                for obj, val in big_path.items()
-            }
         return big_path
 
     def physical_qubits(self, circuit: cirq.Circuit) -> int:
