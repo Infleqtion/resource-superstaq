@@ -270,7 +270,7 @@ def main(args: argparse.Namespace | None = None) -> int:
     t1 = time.time()
     est = res.ftqc.ResourceEstimator(arc=arch)
     serial_gate_counts = cast(
-        GateCounts, est.serial_circuit_cost(primitive_circuit, pretty=False, verbose=verbose)
+        GateCounts, est.serial_circuit_cost(primitive_circuit, verbose=verbose)
     )
     serial_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in serial_gate_counts.items()
@@ -280,7 +280,6 @@ def main(args: argparse.Namespace | None = None) -> int:
         GateCounts,
         est.parallel_circuit_cost(
             primitive_circuit,
-            pretty=False,
             verbose=verbose,
         ),
     )
