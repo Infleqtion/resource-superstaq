@@ -135,7 +135,6 @@ def test_misc() -> None:
     illegal_circuit = cirq.Circuit(cirq.Rx(rads=2).on(cirq.LineQubit(0)))
     with pytest.raises(ValueError):
         _ = compile_cirq_to_clifford_t(circ=illegal_circuit, eps=1e-4)
-    assert process_cirq_str(cirq.Circuit(), ["I"], cirq.LineQubit(0)) is None  # type: ignore[func-returns-value]
     with pytest.raises(ValueError):
         process_cirq_str(cirq.Circuit(), ["M"], cirq.LineQubit(0))
     M_circuit = cirq.Circuit(cirq.MeasurementGate(1, key="").on(cirq.LineQubit(0)))

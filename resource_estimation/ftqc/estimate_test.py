@@ -13,8 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
+import typing
 from math import pi
-from typing import cast
 
 import cirq
 import networkx as nx
@@ -152,10 +152,10 @@ def test_parallel_circuit_cost(
     expected_moment_cost = movement_estimator.arc.moment_cost(cirq.CNOT.on(qubit_a, qubit_b))
     assert estimated_moment_cost == expected_moment_cost
 
-    estimated_moment_cost = movement_estimator.parallel_circuit_cost(circuit=circuit, pretty=True)
+    estimated_moment_cost = movement_estimator.parallel_circuit_cost(circuit=circuit)
     assert estimated_moment_cost == {
-        "CZ": 1,
-        "PhasedXZGate": 2,
+        cirq.CZ: 1,
+        cirq.PhasedXZGate: 2,
     }
 
 
@@ -167,9 +167,9 @@ def test_self_returns(
     circuit = cirq.Circuit(
         [lsp.ErrorCorrect(2).on(qubit_a, qubit_b), cirq.ResetChannel().on(qubit_a)],
     )
-    cost = movement_estimator.serial_circuit_cost(circuit=circuit, pretty=True)
+    cost = movement_estimator.serial_circuit_cost(circuit=circuit)
     assert cost == {
-        "ResetChannel": 49,
+        cirq.ResetChannel: 49,
     }
 
     circuit = cirq.Circuit(
@@ -178,9 +178,9 @@ def test_self_returns(
             cirq.ResetChannel().on_each(qubit_a, qubit_b),
         ],
     )
-    cost = lattice_estimator.serial_circuit_cost(circuit=circuit, pretty=True)
+    cost = lattice_estimator.serial_circuit_cost(circuit=circuit)
     assert cost == {
-        "ResetChannel": 2 * 49,
+        cirq.ResetChannel: 2 * 49,
     }
 
 
@@ -701,7 +701,7 @@ def test_reaction_depth_rejects_concrete_qubits_in_dynamics_at_construction(
     custom_gate = cirq.XPowGate(exponent=0.25)
     concrete_pauli: cirq.PauliString[cirq.Qid] = cirq.PauliString(cirq.X(operation_qubit))
     # invalid input is cast explicitly to catch error and satisfy type checker
-    invalid_pauli = cast(cirq.PauliString[cirq.LineQubit], concrete_pauli)
+    invalid_pauli = typing.cast(cirq.PauliString[cirq.LineQubit], concrete_pauli)
     with pytest.raises(ValueError, match="must use only operation-local qubits"):
         est.ReactionDepthEstimator(
             factories={custom_gate: True},

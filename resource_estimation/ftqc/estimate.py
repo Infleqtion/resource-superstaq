@@ -14,18 +14,18 @@
 from __future__ import annotations
 
 import collections
+import typing
 import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar
 
 import cirq
 import networkx as nx
 from tqdm import tqdm
 
-if TYPE_CHECKING:
+if typing.TYPE_CHECKING:  # pragma: no cover
     from resource_estimation.ftqc.architecture import Architecture
-    from resource_estimation.typing import GateCounts, GateKey, StrCounts
+    from resource_estimation.typing import GateKey
 
 from resource_estimation.typing import _require_gate_operation
 
@@ -51,8 +51,7 @@ class ResourceEstimator:
         self,
         circuit: cirq.Circuit,
         verbose: int = 0,
-        pretty: bool = False,
-    ) -> GateCounts | StrCounts:
+    ) -> dict[cirq.Gate, int]:
         """Counts up the total physical gates from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
         cost: collections.Counter[GateKey] = collections.Counter()
@@ -63,11 +62,6 @@ class ResourceEstimator:
             disable=not bool(verbose),
         ):
             cost += collections.Counter(self.arc.gate_cost(op))
-        if pretty:
-            return {
-                obj.__name__ if hasattr(obj, "__name__") else str(obj): val
-                for obj, val in cost.items()
-            }
         return {op: val for op, val in cost.items()}
 
     def serial_circuit_time(self, circuit: cirq.Circuit) -> float:
@@ -124,8 +118,7 @@ class ResourceEstimator:
         self,
         circuit: cirq.Circuit,
         verbose: int = 0,
-        pretty: bool = False,
-    ) -> GateCounts | StrCounts:
+    ) -> dict[cirq.Gate, int]:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
         qubit_paths: dict[cirq.Qid, collections.Counter[GateKey]] = {
             qubit: collections.Counter() for qubit in circuit.all_qubits()
@@ -148,11 +141,6 @@ class ResourceEstimator:
         big_time = qubit_times[big_qubit]
         big_path = qubit_paths[big_qubit]
 
-        if pretty:
-            return {
-                obj.__name__ if hasattr(obj, "__name__") else str(obj): val
-                for obj, val in big_path.items()
-            }
         return big_path
 
     def physical_qubits(self, circuit: cirq.Circuit) -> int:
@@ -161,11 +149,11 @@ class ResourceEstimator:
 
 
 ReactionTreeNode = tuple[int, int]
-Q = TypeVar("Q", bound=cirq.Qid)
+Q = typing.TypeVar("Q", bound=cirq.Qid)
 
 
 @dataclass(frozen=True)
-class ReactionDynamics(Generic[Q]):
+class ReactionDynamics(typing.Generic[Q]):
     """Reaction dynamic for each delayed choice measurement in a factory.
 
     Attributes:
@@ -187,12 +175,12 @@ class ReactionDepthEstimator:
     anti-commutes with any of the target vertex's dependency Paulis.
     """
 
-    _DEFAULT_FACTORIES: ClassVar[dict[cirq.Gate, bool]] = {
+    _DEFAULT_FACTORIES: typing.ClassVar[dict[cirq.Gate, bool]] = {
         cirq.T: True,
         cirq.S: True,
         cirq.CCZ: True,
     }
-    _NON_CLIFFORD_ERROR: ClassVar[str] = (
+    _NON_CLIFFORD_ERROR: typing.ClassVar[str] = (
         "Reaction-depth estimator encountered a non-Clifford operation without "
         "factory reaction dynamics: {operation!r}."
     )
