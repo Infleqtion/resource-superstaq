@@ -23,9 +23,8 @@ import cirq
 import cirq_superstaq as css
 
 import resource_estimation as res
-from resource_estimation.analysis import STR2ARCH
+from resource_estimation.analysis import STR2ARCH, C, make_pretty
 from resource_estimation.typing import GateCounts
-from resource_estimation.visualizations import C, make_pretty
 
 
 def parse_args() -> argparse.Namespace:
