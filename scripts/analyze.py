@@ -24,6 +24,7 @@ import cirq_superstaq as css
 
 import resource_estimation as res
 from resource_estimation.analysis import STR2ARCH
+
 if typing.TYPE_CHECKING:
     from resource_estimation.typing import GateCounts
 from resource_estimation.visualizations import C, make_pretty
