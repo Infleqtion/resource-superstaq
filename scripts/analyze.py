@@ -26,7 +26,7 @@ import resource_estimation as res
 from resource_estimation.analysis import STR2ARCH
 
 if typing.TYPE_CHECKING:
-    from resource_estimation.typing import GateCounts
+    pass
 from resource_estimation.visualizations import C, make_pretty
 
 
@@ -272,19 +272,14 @@ def main(args: argparse.Namespace | None = None) -> int:
 
     t1 = time.time()
     est = res.ftqc.ResourceEstimator(arc=arch)
-    serial_gate_counts = cast(
-        GateCounts, est.serial_circuit_cost(primitive_circuit, verbose=verbose)
-    )
+    serial_gate_counts = est.serial_circuit_cost(primitive_circuit, verbose=verbose)
     serial_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in serial_gate_counts.items()
     }
     total_time_serial = sum(serial_gate_times.values())
-    parallel_gate_counts = cast(
-        GateCounts,
-        est.parallel_circuit_cost(
-            primitive_circuit,
-            verbose=verbose,
-        ),
+    parallel_gate_counts = est.parallel_circuit_cost(
+        primitive_circuit,
+        verbose=verbose,
     )
     parallel_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in parallel_gate_counts.items()
