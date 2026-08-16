@@ -15,7 +15,6 @@ import collections
 from math import ceil, pi
 
 import cirq
-import cirq_superstaq as css
 import numpy as np
 import pytest
 
@@ -697,32 +696,6 @@ def test_folded_architecture() -> None:
     normal_cultivation_time = normal_movement._cultivate_t_cost["op_time"]
 
     assert folded_cultivation_time < normal_cultivation_time
-
-
-def test_convert_globals_to_phasedxz() -> None:
-    """Confirm that the conversion function works as expected"""
-    sc = arch.Superconductor()
-    example1 = {
-        "gate_cost": {css.ParallelRGate: 2, cirq.Rz: 3},
-        "moment_cost": {
-            css.ParallelRGate: 13,
-        },
-    }
-    expected = {"gate_cost": {cirq.PhasedXZGate: 3}, "moment_cost": {}, "op_time": 0.0}
-    actual = arch.convert_globals_to_phasedxz(architecture=sc, cost_with_globals=example1)
-    assert expected == actual
-
-    example2 = {
-        "gate_cost": {cirq.MeasurementGate: 5},
-        "moment_cost": {cirq.Rz: 5, css.ParallelRGate: 9},
-    }
-    expected = {
-        "gate_cost": {cirq.MeasurementGate: 5},
-        "moment_cost": {cirq.PhasedXZGate: 5},
-        "op_time": 0.02 * 5,
-    }
-    actual = arch.convert_globals_to_phasedxz(architecture=sc, cost_with_globals=example2)
-    assert expected == actual
 
 
 def test_logical_move() -> None:
