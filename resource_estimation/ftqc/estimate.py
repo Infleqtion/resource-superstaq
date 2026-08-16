@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 if typing.TYPE_CHECKING:  # pragma: no cover
     from resource_estimation.ftqc.architecture import Architecture
-    from resource_estimation.typing import GateCounts, GateKey, StrCounts
+    from resource_estimation.typing import GateCounts, GateKey
 
 from resource_estimation.typing import _require_gate_operation
 
@@ -118,8 +118,7 @@ class ResourceEstimator:
         self,
         circuit: cirq.Circuit,
         verbose: int = 0,
-        pretty: bool = False,
-    ) -> GateCounts | StrCounts:
+    ) -> GateCounts:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
         qubit_paths: dict[cirq.Qid, collections.Counter[GateKey]] = {
             qubit: collections.Counter() for qubit in circuit.all_qubits()
