@@ -22,7 +22,6 @@ import sys
 import time
 from math import pi
 from typing import TYPE_CHECKING
-from warnings import warn
 
 import cirq
 import cirq_superstaq as css
@@ -375,7 +374,6 @@ def ft_compile(
     arc: Architecture,
     verbose: int = 1,
     with_barriers: bool = False,
-    num_threads: int = 1,
     skip_validation: bool = False,
 ) -> cirq.Circuit:
     """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T + CCZ gateset to a cirq circuit of primitives.
@@ -390,16 +388,12 @@ def ft_compile(
     G = layout.layout_graph
 
     circuit = layout.mapped_circuit
-    if verbose > 1:
-        print("Validating Circuit Operations")
     if skip_validation:  # pragma: no cover
         print("Validation Turned Off")
     else:
         validate_ops(circuit, verbose=verbose)
 
     circuit = _decompose_to_primitives(circuit, layout=layout, arc=arc)
-    if verbose > 1:
-        verbose_list = [list(moment.operations) for moment in circuit.moments]
 
     # Handling State Prep
     # In a more optimized world this could happen the moment before the first logical operation
@@ -419,24 +413,13 @@ def ft_compile(
         )
 
     if arc.idling:
-        if num_threads == 1:
-            circuit = handle_idling(
-                circuit=circuit,
-                layout=layout,
-                with_barriers=with_barriers,
-                rounds=arc.rounds,
-                verbose=verbose,
-            )
-        else:  # pragma: no cover
-            warn("Parallelization is untested. Use at your own peril")
-            from resource_estimation.ftqc.compile_ftqc_parallel import handle_idling_parallel
-
-            circuit = handle_idling_parallel(
-                circuit=circuit,
-                layout=layout,
-                rounds=arc.rounds,
-                num_threads=num_threads,
-            )
+        circuit = handle_idling(
+            circuit=circuit,
+            layout=layout,
+            with_barriers=with_barriers,
+            rounds=arc.rounds,
+            verbose=verbose,
+        )
 
     if arc.zone_ops is not None or arc.alley_ops is not None:
         zone_ops = arc.zone_ops if arc.zone_ops is not None else cirq.Gateset()
@@ -447,8 +430,5 @@ def ft_compile(
             zone_ops=zone_ops,
             alley_ops=alley_ops,
         )
-
-    if verbose > 1:
-        return (verbose_list, circuit)
 
     return circuit

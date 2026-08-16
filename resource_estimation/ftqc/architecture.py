@@ -15,13 +15,10 @@ from __future__ import annotations
 
 import abc
 import collections
-import json
 from functools import cached_property, lru_cache
 from math import ceil
-from pathlib import Path
 
 import cirq
-import cirq_superstaq as css
 import numpy as np
 
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
@@ -204,56 +201,6 @@ class Architecture(abc.ABC):
         self._primitives = None
         self._phys_gate_times = None
         self.__post_init__()
-
-    ### Class Methods ###
-    # TODO: Deprecate these
-    @classmethod
-    def from_dict(cls, d: dict) -> DefaultLattice | DefaultMovement:
-        movement = d["movement"]
-        if movement:
-            base_arc = DefaultMovement(
-                idling=d["idling"],
-                post_op_correction=d["post_op_correction"],
-                d=d["d"],
-                cultivation_repetition=d["cultivation_repetition"],
-                cultivation_fault_distance=d["cultivation_fault_distance"],
-                syndrome_rounds=d["syndrome_rounds"],
-                fold_cultiv=d.get("fold_cultiv", False),
-            )
-        else:
-            base_arc = DefaultLattice(
-                idling=d["idling"],
-                post_op_correction=d["post_op_correction"],
-                d=d["d"],
-                cultivation_repetition=d["cultivation_repetition"],
-                cultivation_fault_distance=d["cultivation_fault_distance"],
-                syndrome_rounds=d["syndrome_rounds"],
-            )
-        # TODO: Check once the flag
-        base_arc.__post_init__()
-        if "gate_times" in d:
-            for gate, gate_time in d["gate_times"].items():
-                if gate in base_arc.phys_gate_times:
-                    base_arc.phys_gate_times[gate] = gate_time
-                elif isinstance(gate, str) and gate in {
-                    obj.__name__ if hasattr(obj, "__name__") else str(obj)
-                    for obj in base_arc.phys_gate_times
-                }:
-                    cirq_gates = {
-                        obj.__name__ if hasattr(obj, "__name__") else str(obj): obj
-                        for obj in base_arc.phys_gate_times
-                    }
-                    if gate in cirq_gates:
-                        base_arc.phys_gate_times[cirq_gates[gate]] = gate_time
-                else:
-                    raise ValueError(f"Gate time not found for {gate}")
-        return base_arc
-
-    @classmethod
-    def from_json(cls, fp: str | Path) -> DefaultLattice | DefaultMovement:
-        with open(fp) as f:
-            input_dict = json.load(f)
-        return cls.from_dict(input_dict)
 
     ### Fundamental Cost Counting Methods ###
     # These should never be overwritten
@@ -1001,26 +948,3 @@ class Superconductor(DefaultLattice):
     @property
     def __name__(self) -> str:
         return "Superconductor"
-
-
-# Deprecated by removing GR gates
-def convert_globals_to_phasedxz(architecture: Architecture, cost_with_globals: dict) -> dict:
-    """Converts costs defined by GR and Rz into PhasedXZ by removing GR and replacing Rz with PhasedXZ to represent arbitrary single qubit rotations"""
-    gate_cost = cost_with_globals["gate_cost"].copy()
-    if css.ParallelRGate in gate_cost:
-        del gate_cost[css.ParallelRGate]
-    rz_gates = gate_cost.get(cirq.Rz, 0)
-    if rz_gates:
-        gate_cost[cirq.PhasedXZGate] = rz_gates
-        del gate_cost[cirq.Rz]
-
-    moment_cost = cost_with_globals["moment_cost"].copy()
-    if css.ParallelRGate in moment_cost:
-        del moment_cost[css.ParallelRGate]
-    rz_moments = moment_cost.get(cirq.Rz, 0)
-    if rz_moments:
-        moment_cost[cirq.PhasedXZGate] = moment_cost.get(cirq.Rz, 0)
-        del moment_cost[cirq.Rz]
-
-    op_time = architecture.total_time(moment_cost_dict=moment_cost)
-    return {"gate_cost": gate_cost, "moment_cost": moment_cost, "op_time": op_time}
