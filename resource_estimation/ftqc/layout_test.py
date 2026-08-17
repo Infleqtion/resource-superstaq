@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import functools
+
 import cirq
 import pytest
 
@@ -252,6 +254,42 @@ def test_movement(circuit5: cirq.Circuit) -> None:
     assert movement.num_physical_qubits == 8 * 97
 
 
+def test_movement_patch_builder(circuit5: cirq.Circuit) -> None:
+    built_patch_ids = []
+
+    def patch_builder(patch_id: int) -> codepatch.RotatedSurfaceCodePatch:
+        built_patch_ids.append(patch_id)
+        return codepatch.RotatedSurfaceCodePatch(patch_id=patch_id, d=5)
+
+    movement = MovementLayout(circuit5, num_t_factories=3, patch_builder=patch_builder)
+
+    assert built_patch_ids == list(range(8))
+    assert all(patch.d == 5 for patch in movement.code_patches)
+    assert movement.distance(movement.patch_at((0, 0)), movement.patch_at((1, 1))) == 18
+    assert movement.num_physical_qubits == 8 * 49
+
+
+def test_movement_patch_builder_validation(circuit5: cirq.Circuit) -> None:
+    def wrong_id_builder(patch_id: int) -> codepatch.RotatedSurfaceCodePatch:
+        return codepatch.RotatedSurfaceCodePatch(patch_id=patch_id + 1, d=3)
+
+    with pytest.raises(ValueError, match="returned patch_id 1; expected 0"):
+        MovementLayout(circuit5, patch_builder=wrong_id_builder)
+
+    def empty_patch_builder(patch_id: int) -> codepatch.RotatedSurfaceCodePatch:
+        return codepatch.CodePatch(
+            patch_id=patch_id,
+            n=0,
+            k=0,
+            d=None,
+            num_measure_qubits=0,
+            logical_qubits=[],
+        )  # type: ignore[return-value]
+
+    with pytest.raises(ValueError, match="exactly one logical qubit"):
+        MovementLayout(circuit5, patch_builder=empty_patch_builder)
+
+
 def test_general_exceptions(circuit5: cirq.Circuit) -> None:
     movement = MovementLayout(circuit5)
     with pytest.raises(ValueError, match="not a valid"):
@@ -330,7 +368,12 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
     """
     Test that the distillery works with both T and CCZ Distillation
     """
-    distillery = MovementDistillery(circuit5, num_t_factories=3, num_ccz_factories=2)
+    distillery = MovementDistillery(
+        circuit5,
+        num_t_factories=3,
+        num_ccz_factories=2,
+        patch_builder=functools.partial(codepatch.RotatedSurfaceCodePatch, d=3),
+    )
     distillery.reload_factories(ftype="s")
     distillery.reload_factories(ftype="t")
     distillery.reload_factories(ftype="ccz")

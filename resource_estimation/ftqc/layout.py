@@ -26,6 +26,12 @@ import numpy as np
 
 import resource_estimation.ftqc.codepatch as codepatch
 
+PatchBuilder = typing.Callable[[int], codepatch.RotatedSurfaceCodePatch]
+
+
+def _default_patch_builder(patch_id: int) -> codepatch.RotatedSurfaceCodePatch:
+    return codepatch.RotatedSurfaceCodePatch(patch_id=patch_id, d=7)
+
 
 @dataclass
 class Layout(abc.ABC):
@@ -262,9 +268,9 @@ class MovementLayout(Layout):
         input_circuit: cirq.Circuit,
         num_t_factories: int = 1,
         num_ccz_factories: int = 0,
-        d: int = 7,
+        patch_builder: PatchBuilder = _default_patch_builder,
     ) -> None:
-        self.d = d
+        self.patch_builder = patch_builder
         self.grid: dict[tuple[int, int], codepatch.RotatedSurfaceCodePatch] = {}
         self._patches_by_id: dict[int, codepatch.RotatedSurfaceCodePatch] = {}
         super().__init__(
@@ -277,7 +283,13 @@ class MovementLayout(Layout):
     def _make_patch(
         self, patch_id: int, position: tuple[int, int]
     ) -> codepatch.RotatedSurfaceCodePatch:
-        patch = codepatch.RotatedSurfaceCodePatch(patch_id=patch_id, d=self.d)
+        patch = self.patch_builder(patch_id)
+        if patch.patch_id != patch_id:
+            raise ValueError(
+                f"Patch builder returned patch_id {patch.patch_id}; expected {patch_id}."
+            )
+        if len(patch.logical_qubits) != 1:
+            raise ValueError("Layout patches must contain exactly one logical qubit.")
         self.grid[position] = patch
         self._patches_by_id[patch_id] = patch
         return patch
@@ -630,13 +642,13 @@ class MovementDistillery(MovementLayout):
         input_circuit: cirq.Circuit,
         num_t_factories: int = 0,
         num_ccz_factories: int = 0,
-        d: int = 7,
+        patch_builder: PatchBuilder = _default_patch_builder,
     ) -> None:
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
             num_ccz_factories=num_ccz_factories,
-            d=d,
+            patch_builder=patch_builder,
         )
         self.distil = True
 
