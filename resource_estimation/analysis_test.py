@@ -54,8 +54,8 @@ def populated_report(report: analysis.Report) -> analysis.Report:
     report.primitive_width = 10
     report.primitive_depth = 10
     report.compile_time = 1.0
-    report.gates_serial = {}
-    report.gates_parallel = {}
+    report.gates_serial = {"X": (2, 3.5)}
+    report.gates_parallel = {"CZ": (1, 0.75)}
     report.time_serial = 1.0
     report.time_parallel = 1.0
     report.physical_qubits = 10
@@ -82,14 +82,17 @@ def test_get_eps() -> None:
     assert other_gates == 0
 
 
-def test_save_and_load_round_trip(report: analysis.Report, tmp_path: Path) -> None:
-    filepath = report.save(tmp_path)
+def test_save_and_load_round_trip(populated_report: analysis.Report, tmp_path: Path) -> None:
+    filepath = populated_report.save(tmp_path)
 
     assert filepath.exists()
     assert filepath.parent == tmp_path
 
     loaded_report = analysis.Report.load(filepath)
-    assert loaded_report.info_dict == report.info_dict
+    assert loaded_report.info_dict == populated_report.info_dict
+
+    assert isinstance(loaded_report.gates_serial["X"], tuple)
+    assert isinstance(loaded_report.gates_parallel["CZ"], tuple)
 
 
 def test_save_increments_filename(report: analysis.Report, tmp_path: Path) -> None:

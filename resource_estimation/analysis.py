@@ -405,6 +405,10 @@ class Report:
     def load(cls, filename: Path | str) -> Self:
         with open(filename, "r") as f:
             configs = json.load(f)
+        for parameter in ("gates_serial", "gates_parallel"):
+            configs[parameter] = {
+                gate: (count, time) for gate, (count, time) in configs[parameter].items()
+            }
         return cls(**configs)
 
     def header_line(self, title: str) -> str:
