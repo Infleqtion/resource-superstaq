@@ -211,15 +211,12 @@ def main(args: argparse.Namespace | None = None) -> int:
         # Fault distance limited by 1e-6 at distance 3 for both
         cultivation_fault_distance = 3 if args.error_per_cult >= 2e-7 else 5
         distance = args.code_distance
-        expected_fidelity = float(
-            1
-            - res.analysis.error_estimate(
-                code_distance=distance,
-                error_per_rz=eps,
-                error_per_cult=args.error_per_cult,
-                num_rz_gates=rz_gates,
-                num_clifford=other_gates,
-            )
+        expected_fidelity = 1 - res.analysis.error_estimate(
+            code_distance=distance,
+            error_per_rz=eps,
+            error_per_cult=args.error_per_cult,
+            num_rz_gates=rz_gates,
+            num_clifford=other_gates,
         )
     else:
         cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance = (
