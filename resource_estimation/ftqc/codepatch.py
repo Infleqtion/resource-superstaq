@@ -94,7 +94,7 @@ class CodePatch:(abc.ABC)
         patch_id: int,
         n: int,
         k: int,
-        d: int | float | None,
+        d: int,
         num_measure_qubits: int,
         logical_qubits: typing.Iterable[LogicalQubit],
     ) -> None:
