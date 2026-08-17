@@ -41,10 +41,6 @@ InfoValue = float | int | str | bool | dict[str, tuple[int, float]]
 InfoSection = dict[str, InfoValue]
 InfoDict = dict[str, InfoSection]
 
-InfoValue = float | int | str | bool | dict[str, tuple[int, float]]
-InfoSection = dict[str, InfoValue]
-InfoDict = dict[str, InfoSection]
-
 STR2ARCH: dict[str, collections.abc.Callable[..., arch.Architecture]] = {
     "ssm": functools.partial(arch.DefaultMovement, idling=False, post_op_correction=True),
     "dsnm": functools.partial(arch.DefaultLattice, idling=False, post_op_correction=True),
