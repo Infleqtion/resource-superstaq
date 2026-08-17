@@ -366,6 +366,8 @@ def add_moves(
             zone_type = None
             if op.gate in zone_ops:
                 zone_type = "interact" if op.gate == cirq.CNOT else "measure"
+            # Patch-backed compilation records physical separation on alley moves. Legacy calls
+            # without a layout leave it unset for the architecture to infer from GridQubit operands.
             distance = layout.distance(*op_qubits) if zone_type is None and layout else None
             move_op = (
                 functools.partial(lsp.Move(zone=zone_type, distance=distance).on)

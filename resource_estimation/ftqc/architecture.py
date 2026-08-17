@@ -708,8 +708,10 @@ class DefaultMovement(Architecture):
         gate_cost = {cirq.QubitPermutationGate: 1}
         moment_cost = {cirq.QubitPermutationGate: 1}
         if op.gate.zone is None:
+            # Patch-backed compilation records physical distance directly on the Move operation.
             distance = op.gate.distance
             if distance is None:
+                # Support legacy GridQubit moves that do not record an explicit distance.
                 ctrl, trgt = op.qubits
                 grid_distance = abs(trgt.row - ctrl.row) + abs(trgt.col - ctrl.col)
                 distance = self.d * grid_distance

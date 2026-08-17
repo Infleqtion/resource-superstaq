@@ -286,6 +286,8 @@ class Move(cirq.Gate):
     ) -> None:
         self._num_qubits = 2 if zone is None else 1
         self._zone = zone
+        # New movement compilation stores layout-derived physical distance on the gate. None keeps
+        # legacy Move operations whose distance is inferred later from their GridQubit operands.
         self._distance = distance
 
     def num_qubits(self) -> int:

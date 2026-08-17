@@ -79,7 +79,11 @@ class Layout(abc.ABC):
         first: cirq.Qid | codepatch.CodePatch,
         second: cirq.Qid | codepatch.CodePatch,
     ) -> int:
-        """Return the Manhattan distance between two layout objects."""
+        """Return the Manhattan distance between two layout objects.
+
+        Legacy GridQubit layouts measure distance in grid hops; movement layouts override this
+        method to measure across the physical dimensions of their patches.
+        """
         first_row, first_col = self.position_of(first)
         second_row, second_col = self.position_of(second)
         return abs(first_row - second_row) + abs(first_col - second_col)
@@ -167,6 +171,8 @@ class Layout(abc.ABC):
 
         def movement_heuristic(factory):
             """Heuristic based on the closest qubit within the factory by Manhattan distance"""
+            # This replaces the legacy direct GridQubit calculation so each layout can define
+            # whether its distance is measured in grid hops or physical patch dimensions.
             return min(self.distance(f, q) for q in qubits for f in factory)
 
         def lattice_heuristic(factory):
@@ -353,6 +359,8 @@ class MovementLayout(Layout):
         second_patch = self.patch_for(second)
         first_row, first_col = self.position_of(first_patch)
         second_row, second_col = self.position_of(second_patch)
+        # A movement-grid coordinate now represents a whole patch, so each grid step spans the
+        # patch's interleaved physical-qubit dimension instead of one legacy GridQubit unit.
         return (
             abs(first_row - second_row) * first_patch.height
             + abs(first_col - second_col) * first_patch.width
