@@ -86,7 +86,7 @@ class LogicalQubit(cirq.Qid):
         return f"codepatch.LogicalQubit({self.patch_id!r}, {self.logical_index!r})"
 
 
-class CodePatch:
+class CodePatch:(abc.ABC)
     """Common metadata for an error-correcting code patch."""
 
     def __init__(
