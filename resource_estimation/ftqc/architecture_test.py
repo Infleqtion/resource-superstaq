@@ -20,6 +20,7 @@ import numpy as np
 import pytest
 
 import resource_estimation.ftqc.architecture as arch
+import resource_estimation.ftqc.codepatch as codepatch
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.stim_functions import cultivate
 
@@ -39,6 +40,75 @@ def test_architecture_exceptions(lattice_architecture, movement_architecture) ->
         _ = lattice_architecture.cultivate_cost(lsp.Cultivate(1).on(cirq.GridQubit(0, 0)))
 
 
+def test_architecture_uses_surface_code_patch(
+    lattice_architecture: arch.DefaultLattice,
+    movement_architecture: arch.DefaultMovement,
+) -> None:
+    for architecture in (lattice_architecture, movement_architecture):
+        assert isinstance(architecture.patch, codepatch.RotatedSurfaceCodePatch)
+        assert architecture.patch.code_params == (49, 1, 7)
+        assert len(architecture.patch.logical_qubits) == 1
+
+
+def test_architecture_rejects_even_code_distance() -> None:
+    with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
+        arch.DefaultLattice(d=4)
+
+
+def _legacy_surface_syndrome_cost(d: int, rounds: int, num_logical_qubits: int) -> dict[str, dict]:
+    full_stabilizers = (d - 1) ** 2
+    partial_stabilizers = 4 * (d // 2)
+    gate_cost = {
+        cirq.CZ: (4 * full_stabilizers + 2 * partial_stabilizers) * num_logical_qubits * rounds,
+        cirq.MeasurementGate: (full_stabilizers + partial_stabilizers)
+        * num_logical_qubits
+        * rounds,
+        cirq.PhasedXZGate: (12 * (full_stabilizers // 2) + 8 * (partial_stabilizers // 2))
+        * num_logical_qubits
+        * rounds,
+        cirq.ResetChannel: (full_stabilizers + partial_stabilizers) * num_logical_qubits * rounds,
+    }
+    moment_cost = {
+        cirq.CZ: 4 * rounds,
+        cirq.PhasedXZGate: 2 * rounds,
+        cirq.MeasurementGate: rounds,
+        cirq.ResetChannel: rounds,
+    }
+    return {"gate_cost": gate_cost, "moment_cost": moment_cost}
+
+
+@pytest.mark.parametrize(
+    ("architecture_type", "permutation_moments_per_round"),
+    [
+        (arch.DefaultLattice, 0),
+        (arch.DefaultMovement, 10),
+        (arch.DualSpeciesMovement, 0),
+        (arch.MeasureZonesOnly, 2),
+        (arch.Superconductor, 0),
+    ],
+)
+@pytest.mark.parametrize(("d", "rounds", "num_logical_qubits"), [(3, 1, 1), (5, 2, 2), (7, 3, 1)])
+def test_architecture_syndrome_counts_match_legacy(
+    architecture_type: type[arch.Architecture],
+    permutation_moments_per_round: int,
+    d: int,
+    rounds: int,
+    num_logical_qubits: int,
+) -> None:
+    architecture = architecture_type(d=d, syndrome_rounds=rounds)
+    qubits = cirq.LineQubit.range(num_logical_qubits)
+    operation = lsp.SyndromeExtract(num_logical_qubits, rounds).on(*qubits)
+    expected = _legacy_surface_syndrome_cost(d, rounds, num_logical_qubits)
+
+    if permutation_moments_per_round:
+        permutations = permutation_moments_per_round * rounds
+        expected["gate_cost"][cirq.QubitPermutationGate] = permutations
+        expected["moment_cost"][cirq.QubitPermutationGate] = permutations
+
+    assert architecture.gate_cost(operation) == expected["gate_cost"]
+    assert architecture.moment_cost(operation) == expected["moment_cost"]
+
+
 def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
     # TODO: Brainstorm a better way to test this feature
     actual_op_cost = lattice_architecture.cultivate_cost(
@@ -46,7 +116,9 @@ def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
     )
     # Tests that the parallel gates are counted correctly
     se_moment_cost = collections.Counter(
-        arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["moment_cost"]
+        arch._syndrome_extract_cost(
+            rounds=4, num_logical_qubits=1, patch=lattice_architecture.patch
+        )["moment_cost"]
     )
     expected_Y_moment_cost = collections.Counter(
         {cirq.PhasedXZGate: 10, cirq.CZ: 10, cirq.MeasurementGate: 2, cirq.ResetChannel: 2}
@@ -57,10 +129,14 @@ def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
     # Tests that the serial gates are counted correctly
     # It does continue the assumption that we can just use a syndrome extraction cycle to approximate the total cost
     se_gate_cost = collections.Counter(
-        arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"]
+        arch._syndrome_extract_cost(
+            rounds=4, num_logical_qubits=1, patch=lattice_architecture.patch
+        )["gate_cost"]
     )
     expected_Y_gate_cost = collections.Counter(
-        arch._syndrome_extract_cost(rounds=4, num_logical_qubits=1, d=7)["gate_cost"]
+        arch._syndrome_extract_cost(
+            rounds=4, num_logical_qubits=1, patch=lattice_architecture.patch
+        )["gate_cost"]
     )
     expected_gate_cost = expected_Y_gate_cost + se_gate_cost + expected_Y_gate_cost
     expected_gate_cost += {cirq.CZ: 2 * (7 - 1)}
@@ -116,38 +192,28 @@ def test_movement_gate_costs(d) -> None:
     # Check Syndrome on single qubit
     op = lsp.SyndromeExtract(1, 1).on(qubit_a)
     cost = arc.gate_cost(op)
+    phased_xz_gates = 2 * (
+        arc.patch.total_x_check_weight()
+        + arc.patch.num_x_stabilizers()
+        + arc.patch.num_z_stabilizers()
+    )
     assert cost == {
-        cirq.CZ: arc.patch.total_z_syndrome_cnots() + arc.patch.total_x_syndrome_cnots(),
+        cirq.CZ: arc.patch.total_z_check_weight() + arc.patch.total_x_check_weight(),
         cirq.QubitPermutationGate: 10,
         cirq.MeasurementGate: arc.patch.num_measure_qubits,
         cirq.ResetChannel: arc.patch.num_measure_qubits,
-        cirq.PhasedXZGate: (
-            (10 * arc.patch.num_x_stabs(full=True))  # 5 Hadamards on left and 5 Hadamards on right
-            + (2 * arc.patch.num_z_stabs(full=True))  # 1 Hadamard on left and 1 Hadamard on right
-            + (
-                6 * arc.patch.num_x_stabs(full=False)
-            )  # 3 Hadamards on left and 3 Hadamards on right
-            + (2 * arc.patch.num_z_stabs(full=False))  # 1 Hadamard on left and 1 Hadamard on right
-        ),
+        cirq.PhasedXZGate: phased_xz_gates,
     }
 
     # Check Syndrome on two qubits
     op = lsp.SyndromeExtract(2, 1).on(qubit_a, qubit_b)
     cost = arc.gate_cost(op)
     assert cost == {
-        cirq.CZ: 2 * (arc.patch.total_z_syndrome_cnots() + arc.patch.total_x_syndrome_cnots()),
+        cirq.CZ: 2 * (arc.patch.total_z_check_weight() + arc.patch.total_x_check_weight()),
         cirq.QubitPermutationGate: 10,
         cirq.MeasurementGate: arc.patch.num_measure_qubits * 2,
         cirq.ResetChannel: arc.patch.num_measure_qubits * 2,
-        cirq.PhasedXZGate: 2
-        * (
-            (10 * arc.patch.num_x_stabs(full=True))  # 5 Hadamards on left and 5 Hadamards on right
-            + (2 * arc.patch.num_z_stabs(full=True))  # 1 Hadamard on left and 1 Hadamard on right
-            + (
-                6 * arc.patch.num_x_stabs(full=False)
-            )  # 3 Hadamards on left and 3 Hadamards on right
-            + (2 * arc.patch.num_z_stabs(full=False))  # 1 Hadamard on left and 1 Hadamard on right
-        ),
+        cirq.PhasedXZGate: 2 * phased_xz_gates,
     }
 
     # Check S gate
@@ -825,11 +891,13 @@ def test_logical_move() -> None:
     arc = arch.DualSpeciesMovement()
     one_hop = lsp.Move(zone=None).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 0))
     two_hop = lsp.Move(zone=None).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 1))
+    explicit_distance = lsp.Move(zone=None, distance=13).on(cirq.LineQubit(0), cirq.LineQubit(1))
 
     one_cost = arc.op_time(one_hop)
     two_cost = arc.op_time(two_hop)
 
     assert two_cost == 2 * one_cost
+    assert arc.op_time(explicit_distance) == 26
 
 
 def test_y_cult_on_movement() -> None:

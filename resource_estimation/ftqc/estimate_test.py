@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import functools
 from math import pi
 
 import cirq
@@ -19,9 +20,11 @@ import numpy as np
 import pytest
 
 import resource_estimation.ftqc.architecture as arch
+import resource_estimation.ftqc.codepatch as codepatch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc import ccz_8_to_1, distil_15_to_1
+from resource_estimation.ftqc.layout import MovementLayout
 
 
 @pytest.fixture
@@ -271,6 +274,21 @@ def test_physical_qubit_count(lattice_estimator) -> None:
     expected_num_physical_qubits = 98  # 2 * (2 * d**2 - 1)
     num_physical_qubits = lattice_estimator.physical_qubits(test_circuit)
     assert num_physical_qubits == expected_num_physical_qubits
+
+
+def test_movement_physical_qubit_count_uses_layout() -> None:
+    circuit = cirq.Circuit(cirq.I.on_each(*cirq.LineQubit.range(2)))
+    layout = MovementLayout(
+        circuit,
+        num_t_factories=1,
+        patch_builder=functools.partial(codepatch.RotatedSurfaceCodePatch, d=5),
+    )
+    estimator = est.ResourceEstimator(
+        arc=arch.DefaultMovement(d=5, idling=False, post_op_correction=False),
+        layout=layout,
+    )
+
+    assert estimator.physical_qubits(layout.mapped_circuit) == 3 * (2 * 5**2 - 1)
 
 
 def local_pauli(pauli: cirq.Pauli, qubit_index: int = 0) -> cirq.PauliString:

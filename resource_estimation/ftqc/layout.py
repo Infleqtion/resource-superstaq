@@ -24,6 +24,14 @@ import cirq
 import networkx as nx
 import numpy as np
 
+import resource_estimation.ftqc.codepatch as codepatch
+
+PatchBuilder = typing.Callable[[int], codepatch.RotatedSurfaceCodePatch]
+
+
+def _default_patch_builder(patch_id: int) -> codepatch.RotatedSurfaceCodePatch:
+    return codepatch.RotatedSurfaceCodePatch(patch_id=patch_id, d=7)
+
 
 @dataclass
 class Layout(abc.ABC):
@@ -44,12 +52,47 @@ class Layout(abc.ABC):
         self._all_factories = set()
         self._generate()
 
-    def set_map_circuit(self, qubit_map: dict[cirq.Qid, cirq.GridQubit]) -> None:
-        """Apply a given mapping from qubits in the input circuit to GridQubits used for compilation"""
+    def set_map_circuit(self, qubit_map: dict[cirq.Qid, cirq.Qid]) -> None:
+        """Apply a mapping from input-circuit qubits to layout qubits used for compilation."""
+        self.qubit_map = qubit_map
         mapped_circuit = cirq.Circuit(
             moment.transform_qubits(qubit_map) for moment in self.input_circuit
         )
         self.mapped_circuit = mapped_circuit
+
+    def circuit_qubit(self, node: cirq.Qid | codepatch.CodePatch) -> cirq.Qid:
+        """Return the Cirq wire associated with a layout-graph node."""
+        if isinstance(node, cirq.Qid):
+            return node
+        if len(node.logical_qubits) != 1:
+            raise ValueError("Layout patches must contain exactly one logical qubit.")
+        return node.logical_qubits[0]
+
+    def circuit_qubits(
+        self, nodes: typing.Iterable[cirq.Qid | codepatch.CodePatch]
+    ) -> tuple[cirq.Qid, ...]:
+        """Return the Cirq wires associated with layout-graph nodes."""
+        return tuple(self.circuit_qubit(node) for node in nodes)
+
+    def position_of(self, node: cirq.Qid | codepatch.CodePatch) -> tuple[int, int]:
+        """Return a layout node's row and column."""
+        if isinstance(node, cirq.GridQubit):
+            return node.row, node.col
+        raise ValueError(f"No layout position found for {node!r}.")
+
+    def distance(
+        self,
+        first: cirq.Qid | codepatch.CodePatch,
+        second: cirq.Qid | codepatch.CodePatch,
+    ) -> int:
+        """Return the Manhattan distance between two layout objects.
+
+        Legacy GridQubit layouts measure distance in grid hops; movement layouts override this
+        method to measure across the physical dimensions of their patches.
+        """
+        first_row, first_col = self.position_of(first)
+        second_row, second_col = self.position_of(second)
+        return abs(first_row - second_row) + abs(first_col - second_col)
 
     def reset_graph(self) -> None:
         """Reset the graph to its starting state by setting all factory qubits to the `used` state"""
@@ -78,51 +121,9 @@ class Layout(abc.ABC):
             for node in factory:
                 self.layout_graph.nodes[node]["used"] = False
 
-    def _generate(self) -> None:
-        """Private method to generate the underlying networkx graph, qubit map, and qubit placement
-        This method is the core of what defines a Layout
-        At this level, the graph generated has no locality, but methods in subclasses should be local (especially lattice surgery layouts)
-        """
-        total_qubits = (
-            len(self.input_circuit.all_qubits()) + self.num_s_factories + self.num_t_factories
-        )
-        side_length = ceil(sqrt(total_qubits))
-
-        def idx_to_xy(idx: int) -> tuple[int, int]:
-            x = idx // side_length
-            y = idx % side_length
-            return x, y
-
-        qubit_map = {
-            qid: cirq.GridQubit(*idx_to_xy(idx))
-            for idx, qid in enumerate(sorted(self.input_circuit.all_qubits()))
-        }
-        self.set_map_circuit(qubit_map=qubit_map)
-        G = nx.Graph()
-        G.add_nodes_from(
-            [(q, dict(patch_type="data")) for q in qubit_map.values()],
-        )
-        G.add_nodes_from(
-            [
-                (
-                    cirq.GridQubit(*idx_to_xy(idx + len(G.nodes))),
-                    dict(patch_type="factory", ftype="t", fid=idx, used=True),
-                )
-                for idx in range(self.num_t_factories)
-            ],
-        )
-        G.add_nodes_from(
-            [
-                (
-                    cirq.GridQubit(*idx_to_xy(idx + len(G.nodes))),
-                    dict(patch_type="factory", ftype="s", fid=idx, used=True),
-                )
-                for idx in range(self.num_s_factories)
-            ],
-        )
-        G.add_edges_from((n1, n2) for n1, n2 in itertools.combinations(G.nodes, 2))
-        self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
-        self.layout_graph = G
+    @abc.abstractmethod
+    def _generate(self) -> None:  # pragma: no cover
+        """Generate the layout graph, circuit mapping, and patch placement."""
 
     def available_factories(
         self, ftype: typing.Literal["t", "s", "ccz"]
@@ -152,7 +153,7 @@ class Layout(abc.ABC):
             tuple(
                 sorted(
                     (q for q in self._all_factories if has_fid(q, fid) and is_ftype_factory(q)),
-                    key=lambda q: (q.row, q.col),
+                    key=self.position_of,
                 )
             )
             for fid in unique_fids
@@ -163,10 +164,12 @@ class Layout(abc.ABC):
         qubits: tuple[cirq.GridQubit, ...] | cirq.GridQubit,
         ftype: typing.Literal["s", "t", "ccz"],
     ) -> cirq.GridQubit | tuple[cirq.GridQubit, ...]:
-        """Finds the closest factory of desired type according to the Manhattan distance using the GridQubit indices of the factory qubits that do not have the `used` status
+        """Find the closest unused factory of the requested type.
+
+        Distance comes from the positions and patch dimensions defined by the layout.
         Removes the returned factory from the available options and sets its status to `used`
         """
-        single_qubit = isinstance(qubits, cirq.GridQubit)
+        single_qubit = isinstance(qubits, cirq.Qid)
         qubits = (qubits,) if single_qubit else qubits
         available_factories = self.available_factories(ftype=ftype)
         if not available_factories:
@@ -174,7 +177,9 @@ class Layout(abc.ABC):
 
         def movement_heuristic(factory):
             """Heuristic based on the closest qubit within the factory by Manhattan distance"""
-            return min(abs(f.row - q.row) + abs(f.col - q.col) for q in qubits for f in factory)
+            # This replaces the legacy direct GridQubit calculation so each layout can define
+            # whether its distance is measured in grid hops or physical patch dimensions.
+            return min(self.distance(f, q) for q in qubits for f in factory)
 
         def lattice_heuristic(factory):
             """Heuristic based on the lattice surgery routing distance between the first qubit in the factory and the first qubit in the set of target qubits"""
@@ -246,7 +251,7 @@ class Layout(abc.ABC):
             node_dict = G.nodes[node]
             key = node_dict["ftype"] if "ftype" in node_dict else node_dict["patch_type"]
             node_color.append(color_dict[key])
-        pos = {node: (node.row, node.col) for node in G.nodes}
+        pos = {node: self.position_of(node) for node in G.nodes}
         nx.draw(G, with_labels=True, node_color=node_color, pos=pos)
 
 
@@ -259,8 +264,15 @@ class MovementLayout(Layout):
 
     # TODO: build this implementation
     def __init__(
-        self, input_circuit: cirq.Circuit, num_t_factories: int = 1, num_ccz_factories: int = 0
+        self,
+        input_circuit: cirq.Circuit,
+        num_t_factories: int = 1,
+        num_ccz_factories: int = 0,
+        patch_builder: PatchBuilder = _default_patch_builder,
     ) -> None:
+        self.patch_builder = patch_builder
+        self.grid: dict[tuple[int, int], codepatch.RotatedSurfaceCodePatch] = {}
+        self._patches_by_id: dict[int, codepatch.RotatedSurfaceCodePatch] = {}
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
@@ -268,7 +280,105 @@ class MovementLayout(Layout):
             num_s_factories=0,
         )
 
-    def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit):
+    def _make_patch(
+        self, patch_id: int, position: tuple[int, int]
+    ) -> codepatch.RotatedSurfaceCodePatch:
+        patch = self.patch_builder(patch_id)
+        if patch.patch_id != patch_id:
+            raise ValueError(
+                f"Patch builder returned patch_id {patch.patch_id}; expected {patch_id}."
+            )
+        if len(patch.logical_qubits) != 1:
+            raise ValueError("Layout patches must contain exactly one logical qubit.")
+        self.grid[position] = patch
+        self._patches_by_id[patch_id] = patch
+        return patch
+
+    def _generate(self) -> None:
+        """Place data and factory patches on an abstract movement grid."""
+        total_patches = (
+            len(self.input_circuit.all_qubits()) + self.num_s_factories + self.num_t_factories
+        )
+        side_length = ceil(sqrt(total_patches))
+
+        def idx_to_position(idx: int) -> tuple[int, int]:
+            return idx // side_length, idx % side_length
+
+        self.grid = {}
+        self._patches_by_id = {}
+        G = nx.Graph()
+        qubit_map: dict[cirq.Qid, cirq.Qid] = {}
+        for patch_id, qid in enumerate(sorted(self.input_circuit.all_qubits())):
+            position = idx_to_position(patch_id)
+            patch = self._make_patch(patch_id, position)
+            qubit_map[qid] = self.circuit_qubit(patch)
+            G.add_node(patch, position=position, patch_type="data")
+        self.set_map_circuit(qubit_map=qubit_map)
+
+        first_factory_id = len(G.nodes)
+        for factory_index in range(self.num_t_factories):
+            patch_id = first_factory_id + factory_index
+            position = idx_to_position(patch_id)
+            patch = self._make_patch(patch_id, position)
+            G.add_node(
+                patch,
+                position=position,
+                patch_type="factory",
+                ftype="t",
+                fid=factory_index,
+                used=True,
+            )
+
+        self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
+        self.layout_graph = G
+
+    def patch_for(
+        self, qubit_or_patch: cirq.Qid | codepatch.CodePatch
+    ) -> codepatch.RotatedSurfaceCodePatch:
+        """Return the patch associated with a movement-layout object."""
+        if isinstance(qubit_or_patch, codepatch.CodePatch):
+            return typing.cast(codepatch.RotatedSurfaceCodePatch, qubit_or_patch)
+        if not isinstance(qubit_or_patch, codepatch.LogicalQubit):
+            raise TypeError(f"No code patch found for {qubit_or_patch!r}.")
+        return self._patches_by_id[qubit_or_patch.patch_id]
+
+    def patch_at(self, position: tuple[int, int]) -> codepatch.RotatedSurfaceCodePatch:
+        """Return the patch placed at a grid position."""
+        return self.grid[position]
+
+    @property
+    def code_patches(self) -> tuple[codepatch.RotatedSurfaceCodePatch, ...]:
+        """Return all code patches placed in the layout."""
+        return tuple(self.grid.values())
+
+    @property
+    def num_physical_qubits(self) -> int:
+        """Return the physical-qubit footprint of all patches in the layout."""
+        return sum(patch.num_physical_qubits for patch in self.code_patches)
+
+    def position_of(self, node: cirq.Qid | codepatch.CodePatch) -> tuple[int, int]:
+        """Return the grid position of a patch or one of its logical qubits."""
+        patch = self.patch_for(node)
+        return typing.cast(tuple[int, int], self.layout_graph.nodes[patch]["position"])
+
+    def distance(
+        self,
+        first: cirq.Qid | codepatch.CodePatch,
+        second: cirq.Qid | codepatch.CodePatch,
+    ) -> int:
+        """Return physical Manhattan distance using the patches' dimensions."""
+        first_patch = self.patch_for(first)
+        second_patch = self.patch_for(second)
+        first_row, first_col = self.position_of(first_patch)
+        second_row, second_col = self.position_of(second_patch)
+        # A movement-grid coordinate now represents a whole patch, so each grid step spans the
+        # patch's interleaved physical-qubit dimension instead of one legacy GridQubit unit.
+        return (
+            abs(first_row - second_row) * first_patch.height
+            + abs(first_col - second_col) * first_patch.width
+        )
+
+    def route_cnot(self, ctrl: cirq.Qid, trgt: cirq.Qid):
         raise NotImplementedError
 
 
@@ -528,12 +638,17 @@ class MovementDistillery(MovementLayout):
     """
 
     def __init__(
-        self, input_circuit: cirq.Circuit, num_t_factories: int = 0, num_ccz_factories: int = 0
+        self,
+        input_circuit: cirq.Circuit,
+        num_t_factories: int = 0,
+        num_ccz_factories: int = 0,
+        patch_builder: PatchBuilder = _default_patch_builder,
     ) -> None:
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
             num_ccz_factories=num_ccz_factories,
+            patch_builder=patch_builder,
         )
         self.distil = True
 
@@ -550,76 +665,74 @@ class MovementDistillery(MovementLayout):
         total_qubits = program_qubits + distillation_qubits
         side_length = ceil(sqrt(total_qubits))
 
-        # Maps linear indices to left-r>ight + up->down grid filling
-        def idx_to_xy(idx: int) -> tuple[int, int]:
-            x = idx // side_length
-            y = idx % side_length
-            return x, y
+        def idx_to_position(idx: int) -> tuple[int, int]:
+            return idx // side_length, idx % side_length
 
-        # Map Program Qubits to GridQubits
-        qubit_map = {
-            qid: cirq.GridQubit(*idx_to_xy(idx))
-            for idx, qid in enumerate(sorted(self.input_circuit.all_qubits()))
-        }
+        self.grid = {}
+        self._patches_by_id = {}
+        G = nx.Graph()
+        qubit_map: dict[cirq.Qid, cirq.Qid] = {}
+        for patch_id, qid in enumerate(sorted(self.input_circuit.all_qubits())):
+            position = idx_to_position(patch_id)
+            patch = self._make_patch(patch_id, position)
+            qubit_map[qid] = self.circuit_qubit(patch)
+            G.add_node(patch, position=position, patch_type="data")
         self.set_map_circuit(qubit_map=qubit_map)
 
-        # Generate Layout Graph
-        G = nx.Graph()
-        G.add_nodes_from(
-            [(q, dict(patch_type="data")) for q in qubit_map.values()],
-        )
         # Add T Distillation Factories to Graph
         for factory_index in range(self.num_t_factories):
             qubit_index = factory_index * qubits_per_t_distil + program_qubits
-            output_qubit = cirq.GridQubit(*idx_to_xy(qubit_index))
-            G.add_node(output_qubit, patch_type="factory", ftype="t", fid=factory_index, used=True)
-            block_qubits = [
-                cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, qubits_per_t_distil)
-            ]
-            G.add_nodes_from(
-                [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits],
+            position = idx_to_position(qubit_index)
+            output_patch = self._make_patch(qubit_index, position)
+            G.add_node(
+                output_patch,
+                position=position,
+                patch_type="factory",
+                ftype="t",
+                fid=factory_index,
+                used=True,
             )
+            for i in range(1, qubits_per_t_distil):
+                patch_id = qubit_index + i
+                position = idx_to_position(patch_id)
+                patch = self._make_patch(patch_id, position)
+                G.add_node(patch, position=position, patch_type="block", fid=factory_index)
+
         # Add CCZ Distillation Factories to Graph
         data_plus_t = program_qubits + (qubits_per_t_distil * self.num_t_factories)
         for factory_index in range(self.num_ccz_factories):  # just builds on to the T factories
             qubit_index = factory_index * qubits_per_ccz_distil + data_plus_t
-            output_qubits = [
-                cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(num_output_qubits)
-            ]
-            G.add_nodes_from(
-                [
-                    (
-                        q,
-                        dict(
-                            patch_type="factory",
-                            ftype="ccz",
-                            fid=self.num_t_factories + factory_index,
-                            used=True,
-                        ),
-                    )
-                    for q in output_qubits
-                ]
-            )
-            block_qubits = [
-                cirq.GridQubit(*idx_to_xy(qubit_index + i))
-                for i in range(num_output_qubits, qubits_per_ccz_distil)
-            ]
-            G.add_nodes_from(
-                [
-                    (q, dict(patch_type="block", fid=(self.num_t_factories + factory_index)))
-                    for q in block_qubits
-                ]
-            )
+            fid = self.num_t_factories + factory_index
+            for i in range(num_output_qubits):
+                patch_id = qubit_index + i
+                position = idx_to_position(patch_id)
+                patch = self._make_patch(patch_id, position)
+                G.add_node(
+                    patch,
+                    position=position,
+                    patch_type="factory",
+                    ftype="ccz",
+                    fid=fid,
+                    used=True,
+                )
+            for i in range(num_output_qubits, qubits_per_ccz_distil):
+                patch_id = qubit_index + i
+                position = idx_to_position(patch_id)
+                patch = self._make_patch(patch_id, position)
+                G.add_node(patch, position=position, patch_type="block", fid=fid)
+
         # Movement layouts assume all-to-all connectivity; avoid storing O(n^2) edges explicitly.
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
 
-    def distillation_block(self, factory: tuple[cirq.GridQubit]) -> list[cirq.GridQubit]:
+    def distillation_block(
+        self, factory: tuple[codepatch.CodePatch, ...]
+    ) -> list[codepatch.CodePatch]:
         G = self.layout_graph
         fid = G.nodes[factory[0]]["fid"]
-        block_qubits = [
-            q
-            for q in G.nodes
-            if (G.nodes[q]["patch_type"] == "block") and (G.nodes[q]["fid"] == fid)
+        block_patches = [
+            patch
+            for patch in G.nodes
+            if (G.nodes[patch]["patch_type"] == "block") and (G.nodes[patch]["fid"] == fid)
         ]
-        return block_qubits + list(factory)
+        return block_patches + list(factory)

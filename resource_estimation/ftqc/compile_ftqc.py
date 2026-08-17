@@ -151,16 +151,20 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     if not available_factories:
         if distil_t or distil_ccz:
             operations += [
-                prep_gate.on(*layout.distillation_block(factory)) for factory in all_factories
+                prep_gate.on(*layout.circuit_qubits(layout.distillation_block(factory)))
+                for factory in all_factories
             ]
         else:
-            operations += [prep_gate.on(*factory) for factory in all_factories]
+            operations += [
+                prep_gate.on(*layout.circuit_qubits(factory)) for factory in all_factories
+            ]
         layout.reload_factories(ftype=ftype)
     # These should be tuples of qubits
     routed_factory = layout.nearest_factory(op.qubits, ftype=ftype)
+    routed_factory_qubits = layout.circuit_qubits(routed_factory)
     cnots, measurements, resets = [], [], []
     corrections = correction if isinstance(correction, list) else [correction.on(*op.qubits)]
-    for factory_qubit, program_qubit in zip(routed_factory, op.qubits):
+    for factory_qubit, program_qubit in zip(routed_factory_qubits, op.qubits):
         cnots.append(cirq.CNOT.on(factory_qubit, program_qubit))
         measurements.append(cirq.MeasurementGate(1, key="").on(factory_qubit))
         resets.append(cirq.ResetChannel().on(factory_qubit))
@@ -186,18 +190,18 @@ def handle_idling(
     # TODO: This pass is a main bottleneck for larger experiments, so make it faster
     # Assemble Qubits that will be subject to Idling
     G = layout.layout_graph
-    logical_qubits = list(node for node in G.nodes if G.nodes[node]["patch_type"] == "data")
-    t_factories = list(
+    logical_nodes = list(node for node in G.nodes if G.nodes[node]["patch_type"] == "data")
+    t_factory_nodes = list(
         node
         for node in G.nodes
         if G.nodes[node]["patch_type"] == "factory" and G.nodes[node]["ftype"] == "t"
     )
-    s_factories = list(
+    s_factory_nodes = list(
         node
         for node in G.nodes
         if G.nodes[node]["patch_type"] == "factory" and G.nodes[node]["ftype"] == "s"
     )
-    non_ancillas = logical_qubits + s_factories + t_factories
+    non_ancillas = set(layout.circuit_qubits(logical_nodes + s_factory_nodes + t_factory_nodes))
     # Ensures no idling happens on qubits that are not used in the circuit
     # This is a bit faster
     non_ancillas = {q for op in circuit.all_operations() for q in op.qubits if q in non_ancillas}
@@ -338,8 +342,12 @@ def add_moves(
     zone_ops: cirq.Gateset,
     alley_ops: cirq.Gateset,
     verbose: int = 0,
+    layout: Layout | None = None,
 ) -> cirq.Circuit:
-    """Handles replacement moves for both alley movement and interaction zone movement"""
+    """Handle replacement moves for both alley movement and interaction-zone movement.
+
+    When a layout is supplied, inter-patch moves record the physical distance between patches.
+    """
     total = len(circuit)
     tstart = time.time()
 
@@ -358,8 +366,11 @@ def add_moves(
             zone_type = None
             if op.gate in zone_ops:
                 zone_type = "interact" if op.gate == cirq.CNOT else "measure"
+            # Patch-backed compilation records physical separation on alley moves. Legacy calls
+            # without a layout leave it unset for the architecture to infer from GridQubit operands.
+            distance = layout.distance(*op_qubits) if zone_type is None and layout else None
             move_op = (
-                functools.partial(lsp.Move(zone=zone_type).on)
+                functools.partial(lsp.Move(zone=zone_type, distance=distance).on)
                 if zone_type is None
                 else functools.partial(lsp.Move(zone=zone_type).on_each)
             )
@@ -403,7 +414,8 @@ def ft_compile(
 
     # Handling State Prep
     # In a more optimized world this could happen the moment before the first logical operation
-    logical_qubits = [node for node in G.nodes if G.nodes[node]["patch_type"] == "data"]
+    logical_nodes = [node for node in G.nodes if G.nodes[node]["patch_type"] == "data"]
+    logical_qubits = layout.circuit_qubits(logical_nodes)
     state_prep = cirq.Circuit(lsp.SyndromeExtract(1, rounds=arc.rounds).on_each(*logical_qubits))
     if with_barriers:
         state_prep += css.barrier(*sorted(circuit.all_qubits()))
@@ -446,6 +458,7 @@ def ft_compile(
             verbose=verbose,
             zone_ops=zone_ops,
             alley_ops=alley_ops,
+            layout=layout,
         )
 
     if verbose > 1:

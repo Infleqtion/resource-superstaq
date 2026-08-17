@@ -71,6 +71,9 @@ def test_move() -> None:
     a, b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     alley_move = lsp.Move(None).on(a, b)
     assert str(alley_move) == "MOVE(q(0, 0), q(0, 1))"
+    assert alley_move.gate.distance is None
+    distance_move = lsp.Move(None, distance=5).on(a, b)
+    assert distance_move.gate.distance == 5
     interact_move = lsp.Move("interact").on(a)
     assert str(interact_move) == "MOVE_IZ(q(0, 0))"
     measure_move = lsp.Move("measure").on(b)
@@ -316,6 +319,9 @@ def test_repr() -> None:
 
     move = lsp.Move(zone=None).on(qa, qb)
     assert repr(move) == "lsp.Move(zone=None).on(cirq.LineQubit(0), cirq.LineQubit(1))"
+
+    move = lsp.Move(zone=None, distance=5).on(qa, qb)
+    assert repr(move) == "lsp.Move(zone=None, distance=5).on(cirq.LineQubit(0), cirq.LineQubit(1))"
 
     move = lsp.Move(zone="measure").on(qa)
     assert repr(move) == "lsp.Move(zone=measure).on(cirq.LineQubit(0))"

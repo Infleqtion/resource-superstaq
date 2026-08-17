@@ -25,6 +25,7 @@ from tqdm import tqdm
 
 if TYPE_CHECKING:
     from resource_estimation.ftqc.architecture import Architecture
+    from resource_estimation.ftqc.layout import MovementLayout
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -32,8 +33,9 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 class ResourceEstimator:
     """Class for resource estimator objects defined by the given architecture"""
 
-    def __init__(self, arc: Architecture) -> None:
+    def __init__(self, arc: Architecture, layout: MovementLayout | None = None) -> None:
         self.arc = arc
+        self.layout = layout
 
     def validate_circuit_ops(self, circuit: cirq.Circuit) -> None:
         """Checks that the input circuit contains only valid operations and warns of operations still in progress"""
@@ -158,6 +160,8 @@ class ResourceEstimator:
 
     def physical_qubits(self, circuit: cirq.Circuit) -> int:
         """Calculates the physical qubit cost of the requested circuit"""
+        if self.arc.movement and self.layout is not None:
+            return self.layout.num_physical_qubits
         return cirq.num_qubits(circuit) * self.arc.patch.num_physical_qubits
 
 

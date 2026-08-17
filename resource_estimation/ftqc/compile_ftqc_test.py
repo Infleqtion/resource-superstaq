@@ -172,7 +172,7 @@ def test_direct_substitution() -> None:
 def test_replace_cirq_op_movement(bell_circuit) -> None:
     movement_layout = MovementLayout(bell_circuit, num_t_factories=2)
 
-    op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
+    op_to_replace = cirq.T.on(movement_layout.qubit_map[cirq.GridQubit(0, 0)])
     returned_ops = comp.replace_cirq_op(
         op=op_to_replace,
         layout=movement_layout,
@@ -372,9 +372,9 @@ def test_bell_movement_FF(bell_circuit) -> None:
         compiled_bell_circuit,
         textwrap.dedent(
             """
-                (0, 0): ───SE(1)───H───MOVE───@───#2─────
-                                       │      │   │
-                (0, 1): ───SE(1)───────#2─────X───MOVE───
+                0:0: ───SE(1)───H───MOVE───@───#2─────
+                                    │      │   │
+                1:0: ───SE(1)───────#2─────X───MOVE───
             """,
         ),
     )
@@ -395,9 +395,9 @@ def test_bell_movement_FT(bell_circuit) -> None:
         compiled_bell_circuit,
         textwrap.dedent(
             """
-                (0, 0): ───SE(1)───H───SE(1)───MOVE───@───#2─────SE(1)───
-                                               │      │   │
-                (0, 1): ───SE(1)───────────────#2─────X───MOVE───SE(1)───
+                0:0: ───SE(1)───H───SE(1)───MOVE───@───#2─────SE(1)───
+                                            │      │   │
+                1:0: ───SE(1)───────────────#2─────X───MOVE───SE(1)───
             """,
         ),
     )
@@ -422,9 +422,9 @@ def test_bell_movement_TF(bell_circuit) -> None:
         compiled_bell_circuit,
         textwrap.dedent(
             """
-                (0, 0): ───SE(1)───H───────MOVE───@───#2─────
-                                           │      │   │
-                (0, 1): ───SE(1)───SE(1)───#2─────X───MOVE───
+                0:0: ───SE(1)───H───────MOVE───@───#2─────
+                                        │      │   │
+                1:0: ───SE(1)───SE(1)───#2─────X───MOVE───
             """,
         ),
     )
@@ -446,9 +446,9 @@ def test_bell_movement_TT(bell_circuit) -> None:
         compiled_bell_circuit,
         textwrap.dedent(
             """
-                (0, 0): ───SE(1)───H───────SE(1)───MOVE───@───#2─────SE(1)───
-                                                   │      │   │
-                (0, 1): ───SE(1)───SE(1)───SE(1)───#2─────X───MOVE───SE(1)───
+                0:0: ───SE(1)───H───────SE(1)───MOVE───@───#2─────SE(1)───
+                                                │      │   │
+                1:0: ───SE(1)───SE(1)───SE(1)───#2─────X───MOVE───SE(1)───
             """,
         ),
     )
@@ -579,13 +579,13 @@ def test_t_movement_FF(t_circuit) -> None:
         compiled_t_circuit,
         textwrap.dedent(
             """
-            (0, 0): ───SE(1)─────────H───MOVE───@───#2───────────────────────────────────────────────────────
-                                         │      │   │
-            (0, 1): ───SE(1)─────────────#2─────X───MOVE───#2─────X───MOVE───S───────────────────────────────
-                                                           │      │   │
-            (1, 0): ───CULT(0.785)─────────────────────────┼──────┼───┼──────────────────────────────────────
-                                                           │      │   │
-            (1, 1): ───CULT(0.785)─────────────────────────MOVE───@───#2─────MOVE_MZ───M('')───MOVE_MZ───R───
+            0:0: ───SE(1)─────────H───MOVE───@───#2───────────────────────────────────────────────────────
+                                      │      │   │
+            1:0: ───SE(1)─────────────#2─────X───MOVE───#2─────X───MOVE───S───────────────────────────────
+                                                        │      │   │
+            2:0: ───CULT(0.785)─────────────────────────┼──────┼───┼──────────────────────────────────────
+                                                        │      │   │
+            3:0: ───CULT(0.785)─────────────────────────MOVE───@───#2─────MOVE_MZ───M('')───MOVE_MZ───R───
             """,
         ),
     )
@@ -607,13 +607,13 @@ def test_t_movement_FT(t_circuit) -> None:
         compiled_t_circuit,
         textwrap.dedent(
             """
-            (0, 0): ───SE(1)─────────H───SE(1)───MOVE───@───#2─────SE(1)─────────────────────────────────────────────────────────────────────
-                                                 │      │   │
-            (0, 1): ───SE(1)─────────────────────#2─────X───MOVE───SE(1)───#2─────X───MOVE───SE(1)───S─────────SE(1)─────────────────────────
-                                                                           │      │   │
-            (1, 0): ───CULT(0.785)─────────────────────────────────────────┼──────┼───┼──────────────────────────────────────────────────────
-                                                                           │      │   │
-            (1, 1): ───CULT(0.785)─────────────────────────────────────────MOVE───@───#2─────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
+            0:0: ───SE(1)─────────H───SE(1)───MOVE───@───#2─────SE(1)─────────────────────────────────────────────────────────────────────
+                                              │      │   │
+            1:0: ───SE(1)─────────────────────#2─────X───MOVE───SE(1)───#2─────X───MOVE───SE(1)───S─────────SE(1)─────────────────────────
+                                                                        │      │   │
+            2:0: ───CULT(0.785)─────────────────────────────────────────┼──────┼───┼──────────────────────────────────────────────────────
+                                                                        │      │   │
+            3:0: ───CULT(0.785)─────────────────────────────────────────MOVE───@───#2─────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
             """,
         ),
     )
@@ -636,13 +636,13 @@ def test_t_movement_TF(t_circuit) -> None:
         compiled_t_circuit,
         textwrap.dedent(
             """
-            (0, 0): ───SE(1)─────────H───────MOVE────@───────#2──────SE(1)───SE(1)───SE(1)───────────────────────────────────
-                                             │       │       │
-            (0, 1): ───SE(1)─────────SE(1)───#2──────X───────MOVE────#2──────X───────MOVE────S─────────SE(1)─────────────────
-                                                                     │       │       │
-            (1, 0): ───CULT(0.785)───SE(1)───SE(1)───SE(1)───SE(1)───┼───────┼───────┼───────────────────────────────────────
-                                                                     │       │       │
-            (1, 1): ───CULT(0.785)───SE(1)───────────────────────────MOVE────@───────#2──────MOVE_MZ───M('')───MOVE_MZ───R───
+            0:0: ───SE(1)─────────H───────MOVE────@───────#2──────SE(1)───SE(1)───SE(1)───────────────────────────────────
+                                          │       │       │
+            1:0: ───SE(1)─────────SE(1)───#2──────X───────MOVE────#2──────X───────MOVE────S─────────SE(1)─────────────────
+                                                                  │       │       │
+            2:0: ───CULT(0.785)───SE(1)───SE(1)───SE(1)───SE(1)───┼───────┼───────┼───────────────────────────────────────
+                                                                  │       │       │
+            3:0: ───CULT(0.785)───SE(1)───────────────────────────MOVE────@───────#2──────MOVE_MZ───M('')───MOVE_MZ───R───
 
             """,
         ),
@@ -667,15 +667,15 @@ def test_t_movement_TT(t_circuit) -> None:
         compiled_t_circuit,
         textwrap.dedent(
             """
-                                                                                     ┌──────────┐   ┌──────────┐
-            (0, 0): ───SE(1)─────────H───────SE(1)───MOVE────@───────#2──────SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───────────────────────────────────
-                                                     │       │       │
-            (0, 1): ───SE(1)─────────SE(1)───SE(1)───#2──────X───────MOVE────SE(1)────#2─────────────X─────────────MOVE────SE(1)───S─────────SE(1)───SE(1)─────────────────
-                                                                                      │              │             │
-            (1, 0): ───CULT(0.785)───SE(1)───SE(1)───SE(1)───SE(1)───SE(1)───SE(1)────┼────SE(1)─────┼────SE(1)────┼───────────────────────────────────────────────────────
-                                                                                      │              │             │
-            (1, 1): ───CULT(0.785)───SE(1)───SE(1)───SE(1)────────────────────────────MOVE───────────@─────────────#2──────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
-                                                                                     └──────────┘   └──────────┘
+                                                                                  ┌──────────┐   ┌──────────┐
+            0:0: ───SE(1)─────────H───────SE(1)───MOVE────@───────#2──────SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───────────────────────────────────
+                                                  │       │       │
+            1:0: ───SE(1)─────────SE(1)───SE(1)───#2──────X───────MOVE────SE(1)────#2─────────────X─────────────MOVE────SE(1)───S─────────SE(1)───SE(1)─────────────────
+                                                                                   │              │             │
+            2:0: ───CULT(0.785)───SE(1)───SE(1)───SE(1)───SE(1)───SE(1)───SE(1)────┼────SE(1)─────┼────SE(1)────┼───────────────────────────────────────────────────────
+                                                                                   │              │             │
+            3:0: ───CULT(0.785)───SE(1)───SE(1)───SE(1)────────────────────────────MOVE───────────@─────────────#2──────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
+                                                                                  └──────────┘   └──────────┘
             """,
         ),
     )
@@ -951,7 +951,7 @@ def test_hm_moves() -> None:
 def test_replace_cirq_op_distil_t(bell_circuit) -> None:
     distillery_layout = MovementDistillery(bell_circuit, num_t_factories=2, num_ccz_factories=0)
 
-    op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
+    op_to_replace = cirq.T.on(distillery_layout.qubit_map[cirq.GridQubit(0, 0)])
     returned_ops = comp.replace_cirq_op(
         op=op_to_replace,
         layout=distillery_layout,
@@ -976,7 +976,7 @@ def test_replace_cirq_op_distil_t(bell_circuit) -> None:
 def test_replace_cirq_op_distil_ccz(random_circ) -> None:
     distillery_layout = MovementDistillery(random_circ, num_ccz_factories=2, num_t_factories=0)
 
-    op_to_replace = cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
+    op_to_replace = cirq.CCZ.on(*sorted(distillery_layout.mapped_circuit.all_qubits())[:3])
     returned_ops = comp.replace_cirq_op(
         op=op_to_replace, layout=distillery_layout, transversal_cnot=True
     )
