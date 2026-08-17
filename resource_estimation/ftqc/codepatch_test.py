@@ -92,7 +92,7 @@ def test_logical_qubit_rejects_noninteger_support_entries(support: set[object]) 
         codepatch.LogicalQubit(patch_id=0, logical_index=0, x_support=support, z_support={0})  # type: ignore[arg-type]
 
 
-def test_code_patch_metadata() -> None:
+def test_code_patch_instantiation() -> None:
     logical_qubit = codepatch.LogicalQubit(3, 0, x_support={0}, z_support={1})
     patch = codepatch.CodePatch(
         patch_id=3,
