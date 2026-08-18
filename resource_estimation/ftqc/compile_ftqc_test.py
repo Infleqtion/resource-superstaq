@@ -307,9 +307,8 @@ def test_nondeterministic_compilation_T(random_circ2) -> None:
             assert compiled2_ops[i].gate.resource == "T"
 
 
-def test_nondeterministic_compilation_CCZ(random_circ2) -> None:
-    circuit = cirq.Circuit()
-    circuit.append(cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)))
+def test_nondeterministic_compilation_CCZ() -> None:
+    circuit = cirq.Circuit(cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)))
     lay = MovementDistillery(circuit, num_t_factories=0, num_ccz_factories=1)
     arc = arch.DefaultMovement()
     compiled1 = comp.ft_compile(lay, arc, dynamic=False)
@@ -333,6 +332,7 @@ def test_nondeterministic_compilation_CCZ(random_circ2) -> None:
     moments2 = list(compiled2.moments)
     correction_circuit = cirq.Circuit()
     for i in range(0, len(moments1)):
+        # The circuits should be identical until we reach the correction part
         if not reached_correction:
             try:
                 assert len(moments1[i].operations) == len(moments2[i].operations)
@@ -350,10 +350,11 @@ def test_nondeterministic_compilation_CCZ(random_circ2) -> None:
             for j in range(0, len(moments2[i].operations)):
                 assert moments1[i].operations[j] == moments2[i].operations[j]
         else:
+            # Once we reach the correction part, we want to make sure compilation does exactly what
+            # we expect on the logical qubits
             for op in moments1[i].operations:
                 if relevant_op(op):
                     correction_circuit.append(op)
-    print(correction_circuit)
     # If this errors, look at the correction circuit to make sure it's not just that the CNOT order
     # changed or the qubit indices changes
     cirq.testing.assert_has_diagram(

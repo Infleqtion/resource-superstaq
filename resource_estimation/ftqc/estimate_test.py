@@ -298,11 +298,16 @@ def test_dynamic_CCZ_resource_counts(mock_randint) -> None:
     # The circuit excludes syndrome extraction costs since those are handled during compilation, so
     # the CCZ correction cost should be identical to just doing these gates with no syndrome
     # extraction
+    se_gate = lsp.SyndromeExtract(num_qubits=1, rounds=arc.rounds)
     correction_circuit.append(cirq.H.on_each(*(qubit_a, qubit_b, qubit_c)))
+    correction_circuit.append(se_gate.on_each(*(qubit_a, qubit_b, qubit_c)))
     correction_circuit.append(cirq.X.on_each(*(qubit_a, qubit_b, qubit_c)))
     correction_circuit.append(cirq.CNOT.on(qubit_a, qubit_b))
+    correction_circuit.append(se_gate.on_each(*(qubit_a, qubit_b)))
     correction_circuit.append(cirq.CNOT.on(qubit_a, qubit_c))
+    correction_circuit.append(se_gate.on_each(*(qubit_a, qubit_c)))
     correction_circuit.append(cirq.CNOT.on(qubit_b, qubit_c))
+    correction_circuit.append(se_gate.on_each(*(qubit_b, qubit_c)))
     correction_circuit.append(cirq.H.on_each(*(qubit_a, qubit_b, qubit_c)))
     dynamic_op: cirq.Operation = lsp.ResourceCorrection("CCZ").on(qubit_a, qubit_b, qubit_c)
     mock_randint.side_effect = [1, 0, 1, 0, 1, 0]

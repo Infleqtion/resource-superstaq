@@ -252,8 +252,6 @@ def post_op_syndrome_extraction(
     """For movement, it has been suggested that we just do syndrome extraction (for a single round) right after a logical operations."""
     # Allowing a little bit of flexibility on what we want to correct
     # Might even want to add Lattice Primitives, but there aren't many (any?) that are not implicitly corrected
-    # I assume that if we have this CCZ correction gate on 3 qubits that it will do the thing I
-    # intend for resource correction
     ops_to_correct = [
         cirq.CNOT,
         cirq.S,
@@ -265,14 +263,13 @@ def post_op_syndrome_extraction(
     if movement:
         ops_to_correct.append(cirq.H)
 
-    syndrom_extract = lsp.SyndromeExtract(1, rounds)
+    syndrome_extract = lsp.SyndromeExtract(1, rounds)
     barrier = css.barrier(*sorted(circuit.all_qubits()))
 
     total = len(circuit)
     tstart = time()
 
     def _map_func(op: cirq.Operation, moment_idx: int) -> Iterator[cirq.Operation]:
-        nonlocal syndrom_extract
         if verbose:
             knock_off_tqdm(
                 moment_idx=moment_idx,
@@ -292,12 +289,7 @@ def post_op_syndrome_extraction(
             if op.gate in ops_to_correct or isinstance(op.gate, cirq.MeasurementGate)
         ]
         if qubits_to_correct:
-            # The `CCZ` resource correction actually takes 5 operations and thus needs 5 times the
-            # amount of syndrome extraction rounds.
-            # TODO: Is this the way to do this?
-            if isinstance(op.gate, lsp.ResourceCorrection) and op.gate.resource == "CCZ":
-                syndrom_extract = lsp.SyndromeExtract(1, rounds * 5)
-            yield from syndrom_extract.on_each(*qubits_to_correct)
+            yield from syndrome_extract.on_each(*qubits_to_correct)
 
             if with_barriers:
                 yield barrier
