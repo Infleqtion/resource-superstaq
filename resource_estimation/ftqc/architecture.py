@@ -699,15 +699,15 @@ class DefaultMovement(Architecture):
             if randint(0, 1):
                 return {"op_time": 0.0, "gate_cost": {}, "moment_cost": {}}
             else:
-                h_gate_cost = Counter(self._h_cost["gate_cost"])
-                x_gate_cost = Counter(self._x_cost["gate_cost"])
-                cnot_gate_cost = Counter(self._cnot_cost["gate_cost"])
+                h_gate_cost = collections.Counter(self._h_cost["gate_cost"])
+                x_gate_cost = collections.Counter(self._x_cost["gate_cost"])
+                cnot_gate_cost = collections.Counter(self._cnot_cost["gate_cost"])
                 qubit = cirq.LineQubit(0)
                 se_costs_dict = self.syndrome_extract_cost(
                     lsp.SyndromeExtract(num_qubits=1, rounds=self.rounds).on(qubit)
                 )
                 se_gate_cost = se_costs_dict["gate_cost"]
-                overall_gate_cost = Counter()
+                overall_gate_cost = collections.Counter()
                 overall_gate_cost += h_gate_cost
                 overall_gate_cost += x_gate_cost
                 overall_gate_cost += cnot_gate_cost
@@ -721,10 +721,10 @@ class DefaultMovement(Architecture):
                     se_gate_cost[gate] *= 9
                 overall_gate_cost += se_gate_cost
 
-                h_moment_cost = Counter(self._h_cost["moment_cost"])
-                x_moment_cost = Counter(self._x_cost["moment_cost"])
-                cnot_moment_cost = Counter(self._cnot_cost["moment_cost"])
-                se_moment_cost = Counter(se_costs_dict["moment_cost"])
+                h_moment_cost = collections.Counter(self._h_cost["moment_cost"])
+                x_moment_cost = collections.Counter(self._x_cost["moment_cost"])
+                cnot_moment_cost = collections.Counter(self._cnot_cost["moment_cost"])
+                se_moment_cost = collections.Counter(se_costs_dict["moment_cost"])
                 # CNOT cost is multiplied by 3 since those gates must happen serially
                 for gate in cnot_moment_cost:
                     cnot_moment_cost[gate] *= 3

@@ -19,6 +19,7 @@ import functools
 import os
 import sys
 import time
+from itertools import combinations
 from math import pi
 from typing import TYPE_CHECKING
 from warnings import warn
