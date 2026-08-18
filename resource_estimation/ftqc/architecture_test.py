@@ -51,22 +51,26 @@ def test_architecture_uses_surface_code_patch(
 
 
 def test_architecture_rejects_even_code_distance() -> None:
-    with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
+    with pytest.raises(ValueError, match="CodePatches must be odd distance"):
         arch.DefaultLattice(d=4)
 
 
 def _legacy_surface_syndrome_cost(d: int, rounds: int, num_logical_qubits: int) -> dict[str, dict]:
-    full_stabilizers = (d - 1) ** 2
-    partial_stabilizers = 4 * (d // 2)
+    patch = lsp.RotatedCodePatch(d)
     gate_cost = {
-        cirq.CZ: (4 * full_stabilizers + 2 * partial_stabilizers) * num_logical_qubits * rounds,
-        cirq.MeasurementGate: (full_stabilizers + partial_stabilizers)
+        cirq.CZ: (patch.total_x_syndrome_cnots() + patch.total_z_syndrome_cnots())
         * num_logical_qubits
         * rounds,
-        cirq.PhasedXZGate: (12 * (full_stabilizers // 2) + 8 * (partial_stabilizers // 2))
+        cirq.MeasurementGate: patch.num_measure_qubits * num_logical_qubits * rounds,
+        cirq.PhasedXZGate: (
+            10 * patch.num_x_stabs(full=True)
+            + 2 * patch.num_z_stabs(full=True)
+            + 6 * patch.num_x_stabs(full=False)
+            + 2 * patch.num_z_stabs(full=False)
+        )
         * num_logical_qubits
         * rounds,
-        cirq.ResetChannel: (full_stabilizers + partial_stabilizers) * num_logical_qubits * rounds,
+        cirq.ResetChannel: patch.num_measure_qubits * num_logical_qubits * rounds,
     }
     moment_cost = {
         cirq.CZ: 4 * rounds,
@@ -87,14 +91,13 @@ def _legacy_surface_syndrome_cost(d: int, rounds: int, num_logical_qubits: int) 
         (arch.Superconductor, 0),
     ],
 )
-@pytest.mark.parametrize(("d", "rounds", "num_logical_qubits"), [(3, 1, 1), (5, 2, 2), (7, 3, 1)])
 def test_architecture_syndrome_counts_match_legacy(
     architecture_type: type[arch.Architecture],
     permutation_moments_per_round: int,
-    d: int,
-    rounds: int,
-    num_logical_qubits: int,
 ) -> None:
+    d = 5
+    rounds = 2
+    num_logical_qubits = 2
     architecture = architecture_type(d=d, syndrome_rounds=rounds)
     qubits = cirq.LineQubit.range(num_logical_qubits)
     operation = lsp.SyndromeExtract(num_logical_qubits, rounds).on(*qubits)

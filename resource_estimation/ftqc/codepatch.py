@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import abc
 import typing
 
 import cirq
@@ -55,10 +56,12 @@ class LogicalQubit(cirq.Qid):
 
     @property
     def x_support(self) -> frozenset[int]:
+        """Return the physical-qubit indices supporting the logical X operator."""
         return self._x_support
 
     @property
     def z_support(self) -> frozenset[int]:
+        """Return the physical-qubit indices supporting the logical Z operator."""
         return self._z_support
 
     @property
@@ -86,7 +89,7 @@ class LogicalQubit(cirq.Qid):
         return f"codepatch.LogicalQubit({self.patch_id!r}, {self.logical_index!r})"
 
 
-class CodePatch:(abc.ABC)
+class CodePatch(abc.ABC):
     """Common metadata for an error-correcting code patch."""
 
     def __init__(
@@ -95,20 +98,26 @@ class CodePatch:(abc.ABC)
         n: int,
         k: int,
         d: int,
-        num_measure_qubits: int,
-        logical_qubits: typing.Iterable[LogicalQubit],
     ) -> None:
         self._patch_id = _validate_id(patch_id, "patch_id")
         self.n = n
         self.k = k
         self.d = d
         self.num_data_qubits = self.n
-        self.num_measure_qubits = num_measure_qubits
-        self.logical_qubits = tuple(logical_qubits)
 
     @property
     def patch_id(self) -> int:
         return self._patch_id
+
+    @property
+    @abc.abstractmethod
+    def num_measure_qubits(self) -> int:
+        """Return the number of measurement qubits in the code patch."""
+
+    @property
+    @abc.abstractmethod
+    def num_logical_qubits(self) -> int:
+        """Return the number of logical qubits encoded by the code patch."""
 
     @property
     def code_params(self) -> tuple[int, int, int | float | None]:
@@ -127,18 +136,25 @@ class CSSCodePatch(CodePatch):
     def __init__(self, patch_id: int, qldpc_code: codes.CSSCode) -> None:
         self._qldpc_code = qldpc_code
         n, k, code_distance = self._qldpc_code.get_code_params()
+        self.logical_qubits = tuple(self._logical_qubits_from_qldpc_code(patch_id))
         super().__init__(
             patch_id=patch_id,
             n=int(n),
             k=int(k),
             d=code_distance,
-            num_measure_qubits=int(self._qldpc_code.num_checks),
-            logical_qubits=self._logical_qubits_from_qldpc_code(patch_id),
         )
 
     @property
     def qldpc_code(self) -> codes.CSSCode:
         return self._qldpc_code
+
+    @property
+    def num_measure_qubits(self) -> int:
+        return int(self.qldpc_code.num_checks)
+
+    @property
+    def num_logical_qubits(self) -> int:
+        return len(self.logical_qubits)
 
     def num_x_stabilizers(self) -> int:
         """Return the number of X-type stabilizer checks."""
@@ -175,10 +191,11 @@ class CSSCodePatch(CodePatch):
 
 
 class RotatedSurfaceCodePatch(CSSCodePatch):
-    """A rotated surface-code patch backed by qLDPC metadata."""
+    """A rotated surface-code patch generated from the qldpc library."""
 
     def __init__(self, patch_id: int, d: int) -> None:
-        assert (d - 1) % 2 == 0, "CodePatches must be odd distance"
+        if (d - 1) % 2 != 0:
+            raise ValueError("CodePatches must be odd distance")
         super().__init__(patch_id=patch_id, qldpc_code=codes.SurfaceCode(d))
 
     def __repr__(self) -> str:

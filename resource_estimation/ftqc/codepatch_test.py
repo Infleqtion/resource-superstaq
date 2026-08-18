@@ -16,6 +16,7 @@ import pytest
 from qldpc import codes
 
 import resource_estimation.ftqc.codepatch as codepatch
+import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 
 
 def test_logical_qubit() -> None:
@@ -92,23 +93,9 @@ def test_logical_qubit_rejects_noninteger_support_entries(support: set[object]) 
         codepatch.LogicalQubit(patch_id=0, logical_index=0, x_support=support, z_support={0})  # type: ignore[arg-type]
 
 
-def test_code_patch_instantiation() -> None:
-    logical_qubit = codepatch.LogicalQubit(3, 0, x_support={0}, z_support={1})
-    patch = codepatch.CodePatch(
-        patch_id=3,
-        n=9,
-        k=1,
-        d=3,
-        num_measure_qubits=8,
-        logical_qubits=[logical_qubit],
-    )
-
-    assert patch.patch_id == 3
-    assert patch.code_params == (9, 1, 3)
-    assert patch.num_data_qubits == 9
-    assert patch.num_measure_qubits == 8
-    assert patch.num_physical_qubits == 17
-    assert patch.logical_qubits == (logical_qubit,)
+def test_code_patch_is_abstract() -> None:
+    with pytest.raises(TypeError, match="abstract class CodePatch"):
+        codepatch.CodePatch(patch_id=3, n=9, k=1, d=3)
 
 
 def test_rotated_surface_code_patch_metadata() -> None:
@@ -119,6 +106,7 @@ def test_rotated_surface_code_patch_metadata() -> None:
     assert patch.code_params == (49, 1, 7)
     assert patch.num_data_qubits == 49
     assert patch.num_measure_qubits == 48
+    assert patch.num_logical_qubits == 1
     assert patch.num_physical_qubits == 97
     assert patch.num_x_stabilizers() == 24
     assert patch.num_z_stabilizers() == 24
@@ -167,18 +155,24 @@ def test_rotated_surface_code_patches_have_distinct_logical_qubits() -> None:
 
 
 def test_code_patch_requires_distance() -> None:
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="missing 1 required positional argument: 'd'"):
         codepatch.RotatedSurfaceCodePatch(patch_id=0)  # type: ignore[call-arg]
 
 
 @pytest.mark.parametrize("d", (3, 5, 7))
 def test_surface_code_patch_counts_match_legacy(d: int) -> None:
     patch = codepatch.RotatedSurfaceCodePatch(patch_id=d, d=d)
+    legacy_patch = lsp.RotatedCodePatch(d)
 
-    assert patch.num_data_qubits == d**2
-    assert patch.num_measure_qubits == d**2 - 1
-    assert patch.num_physical_qubits == 2 * d**2 - 1
-    assert patch.num_x_stabilizers() == (d**2 - 1) // 2
-    assert patch.num_z_stabilizers() == (d**2 - 1) // 2
-    assert patch.total_x_check_weight() == 2 * d * (d - 1)
-    assert patch.total_z_check_weight() == 2 * d * (d - 1)
+    assert patch.d == legacy_patch.d
+    assert patch.num_data_qubits == legacy_patch.num_data_qubits
+    assert patch.num_measure_qubits == legacy_patch.num_measure_qubits
+    assert patch.num_physical_qubits == legacy_patch.num_physical_qubits
+    assert patch.num_x_stabilizers() == (
+        legacy_patch.num_x_stabs(full=True) + legacy_patch.num_x_stabs(full=False)
+    )
+    assert patch.num_z_stabilizers() == (
+        legacy_patch.num_z_stabs(full=True) + legacy_patch.num_z_stabs(full=False)
+    )
+    assert patch.total_x_check_weight() == legacy_patch.total_x_syndrome_cnots()
+    assert patch.total_z_check_weight() == legacy_patch.total_z_syndrome_cnots()
