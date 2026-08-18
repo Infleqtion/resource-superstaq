@@ -116,8 +116,13 @@ class CodePatch(abc.ABC):
 
     @property
     @abc.abstractmethod
+    def logical_qubits(self) -> tuple[LogicalQubit, ...]:
+        """Return the logical qubits encoded by the code patch."""
+
+    @property
     def num_logical_qubits(self) -> int:
         """Return the number of logical qubits encoded by the code patch."""
+        return len(self.logical_qubits)
 
     @property
     def code_params(self) -> tuple[int, int, int | float | None]:
@@ -133,10 +138,11 @@ class CodePatch(abc.ABC):
 class CSSCodePatch(CodePatch):
     """Metadata shared by qLDPC CSS code patches."""
 
+    @abc.abstractmethod
     def __init__(self, patch_id: int, qldpc_code: codes.CSSCode) -> None:
         self._qldpc_code = qldpc_code
         n, k, code_distance = self._qldpc_code.get_code_params()
-        self.logical_qubits = tuple(self._logical_qubits_from_qldpc_code(patch_id))
+        self._logical_qubits = tuple(self._logical_qubits_from_qldpc_code(patch_id))
         super().__init__(
             patch_id=patch_id,
             n=int(n),
@@ -149,12 +155,12 @@ class CSSCodePatch(CodePatch):
         return self._qldpc_code
 
     @property
-    def num_measure_qubits(self) -> int:
-        return int(self.qldpc_code.num_checks)
+    def logical_qubits(self) -> tuple[LogicalQubit, ...]:
+        return self._logical_qubits
 
     @property
-    def num_logical_qubits(self) -> int:
-        return len(self.logical_qubits)
+    def num_measure_qubits(self) -> int:
+        return int(self.qldpc_code.num_checks)
 
     def num_x_stabilizers(self) -> int:
         """Return the number of X-type stabilizer checks."""

@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import inspect
+
 import cirq
 import pytest
 from qldpc import codes
@@ -93,9 +95,15 @@ def test_logical_qubit_rejects_noninteger_support_entries(support: set[object]) 
         codepatch.LogicalQubit(patch_id=0, logical_index=0, x_support=support, z_support={0})  # type: ignore[arg-type]
 
 
-def test_code_patch_is_abstract() -> None:
+def test_code_patch_classes_are_abstract() -> None:
+    assert inspect.isabstract(codepatch.CodePatch)
+    assert inspect.isabstract(codepatch.CSSCodePatch)
+    assert not inspect.isabstract(codepatch.RotatedSurfaceCodePatch)
+
     with pytest.raises(TypeError, match="abstract class CodePatch"):
         codepatch.CodePatch(patch_id=3, n=9, k=1, d=3)
+    with pytest.raises(TypeError, match="abstract class CSSCodePatch"):
+        codepatch.CSSCodePatch(patch_id=3, qldpc_code=codes.SurfaceCode(3))
 
 
 def test_rotated_surface_code_patch_metadata() -> None:
