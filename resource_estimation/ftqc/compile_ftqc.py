@@ -16,7 +16,6 @@ from __future__ import annotations
 import collections
 import copy
 import functools
-import itertools
 import os
 import sys
 import time

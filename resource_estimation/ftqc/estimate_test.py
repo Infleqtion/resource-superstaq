@@ -11,20 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from resource_estimation.ftqc import ResourceEstimator, distil_15_to_1, ccz_8_to_1
 from math import pi
+from unittest import mock
 
 import cirq
 import networkx as nx
 import numpy as np
 import pytest
 from numpy import isclose
-import random
+
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-from unittest import mock
-from resource_estimation.ftqc import ccz_8_to_1, distil_15_to_1
+from resource_estimation.ftqc import ResourceEstimator, ccz_8_to_1, distil_15_to_1
 
 
 @pytest.fixture

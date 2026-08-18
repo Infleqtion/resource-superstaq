@@ -310,7 +310,9 @@ def test_nondeterministic_compilation_T(random_circ2) -> None:
 
 
 def test_nondeterministic_compilation_CCZ() -> None:
-    circuit = cirq.Circuit(cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)))
+    circuit = cirq.Circuit(
+        cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
+    )
     lay = MovementDistillery(circuit, num_t_factories=0, num_ccz_factories=1)
     arc = arch.DefaultMovement()
     compiled1 = comp.ft_compile(lay, arc, dynamic=False)
