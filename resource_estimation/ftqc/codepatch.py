@@ -41,8 +41,8 @@ class LogicalQubit(cirq.Qid):
     ) -> None:
         self._patch_id = _validate_id(patch_id, "patch_id")
         self._logical_index = _validate_id(logical_index, "logical_index")
-        self._x_support = self._validate_support(x_support, "x_support")
-        self._z_support = self._validate_support(z_support, "z_support")
+        self._x_support = self._normalize_support(x_support, "x_support")
+        self._z_support = self._normalize_support(z_support, "z_support")
         if not self.x_support | self.z_support:
             raise ValueError("LogicalQubit supports must include at least one physical qubit.")
 
@@ -72,15 +72,8 @@ class LogicalQubit(cirq.Qid):
         return self.patch_id, self.logical_index
 
     @staticmethod
-    def _validate_support(support: typing.Iterable[int], name: str) -> frozenset[int]:
-        qubits = set()
-        for qubit in support:
-            if not isinstance(qubit, int) or isinstance(qubit, bool):
-                raise TypeError(f"LogicalQubit {name} entries must be integers.")
-            if qubit < 0:
-                raise ValueError(f"LogicalQubit {name} entries must be nonnegative.")
-            qubits.add(qubit)
-        return frozenset(qubits)
+    def _normalize_support(support: typing.Iterable[int], name: str) -> frozenset[int]:
+        return frozenset(_validate_id(qubit, f"LogicalQubit {name} entry") for qubit in support)
 
     def __str__(self) -> str:
         return f"{self.patch_id}:{self.logical_index}"

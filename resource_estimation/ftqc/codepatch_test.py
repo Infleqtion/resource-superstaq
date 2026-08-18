@@ -85,13 +85,13 @@ def test_logical_qubit_rejects_invalid_ids(
 
 @pytest.mark.parametrize("support", [{-1}, {0, -1}])
 def test_logical_qubit_rejects_negative_support_entries(support: set[int]) -> None:
-    with pytest.raises(ValueError, match="entries must be nonnegative"):
+    with pytest.raises(ValueError, match="entry must be nonnegative"):
         codepatch.LogicalQubit(patch_id=0, logical_index=0, x_support=support, z_support={0})
 
 
 @pytest.mark.parametrize("support", [{1.5}, {True}])
 def test_logical_qubit_rejects_noninteger_support_entries(support: set[object]) -> None:
-    with pytest.raises(TypeError, match="entries must be integers"):
+    with pytest.raises(TypeError, match="entry must be an integer"):
         codepatch.LogicalQubit(patch_id=0, logical_index=0, x_support=support, z_support={0})  # type: ignore[arg-type]
 
 
