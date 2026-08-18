@@ -14,8 +14,8 @@
 from math import pi
 
 import cirq
+import numpy as np
 import pytest
-from numpy.testing import assert_array_equal
 
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 
@@ -147,7 +147,7 @@ def test_buffer() -> None:
     smooth_buff = lsp.BufferCodePatch(d=d, smooth=True)
     rough_buff = lsp.BufferCodePatch(d=d, smooth=False)
 
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_buff.num_z_stabs(full=True),
             smooth_buff.num_x_stabs(full=True),
@@ -156,14 +156,14 @@ def test_buffer() -> None:
         ],
         6,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_buff.num_x_stabs(full=False),
             rough_buff.num_z_stabs(full=False),
         ],
         2,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_buff.num_z_stabs(full=False),
             rough_buff.num_x_stabs(full=False),
@@ -176,7 +176,7 @@ def test_intermediate_patch() -> None:
     d = 7
     smooth_inter = lsp.IntermediatePatch(d=d, smooth=True)
     rough_inter = lsp.IntermediatePatch(d=d, smooth=False)
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_inter.num_z_stabs(full=True),
             smooth_inter.num_x_stabs(full=True),
@@ -185,14 +185,14 @@ def test_intermediate_patch() -> None:
         ],
         18,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_inter.num_x_stabs(full=False),
             rough_inter.num_z_stabs(full=False),
         ],
         6,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_inter.num_z_stabs(full=False),
             rough_inter.num_x_stabs(full=False),
@@ -205,7 +205,7 @@ def test_endpoint_patch() -> None:
     d = 7
     smooth_end = lsp.EndpointPatch(d=d, smooth=True)
     rough_end = lsp.EndpointPatch(d=d, smooth=False)
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_end.num_z_stabs(full=True),
             smooth_end.num_x_stabs(full=True),
@@ -214,14 +214,14 @@ def test_endpoint_patch() -> None:
         ],
         18,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_end.num_x_stabs(full=False),
             rough_end.num_z_stabs(full=False),
         ],
         6,
     )
-    assert_array_equal(
+    np.testing.assert_array_equal(
         [
             smooth_end.num_z_stabs(full=False),
             rough_end.num_x_stabs(full=False),
@@ -251,10 +251,12 @@ def test_serialization() -> None:
     )
     json_str = cirq.to_json(circuit)
     new_circuit = cirq.read_json(
-        json_text=json_str, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
+        json_text=json_str,
+        resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS],
     )
     cirq.testing.assert_json_roundtrip_works(
-        circuit, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
+        circuit,
+        resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS],
     )
 
     circuit = cirq.Circuit(
@@ -268,15 +270,17 @@ def test_serialization() -> None:
             lsp.Move(zone="interact").on_each(qubit_a, qubit_b),
             lsp.Move(zone=None).on(qubit_a, qubit_b),
             lsp.Move(zone="measure").on(qubit_a),
-        ]
+        ],
     )
     json_str = cirq.to_json(circuit)
     new_circuit = cirq.read_json(
-        json_text=json_str, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
+        json_text=json_str,
+        resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS],
     )
     assert new_circuit == circuit
     cirq.testing.assert_json_roundtrip_works(
-        circuit, resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS]
+        circuit,
+        resolvers=[lsp.custom_resolver, *cirq.DEFAULT_RESOLVERS],
     )
 
 

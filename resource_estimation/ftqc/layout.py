@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
+
 import abc
-from collections import deque
+import collections
+import itertools
+import typing
 from dataclasses import dataclass
-from itertools import combinations, product
 from math import ceil, sqrt
-from typing import Literal
 
 import cirq
 import networkx as nx
@@ -37,9 +38,9 @@ class Layout(abc.ABC):
     def __post_init__(self) -> None:
         self.mapped_circuit = None
         self.layout_graph = None
-        self._available_t_factories = deque()
-        self._available_s_factories = deque()
-        self._available_ccz_factories = deque()
+        self._available_t_factories = collections.deque()
+        self._available_s_factories = collections.deque()
+        self._available_ccz_factories = collections.deque()
         self._all_factories = set()
         self._generate()
 
@@ -57,21 +58,21 @@ class Layout(abc.ABC):
             if G.nodes[node]["patch_type"] == "factory":
                 G.nodes[node]["used"] = True
         # Resets the available factories
-        self._available_t_factories = deque()
-        self._available_s_factories = deque()
-        self._available_ccz_factories = deque()
+        self._available_t_factories = collections.deque()
+        self._available_s_factories = collections.deque()
+        self._available_ccz_factories = collections.deque()
 
-    def reload_factories(self, ftype: Literal["t", "s", "ccz"]) -> None:
+    def reload_factories(self, ftype: typing.Literal["t", "s", "ccz"]) -> None:
         if ftype not in ["t", "s", "ccz"]:
             raise ValueError(f"{ftype} is not a valid factory type")
 
         factories = self.all_factories(ftype=ftype)
         if ftype == "t":
-            self._available_t_factories = deque(factories)
+            self._available_t_factories = collections.deque(factories)
         elif ftype == "s":
-            self._available_s_factories = deque(factories)
+            self._available_s_factories = collections.deque(factories)
         elif ftype == "ccz":
-            self._available_ccz_factories = deque(factories)
+            self._available_ccz_factories = collections.deque(factories)
         # Update graph to reflect the new status
         for factory in factories:
             for node in factory:
@@ -119,13 +120,13 @@ class Layout(abc.ABC):
                 for idx in range(self.num_s_factories)
             ],
         )
-        G.add_edges_from((n1, n2) for n1, n2 in combinations(G.nodes, 2))
+        G.add_edges_from((n1, n2) for n1, n2 in itertools.combinations(G.nodes, 2))
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
 
     def available_factories(
-        self, ftype: Literal["t", "s", "ccz"]
-    ) -> deque[tuple[cirq.GridQubit, ...]]:
+        self, ftype: typing.Literal["t", "s", "ccz"]
+    ) -> collections.deque[tuple[cirq.GridQubit, ...]]:
         if ftype == "t":
             return self._available_t_factories
         elif ftype == "s":
@@ -134,13 +135,19 @@ class Layout(abc.ABC):
             return self._available_ccz_factories
         raise ValueError(f"No factories available with type {ftype}")
 
-    def all_factories(self, ftype: Literal["t", "s", "ccz"]):
+    def all_factories(self, ftype: typing.Literal["t", "s", "ccz"]):
         G = self.layout_graph
-        is_ftype_factory = lambda node: "ftype" in G.nodes[node] and G.nodes[node]["ftype"] == ftype
+
+        def is_ftype_factory(node):
+            return "ftype" in G.nodes[node] and G.nodes[node]["ftype"] == ftype
+
         unique_fids = np.unique(
             [G.nodes[node]["fid"] for node in G.nodes if is_ftype_factory(node)]
         )
-        has_fid = lambda node, fid: "fid" in G.nodes[node] and G.nodes[node]["fid"] == fid
+
+        def has_fid(node, fid):
+            return "fid" in G.nodes[node] and G.nodes[node]["fid"] == fid
+
         return [
             tuple(
                 sorted(
@@ -154,7 +161,7 @@ class Layout(abc.ABC):
     def nearest_factory(
         self,
         qubits: tuple[cirq.GridQubit, ...] | cirq.GridQubit,
-        ftype: Literal["s", "t", "ccz"],
+        ftype: typing.Literal["s", "t", "ccz"],
     ) -> cirq.GridQubit | tuple[cirq.GridQubit, ...]:
         """Finds the closest factory of desired type according to the Manhattan distance using the GridQubit indices of the factory qubits that do not have the `used` status
         Removes the returned factory from the available options and sets its status to `used`
@@ -166,11 +173,11 @@ class Layout(abc.ABC):
             raise ValueError(f"No {ftype} factories available!")
 
         def movement_heuristic(factory):
-            "Heuristic based on the closest qubit within the factory by Manhattan distance"
+            """Heuristic based on the closest qubit within the factory by Manhattan distance"""
             return min(abs(f.row - q.row) + abs(f.col - q.col) for q in qubits for f in factory)
 
         def lattice_heuristic(factory):
-            "Heuristic based on the lattice surgery routing distance between the first qubit in the factory and the first qubit in the set of target qubits"
+            """Heuristic based on the lattice surgery routing distance between the first qubit in the factory and the first qubit in the set of target qubits"""
             return len(self.route_cnot(factory[0], qubits[0]))
 
         factories = self.available_factories(ftype=ftype)
@@ -303,7 +310,7 @@ class Column(Layout):
             if row % 2 == 0:
                 s_factories.extend([cirq.GridQubit(row, 0), cirq.GridQubit(row, 6)])
                 ancillas.extend(
-                    [cirq.GridQubit(row, 1), cirq.GridQubit(row, 3), cirq.GridQubit(row, 5)]
+                    [cirq.GridQubit(row, 1), cirq.GridQubit(row, 3), cirq.GridQubit(row, 5)],
                 )
             else:
                 t_factories.extend([cirq.GridQubit(row, 0), cirq.GridQubit(row, 6)])
@@ -393,9 +400,9 @@ class FactorySandwich(Layout):
         G.add_edges_from(
             [
                 (n1, n2)
-                for n1, n2 in combinations(G.nodes, 2)
+                for n1, n2 in itertools.combinations(G.nodes, 2)
                 if abs(n1.row - n2.row) + abs(n1.col - n2.col) == 1
-            ]
+            ],
         )
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
@@ -451,19 +458,27 @@ class Embedded(Layout):
 
         # Now convert that array into logical qubits, factories, and ancilla in the qubit map and layout graph
         logical_qubit_positions = [
-            (i, j) for i, j in product(range(total_rows), range(total_cols)) if stage5[i, j] == 1
+            (i, j)
+            for i, j in itertools.product(range(total_rows), range(total_cols))
+            if stage5[i, j] == 1
         ]
         ancilla_positions = [
-            (i, j) for i, j in product(range(total_rows), range(total_cols)) if stage5[i, j] == 0
+            (i, j)
+            for i, j in itertools.product(range(total_rows), range(total_cols))
+            if stage5[i, j] == 0
         ]
         # We also trim off the corners to avoid adding useless ancilla patches
-        for i, j in product([0, total_rows - 1], (0, total_cols - 1)):
+        for i, j in itertools.product([0, total_rows - 1], (0, total_cols - 1)):
             ancilla_positions.remove((i, j))
         s_factory_positions = [
-            (i, j) for i, j in product(range(total_rows), range(total_cols)) if stage5[i, j] == 2
+            (i, j)
+            for i, j in itertools.product(range(total_rows), range(total_cols))
+            if stage5[i, j] == 2
         ]
         t_factory_positions = [
-            (i, j) for i, j in product(range(total_rows), range(total_cols)) if stage5[i, j] == 3
+            (i, j)
+            for i, j in itertools.product(range(total_rows), range(total_cols))
+            if stage5[i, j] == 3
         ]
         qubit_map = {
             qid: cirq.GridQubit(row, col)
@@ -496,9 +511,9 @@ class Embedded(Layout):
         G.add_edges_from(
             [
                 (n1, n2)
-                for n1, n2 in combinations(G.nodes, 2)
+                for n1, n2 in itertools.combinations(G.nodes, 2)
                 if abs(n1.row - n2.row) + abs(n1.col - n2.col) == 1
-            ]
+            ],
         )
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
@@ -562,7 +577,7 @@ class MovementDistillery(MovementLayout):
                 cirq.GridQubit(*idx_to_xy(qubit_index + i)) for i in range(1, qubits_per_t_distil)
             ]
             G.add_nodes_from(
-                [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits]
+                [(q, dict(patch_type="block", fid=factory_index)) for q in block_qubits],
             )
         # Add CCZ Distillation Factories to Graph
         data_plus_t = program_qubits + (qubits_per_t_distil * self.num_t_factories)

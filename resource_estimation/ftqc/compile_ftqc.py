@@ -11,28 +11,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from resource_estimation.ftqc.architecture import Architecture
+import collections
 import copy
+import functools
+import itertools
 import os
 import sys
-from collections.abc import Iterator
-from itertools import combinations
-from functools import partial
+import time
 from math import pi
-from time import time
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import cirq
 import cirq_superstaq as css
-from cirq_superstaq import Barrier, barrier
-from tqdm import tqdm
+import tqdm
 
+if TYPE_CHECKING:
+    from resource_estimation.ftqc.architecture import Architecture
 from . import lattice_surgery_primitives as lsp
 from .layout import Layout
 
@@ -45,7 +42,10 @@ from .layout import Layout
 
 # This function is only visual and is extremely finicky, so it is not tested
 def knock_off_tqdm(
-    moment_idx: int, total: int, tstart: float, message: str
+    moment_idx: int,
+    total: int,
+    tstart: float,
+    message: str,
 ) -> None:  # pragma: no cover
     """Implements tqdm-like behavior for the compiler"""
     if not sys.stdout.isatty():
@@ -53,13 +53,13 @@ def knock_off_tqdm(
         return
     WIDTH = os.get_terminal_size().columns
     moment_idx += 1
-    time_passed = time() - tstart
+    time_passed = time.time() - tstart
     guessed_time = time_passed * (total / moment_idx)
     offset = len(
         f"{message} || {moment_idx} / {total} ["
         f"{int(time_passed // 3600)}:{int(time_passed // 60)}:{int(time_passed % 60)}.{int(10 * time_passed) % 10}{int(100 * time_passed) % 10}<"
         f"{int(guessed_time // 3600)}:{int(guessed_time // 60)}:{int(guessed_time % 60)}.{int(10 * guessed_time) % 10}{int(100 * guessed_time) % 10}, "
-        f"{round(moment_idx / time_passed, 2)}it/s]"
+        f"{round(moment_idx / time_passed, 2)}it/s]",
     )
     bars = int((WIDTH - offset) * moment_idx / total)
     spaces = int(WIDTH - offset) - bars
@@ -105,7 +105,7 @@ def replace_cirq_op(
         return [
             lsp.Merge(num_qubits=num_qubits - 1, smooth=True).on(*path_patches[:-1]),
             lsp.Split(partitions=[1, len(path_patches[:-1]) - 1], smooth=True).on(
-                *path_patches[:-1]
+                *path_patches[:-1],
             ),
             lsp.Merge(num_qubits=num_qubits - 1, smooth=False).on(*path_patches[1:]),
             lsp.Split(partitions=[1] * (len(path_patches[1:])), smooth=False).on(*path_patches[1:]),
@@ -113,7 +113,7 @@ def replace_cirq_op(
     if _requires_resource(op, transversal_cnot):
         return teleport_resource(op, layout, dynamic)
     raise ValueError(
-        f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} gate: {op.gate}"
+        f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} gate: {op.gate}",
     )
 
 
@@ -213,14 +213,14 @@ def handle_idling(
     # Build circuit where Syndrome Extract is performed on Idling qubits that are not being acted upon
     # Split moments are treated separately because they can always get absorbed into the previous moment
     total = len(circuit)
-    tstart = time()
+    tstart = time.time()
 
     se = lsp.SyndromeExtract(1, rounds)
 
     def _map_func(moment, moment_idx):
         if verbose > 0:
             knock_off_tqdm(moment_idx=moment_idx, total=total, tstart=tstart, message="Idling:")
-        if all(isinstance(gate.gate, (Barrier, lsp.Split)) for gate in moment):
+        if all(isinstance(gate.gate, (css.Barrier, lsp.Split)) for gate in moment):
             return moment
         if moment_idx == 0 or sum(
             isinstance(gate.gate, lsp.SyndromeExtract) for gate in moment
@@ -233,7 +233,7 @@ def handle_idling(
         moment = cirq.Moment(*moment, *se.on_each(*idling_qubits), _flatten_contents=False)
 
         if with_barriers:
-            return [moment, cirq.Moment(barrier(*circuit.all_qubits()))]
+            return [moment, cirq.Moment(css.barrier(*circuit.all_qubits()))]
 
         return moment
 
@@ -267,9 +267,9 @@ def post_op_syndrome_extraction(
     barrier = css.barrier(*sorted(circuit.all_qubits()))
 
     total = len(circuit)
-    tstart = time()
+    tstart = time.time()
 
-    def _map_func(op: cirq.Operation, moment_idx: int) -> Iterator[cirq.Operation]:
+    def _map_func(op: cirq.Operation, moment_idx: int) -> collections.Iterator[cirq.Operation]:
         if verbose:
             knock_off_tqdm(
                 moment_idx=moment_idx,
@@ -280,7 +280,7 @@ def post_op_syndrome_extraction(
 
         yield op
 
-        if with_barriers and not isinstance(op.gate, Barrier):
+        if with_barriers and not isinstance(op.gate, css.Barrier):
             yield barrier
 
         qubits_to_correct = [
@@ -316,7 +316,7 @@ def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
     total_ops = len(list(circuit.all_operations()))
     if not all(
         op.gate in valid_gates or isinstance(op.gate, valid_types)
-        for op in tqdm(circuit.all_operations(), total=total_ops, disable=not verbose)
+        for op in tqdm.tqdm(circuit.all_operations(), total=total_ops, disable=not verbose)
     ):
         raise ValueError("This compiler only handles Clifford + T + CCZ circuits")
 
@@ -328,7 +328,7 @@ def _decompose_to_primitives(
     dynamic: bool = False,
 ) -> tuple[cirq.Circuit, list[cirq.GridQubit]]:
     primitives = cirq.Gateset(
-        *(cirq.GateFamily(g._gate, ignore_global_phase=False) for g in arc.primitives.gates)
+        *(cirq.GateFamily(g._gate, ignore_global_phase=False) for g in arc.primitives.gates),
     )
     transversal_cnot = cirq.CX in primitives
 
@@ -354,7 +354,7 @@ def add_moves(
 ) -> cirq.Circuit:
     """Handles replacement moves for both alley movement and interaction zone movement"""
     total = len(circuit)
-    tstart = time()
+    tstart = time.time()
 
     def map_func(op, moment_idx):
         if verbose:
@@ -372,9 +372,9 @@ def add_moves(
             if op.gate in zone_ops:
                 zone_type = "interact" if op.gate == cirq.CNOT else "measure"
             move_op = (
-                partial(lsp.Move(zone=zone_type).on)
+                functools.partial(lsp.Move(zone=zone_type).on)
                 if zone_type is None
-                else partial(lsp.Move(zone=zone_type).on_each)
+                else functools.partial(lsp.Move(zone=zone_type).on_each)
             )
             yield move_op(*op_qubits)
             yield op
@@ -456,7 +456,10 @@ def ft_compile(
         zone_ops = arc.zone_ops if arc.zone_ops is not None else cirq.Gateset()
         alley_ops = arc.alley_ops if arc.alley_ops is not None else cirq.Gateset()
         circuit = add_moves(
-            circuit=circuit, verbose=verbose, zone_ops=zone_ops, alley_ops=alley_ops
+            circuit=circuit,
+            verbose=verbose,
+            zone_ops=zone_ops,
+            alley_ops=alley_ops,
         )
 
     if verbose > 1:
