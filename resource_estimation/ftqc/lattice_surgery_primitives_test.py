@@ -86,6 +86,15 @@ def test_distil() -> None:
         _ = lsp.Distil("Toffoli")
 
 
+def test_resource_correct() -> None:
+    gate = lsp.ResourceCorrection("T")
+    assert str(gate) == "ResourceCorrection(T)"
+    gate = lsp.ResourceCorrection("CCZ")
+    assert str(gate) == "ResourceCorrection(CCZ)"
+    with pytest.raises(ValueError, match="Invalid resource"):
+        _ = lsp.ResourceCorrection("Toffoli")
+
+
 def test_rotated_code_patch() -> None:
     with pytest.raises(AssertionError, match="CodePatches must be odd distance"):
         lsp.RotatedCodePatch(4)
@@ -236,6 +245,8 @@ def test_serialization() -> None:
             lsp.Move(zone="measure").on(qubit_a),
             lsp.Distil("T").on(*factory_block),
             lsp.Distil("CCZ").on(*factory_block[:23]),
+            lsp.ResourceCorrection("T").on(qubit_a),
+            lsp.ResourceCorrection("CCZ").on(qubit_a, qubit_b, cirq.GridQubit(0, 2)),
         ]
     )
     json_str = cirq.to_json(circuit)

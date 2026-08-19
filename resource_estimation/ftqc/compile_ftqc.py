@@ -16,10 +16,10 @@ from __future__ import annotations
 import collections
 import copy
 import functools
-import itertools
 import os
 import sys
 import time
+from itertools import combinations
 from math import pi
 from typing import TYPE_CHECKING
 from warnings import warn
@@ -34,7 +34,7 @@ from . import lattice_surgery_primitives as lsp
 from .layout import Layout
 
 # IMPORTANT NOTES
-# Classical control has not been implemented yet
+# Classical control is in the process of being implemented
 #   If you requested S, I assume you measure 1 and have to do Z
 #   If you requested T, I assume you measure 1 and have to do S
 # ABC -- Always be Cultivating
@@ -90,6 +90,7 @@ def replace_cirq_op(
     op: cirq.Operation,
     layout: Layout,
     transversal_cnot: bool,
+    dynamic: bool = False,
 ) -> list[cirq.Operation]:
     """Replacement logic similar to decomposition for cirq operations to be converted to primitives.
 
@@ -110,13 +111,15 @@ def replace_cirq_op(
             lsp.Split(partitions=[1] * (len(path_patches[1:])), smooth=False).on(*path_patches[1:]),
         ]
     if _requires_resource(op, transversal_cnot):
-        return teleport_resource(op, layout)
+        return teleport_resource(op, layout, dynamic)
     raise ValueError(
         f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} gate: {op.gate}",
     )
 
 
-def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation]:
+def teleport_resource(
+    op: cirq.Operation, layout: Layout, dynamic: bool = False
+) -> list[cirq.Operation]:
     distil_t = layout.distil and op in cirq.GateFamily(cirq.T)
     distil_ccz = layout.distil and op in cirq.GateFamily(cirq.CCZ)
     cultivate_t = (not layout.distil) and op in cirq.GateFamily(cirq.T)
@@ -124,11 +127,11 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     if distil_t:
         ftype = "t"
         prep_gate = lsp.Distil("T")
-        correction = cirq.S
+        correction = lsp.ResourceCorrection("T") if dynamic else cirq.S
     elif cultivate_t:
         ftype = "t"
         prep_gate = lsp.Cultivate(pi / 4)
-        correction = cirq.S
+        correction = lsp.ResourceCorrection("T") if dynamic else cirq.S
     elif cultivate_s:
         ftype = "s"
         prep_gate = lsp.Cultivate(pi / 2)
@@ -136,13 +139,15 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     elif distil_ccz:
         ftype = "ccz"
         prep_gate = lsp.Distil("CCZ")
-        # Since CNOT is the logical primitve, we use conjugation here
-        correction = [
-            *cirq.H.on_each(*op.qubits),
-            *cirq.X.on_each(*op.qubits),
-            *cirq.CNOT.on_each(*itertools.combinations(op.qubits, 2)),
-            *cirq.H.on_each(*op.qubits),
-        ]
+        if dynamic:
+            correction = lsp.ResourceCorrection("CCZ")
+        else:
+            correction = [
+                *cirq.H.on_each(*op.qubits),
+                *cirq.X.on_each(*op.qubits),
+                *cirq.CNOT.on_each(*combinations(op.qubits, 2)),
+                *cirq.H.on_each(*op.qubits),
+            ]
     else:
         raise ValueError(f"Invalid resource encountered: {op.gate}")
     available_factories = layout.available_factories(ftype)
@@ -159,7 +164,10 @@ def teleport_resource(op: cirq.Operation, layout: Layout) -> list[cirq.Operation
     # These should be tuples of qubits
     routed_factory = layout.nearest_factory(op.qubits, ftype=ftype)
     cnots, measurements, resets = [], [], []
-    corrections = correction if isinstance(correction, list) else [correction.on(*op.qubits)]
+
+    corrections: list[cirq.Operation] = (
+        correction if isinstance(correction, list) else [correction.on(*op.qubits)]
+    )
     for factory_qubit, program_qubit in zip(routed_factory, op.qubits):
         cnots.append(cirq.CNOT.on(factory_qubit, program_qubit))
         measurements.append(cirq.MeasurementGate(1, key="").on(factory_qubit))
@@ -247,13 +255,15 @@ def post_op_syndrome_extraction(
     ops_to_correct = [
         cirq.CNOT,
         cirq.S,
+        lsp.ResourceCorrection("T"),
+        lsp.ResourceCorrection("CCZ"),
         # cirq.X,
         # cirq.Z,
     ]
     if movement:
         ops_to_correct.append(cirq.H)
 
-    syndrom_extract = lsp.SyndromeExtract(1, rounds)
+    syndrome_extract = lsp.SyndromeExtract(1, rounds)
     barrier = css.barrier(*sorted(circuit.all_qubits()))
 
     total = len(circuit)
@@ -279,7 +289,7 @@ def post_op_syndrome_extraction(
             if op.gate in ops_to_correct or isinstance(op.gate, cirq.MeasurementGate)
         ]
         if qubits_to_correct:
-            yield from syndrom_extract.on_each(*qubits_to_correct)
+            yield from syndrome_extract.on_each(*qubits_to_correct)
 
             if with_barriers:
                 yield barrier
@@ -315,6 +325,7 @@ def _decompose_to_primitives(
     circuit: cirq.Circuit,
     layout: Layout,
     arc: Architecture,
+    dynamic: bool = False,
 ) -> tuple[cirq.Circuit, list[cirq.GridQubit]]:
     primitives = cirq.Gateset(
         *(cirq.GateFamily(g._gate, ignore_global_phase=False) for g in arc.primitives.gates),
@@ -322,7 +333,9 @@ def _decompose_to_primitives(
     transversal_cnot = cirq.CX in primitives
 
     def _map_fn(op: cirq.Operation) -> list[cirq.Operation]:
-        return replace_cirq_op(op=op, layout=layout, transversal_cnot=transversal_cnot)
+        return replace_cirq_op(
+            op=op, layout=layout, transversal_cnot=transversal_cnot, dynamic=dynamic
+        )
 
     # TODO: can we turn layout into a decomposition_context?
     ops = cirq.decompose(
@@ -377,6 +390,7 @@ def ft_compile(
     with_barriers: bool = False,
     num_threads: int = 1,
     skip_validation: bool = False,
+    dynamic: bool = False,
 ) -> cirq.Circuit:
     """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T + CCZ gateset to a cirq circuit of primitives.
     The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
@@ -397,7 +411,7 @@ def ft_compile(
     else:
         validate_ops(circuit, verbose=verbose)
 
-    circuit = _decompose_to_primitives(circuit, layout=layout, arc=arc)
+    circuit = _decompose_to_primitives(circuit, layout=layout, arc=arc, dynamic=dynamic)
     if verbose > 1:
         verbose_list = [list(moment.operations) for moment in circuit.moments]
 

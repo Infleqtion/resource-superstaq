@@ -80,6 +80,7 @@ __all__ = [
     "MeasureZonesOnly",
     "MovementLayout",
     "Move",
+    "ResourceCorrection",
     "ReactionDepthEstimator",
     "ReactionDynamics",
     "ResourceEstimator",
