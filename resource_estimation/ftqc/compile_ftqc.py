@@ -30,6 +30,8 @@ if TYPE_CHECKING:
     from typing import Iterator, Literal, Sequence
 
     from resource_estimation.ftqc.architecture import Architecture
+from resource_estimation.typing import _require_gate_operation
+
 from . import lattice_surgery_primitives as lsp
 from .layout import Layout, MovementDistillery
 
@@ -382,7 +384,7 @@ def add_moves(
         if op not in zone_ops and op not in alley_ops:
             return op
 
-        assert isinstance(op, cirq.GateOperation)
+        op = _require_gate_operation(op)
 
         op_qubits = list(op.qubits)
         zone_type: Literal["measure", "interact"] | None = None
