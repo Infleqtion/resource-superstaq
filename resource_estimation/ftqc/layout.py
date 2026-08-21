@@ -120,7 +120,6 @@ class Layout(abc.ABC):
                 for idx in range(self.num_s_factories)
             ],
         )
-        # G.add_edges_from((n1, n2) for n1, n2 in itertools.combinations(G.nodes, 2))
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
 
@@ -225,11 +224,11 @@ class Layout(abc.ABC):
         path = nx.dijkstra_path(G=G, source=ctrl, target=trgt, weight=custom_weight)
         return path
 
-    def distance(self, q1: cirq.GridQubit, q2: cirq.GridQubit) -> int:
-        """Calculates the Manhattan distance between two logical qubits with defined grid coordinates"""
-        if q1 not in self.layout_graph.nodes or q2 not in self.layout_graph.nodes:
-            raise ValueError("Input qubits are not in the set of layout nodes")
-        return abs(q2.row - q1.row) + abs(q2.col - q1.col)
+    # def distance(self, q1: cirq.GridQubit, q2: cirq.GridQubit) -> int:
+    #     """Calculates the Manhattan distance between two logical qubits with defined grid coordinates"""
+    #     if q1 not in self.layout_graph.nodes or q2 not in self.layout_graph.nodes:
+    #         raise ValueError("Input qubits are not in the set of layout nodes")
+    #     return abs(q2.row - q1.row) + abs(q2.col - q1.col)
 
     def draw(self) -> None:  # pragma: no cover
         """Draw method to display layouts clearly

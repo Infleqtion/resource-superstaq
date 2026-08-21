@@ -21,6 +21,7 @@ import pytest
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.layout as lyt
 from resource_estimation.ftqc import ccz_8_to_1, distil_15_to_1
 
 
@@ -76,8 +77,8 @@ def movement_estimator() -> est.ResourceEstimator:
     ],
 )
 def test_all_primitives(estimator) -> None:
-    dummy_qubits = [cirq.GridQubit(i, j) for i in range(3) for j in range(3)]
-    factory_block = [cirq.GridQubit(4, i) for i in range(31)]
+    dummy_qubits = cirq.LineQubit.range(9)
+    # factory_block = [cirq.GridQubit(4, i) for i in range(31)]
     circuit = cirq.Circuit()
     circuit += [cirq.I.on(q) for q in dummy_qubits]
     circuit += [cirq.Z.on(q) for q in dummy_qubits]
@@ -88,10 +89,19 @@ def test_all_primitives(estimator) -> None:
     circuit += [lsp.ErrorCorrect(1).on(q) for q in dummy_qubits]
     arc = estimator.arc
     if arc.movement:
+        layout = lyt.MovementDistillery(
+            input_circuit=circuit, num_ccz_factories=1, inplace_cnot=True, num_t_factories=1
+        )
+        t_factory = layout.all_factories("t")[0]
+        ccz_factory = layout.all_factories("ccz")[0]
+        t_block = layout.distillation_block(t_factory)
+        ccz_block = layout.distillation_block(ccz_factory)
+        print(len(t_block), lsp.Distil("T")._num_qubits)
+        print(len(ccz_block), lsp.Distil("CCZ")._num_qubits)
         circuit += [cirq.CNOT.on(dummy_qubits[i], dummy_qubits[i + 1]) for i in range(8)]
         circuit += [cirq.S.on(q) for q in dummy_qubits]
-        circuit += [lsp.Distil("T").on(*factory_block)]
-        circuit += [lsp.Distil("CCZ").on(*factory_block[:23])]
+        circuit += [lsp.Distil("T").on(*t_block)]
+        circuit += [lsp.Distil("CCZ").on(*ccz_block)]
     else:
         circuit += [
             lsp.Merge(2, smooth=True).on(*dummy_qubits[:2]),
@@ -99,15 +109,16 @@ def test_all_primitives(estimator) -> None:
             lsp.Merge(2, smooth=False).on(*dummy_qubits[1:3]),
             lsp.Split([1, 1], smooth=False).on(*dummy_qubits[1:3]),
         ]
+        layout = lyt.Column(input_circuit=circuit)
     circuit += [lsp.Cultivate(pi / 4).on(q) for q in dummy_qubits]
 
     # At least verify that there is no randomness in these estimates
     # Still TODO: Make this test better
     with pytest.warns(UserWarning, match="Returning result for d=7"):
-        c1 = estimator.serial_circuit_cost(circuit)
-        t1 = estimator.serial_circuit_time(circuit)
-        c2 = estimator.serial_circuit_cost(circuit)
-        t2 = estimator.serial_circuit_time(circuit)
+        c1 = estimator.serial_circuit_cost(circuit, layout=layout)
+        t1 = estimator.serial_circuit_time(circuit, layout=layout)
+        c2 = estimator.serial_circuit_cost(circuit, layout=layout)
+        t2 = estimator.serial_circuit_time(circuit, layout=layout)
     for key in c1.keys():
         assert c1[key] == c2[key]
     assert np.isclose(t1, t2, atol=0.00001)
@@ -126,7 +137,10 @@ def test_parallel_circuit_cost(lattice_estimator, movement_estimator) -> None:
         lsp.SyndromeExtract(1, 1).on(qubit_a),
         lsp.Merge(2, smooth=True).on(qubit_b, qubit_c),
     )
-    estimated_moment_cost = lattice_estimator.parallel_circuit_cost(circuit=circuit)
+    column_layout = lyt.Column(input_circuit=circuit)
+    estimated_moment_cost = lattice_estimator.parallel_circuit_cost(
+        circuit=circuit, layout=column_layout
+    )
     expected_moment_cost = lattice_estimator.arc.moment_cost(lsp.Merge(2).on(qubit_b, qubit_c))
     assert estimated_moment_cost == expected_moment_cost
 
@@ -135,7 +149,9 @@ def test_parallel_circuit_cost(lattice_estimator, movement_estimator) -> None:
         lsp.SyndromeExtract(1, lattice_estimator.arc.d).on(qubit_a),
         lsp.Merge(2, smooth=True).on(qubit_b, qubit_c),
     )
-    estimated_moment_cost = lattice_estimator.parallel_circuit_cost(circuit=circuit)
+    estimated_moment_cost = lattice_estimator.parallel_circuit_cost(
+        circuit=circuit, layout=column_layout
+    )
     expected_moment_cost = lattice_estimator.arc.moment_cost(
         lsp.SyndromeExtract(1, lattice_estimator.arc.d).on(qubit_a),
     )
@@ -143,11 +159,15 @@ def test_parallel_circuit_cost(lattice_estimator, movement_estimator) -> None:
 
     # Test parallel CNOT gates get counted as parallel
     circuit = cirq.Circuit(cirq.CNOT.on(qubit_a, qubit_b), cirq.CNOT.on(qubit_c, qubit_d))
-    estimated_moment_cost = movement_estimator.parallel_circuit_cost(circuit=circuit)
+    estimated_moment_cost = movement_estimator.parallel_circuit_cost(
+        circuit=circuit, layout=column_layout
+    )
     expected_moment_cost = movement_estimator.arc.moment_cost(cirq.CNOT.on(qubit_a, qubit_b))
     assert estimated_moment_cost == expected_moment_cost
 
-    estimated_moment_cost = movement_estimator.parallel_circuit_cost(circuit=circuit, pretty=True)
+    estimated_moment_cost = movement_estimator.parallel_circuit_cost(
+        circuit=circuit, layout=column_layout, pretty=True
+    )
     assert estimated_moment_cost == {
         "CZ": 1,
         "PhasedXZGate": 2,
@@ -160,7 +180,8 @@ def test_self_returns(movement_estimator, lattice_estimator) -> None:
     circuit = cirq.Circuit(
         [lsp.ErrorCorrect(2).on(qubit_a, qubit_b), cirq.ResetChannel().on(qubit_a)],
     )
-    cost = movement_estimator.serial_circuit_cost(circuit=circuit, pretty=True)
+    layout = lyt.MovementLayout(circuit, num_t_factories=0, inplace_cnot=True)
+    cost = movement_estimator.serial_circuit_cost(circuit=circuit, layout=layout, pretty=True)
     assert cost == {
         "ResetChannel": 49,
     }
@@ -171,7 +192,8 @@ def test_self_returns(movement_estimator, lattice_estimator) -> None:
             cirq.ResetChannel().on_each(qubit_a, qubit_b),
         ],
     )
-    cost = lattice_estimator.serial_circuit_cost(circuit=circuit, pretty=True)
+    layout = lyt.Column(circuit)
+    cost = lattice_estimator.serial_circuit_cost(circuit=circuit, layout=layout, pretty=True)
     assert cost == {
         "ResetChannel": 2 * 49,
     }
@@ -181,8 +203,9 @@ def test_error_handling(lattice_estimator, movement_estimator) -> None:
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     # Check Bad Lattice Surgery Circuit
     bad_circuit = cirq.Circuit([lsp.Cultivate(pi / 2).on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b)])
+    layout = lyt.Column(bad_circuit)
     with pytest.raises(ValueError, match="incompatible"):
-        _ = lattice_estimator.serial_circuit_cost(bad_circuit)
+        _ = lattice_estimator.serial_circuit_cost(bad_circuit, layout=layout)
 
     # Check Bad Movement Circuit
     bad_circuit = cirq.Circuit(
@@ -192,8 +215,9 @@ def test_error_handling(lattice_estimator, movement_estimator) -> None:
             cirq.CNOT.on(qubit_a, qubit_b),
         ],
     )
+    layout = lyt.MovementLayout(bad_circuit, inplace_cnot=True)
     with pytest.raises(ValueError, match="incompatible"):
-        _ = movement_estimator.serial_circuit_cost(bad_circuit)
+        _ = movement_estimator.serial_circuit_cost(bad_circuit, layout=layout)
 
 
 # TODO: Might be worth having one or two more example tests for the critical path algorithm
@@ -208,9 +232,15 @@ def test_critical_path() -> None:
     c2 += cirq.S.on(q0)
     c2 += cirq.CNOT.on(q0, q1)
     arc = arch.DefaultMovement()
+    # Both have same layout
+    layout = lyt.MovementLayout(c1, num_t_factories=1, inplace_cnot=True, num_ccz_factories=1)
     estim = est.ResourceEstimator(arc)
     # Should be identical aside from floating point errors
-    assert np.isclose(estim.serial_circuit_time(c1), estim.serial_circuit_time(c2), atol=1e-5)
+    assert np.isclose(
+        estim.serial_circuit_time(c1, layout=layout),
+        estim.serial_circuit_time(c2, layout=layout),
+        atol=1e-5,
+    )
 
     qa, qb = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit(
@@ -231,7 +261,7 @@ def test_critical_path() -> None:
         ],
     )
     with pytest.warns(UserWarning, match="very expensive"):
-        cp = estim.critical_path(circuit)
+        cp = estim.critical_path(circuit, layout=layout)
     expected = [
         cirq.S(cirq.GridQubit(0, 0)),
         cirq.H(cirq.GridQubit(0, 0)),
@@ -245,9 +275,9 @@ def test_critical_path() -> None:
         cirq.H(cirq.GridQubit(0, 1)),
     ]
     assert cp == expected
-    assert estim.parallel_circuit_time(circuit=circuit) == estim.parallel_circuit_time(
-        circuit=cirq.Circuit(expected),
-    )
+    assert estim.parallel_circuit_time(
+        circuit=circuit, layout=layout
+    ) == estim.parallel_circuit_time(circuit=cirq.Circuit(expected), layout=layout)
 
     # Test that critical path for distillation circuits are as expected
     # Critical paths are currently the same for both distillation circuits
@@ -255,8 +285,8 @@ def test_critical_path() -> None:
     ccz_distilled = ccz_8_to_1()
     expected_types = [lsp.Cultivate, cirq.CNOT, cirq.S, cirq.H, cirq.MeasurementGate]
     with pytest.warns(UserWarning, match="very expensive"):
-        path1 = estim.critical_path(t_15_to_1)
-        path2 = estim.critical_path(ccz_distilled)
+        path1 = estim.critical_path(t_15_to_1, layout=layout)
+        path2 = estim.critical_path(ccz_distilled, layout=layout)
         assert all(op in cirq.GateFamily(expected) for op, expected in zip(path1, expected_types))
         assert all(op in cirq.GateFamily(expected) for op, expected in zip(path2, expected_types))
 

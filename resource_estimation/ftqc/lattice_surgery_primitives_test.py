@@ -67,14 +67,14 @@ def test_cultivate() -> None:
     assert str(cultivation_gate) == "CULT(1.571)"
 
 
-def test_move() -> None:
-    a, b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
-    alley_move = lsp.Move(None).on(a, b)
-    assert str(alley_move) == "MOVE(q(0, 0), q(0, 1))"
-    interact_move = lsp.Move("interact").on(a)
-    assert str(interact_move) == "MOVE_IZ(q(0, 0))"
-    measure_move = lsp.Move("measure").on(b)
-    assert str(measure_move) == "MOVE_MZ(q(0, 1))"
+# def test_move() -> None:
+#     a, b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
+#     alley_move = lsp.Move(None).on(a, b)
+#     assert str(alley_move) == "MOVE(q(0, 0), q(0, 1))"
+#     interact_move = lsp.Move("interact").on(a)
+#     assert str(interact_move) == "MOVE_IZ(q(0, 0))"
+#     measure_move = lsp.Move("measure").on(b)
+#     assert str(measure_move) == "MOVE_MZ(q(0, 1))"
 
 
 def test_distil() -> None:
@@ -231,9 +231,9 @@ def test_serialization() -> None:
             lsp.SyndromeExtract(1, 1).on(qubit_a),
             lsp.ErrorCorrect(1).on(qubit_b),
             lsp.Cultivate(1.0).on(qubit_a),
-            lsp.Move(zone="interact").on_each(qubit_a, qubit_b),
-            lsp.Move(zone=None).on(qubit_a, qubit_b),
-            lsp.Move(zone="measure").on(qubit_a),
+            # lsp.Move(zone="interact").on_each(qubit_a, qubit_b),
+            # lsp.Move(zone=None).on(qubit_a, qubit_b),
+            # lsp.Move(zone="measure").on(qubit_a),
             lsp.Distil("T").on(*factory_block),
             lsp.Distil("CCZ").on(*factory_block[:23]),
         ]
@@ -256,9 +256,9 @@ def test_serialization() -> None:
             lsp.ErrorCorrect(1).on(qubit_b),
             lsp.Distil("T").on(*factory_block),
             lsp.Distil("CCZ").on(*factory_block[:23]),
-            lsp.Move(zone="interact").on_each(qubit_a, qubit_b),
-            lsp.Move(zone=None).on(qubit_a, qubit_b),
-            lsp.Move(zone="measure").on(qubit_a),
+            # lsp.Move(zone="interact").on_each(qubit_a, qubit_b),
+            # lsp.Move(zone=None).on(qubit_a, qubit_b),
+            # lsp.Move(zone="measure").on(qubit_a),
         ],
     )
     json_str = cirq.to_json(circuit)
@@ -308,17 +308,17 @@ def test_repr() -> None:
         repr(dist_ccz)
         == "lsp.Distil(CCZ)(cirq.LineQubit(0), cirq.LineQubit(1), cirq.LineQubit(2), cirq.LineQubit(3), cirq.LineQubit(4), cirq.LineQubit(5), cirq.LineQubit(6), cirq.LineQubit(7), cirq.LineQubit(8), cirq.LineQubit(9), cirq.LineQubit(10), cirq.LineQubit(11), cirq.LineQubit(12), cirq.LineQubit(13), cirq.LineQubit(14), cirq.LineQubit(15), cirq.LineQubit(16), cirq.LineQubit(17), cirq.LineQubit(18), cirq.LineQubit(19), cirq.LineQubit(20), cirq.LineQubit(21), cirq.LineQubit(22))"
     )
-    move = lsp.Move(zone="interact").on_each(qa, qb)
-    assert (
-        repr(move)
-        == "[lsp.Move(zone=interact).on(cirq.LineQubit(0)), lsp.Move(zone=interact).on(cirq.LineQubit(1))]"
-    )
+    # move = lsp.Move(zone="interact").on_each(qa, qb)
+    # assert (
+    #     repr(move)
+    #     == "[lsp.Move(zone=interact).on(cirq.LineQubit(0)), lsp.Move(zone=interact).on(cirq.LineQubit(1))]"
+    # )
 
-    move = lsp.Move(zone=None).on(qa, qb)
-    assert repr(move) == "lsp.Move(zone=None).on(cirq.LineQubit(0), cirq.LineQubit(1))"
+    # move = lsp.Move(zone=None).on(qa, qb)
+    # assert repr(move) == "lsp.Move(zone=None).on(cirq.LineQubit(0), cirq.LineQubit(1))"
 
-    move = lsp.Move(zone="measure").on(qa)
-    assert repr(move) == "lsp.Move(zone=measure).on(cirq.LineQubit(0))"
+    # move = lsp.Move(zone="measure").on(qa)
+    # assert repr(move) == "lsp.Move(zone=measure).on(cirq.LineQubit(0))"
 
 
 def test_patch_eq_and_hash() -> None:

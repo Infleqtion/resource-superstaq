@@ -208,7 +208,7 @@ def test_embedded(circuit5: cirq.Circuit) -> None:
 
 
 def test_movement(circuit5: cirq.Circuit) -> None:
-    movement = MovementLayout(circuit5, num_t_factories=3)
+    movement = MovementLayout(circuit5, num_t_factories=3, measure_zones=False, inplace_cnot=True)
     movement.reload_factories(ftype="s")
     movement.reload_factories(ftype="t")
     G = movement.layout_graph
@@ -243,7 +243,7 @@ def test_movement(circuit5: cirq.Circuit) -> None:
 
 
 def test_general_exceptions(circuit5: cirq.Circuit) -> None:
-    movement = MovementLayout(circuit5)
+    movement = MovementLayout(circuit5, measure_zones=False, inplace_cnot=True)
     with pytest.raises(ValueError, match="not a valid"):
         movement.reload_factories(ftype="q")
     ctrl, trgt = cirq.GridQubit(0, 2), cirq.GridQubit(2, 1)
@@ -254,6 +254,12 @@ def test_general_exceptions(circuit5: cirq.Circuit) -> None:
         _ = movement.nearest_factory(cirq.GridQubit(0, 2), "t")
     with pytest.raises(ValueError, match="No factories available"):
         _ = movement.available_factories(ftype="toffoli")
+    with pytest.raises(ValueError, match="Invalid configuration"):
+        _ = MovementLayout(
+            circuit5, measure_zones=False, interaction_zones=False, inplace_cnot=False
+        )
+    with pytest.raises(ValueError, match="Not a recognized zone type"):
+        _ = movement.zone_qubits(zone_type="not a zone type")
 
 
 def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
@@ -301,7 +307,9 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
     """
     Test that the distillery works with both T and CCZ Distillation
     """
-    distillery = MovementDistillery(circuit5, num_t_factories=3, num_ccz_factories=2)
+    distillery = MovementDistillery(
+        circuit5, num_t_factories=3, num_ccz_factories=2, measure_zones=False, inplace_cnot=True
+    )
     distillery.reload_factories(ftype="s")
     distillery.reload_factories(ftype="t")
     distillery.reload_factories(ftype="ccz")

@@ -341,8 +341,6 @@ def add_moves(
     total = len(circuit)
     tstart = time.time()
 
-    if layout.inplace_cnot and layout.interaction_zones:
-        raise ValueError("Invalid configuration: inplace entanglement & interaction zones")
     interaction_cycle = itertools.cycle(layout.zone_qubits("interact"))
     measurement_cycle = itertools.cycle(layout.zone_qubits("measure"))
     ops_to_replace = [cirq.CNOT]
@@ -386,8 +384,6 @@ def add_moves(
                     op,
                     css.MovementGate({1: 0}).on(q, zone_qubit),
                 ]
-            else:
-                raise ValueError(f"Unexpected gate found: {op.gate}")
             for op in op_sequece:
                 yield op
 
@@ -409,9 +405,7 @@ def ft_compile(
     The architecture is also the source of information for how many rounds of syndrome extraction should be performed when syndrome extraction is called for.
     """
 
-    if arc.zone_ops and not (
-        hasattr(layout, "measure_zones") or hasattr(layout, "interaction_zones")
-    ):
+    if arc.zone_ops and not (layout.measure_zones or layout.interaction_zones):
         raise ValueError("Architecture has zone operations, but Layout does not have any zones")
     # TODO: Aligning left results in circuits that have are more expensive in terms of circuit time than not aligning left. This is probably the result of requesting a layer of parallel cultivations but realigning so the expensive cultivation operations become spread out over multiple moments. It is currently unclear if aligning left is correct or not in general, but the specific tests for ft_compile very much rely on it...
     layout = copy.deepcopy(layout)
@@ -467,13 +461,7 @@ def ft_compile(
                 num_threads=num_threads,
             )
 
-    if arc.zone_ops is not None or arc.alley_ops is not None:
-        measure_zone, interaction_zone, inplace_cnot = False, False, False
-        if arc.zone_ops:
-            measure_zone = cirq.MeasurementGate(num_qubits=1) in arc.zone_ops
-            interaction_zone = cirq.CNOT in arc.zone_ops
-        if arc.alley_ops:
-            inplace_cnot = cirq.CNOT in arc.alley_ops
+    if arc.zone_ops or arc.alley_ops:
         circuit = add_moves(
             circuit=circuit,
             layout=layout,
