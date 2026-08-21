@@ -450,7 +450,12 @@ class DefaultLattice(Architecture):
     def split_cost(self, op: cirq.GateOperation) -> CostDict:
         assert isinstance(op.gate, lsp.Split)
         smooth = op.gate.smooth
-        cost_dict = copy(_split_cost(smooth, self.d))
+        cached_cost = _split_cost(smooth, self.d)
+        cost_dict = CostDict(
+            gate_cost=cached_cost.gate_cost.copy(),
+            moment_cost=cached_cost.moment_cost.copy(),
+            op_time=cached_cost.op_time,
+        )
         op_time = self.total_time(moment_cost_dict=cost_dict.moment_cost)
         cost_dict.op_time = op_time
         return cost_dict
@@ -458,7 +463,12 @@ class DefaultLattice(Architecture):
     def merge_cost(self, op: cirq.GateOperation) -> CostDict:
         assert isinstance(op.gate, lsp.Merge)
         k = op.gate.num_qubits()
-        cost = copy(_merge_cost(self.d, k, op.gate.smooth))
+        cached_cost = _merge_cost(self.d, k, op.gate.smooth)
+        cost = CostDict(
+            gate_cost=cached_cost.gate_cost.copy(),
+            moment_cost=cached_cost.moment_cost.copy(),
+            op_time=cached_cost.op_time,
+        )
         op_time = self.total_time(moment_cost_dict=cost.moment_cost)
         cost.op_time = op_time
         return cost
