@@ -93,12 +93,14 @@ def process_cirq_str(
     circ: cirq.Circuit,
     gates: str | list[str],
     q: cirq.GridQubit | cirq.LineQubit | cirq.NamedQubit,
-) -> None:
+    gate_str: bool = True,
+) -> cirq.Circuit:
     """
     Maps list of strings representing an Rz angle decomposition to a cirq gate
     The list is reversed because gridsynth returns gates in matrix order instead of circuit operation order
-    Alters the original circuit in place so does not have a return value
+    Returns the modified cirq_circuit if gate_str.
     """
+    circuit = circ if gate_str else circ.copy()
     for g in gates[::-1]:
         if g == "H":
             circ += cirq.H.on(q)
@@ -116,7 +118,7 @@ def process_cirq_str(
             circ += cirq.Z.on(q)
         else:
             raise ValueError(f"{g} is not in [H, S, T, W, X, I, Z]")
-    return None
+    return circuit
 
 
 def cin_cliffs(gate: cirq.Gate) -> bool:
