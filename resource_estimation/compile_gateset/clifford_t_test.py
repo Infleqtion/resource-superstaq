@@ -133,11 +133,18 @@ def test_special_angles() -> None:
 
 def test_misc() -> None:
     illegal_circuit = cirq.Circuit(cirq.Rx(rads=2).on(cirq.LineQubit(0)))
+
     with pytest.raises(ValueError):
         _ = compile_cirq_to_clifford_t(circ=illegal_circuit, eps=1e-4)
-    assert process_cirq_str(cirq.Circuit(), "I", cirq.LineQubit(0)) is None
+
+    circ = cirq.Circuit()
+    qubit = cirq.LineQubit(0)
+    circ += cirq.X.on(qubit)
+    assert process_cirq_str(circ, "X", qubit) == circ
+
     with pytest.raises(ValueError):
         _ = process_cirq_str(cirq.Circuit(), "M", cirq.LineQubit(0))
+
     M_circuit = cirq.Circuit(cirq.MeasurementGate(1, key="").on(cirq.LineQubit(0)))
     synthesized_M = compile_cirq_to_clifford_t(circ=M_circuit, eps=1e-2)
     assert synthesized_M == M_circuit
