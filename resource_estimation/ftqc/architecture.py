@@ -770,7 +770,6 @@ class DefaultMovement(Architecture):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
 
-
     def correction_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
         # Total time for CCZ correction: t(H) + t(SE) + t(X) + t(SE) + 3 * t(CNOT) * t(SE) + t(H)
         # (can parallelize H gates, X gates, but 3 pairwise CNOTS means we have to do each one

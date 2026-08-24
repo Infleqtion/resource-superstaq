@@ -24,7 +24,6 @@ import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 import resource_estimation.ftqc.layout as lyt
-from resource_estimation.ftqc import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc import ResourceEstimator, ccz_8_to_1, distil_15_to_1
 
 
