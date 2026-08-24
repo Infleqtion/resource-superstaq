@@ -946,11 +946,11 @@ class DefaultMovement(Architecture):
         # To get the updated cost for the zoned architecture, just add movement where necessary
         new_moment_cost = base_cultivation_cost["moment_cost"].copy()
         new_gate_cost = base_cultivation_cost["gate_cost"].copy()
-        permutations_to_add = sum(
+        movements_to_add = sum(
             v for k, v in new_moment_cost.items() if k is cirq.MeasurementGate or k is cirq.CZ
         )
-        new_moment_cost[css.MovementGate] = permutations_to_add
-        new_gate_cost[css.MovementGate] = permutations_to_add
+        new_moment_cost[css.MovementGate] = movements_to_add
+        new_gate_cost[css.MovementGate] = movements_to_add
         new_time = self.total_time(new_moment_cost)
         return {"op_time": new_time, "gate_cost": new_gate_cost, "moment_cost": new_moment_cost}
 
@@ -1125,11 +1125,11 @@ class MeasureZonesOnly(DefaultMovement):
         # Penalize measurements but not entangling gates
         new_moment_cost = base_cultivation_cost["moment_cost"].copy()
         new_gate_cost = base_cultivation_cost["gate_cost"].copy()
-        permutations_to_add = sum(
+        movements_to_add = sum(
             v for k, v in new_moment_cost.items() if k is cirq.MeasurementGate
         )
-        new_moment_cost[css.MovementGate] = permutations_to_add
-        new_gate_cost[css.MovementGate] = permutations_to_add
+        new_moment_cost[css.MovementGate] = movements_to_add
+        new_gate_cost[css.MovementGate] = movements_to_add
         new_time = self.total_time(new_moment_cost)
         return {"op_time": new_time, "gate_cost": new_gate_cost, "moment_cost": new_moment_cost}
 
