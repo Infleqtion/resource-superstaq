@@ -164,7 +164,7 @@ def toffoli_decompose(circuit: cirq.Circuit) -> cirq.Circuit:
     """
 
     # TODO: Pretty sure there is a faster way to do this like the way we do ft compile now
-    def mapper(op, idx):
+    def mapper(op: cirq.Operation, idx: int) -> cirq.Circuit | cirq.Operation:
         if op in cirq.GateFamily(cirq.TOFFOLI):
             a, b, c = op.qubits
             return cirq.Circuit(

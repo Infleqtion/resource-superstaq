@@ -27,7 +27,7 @@ from resource_estimation.compile_gateset import (
 
 @pytest.mark.parametrize("theta", (1, pi / 3, pi + 1, 2 * pi - pi / 7, pi / 4))
 @pytest.mark.parametrize("eps", (1e-1, 1e-3, 1e-5, 1e-7))
-def test_compile_cirq_to_clifford_t(theta, eps) -> None:
+def test_compile_cirq_to_clifford_t(theta: float, eps: float) -> None:
     circuit = cirq.Circuit(cirq.Rz(rads=theta).on(cirq.GridQubit(0, 0)))
     comp_circuit = compile_cirq_to_clifford_t(circuit, eps=eps, verbose=False)
     u_expected = cirq.unitary(circuit)
@@ -58,7 +58,7 @@ def test_compile_cirq_to_clifford_t(theta, eps) -> None:
         2 * pi,
     ),
 )
-def test_special_cases(theta) -> None:
+def test_special_cases(theta: int) -> None:
     eps = 0.0001
     circuit = cirq.Circuit(cirq.Rz(rads=theta).on(cirq.GridQubit(0, 0)))
     comp_circuit = compile_cirq_to_clifford_t(circuit, eps=eps, verbose=False)
