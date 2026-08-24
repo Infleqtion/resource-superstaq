@@ -224,12 +224,6 @@ class Layout(abc.ABC):
         path = nx.dijkstra_path(G=G, source=ctrl, target=trgt, weight=custom_weight)
         return path
 
-    # def distance(self, q1: cirq.GridQubit, q2: cirq.GridQubit) -> int:
-    #     """Calculates the Manhattan distance between two logical qubits with defined grid coordinates"""
-    #     if q1 not in self.layout_graph.nodes or q2 not in self.layout_graph.nodes:
-    #         raise ValueError("Input qubits are not in the set of layout nodes")
-    #     return abs(q2.row - q1.row) + abs(q2.col - q1.col)
-
     def draw(self) -> None:  # pragma: no cover
         """Draw method to display layouts clearly
         Red and yellow nodes correspond to T and S factories, respectively

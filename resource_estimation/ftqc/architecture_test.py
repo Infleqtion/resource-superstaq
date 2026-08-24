@@ -36,13 +36,6 @@ def movement_architecture() -> arch.DefaultMovement:
     return arch.DefaultMovement()
 
 
-# @pytest.fixture
-# def movement_layout_dsm() -> lyt.MovementLayout:
-#     circuit = cirq.Circuit(cirq.H.on_each(cirq.LineQubit.range(6)))
-#     layout = lyt.MovementLayout(input_circuit=circuit, num_t_factories=0, num_ccz_factories=0, measure_zones=False, interaction_zones=False, inplace_cnot=True)
-#     return layout
-
-
 def test_architecture_exceptions(lattice_architecture, movement_architecture) -> None:
     with pytest.raises(ValueError, match="Cultivation cost"):
         _ = lattice_architecture.cultivate_cost(lsp.Cultivate(1).on(cirq.GridQubit(0, 0)))
