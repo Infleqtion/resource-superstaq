@@ -18,7 +18,6 @@ from resource_estimation.ftqc.architecture import (
     DualSpeciesMovement,
     MeasureZonesOnly,
     Superconductor,
-    convert_globals_to_phasedxz,
 )
 from resource_estimation.ftqc.compile_ftqc import (
     add_moves,
@@ -90,7 +89,6 @@ __all__ = [
     "SyndromeExtract",
     "STR2GATE",
     "add_moves",
-    "convert_globals_to_phasedxz",
     "count_stim_resources",
     "cultivate",
     "custom_resolver",

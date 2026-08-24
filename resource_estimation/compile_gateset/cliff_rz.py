@@ -13,23 +13,31 @@
 # limitations under the License.
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import cirq
 import cirq_superstaq as css
 import numpy as np
 
-# warnings.filterwarnings(category=FutureWarning, action="ignore")
+if TYPE_CHECKING:
+    from types import NotImplementedType
+    from typing import Iterator
+
+    from resource_estimation.typing import GateKey
 
 
 @cirq.transformer
 def eject_z(
-    circuit: cirq.Circuit,
+    circuit: cirq.AbstractCircuit,
+    *,
     context: cirq.TransformerContext | None = None,
     atol: float = 1e-8,
 ) -> cirq.Circuit:
+    circuit = cirq.Circuit(circuit)
     """Pushes Z gates towards the end of the circuit"""
     backlog = dict.fromkeys(circuit.all_qubits(), 0.0)
 
-    def _map_fn(op):
+    def _map_fn(op: cirq.Operation) -> Iterator[cirq.Operation]:
         if isinstance(op.gate, cirq.ZPowGate):
             backlog[op.qubits[0]] += op.gate.exponent
         else:
@@ -56,14 +64,15 @@ def eject_z(
 
 @cirq.transformer
 def phx_to_zhzhz(
-    circuit: cirq.Circuit,
+    circuit: cirq.AbstractCircuit,
+    *,
     context: cirq.TransformerContext | None = None,
     atol: float = 1e-8,
 ) -> cirq.Circuit:
     """Converts PhasedX gates to ZPOW gates and Hadamards with handling for special angles"""
 
     # Adding this as its own thing
-    def _map_fn(op: cirq.Operation, _: int) -> list[cirq.Operation]:
+    def _map_fn(op: cirq.Operation, _: int) -> cirq.OP_TREE:
         if not isinstance(op.gate, cirq.PhasedXPowGate):
             return op
 
@@ -103,17 +112,20 @@ def phx_to_zhzhz(
             cirq.ZPowGate(exponent=p).on(q),
         ]
 
-    return cirq.map_operations_and_unroll(
-        circuit,
-        _map_fn,
-        tags_to_ignore=context.tags_to_ignore if context else (),
-        deep=context.deep if context else False,
+    return cirq.Circuit(
+        cirq.map_operations_and_unroll(
+            circuit,
+            _map_fn,
+            tags_to_ignore=context.tags_to_ignore if context else (),
+            deep=context.deep if context else False,
+        )
     )
 
 
 @cirq.transformer
 def zpow_to_rz(
-    circuit: cirq.Circuit,
+    circuit: cirq.AbstractCircuit,
+    *,
     context: cirq.TransformerContext | None = None,
 ) -> cirq.Circuit:
     """Converts ZPOW gates to Rz gates minding special angle cases and including the angle factor"""
@@ -138,11 +150,13 @@ def zpow_to_rz(
             return cirq.S.on(op.qubits[0])
         return cirq.Rz(rads=op.gate.exponent * np.pi).on(op.qubits[0])
 
-    return cirq.map_operations_and_unroll(
-        circuit,
-        _map_fn,
-        tags_to_ignore=context.tags_to_ignore if context else (),
-        deep=context.deep if context else False,
+    return cirq.Circuit(
+        cirq.map_operations_and_unroll(
+            circuit,
+            _map_fn,
+            tags_to_ignore=context.tags_to_ignore if context else (),
+            deep=context.deep if context else False,
+        )
     )
 
 
@@ -153,7 +167,7 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
 
     def __init__(self, atol: float = 1e-8, allow_ccz: bool = False) -> None:
         self._atol = atol
-        gateset = [
+        gateset: list[GateKey | cirq.GateFamily] = [
             cirq.GateFamily(cirq.CX, ignore_global_phase=False),
             cirq.MeasurementGate,
             cirq.PhasedXZGate,
@@ -196,7 +210,7 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
 
     def _decompose_multi_qubit_operation(
         self, op: cirq.Operation, moment_idx: int = -1
-    ) -> cirq.OP_TREE:
+    ) -> cirq.OP_TREE | None | NotImplementedType:
         if op in self:
             return op
 
@@ -232,3 +246,19 @@ class CliffRzGateset(cirq.TwoQubitCompilationTargetGateset):
         ]
 
     # TODO: add a special decomposition for toffoli
+
+
+class CliffordTGateset(cirq.Gateset):
+    def __init__(self, atol: float) -> None:
+        super().__init__(
+            cirq.H,
+            cirq.S,
+            cirq.Z,
+            cirq.X,
+            cirq.CNOT,
+            cirq.T,
+            cirq.I,
+            cirq.MeasurementGate,
+            cirq.ResetChannel,
+        )
+        self.atol = atol
