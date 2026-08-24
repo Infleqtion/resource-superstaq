@@ -19,6 +19,7 @@ import json
 from functools import cached_property, lru_cache
 from math import ceil
 from pathlib import Path
+from random import randint
 
 import cirq
 import cirq_superstaq as css
@@ -705,6 +706,7 @@ class DefaultMovement(Architecture):
                 lsp.SyndromeExtract,
                 lsp.ErrorCorrect,
                 css.MovementGate,
+                lsp.ResourceCorrection,
                 cirq.CNOT,
                 cirq.S,
                 cirq.I,
@@ -767,6 +769,82 @@ class DefaultMovement(Architecture):
         }
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return {"op_time": op_time, "gate_cost": gate_cost, "moment_cost": moment_cost}
+
+
+    def correction_cost(self, op: cirq.Operation) -> dict[str, dict[type[Gate], int] | float]:
+        # Total time for CCZ correction: t(H) + t(SE) + t(X) + t(SE) + 3 * t(CNOT) * t(SE) + t(H)
+        # (can parallelize H gates, X gates, but 3 pairwise CNOTS means we have to do each one
+        # sequentially) This means that the moment cost of this correction is one H moment cost, one
+        # X moment cost, 3 CNOT coment costs, and one H moment cost, while the overall gate cost is
+        # 3 hadamards, 3 X gates, 3 CNOT gates, and 3 hadamards Also flip a coin for both
+        # corrections
+        # Correction circuit after compilation:
+        # 0: H, SE(n), X, SE(n), IZ, CNOT(0, 1), IZ, SE(n), IZ, CNOT(0, 2), IZ, SE(n), H, SE(n)
+        # 1: H, SE(n), X, SE(n), IZ, CNOT(0, 1), IZ, SE(n), IZ, CNOT(1, 2), IZ, SE(n), H, SE(n)
+        # 2: H, SE(n), X, SE(n), IZ, CNOT(0, 2), IZ, SE(n), IZ, CNOT(1, 2), IZ, SE(n), H, SE(n)
+        # H  SE  C  SE  C  SE         H  SE
+        # H  SE  X  SE  |      C  SE  H  SE
+        # H  SE         X  SE  X  SE  H  SE
+        # We only count 4 rounds of syndrome extraction here since the 5th is added as a post-op
+        # correction
+        if op.gate.resource == "T":
+            if randint(0, 1):
+                return {"op_time": 0.0, "gate_cost": {}, "moment_cost": {}}
+            else:
+                return self._s_cost
+        elif op.gate.resource == "CCZ":
+            if randint(0, 1):
+                return {"op_time": 0.0, "gate_cost": {}, "moment_cost": {}}
+            else:
+                h_gate_cost = collections.Counter(self._h_cost["gate_cost"])
+                x_gate_cost = collections.Counter(self._x_cost["gate_cost"])
+                cnot_gate_cost = collections.Counter(self._cnot_cost["gate_cost"])
+                qubit = cirq.LineQubit(0)
+                se_costs_dict = self.syndrome_extract_cost(
+                    lsp.SyndromeExtract(num_qubits=1, rounds=self.rounds).on(qubit)
+                )
+                se_gate_cost = se_costs_dict["gate_cost"]
+                overall_gate_cost = collections.Counter()
+                overall_gate_cost += h_gate_cost
+                overall_gate_cost += x_gate_cost
+                overall_gate_cost += cnot_gate_cost
+                overall_gate_cost += h_gate_cost
+                # We do 3 of each of these gates
+                for gate in overall_gate_cost:
+                    overall_gate_cost[gate] *= 3
+                # We do 3 syndrome extractions after the first set of hadamards and then 2 after
+                # each of the 3 CNOTs
+                for gate in se_gate_cost:
+                    se_gate_cost[gate] *= 9
+                overall_gate_cost += se_gate_cost
+
+                h_moment_cost = collections.Counter(self._h_cost["moment_cost"])
+                x_moment_cost = collections.Counter(self._x_cost["moment_cost"])
+                cnot_moment_cost = collections.Counter(self._cnot_cost["moment_cost"])
+                se_moment_cost = collections.Counter(se_costs_dict["moment_cost"])
+                # CNOT cost is multiplied by 3 since those gates must happen serially
+                for gate in cnot_moment_cost:
+                    cnot_moment_cost[gate] *= 3
+                for gate in se_moment_cost:
+                    se_moment_cost[gate] *= 4
+                overall_moment_cost = (
+                    h_moment_cost
+                    + x_moment_cost
+                    + cnot_moment_cost
+                    + h_moment_cost
+                    + se_moment_cost
+                )
+                # CNOT cost is multiplied by 3 since those gates must happen serially
+                h_time = self._h_cost["op_time"]
+                x_time = self._x_cost["op_time"]
+                cnot_time = self._cnot_cost["op_time"]
+                se_time = se_costs_dict["op_time"]
+                total_time = h_time + x_time + 3 * cnot_time + h_time + 4 * se_time
+                return {
+                    "op_time": total_time,
+                    "gate_cost": overall_gate_cost,
+                    "moment_cost": overall_moment_cost,
+                }
 
     def s_cost(self, op: cirq.Operation, **kwargs) -> dict[str, dict[type[cirq.Gate], int] | float]:
         return self._s_cost
@@ -903,6 +981,7 @@ class DefaultMovement(Architecture):
         self.op_cost[type(cirq.S)] = self.s_cost
         self.op_cost[css.MovementGate] = self.move_cost
         self.op_cost[lsp.Distil] = self.distil_cost
+        self.op_cost[lsp.ResourceCorrection] = self.correction_cost
 
     @property
     def __name__(self) -> str:
