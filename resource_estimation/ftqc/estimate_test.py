@@ -80,7 +80,6 @@ def movement_estimator() -> est.ResourceEstimator:
 )
 def test_all_primitives(estimator) -> None:
     dummy_qubits = cirq.LineQubit.range(9)
-    # factory_block = [cirq.GridQubit(4, i) for i in range(31)]
     circuit = cirq.Circuit()
     circuit += [cirq.I.on(q) for q in dummy_qubits]
     circuit += [cirq.Z.on(q) for q in dummy_qubits]
@@ -98,8 +97,6 @@ def test_all_primitives(estimator) -> None:
         ccz_factory = layout.all_factories("ccz")[0]
         t_block = layout.distillation_block(t_factory)
         ccz_block = layout.distillation_block(ccz_factory)
-        print(len(t_block), lsp.Distil("T")._num_qubits)
-        print(len(ccz_block), lsp.Distil("CCZ")._num_qubits)
         circuit += [cirq.CNOT.on(dummy_qubits[i], dummy_qubits[i + 1]) for i in range(8)]
         circuit += [cirq.S.on(q) for q in dummy_qubits]
         circuit += [lsp.Distil("T").on(*t_block)]
@@ -238,10 +235,9 @@ def test_critical_path() -> None:
     layout = lyt.MovementLayout(c1, num_t_factories=1, inplace_cnot=True, num_ccz_factories=1)
     estim = est.ResourceEstimator(arc)
     # Should be identical aside from floating point errors
-    assert np.isclose(
+    assert isclose(
         estim.serial_circuit_time(c1, layout=layout),
         estim.serial_circuit_time(c2, layout=layout),
-        atol=1e-5,
     )
 
     qa, qb = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
