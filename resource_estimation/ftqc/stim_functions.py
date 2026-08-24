@@ -18,6 +18,7 @@ import warnings
 from pathlib import Path
 
 import cirq
+import cirq_superstaq as css
 import cultiv
 import stim
 
@@ -25,7 +26,7 @@ DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 STR2GATE = {
     "PhasedXZGate": cirq.PhasedXZGate,
-    "QubitPermutationGate": cirq.QubitPermutationGate,
+    "MovementGate": css.MovementGate,
     "MeasurementGate": cirq.MeasurementGate,
     "CZ": cirq.CZ,
     "ResetChannel": cirq.ResetChannel,

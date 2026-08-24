@@ -16,10 +16,10 @@ from math import pi
 import cirq
 import pytest
 
-from resource_estimation.ftqc.distil import distil_15_to_1
+from resource_estimation.ftqc.architecture import DefaultMovement
+from resource_estimation.ftqc.distil import distil_15_to_1, precompute_distil_cost
 from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
-
-# Need to add tests here.
+from resource_estimation.ftqc.layout import MovementDistillery
 
 
 @pytest.fixture
@@ -99,3 +99,24 @@ def test_15_to_one(base_15_to_one) -> None:
 
     # There should be 7*5 + 15 = 50 CNOT gates
     assert sum(op.gate in cirq.GateFamily(cirq.CNOT) for op in circuit.all_operations()) == 50
+
+
+def test_precompute_distil_cost():
+    empty_circuit = cirq.Circuit(cirq.I.on_each(*cirq.LineQubit.range(4)))
+    layout = MovementDistillery(
+        input_circuit=empty_circuit,
+        num_t_factories=1,
+        num_ccz_factories=1,
+        interaction_zones=True,
+        measure_zones=True,
+    )
+    arc = DefaultMovement()
+    with pytest.raises(ValueError, match="Unknown distillation resource"):
+        _ = precompute_distil_cost("Toffoli", layout=layout, arc=arc)
+
+    # Distil T and CCZ have the same critical path, but T cultivation moves further, so it should be more expensive
+    # Cultivation is a subcomponent, so it should be faster than the Distillation implementations
+    cult = arc._cultivate_t_cost["op_time"]
+    t_distil = precompute_distil_cost("T", layout=layout, arc=arc)["op_time"]
+    ccz_distil = precompute_distil_cost("CCZ", layout=layout, arc=arc)["op_time"]
+    assert cult < ccz_distil < t_distil
