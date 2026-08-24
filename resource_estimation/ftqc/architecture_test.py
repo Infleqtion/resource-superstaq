@@ -99,9 +99,6 @@ def test_movement_gate_costs(d) -> None:
     )
     assert expected_cost == cost
 
-    # Check Move
-    pass  # figure out how to integrate move testing into the broader framework
-
     # Check CNOT
     op = cirq.CNOT.on(qubit_a, qubit_b)
     cost = arc.gate_cost(op)
