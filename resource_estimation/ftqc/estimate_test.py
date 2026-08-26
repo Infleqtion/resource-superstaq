@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
+import typing
 from math import pi
 from unittest import mock
 
@@ -24,6 +27,7 @@ import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc import ResourceEstimator, ccz_8_to_1, distil_15_to_1
+from resource_estimation.typing import GateKey
 
 
 @pytest.fixture
@@ -32,7 +36,7 @@ def lattice_estimator() -> est.ResourceEstimator:
         arc=arch.DefaultLattice(
             d=5,
             idling=True,
-            post_op_correction=1,
+            post_op_correction=True,
             cultivation_repetition=1,
             syndrome_rounds=None,
         ),
@@ -45,7 +49,7 @@ def movement_estimator() -> est.ResourceEstimator:
         arc=arch.DefaultMovement(
             d=5,
             idling=True,
-            post_op_correction=1,
+            post_op_correction=True,
             cultivation_repetition=1,
             distillation_repetition=1,
             syndrome_rounds=None,
@@ -60,7 +64,7 @@ def movement_estimator() -> est.ResourceEstimator:
             arc=arch.DefaultMovement(
                 d=5,
                 idling=True,
-                post_op_correction=1,
+                post_op_correction=True,
                 cultivation_repetition=1,
                 distillation_repetition=1,
                 syndrome_rounds=None,
@@ -70,14 +74,14 @@ def movement_estimator() -> est.ResourceEstimator:
             arc=arch.DefaultLattice(
                 d=5,
                 idling=True,
-                post_op_correction=1,
+                post_op_correction=True,
                 cultivation_repetition=1,
                 syndrome_rounds=None,
             ),
         ),
     ],
 )
-def test_all_primitives(estimator) -> None:
+def test_all_primitives(estimator: est.ResourceEstimator) -> None:
     dummy_qubits = [cirq.GridQubit(i, j) for i in range(3) for j in range(3)]
     factory_block = [cirq.GridQubit(4, i) for i in range(31)]
     circuit = cirq.Circuit()
@@ -110,12 +114,13 @@ def test_all_primitives(estimator) -> None:
         t1 = estimator.serial_circuit_time(circuit)
         c2 = estimator.serial_circuit_cost(circuit)
         t2 = estimator.serial_circuit_time(circuit)
-    for key in c1.keys():
-        assert c1[key] == c2[key]
+    assert c1 == c2
     assert np.isclose(t1, t2, atol=0.00001)
 
 
-def test_parallel_circuit_cost(lattice_estimator, movement_estimator) -> None:
+def test_parallel_circuit_cost(
+    lattice_estimator: est.ResourceEstimator, movement_estimator: est.ResourceEstimator
+) -> None:
     # TODO: This test could (should?) be considerably more thorough than the coverage requirement would imply
     qubit_a, qubit_b, qubit_c, qubit_d = (
         cirq.GridQubit(0, 0),
@@ -156,7 +161,9 @@ def test_parallel_circuit_cost(lattice_estimator, movement_estimator) -> None:
     }
 
 
-def test_self_returns(movement_estimator, lattice_estimator) -> None:
+def test_self_returns(
+    movement_estimator: est.ResourceEstimator, lattice_estimator: est.ResourceEstimator
+) -> None:
     # TODO: There are no self-returns anymore so this function is not well named
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     circuit = cirq.Circuit(
@@ -179,7 +186,9 @@ def test_self_returns(movement_estimator, lattice_estimator) -> None:
     }
 
 
-def test_error_handling(lattice_estimator, movement_estimator) -> None:
+def test_error_handling(
+    lattice_estimator: est.ResourceEstimator, movement_estimator: est.ResourceEstimator
+) -> None:
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     # Check Bad Lattice Surgery Circuit
     bad_circuit = cirq.Circuit([lsp.Cultivate(pi / 2).on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b)])
@@ -255,7 +264,7 @@ def test_critical_path() -> None:
     # Critical paths are currently the same for both distillation circuits
     t_15_to_1 = distil_15_to_1()
     ccz_distilled = ccz_8_to_1()
-    expected_types = [lsp.Cultivate, cirq.CNOT, cirq.S, cirq.H, cirq.MeasurementGate]
+    expected_types: list[GateKey] = [lsp.Cultivate, cirq.CNOT, cirq.S, cirq.H, cirq.MeasurementGate]
     with pytest.warns(UserWarning, match="very expensive"):
         path1 = estim.critical_path(t_15_to_1)
         path2 = estim.critical_path(ccz_distilled)
@@ -335,7 +344,7 @@ def test_dynamic_CCZ_resource_counts(mock_randint) -> None:
     assert parallel_correction_cost == moment_dynamic_cost
 
 
-def test_physical_qubit_count(lattice_estimator) -> None:
+def test_physical_qubit_count(lattice_estimator: est.ResourceEstimator) -> None:
     test_circuit = cirq.Circuit(
         [
             cirq.I.on(cirq.GridQubit(0, 0)),
@@ -347,7 +356,7 @@ def test_physical_qubit_count(lattice_estimator) -> None:
     assert num_physical_qubits == expected_num_physical_qubits
 
 
-def local_pauli(pauli: cirq.Pauli, qubit_index: int = 0) -> cirq.PauliString:
+def local_pauli(pauli: cirq.Pauli, qubit_index: int = 0) -> cirq.PauliString[cirq.LineQubit]:
     return cirq.PauliString(pauli(cirq.LineQubit(qubit_index)))
 
 
@@ -404,7 +413,9 @@ def test_default_ccz_dynamics_schedule_expanded_toffolis() -> None:
         for vertex_index in range(3)
     }
 
-    z_paulis = {qubit: cirq.PauliString(cirq.Z(qubit)) for qubit in (q1, q2, q3)}
+    z_paulis: dict[cirq.Qid, cirq.PauliString[cirq.Qid]] = {
+        qubit: cirq.PauliString(cirq.Z(qubit)) for qubit in (q1, q2, q3)
+    }
     first_ccz_dynamics = (
         ((z_paulis[q1],), (z_paulis[q2] * z_paulis[q3],)),
         ((z_paulis[q2],), (z_paulis[q1] * z_paulis[q3],)),
@@ -509,7 +520,7 @@ def test_reaction_depth_factory_dict_keys_define_factory_gates() -> None:
 
 @pytest.mark.parametrize("factories", [{cirq.S: False}, {cirq.TOFFOLI: True}])
 def test_reaction_depth_rejects_undefined_factory_corrections(
-    factories,
+    factories: dict[GateKey, bool],
 ) -> None:
     with pytest.raises(ValueError, match="No factory reaction dynamics are defined"):
         est.ReactionDepthEstimator(factories=factories)
@@ -762,15 +773,17 @@ def test_reaction_depth_rejects_concrete_qubits_in_dynamics_at_construction(
 ) -> None:
     operation_qubit = cirq.NamedQubit("operation")
     custom_gate = cirq.XPowGate(exponent=0.25)
-    concrete_pauli = cirq.PauliString(cirq.X(operation_qubit))
+    concrete_pauli: cirq.PauliString[cirq.Qid] = cirq.PauliString(cirq.X(operation_qubit))
+    # invalid input is cast explicitly to catch error and satisfy type checker
+    invalid_pauli = typing.cast(cirq.PauliString[cirq.LineQubit], concrete_pauli)
     with pytest.raises(ValueError, match="must use only operation-local qubits"):
         est.ReactionDepthEstimator(
             factories={custom_gate: True},
             factory_reaction_dynamics={
                 (custom_gate, True): (
                     est.ReactionDynamics(
-                        (local_pauli(cirq.X),) if concrete_pauli_is_output else (concrete_pauli,),
-                        (concrete_pauli,) if concrete_pauli_is_output else (local_pauli(cirq.Z),),
+                        (local_pauli(cirq.X),) if concrete_pauli_is_output else (invalid_pauli,),
+                        (invalid_pauli,) if concrete_pauli_is_output else (local_pauli(cirq.Z),),
                     ),
                 )
             },
