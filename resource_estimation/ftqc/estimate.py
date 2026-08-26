@@ -51,7 +51,7 @@ class ResourceEstimator:
         self,
         circuit: cirq.Circuit,
         verbose: int = 0,
-    ) -> dict[cirq.Gate, int]:
+    ) -> dict[GateKey, int]:
         """Counts up the total physical gates from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
         cost: collections.Counter[GateKey] = collections.Counter()

@@ -273,36 +273,29 @@ def test_critical_path() -> None:
 
 
 @mock.patch("resource_estimation.ftqc.architecture.randint")
-def test_dynamic_T_resource_counts(mock_randint) -> None:
+def test_dynamic_T_resource_counts(mock_randint: mock.MagicMock) -> None:
     arc = arch.DefaultMovement()
     qubit = cirq.GridQubit(0, 0)
-    normal_op: cirq.Operation = cirq.S.on(qubit)
-    dynamic_op: cirq.Operation = lsp.ResourceCorrection("T").on(qubit)
+    static_correction = cirq.S.on(qubit)
+    dynamic_correction = lsp.ResourceCorrection("T").on(qubit)
     mock_randint.side_effect = [1, 0, 1, 0]
-    normal_s_cost = arc.gate_cost(normal_op)
-    ops_and_expectations = [(dynamic_op, {}), (normal_op, normal_s_cost)]
-    for op, expectation in ops_and_expectations:
-        cost = arc.gate_cost(op)
-        assert expectation == cost
+    static_s_gate_cost = arc.gate_cost(static_correction)
+    assert arc.gate_cost(dynamic_correction) == {}
+    assert arc.gate_cost(static_correction) == static_s_gate_cost
 
-    ops_and_expectations = [(dynamic_op, normal_s_cost), (normal_op, normal_s_cost)]
-    for op, expectation in ops_and_expectations:
-        cost = arc.gate_cost(op)
-        assert expectation == cost
+    assert arc.gate_cost(dynamic_correction) == static_s_gate_cost
+    assert arc.gate_cost(static_correction) == static_s_gate_cost
 
-    normal_s_time = arc.op_time(normal_op)
-    ops_and_times = [(dynamic_op, 0.0), (normal_op, normal_s_time)]
-    for op, expectation in ops_and_times:
-        time = arc.op_time(op)
-        assert isclose(time, expectation)
-    ops_and_times = [(dynamic_op, normal_s_time), (normal_op, normal_s_time)]
-    for op, expectation in ops_and_times:
-        time = arc.op_time(op)
-        assert isclose(time, expectation)
+    static_correction_time = arc.op_time(static_correction)
+    assert arc.op_time(dynamic_correction) == 0.0
+    assert arc.op_time(static_correction) == static_correction_time
+
+    assert arc.op_time(dynamic_correction) == static_correction_time
+    assert arc.op_time(static_correction) == static_correction_time
 
 
 @mock.patch("resource_estimation.ftqc.architecture.randint")
-def test_dynamic_CCZ_resource_counts(mock_randint) -> None:
+def test_dynamic_CCZ_resource_counts(mock_randint: mock.MagicMock) -> None:
     arc = arch.DefaultMovement()
     qubit_a, qubit_b, qubit_c = (cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
     correction_circuit = cirq.Circuit()
