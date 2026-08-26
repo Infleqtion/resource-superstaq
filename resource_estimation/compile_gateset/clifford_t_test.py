@@ -58,7 +58,7 @@ def test_compile_cirq_to_clifford_t(theta: float, eps: float) -> None:
         2 * pi,
     ),
 )
-def test_special_cases(theta: int) -> None:
+def test_special_cases(theta: float) -> None:
     eps = 0.0001
     circuit = cirq.Circuit(cirq.Rz(rads=theta).on(cirq.GridQubit(0, 0)))
     comp_circuit = compile_cirq_to_clifford_t(circuit, eps=eps, verbose=False)
@@ -78,7 +78,7 @@ def test_error_handling() -> None:
         _ = compile_cirq_to_clifford_t(bad_circuit, eps=0.01)
 
     with pytest.raises(ValueError):
-        _ = process_cirq_str(bad_circuit, gates=["P"], q=cirq.GridQubit(0, 0))
+        process_cirq_str(bad_circuit, gates=["P"], q=cirq.GridQubit(0, 0))
 
 
 def test_measure() -> None:
