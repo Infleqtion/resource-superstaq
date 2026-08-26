@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import collections
 import copy
 import functools
 import os
@@ -21,16 +20,20 @@ import sys
 import time
 from itertools import combinations
 from math import pi
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import cirq
 import cirq_superstaq as css
 import tqdm
 
 if TYPE_CHECKING:
+    from typing import Iterator, Literal, Sequence
+
     from resource_estimation.ftqc.architecture import Architecture
+from resource_estimation.typing import _require_gate_operation
+
 from . import lattice_surgery_primitives as lsp
-from .layout import Layout
+from .layout import Layout, MovementDistillery
 
 # IMPORTANT NOTES
 # Classical control is in the process of being implemented
@@ -90,7 +93,7 @@ def replace_cirq_op(
     layout: Layout,
     transversal_cnot: bool,
     dynamic: bool = False,
-) -> list[cirq.Operation]:
+) -> list[cirq.Operation | cirq.Moment]:
     """Replacement logic similar to decomposition for cirq operations to be converted to primitives.
 
     op: cirq operation to be unrolled
@@ -99,7 +102,10 @@ def replace_cirq_op(
     verbose: flag to print more information
     """
     if op.gate == cirq.CNOT and not transversal_cnot:
-        path_patches = layout.route_cnot(*op.qubits)
+        ctrl, trgt = op.qubits
+        if not (isinstance(ctrl, cirq.GridQubit) and isinstance(trgt, cirq.GridQubit)):
+            raise TypeError("Qubits must be instances of `cirq.GridQubit`")
+        path_patches = layout.route_cnot(ctrl, trgt)
         num_qubits = len(path_patches)
         return [
             lsp.Merge(num_qubits=num_qubits - 1, smooth=True).on(*path_patches[:-1]),
@@ -118,11 +124,17 @@ def replace_cirq_op(
 
 def teleport_resource(
     op: cirq.Operation, layout: Layout, dynamic: bool = False
-) -> list[cirq.Operation]:
+) -> list[cirq.Moment | cirq.Operation]:
     distil_t = layout.distil and op in cirq.GateFamily(cirq.T)
+    if not all(isinstance(q, cirq.GridQubit) for q in op.qubits):
+        raise TypeError("Qubits must be instances of `cirq.GridQubit`")
+    op_qubits = cast(tuple[cirq.GridQubit, ...], op.qubits)
     distil_ccz = layout.distil and op in cirq.GateFamily(cirq.CCZ)
     cultivate_t = (not layout.distil) and op in cirq.GateFamily(cirq.T)
     cultivate_s = op in cirq.GateFamily(cirq.S)
+    ftype: Literal["t", "s", "ccz"]
+    prep_gate: cirq.Gate
+    correction: cirq.Gate | list[cirq.Operation]
     if distil_t:
         ftype = "t"
         prep_gate = lsp.Distil("T")
@@ -151,9 +163,10 @@ def teleport_resource(
         raise ValueError(f"Invalid resource encountered: {op.gate}")
     available_factories = layout.available_factories(ftype)
     all_factories = layout.all_factories(ftype)
-    operations = []
+    operations: list[cirq.Moment | cirq.Operation] = []
     if not available_factories:
         if distil_t or distil_ccz:
+            assert isinstance(layout, MovementDistillery)
             operations += [
                 prep_gate.on(*layout.distillation_block(factory)) for factory in all_factories
             ]
@@ -161,7 +174,7 @@ def teleport_resource(
             operations += [prep_gate.on(*factory) for factory in all_factories]
         layout.reload_factories(ftype=ftype)
     # These should be tuples of qubits
-    routed_factory = layout.nearest_factory(op.qubits, ftype=ftype)
+    routed_factory = layout.nearest_factory(op_qubits, ftype=ftype)
     cnots, measurements, resets = [], [], []
 
     corrections: list[cirq.Operation] = (
@@ -185,7 +198,7 @@ def handle_idling(
     layout: Layout,
     with_barriers: bool,
     rounds: int,
-    verbose=0,
+    verbose: int = 0,
 ) -> cirq.Circuit:
     """Helper function for the compiler that handles idling. This way we can experiment with different kinds of idling or even turn it off entirely.
     This function is still a work in progress, but it is likely to take the form of various compiler passes.
@@ -193,21 +206,25 @@ def handle_idling(
     # TODO: This pass is a main bottleneck for larger experiments, so make it faster
     # Assemble Qubits that will be subject to Idling
     G = layout.layout_graph
-    logical_qubits = list(node for node in G.nodes if G.nodes[node]["patch_type"] == "data")
-    t_factories = list(
+    logical_qubits: list[cirq.GridQubit] = list(
+        node for node in G.nodes if G.nodes[node]["patch_type"] == "data"
+    )
+    t_factories: list[cirq.GridQubit] = list(
         node
         for node in G.nodes
         if G.nodes[node]["patch_type"] == "factory" and G.nodes[node]["ftype"] == "t"
     )
-    s_factories = list(
+    s_factories: list[cirq.GridQubit] = list(
         node
         for node in G.nodes
         if G.nodes[node]["patch_type"] == "factory" and G.nodes[node]["ftype"] == "s"
     )
-    non_ancillas = logical_qubits + s_factories + t_factories
+    non_ancillas_candidates: set[cirq.GridQubit] = set(logical_qubits + s_factories + t_factories)
     # Ensures no idling happens on qubits that are not used in the circuit
     # This is a bit faster
-    non_ancillas = {q for op in circuit.all_operations() for q in op.qubits if q in non_ancillas}
+    non_ancillas: set[cirq.Qid] = {
+        q for op in circuit.all_operations() for q in op.qubits if q in non_ancillas_candidates
+    }
 
     # Build circuit where Syndrome Extract is performed on Idling qubits that are not being acted upon
     # Split moments are treated separately because they can always get absorbed into the previous moment
@@ -216,7 +233,7 @@ def handle_idling(
 
     se = lsp.SyndromeExtract(1, rounds)
 
-    def _map_func(moment, moment_idx):
+    def _map_fn(moment: cirq.Moment, moment_idx: int) -> cirq.Moment | Sequence[cirq.Moment]:
         if verbose > 0:
             knock_off_tqdm(moment_idx=moment_idx, total=total, tstart=tstart, message="Idling:")
         if all(isinstance(gate.gate, (css.Barrier, lsp.Split)) for gate in moment):
@@ -236,7 +253,7 @@ def handle_idling(
 
         return moment
 
-    circuit_with_idling = cirq.map_moments(circuit, _map_func)
+    circuit_with_idling = cirq.map_moments(circuit, _map_fn)
 
     return circuit_with_idling
 
@@ -268,7 +285,7 @@ def post_op_syndrome_extraction(
     total = len(circuit)
     tstart = time.time()
 
-    def _map_func(op: cirq.Operation, moment_idx: int) -> collections.Iterator[cirq.Operation]:
+    def _map_fn(op: cirq.Operation, moment_idx: int) -> Iterator[cirq.Operation]:
         if verbose:
             knock_off_tqdm(
                 moment_idx=moment_idx,
@@ -293,10 +310,10 @@ def post_op_syndrome_extraction(
             if with_barriers:
                 yield barrier
 
-    return cirq.map_operations_and_unroll(circuit, _map_func, raise_if_add_qubits=False)
+    return cirq.map_operations_and_unroll(circuit, _map_fn, raise_if_add_qubits=False)
 
 
-def validate_ops(circuit: cirq.Circuit, verbose: int = 1):
+def validate_ops(circuit: cirq.Circuit, verbose: int = 1) -> None:
     """Checks that the given circuit is in the Clifford+T gateset. CCZs are also allowed"""
     valid_gates = (
         cirq.T,
@@ -325,13 +342,13 @@ def _decompose_to_primitives(
     layout: Layout,
     arc: Architecture,
     dynamic: bool = False,
-) -> tuple[cirq.Circuit, list[cirq.GridQubit]]:
+) -> cirq.Circuit:
     primitives = cirq.Gateset(
         *(cirq.GateFamily(g._gate, ignore_global_phase=False) for g in arc.primitives.gates),
     )
     transversal_cnot = cirq.CX in primitives
 
-    def _map_fn(op: cirq.Operation) -> list[cirq.Operation]:
+    def _map_fn(op: cirq.Operation) -> cirq.OP_TREE:
         return replace_cirq_op(
             op=op, layout=layout, transversal_cnot=transversal_cnot, dynamic=dynamic
         )
@@ -355,7 +372,7 @@ def add_moves(
     total = len(circuit)
     tstart = time.time()
 
-    def map_func(op, moment_idx):
+    def map_func(op: cirq.Operation, moment_idx: int) -> cirq.OP_TREE:
         if verbose:
             knock_off_tqdm(
                 moment_idx=moment_idx,
@@ -363,21 +380,29 @@ def add_moves(
                 tstart=tstart,
                 message="Adding Qubit Movement:",
             )
+
         if op not in zone_ops and op not in alley_ops:
-            yield op
-        else:
-            op_qubits = list(op.qubits)
-            zone_type = None
-            if op.gate in zone_ops:
-                zone_type = "interact" if op.gate == cirq.CNOT else "measure"
-            move_op = (
-                functools.partial(lsp.Move(zone=zone_type).on)
-                if zone_type is None
-                else functools.partial(lsp.Move(zone=zone_type).on_each)
-            )
-            yield move_op(*op_qubits)
-            yield op
-            yield move_op(*op_qubits[::-1])
+            return op
+
+        op = _require_gate_operation(op)
+
+        op_qubits = list(op.qubits)
+        zone_type: Literal["measure", "interact"] | None = None
+
+        if op.gate in zone_ops:
+            zone_type = "interact" if op.gate == cirq.CNOT else "measure"
+
+        move_op = (
+            functools.partial(lsp.Move(zone=zone_type).on)
+            if zone_type is None
+            else functools.partial(lsp.Move(zone=zone_type).on_each)
+        )
+
+        return [
+            move_op(*op_qubits),
+            op,
+            move_op(*op_qubits[::-1]),
+        ]
 
     return cirq.map_operations_and_unroll(circuit, map_func)
 
@@ -435,14 +460,12 @@ def ft_compile(
             verbose=verbose,
         )
 
-    if arc.zone_ops is not None or arc.alley_ops is not None:
-        zone_ops = arc.zone_ops if arc.zone_ops is not None else cirq.Gateset()
-        alley_ops = arc.alley_ops if arc.alley_ops is not None else cirq.Gateset()
+    if arc.zone_ops.gates or arc.alley_ops.gates:
         circuit = add_moves(
             circuit=circuit,
             verbose=verbose,
-            zone_ops=zone_ops,
-            alley_ops=alley_ops,
+            zone_ops=arc.zone_ops,
+            alley_ops=arc.alley_ops,
         )
 
     return circuit
