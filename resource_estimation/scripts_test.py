@@ -12,18 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import subprocess
+import sys
+from pathlib import Path
 
 
-def test_clifford_t() -> None:
-    result = subprocess.run(["python", "scripts/clifford_t.py"])
-    assert result
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_scaling() -> None:
-    result = subprocess.run(["python", "scripts/scaling.py", "10", "20"])
-    assert result
+def test_analyze_help() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "scripts.analyze", "--help"],
+        cwd=REPOSITORY_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
-
-def test_rz_games() -> None:
-    result = subprocess.run(["python", "scripts/rz_games.py", ".122441", "12", "0"])
-    assert result
+    assert result.returncode == 0, result.stderr
+    assert "Resource Estimation Experiment" in result.stdout
