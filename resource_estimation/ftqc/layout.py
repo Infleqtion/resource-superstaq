@@ -34,6 +34,7 @@ class Layout(abc.ABC):
     num_s_factories: int = 0
     num_ccz_factories: int = 0
     distil: bool = False
+    site_spacing: int = 4
 
     def __post_init__(self) -> None:
         self.mapped_circuit = None
@@ -263,16 +264,11 @@ class MovementLayout(Layout):
         input_circuit: cirq.Circuit,
         num_t_factories: int = 1,
         num_ccz_factories: int = 0,
-        measure_zones: bool = False,
-        interaction_zones: bool = False,
-        inplace_cnot: bool = False,
+        architecture: typing.Literal["SSM", "MZO", "DSM"] = "SSM",
     ) -> None:
-        # Need a check here to ensure valid configuration
-        if not any((inplace_cnot, interaction_zones, measure_zones)):
-            raise ValueError("Invalid configuration: no zones or inplace entanglement")
-        self.measure_zones = measure_zones
-        self.interaction_zones = interaction_zones
-        self.inplace_cnot = inplace_cnot
+        self.inplace_cnot = architecture in ("MZO", "DSM")
+        self.measure_zones = architecture in ("MZO", "SSM")
+        self.interaction_zones = architecture in ("SSM")
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
@@ -306,7 +302,7 @@ class MovementLayout(Layout):
             )
         self.layout_graph = G
 
-    def zone_qubits(self, zone_type: Literal["measure", "interact"]):
+    def zone_qubits(self, zone_type: typing.Literal["measure", "interact"]):
         if zone_type == "measure":
             return [
                 node
@@ -590,17 +586,13 @@ class MovementDistillery(MovementLayout):
         input_circuit: cirq.Circuit,
         num_t_factories: int = 0,
         num_ccz_factories: int = 0,
-        measure_zones: bool = False,
-        interaction_zones: bool = False,
-        inplace_cnot: bool = False,
+        architecture: typing.Literal["SSM", "MZO", "DSM"] = "SSM",
     ) -> None:
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
             num_ccz_factories=num_ccz_factories,
-            measure_zones=measure_zones,
-            interaction_zones=interaction_zones,
-            inplace_cnot=inplace_cnot,
+            architecture=architecture,
         )
         self.distil = True
 

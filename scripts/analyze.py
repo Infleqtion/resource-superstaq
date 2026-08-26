@@ -262,7 +262,9 @@ def main(args=None) -> int:
 
     t1 = time.time()
     est = res.ftqc.ResourceEstimator(arc=arch)
-    serial_gate_counts = est.serial_circuit_cost(primitive_circuit, pretty=False, verbose=verbose)
+    serial_gate_counts = est.serial_circuit_cost(
+        primitive_circuit, pretty=False, verbose=verbose, layout=layt
+    )
     serial_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in serial_gate_counts.items()
     }
@@ -271,6 +273,7 @@ def main(args=None) -> int:
         primitive_circuit,
         pretty=False,
         verbose=verbose,
+        layout=layt,
     )
     parallel_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in parallel_gate_counts.items()

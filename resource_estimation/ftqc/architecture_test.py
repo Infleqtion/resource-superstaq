@@ -811,17 +811,13 @@ def test_logical_moves(movement_architecture: arch.DefaultMovement) -> None:
         input_circuit=circuit,
         num_t_factories=0,
         num_ccz_factories=0,
-        measure_zones=False,
-        interaction_zones=False,
-        inplace_cnot=True,
+        architecture="DSM",
     )
     ssm_layout = lyt.MovementLayout(
         input_circuit=circuit,
         num_t_factories=0,
         num_ccz_factories=0,
-        measure_zones=True,
-        interaction_zones=True,
-        inplace_cnot=False,
+        architecture="SSM",
     )
     interaction_move = css.MovementGate({0: 1}).on(cirq.GridQubit(0, 1), cirq.GridQubit(-1, 2))
 
@@ -944,15 +940,13 @@ def test_distillation_cases(lattice_architecture, movement_architecture) -> None
         input_circuit=distil_15_to_1(),
         num_t_factories=1,
         num_ccz_factories=0,
-        measure_zones=True,
-        interaction_zones=True,
+        architecture="SSM",
     )
     ccz_layout = lyt.MovementDistillery(
         input_circuit=ccz_8_to_1(),
         num_t_factories=0,
         num_ccz_factories=1,
-        measure_zones=True,
-        interaction_zones=True,
+        architecture="SSM",
     )
 
     # Make sure that distillation repetition parameter behaves as expected

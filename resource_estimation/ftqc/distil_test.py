@@ -107,8 +107,7 @@ def test_precompute_distil_cost():
         input_circuit=empty_circuit,
         num_t_factories=1,
         num_ccz_factories=1,
-        interaction_zones=True,
-        measure_zones=True,
+        architecture="SSM",
     )
     arc = DefaultMovement()
     with pytest.raises(ValueError, match="Unknown distillation resource"):

@@ -46,8 +46,6 @@ SUPERCOND_GATES = {
     cirq.MeasurementGate: 0.5,  # https://arxiv.org/abs/2308.02079
 }
 
-SITE_SPACING = 4  # Might still need to tweak this
-
 
 @lru_cache(maxsize=128)
 def _merge_cost(
@@ -889,16 +887,17 @@ class DefaultMovement(Architecture):
         """
         ctrl, trgt = op.qubits
         move_type = layout.layout_graph.nodes[trgt]["patch_type"]
+        site_spacing = layout.site_spacing
         dx = abs(trgt.col - ctrl.col)  # number of logical patches horizontally
         dy = abs(trgt.row - ctrl.row)  # number of logical patches vertically
         patch_length = 2 * self.d
         if move_type == "mzone":
             return _measurement_zone_move_precompiled(
-                dx=dx, dy=dy, patch_length=patch_length, site_spacing=SITE_SPACING
+                dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
             )
         elif move_type == "izone":
             return _interaction_zone_move_precompiled(
-                dx=dx, dy=dy, patch_length=patch_length, site_spacing=SITE_SPACING
+                dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
             )
         else:
             bottom_right = max(layout.layout_graph.nodes)
@@ -909,7 +908,7 @@ class DefaultMovement(Architecture):
                 dx=dx,
                 dy=dy,
                 patch_length=patch_length,
-                site_spacing=SITE_SPACING,
+                site_spacing=site_spacing,
                 scratch_dx=scratch_dx,
                 scratch_dy=scratch_dy,
             )
@@ -1125,9 +1124,7 @@ class MeasureZonesOnly(DefaultMovement):
         # Penalize measurements but not entangling gates
         new_moment_cost = base_cultivation_cost["moment_cost"].copy()
         new_gate_cost = base_cultivation_cost["gate_cost"].copy()
-        movements_to_add = sum(
-            v for k, v in new_moment_cost.items() if k is cirq.MeasurementGate
-        )
+        movements_to_add = sum(v for k, v in new_moment_cost.items() if k is cirq.MeasurementGate)
         new_moment_cost[css.MovementGate] = movements_to_add
         new_gate_cost[css.MovementGate] = movements_to_add
         new_time = self.total_time(new_moment_cost)

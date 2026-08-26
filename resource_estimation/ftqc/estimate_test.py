@@ -91,7 +91,7 @@ def test_all_primitives(estimator) -> None:
     arc = estimator.arc
     if arc.movement:
         layout = lyt.MovementDistillery(
-            input_circuit=circuit, num_ccz_factories=1, inplace_cnot=True, num_t_factories=1
+            input_circuit=circuit, num_ccz_factories=1, architecture="DSM", num_t_factories=1
         )
         t_factory = layout.all_factories("t")[0]
         ccz_factory = layout.all_factories("ccz")[0]
@@ -179,7 +179,7 @@ def test_self_returns(movement_estimator, lattice_estimator) -> None:
     circuit = cirq.Circuit(
         [lsp.ErrorCorrect(2).on(qubit_a, qubit_b), cirq.ResetChannel().on(qubit_a)],
     )
-    layout = lyt.MovementLayout(circuit, num_t_factories=0, inplace_cnot=True)
+    layout = lyt.MovementLayout(circuit, num_t_factories=0, architecture="DSM")
     cost = movement_estimator.serial_circuit_cost(circuit=circuit, layout=layout, pretty=True)
     assert cost == {
         "ResetChannel": 49,
@@ -214,7 +214,7 @@ def test_error_handling(lattice_estimator, movement_estimator) -> None:
             cirq.CNOT.on(qubit_a, qubit_b),
         ],
     )
-    layout = lyt.MovementLayout(bad_circuit, inplace_cnot=True)
+    layout = lyt.MovementLayout(bad_circuit, architecture="DSM")
     with pytest.raises(ValueError, match="incompatible"):
         _ = movement_estimator.serial_circuit_cost(bad_circuit, layout=layout)
 
@@ -232,7 +232,7 @@ def test_critical_path() -> None:
     c2 += cirq.CNOT.on(q0, q1)
     arc = arch.DefaultMovement()
     # Both have same layout
-    layout = lyt.MovementLayout(c1, num_t_factories=1, inplace_cnot=True, num_ccz_factories=1)
+    layout = lyt.MovementLayout(c1, num_t_factories=1, architecture="DSM", num_ccz_factories=1)
     estim = est.ResourceEstimator(arc)
     # Should be identical aside from floating point errors
     assert isclose(
@@ -337,7 +337,7 @@ def test_dynamic_CCZ_resource_counts(mock_randint) -> None:
     correction_circuit.append(cirq.CNOT.on(qubit_b, qubit_c))
     correction_circuit.append(se_gate.on_each(*(qubit_b, qubit_c)))
     correction_circuit.append(cirq.H.on_each(*(qubit_a, qubit_b, qubit_c)))
-    layout = lyt.MovementLayout(correction_circuit, interaction_zones=True, measure_zones=True)
+    layout = lyt.MovementLayout(correction_circuit, architecture="SSM")
     dynamic_op: cirq.Operation = lsp.ResourceCorrection("CCZ").on(qubit_a, qubit_b, qubit_c)
     mock_randint.side_effect = [1, 0, 1, 0, 1, 0]
     est = ResourceEstimator(arc)

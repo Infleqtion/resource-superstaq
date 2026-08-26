@@ -373,31 +373,25 @@ def add_moves(
         if op not in ops_to_replace:
             yield op
         else:
+            move = css.MovementGate({0: 1})
+            move_dg = css.MovementGate({1: 0})
             if layout.inplace_cnot and op.gate == cirq.CNOT:
                 ctrl, trgt = op.qubits
-                op_sequece = [
-                    css.MovementGate({0: 1}).on(ctrl, trgt),
-                    op,
-                    css.MovementGate({1: 0}).on(ctrl, trgt),
-                ]
+                op_sequece = [move.on(ctrl, trgt), op, move_dg.on(ctrl, trgt)]
             elif layout.interaction_zones and op.gate == cirq.CNOT:
                 ctrl, trgt = op.qubits
                 zone_qubit = next(interaction_cycle)
                 op_sequece = [
-                    css.MovementGate({0: 1}).on(ctrl, zone_qubit),
-                    css.MovementGate({0: 1}).on(trgt, zone_qubit),
+                    move.on(ctrl, zone_qubit),
+                    move.on(trgt, zone_qubit),
                     op,
-                    css.MovementGate({1: 0}).on(trgt, zone_qubit),
-                    css.MovementGate({1: 0}).on(ctrl, zone_qubit),
+                    move_dg.on(trgt, zone_qubit),
+                    move_dg.on(ctrl, zone_qubit),
                 ]
             elif layout.measure_zones and cirq.is_measurement(op):
-                q = op.qubits[0]  # There should really only be one qubit
+                q = op.qubits[0]  # There should only be one qubit
                 zone_qubit = next(measurement_cycle)
-                op_sequece = [
-                    css.MovementGate({0: 1}).on(q, zone_qubit),
-                    op,
-                    css.MovementGate({1: 0}).on(q, zone_qubit),
-                ]
+                op_sequece = [move.on(q, zone_qubit), op, move_dg.on(q, zone_qubit)]
             for op in op_sequece:
                 yield op
 
