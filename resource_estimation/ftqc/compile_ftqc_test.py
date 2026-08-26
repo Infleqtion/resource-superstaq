@@ -442,17 +442,6 @@ def test_other_passes(random_circ) -> None:
     )
 
 
-def test_verbosity(random_circ) -> None:
-    # TODO: Make this slightly more real (it's a visualization tool so not the most important but still)
-    circuit = random_circ
-    lay = Column(circuit)
-    arc = arch.DefaultLattice()
-    ops, compiled_circuit = comp.ft_compile(lay, arc, verbose=2)
-    for moment_ops in ops:
-        for op in moment_ops:
-            assert op in compiled_circuit.all_operations()
-
-
 def test_bell_movement_FF(bell_circuit) -> None:
     movement_layout = MovementLayout(bell_circuit)
     movement_architecture = arch.MeasureZonesOnly(

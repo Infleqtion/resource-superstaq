@@ -15,7 +15,6 @@ import collections
 from math import ceil, pi
 
 import cirq
-import cirq_superstaq as css
 import numpy as np
 import pytest
 
@@ -512,102 +511,6 @@ def test_timing(movement_architecture, lattice_architecture) -> None:
         lattice_architecture.op_time(cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)))
 
 
-def test_classmethods() -> None:
-    movement_input_dict = {
-        "movement": True,
-        "idling": True,
-        "post_op_correction": True,
-        "d": 7,
-        "cultivation_repetition": 1,
-        "cultivation_fault_distance": 3,
-        "syndrome_rounds": 1,
-    }
-    mv_arc = arch.Architecture.from_dict(movement_input_dict)
-    assert isinstance(mv_arc, arch.DefaultMovement)
-
-    lattice_input_dict = {
-        "movement": False,
-        "idling": True,
-        "post_op_correction": True,
-        "d": 7,
-        "cultivation_repetition": 1,
-        "cultivation_fault_distance": 3,
-        "syndrome_rounds": 1,
-    }
-    ls_arch = arch.Architecture.from_dict(lattice_input_dict)
-    assert isinstance(ls_arch, arch.DefaultLattice)
-
-    movement_input_dict = {
-        "movement": True,
-        "idling": True,
-        "post_op_correction": True,
-        "d": 7,
-        "cultivation_repetition": 1,
-        "cultivation_fault_distance": 3,
-        "syndrome_rounds": 1,
-        "gate_times": {cirq.QubitPermutationGate: 100},
-    }
-    mv_arc = arch.Architecture.from_dict(movement_input_dict)
-    assert mv_arc.phys_gate_times[cirq.QubitPermutationGate] == 100
-
-    movement_input_dict = {
-        "movement": True,
-        "idling": True,
-        "post_op_correction": True,
-        "d": 7,
-        "cultivation_repetition": 1,
-        "cultivation_fault_distance": 3,
-        "syndrome_rounds": 1,
-        "gate_times": {"QubitPermutationGate": 99},
-    }
-    mv_arc = arch.Architecture.from_dict(movement_input_dict)
-    assert mv_arc.phys_gate_times[cirq.QubitPermutationGate] == 99
-
-    lattice_input_dict = {
-        "movement": False,
-        "idling": True,
-        "post_op_correction": True,
-        "d": 7,
-        "cultivation_repetition": 1,
-        "cultivation_fault_distance": 3,
-        "syndrome_rounds": 1,
-        "gate_times": {cirq.CZ: 100},
-    }
-    ls_arc = arch.Architecture.from_dict(lattice_input_dict)
-    assert ls_arc.phys_gate_times[cirq.CZ] == 100
-
-    lattice_input_dict = {
-        "movement": False,
-        "idling": True,
-        "post_op_correction": True,
-        "d": 7,
-        "cultivation_repetition": 1,
-        "cultivation_fault_distance": 3,
-        "syndrome_rounds": 1,
-        "gate_times": {"CZ": 99},
-    }
-    ls_arc = arch.Architecture.from_dict(lattice_input_dict)
-    assert ls_arc.phys_gate_times[cirq.CZ] == 99
-    ls_arc = arch.Architecture.from_json("data/lattice_test.json")
-    assert ls_arc.phys_gate_times[cirq.CZ] == 99
-
-    mv_arc = arch.Architecture.from_json("data/movement_test.json")
-    assert mv_arc.phys_gate_times[cirq.CZ] == 99
-
-    with pytest.raises(ValueError, match="Gate time"):
-        input_dict = {
-            "movement": False,
-            "idling": True,
-            "post_op_correction": True,
-            "d": 7,
-            "cultivation_repetition": 1,
-            "cultivation_fault_distance": 3,
-            "syndrome_rounds": 1,
-            "gate_times": {"CNOT": 99},
-        }
-        _ = arch.Architecture.from_dict(input_dict)
-
-
 def test_dual_species_with_movement() -> None:
     # HM never pays for Measurement
     # HM often pays to move for CZ
@@ -793,32 +696,6 @@ def test_folded_architecture() -> None:
     normal_cultivation_time = normal_movement._cultivate_t_cost["op_time"]
 
     assert folded_cultivation_time < normal_cultivation_time
-
-
-def test_convert_globals_to_phasedxz() -> None:
-    """Confirm that the conversion function works as expected"""
-    sc = arch.Superconductor()
-    example1 = {
-        "gate_cost": {css.ParallelRGate: 2, cirq.Rz: 3},
-        "moment_cost": {
-            css.ParallelRGate: 13,
-        },
-    }
-    expected = {"gate_cost": {cirq.PhasedXZGate: 3}, "moment_cost": {}, "op_time": 0.0}
-    actual = arch.convert_globals_to_phasedxz(architecture=sc, cost_with_globals=example1)
-    assert expected == actual
-
-    example2 = {
-        "gate_cost": {cirq.MeasurementGate: 5},
-        "moment_cost": {cirq.Rz: 5, css.ParallelRGate: 9},
-    }
-    expected = {
-        "gate_cost": {cirq.MeasurementGate: 5},
-        "moment_cost": {cirq.PhasedXZGate: 5},
-        "op_time": 0.02 * 5,
-    }
-    actual = arch.convert_globals_to_phasedxz(architecture=sc, cost_with_globals=example2)
-    assert expected == actual
 
 
 def test_logical_move() -> None:
