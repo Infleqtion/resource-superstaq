@@ -54,8 +54,7 @@ class ResourceEstimator:
         self,
         circuit: cirq.Circuit,
         verbose: int = 0,
-        pretty: bool = False,
-    ) -> dict[cirq.Gate | str, int]:
+    ) -> dict[cirq.Gate, int]:
         """Counts up the total physical gates from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
         cost = collections.Counter()
@@ -66,11 +65,6 @@ class ResourceEstimator:
             disable=not bool(verbose),
         ):
             cost += collections.Counter(self.arc.gate_cost(op))
-        if pretty:
-            return {
-                obj.__name__ if hasattr(obj, "__name__") else str(obj): val
-                for obj, val in cost.items()
-            }
         return {op: val for op, val in cost.items()}
 
     def serial_circuit_time(self, circuit: cirq.Circuit) -> float:
@@ -127,8 +121,7 @@ class ResourceEstimator:
         self,
         circuit: cirq.Circuit,
         verbose: int = 0,
-        pretty: bool = False,
-    ) -> dict[cirq.Gate | str, int]:
+    ) -> dict[cirq.Gate, int]:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
         qubit_paths = {qubit: collections.Counter() for qubit in circuit.all_qubits()}
         qubit_times = dict.fromkeys(circuit.all_qubits(), 0)
@@ -149,11 +142,6 @@ class ResourceEstimator:
         big_time = qubit_times[big_qubit]
         big_path = qubit_paths[big_qubit]
 
-        if pretty:
-            big_path = {
-                obj.__name__ if hasattr(obj, "__name__") else str(obj): val
-                for obj, val in big_path.items()
-            }
         return big_path
 
     def physical_qubits(self, circuit: cirq.Circuit) -> int:

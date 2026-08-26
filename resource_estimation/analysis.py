@@ -24,9 +24,9 @@ from pathlib import Path
 import tqdm
 
 try:
-    from typing import Self
+    from typing import Self, overload
 except ImportError:  # pragma: no cover
-    from typing_extensions import Self
+    from typing_extensions import Self, overload
 
 import cirq
 import numpy as np
@@ -197,6 +197,21 @@ def break_up_ops(cliff_rz_circuit: cirq.Circuit) -> tuple[int, int]:
     return num_rz_gates, num_clifford
 
 
+@overload
+def error_estimate(
+    code_distance: int,
+    error_per_rz: float,
+    error_per_cult: float,
+    num_rz_gates: int,
+    num_clifford: int,
+    transversal_s_gate: bool = True,
+    t_fit_param: float = 4.8,
+    c_fit_param: float = 7.8,
+    hw_noise: float = 0.001,
+) -> float: ...
+
+
+@overload
 def error_estimate(
     code_distance: npt.ArrayLike,
     error_per_rz: npt.ArrayLike,
@@ -204,10 +219,23 @@ def error_estimate(
     num_rz_gates: int,
     num_clifford: int,
     transversal_s_gate: bool = True,
-    t_fit_param: float = 4.8,  # fit parameter from synthesis plot for T
-    c_fit_param: float = 7.8,  # fit parameter from synthesis plot for H, S
+    t_fit_param: float = 4.8,
+    c_fit_param: float = 7.8,
     hw_noise: float = 0.001,
-) -> npt.NDArray[np.float64]:
+) -> float | npt.NDArray[np.float64]: ...
+
+
+def error_estimate(
+    code_distance: npt.ArrayLike,
+    error_per_rz: npt.ArrayLike,
+    error_per_cult: npt.ArrayLike,
+    num_rz_gates: int,
+    num_clifford: int,
+    transversal_s_gate: bool = True,
+    t_fit_param: float = 4.8,
+    c_fit_param: float = 7.8,
+    hw_noise: float = 0.001,
+) -> float | npt.NDArray[np.float64]:
     # Recast for vectorized operations
     code_distance = np.asarray(code_distance, dtype=np.int_)
     error_per_rz = np.asarray(error_per_rz, dtype=np.float64)
