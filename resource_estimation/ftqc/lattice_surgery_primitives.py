@@ -37,6 +37,9 @@ def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
         return Move
     if cirq_type == "lsp.Distil":
         return Distil
+    if cirq_type == "lsp.ResourceCorrection":
+        return ResourceCorrection
+    return None
 
 
 @cirq.value_equality
@@ -123,7 +126,7 @@ class Split(cirq.Gate):
     def _json_namespace_(cls) -> str:
         return "lsp"
 
-    def _value_equality_values_(self) -> tuple[list[int], bool]:
+    def _value_equality_values_(self) -> tuple[int | bool, ...]:
         return *self._partitions, self._smooth
 
 
@@ -136,7 +139,7 @@ class SyndromeExtract(cirq.Gate):  # For now we are sort of ignoring the "buffer
     """
 
     # TODO: Should this be limited to a single qubit gate?
-    def __init__(self, num_qubits, rounds) -> None:
+    def __init__(self, num_qubits: int, rounds: int) -> None:
         self._num_qubits = num_qubits
         self._rounds = rounds
 
@@ -174,7 +177,7 @@ class ErrorCorrect(cirq.Gate):
     num_qubits: Number of logical qubits being corrected
     """
 
-    def __init__(self, num_qubits) -> None:
+    def __init__(self, num_qubits: int) -> None:
         self._num_qubits = num_qubits
 
     def _num_qubits_(self) -> int:
@@ -245,7 +248,7 @@ class Distil(cirq.Gate):
     CCZ leads to a CCZ state
     """
 
-    def __init__(self, resource: Literal["T", "CCZ"]) -> None:
+    def __init__(self, resource: typing.Literal["T", "CCZ"]) -> None:
         if resource not in ("T", "CCZ"):
             raise ValueError(f"Invalid resource for Distil gate: {resource!r}")
         self._resource = resource
@@ -307,6 +310,38 @@ class Move(cirq.Gate):
 
     def _value_equality_values_(self) -> tuple[int, str | None]:
         return (self._num_qubits, self._zone)
+
+
+@cirq.value_equality
+class ResourceCorrection(cirq.Gate):
+    def __init__(self, resource: typing.Literal["T", "CCZ"]) -> None:
+        if resource not in ("T", "CCZ"):
+            raise ValueError(f"Invalid resource for Correction gate: {resource!r}")
+        self._resource: typing.Literal["T", "CCZ"] = resource
+        self._num_qubits = 3 if resource == "CCZ" else 1
+
+    def num_qubits(self) -> int:
+        return self._num_qubits
+
+    @property
+    def resource(self) -> typing.Literal["T", "CCZ"] | None:
+        return self._resource
+
+    def __str__(self) -> str:
+        return f"ResourceCorrection({self._resource})"
+
+    def _json_dict_(self) -> dict[str, object]:
+        return {"resource": self._resource}
+
+    def __repr__(self) -> str:
+        return f"lsp.ResourceCorrection({self._resource})"
+
+    @classmethod
+    def _json_namespace_(cls) -> str:
+        return "lsp"
+
+    def _value_equality_values_(self) -> str:
+        return self._resource
 
 
 class RotatedCodePatch:

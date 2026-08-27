@@ -28,6 +28,7 @@ from resource_estimation.ftqc.layout import (
     MovementDistillery,
     MovementLayout,
 )
+from resource_estimation.typing import GateKey, _require_gate_operation
 
 
 @pytest.fixture
@@ -55,11 +56,22 @@ def random_circ() -> cirq.Circuit:
     )
 
 
+@pytest.fixture
+def random_circ2() -> cirq.Circuit:
+    return cirq.testing.random_circuit(
+        qubits=4,
+        n_moments=7,
+        op_density=0.8,
+        gate_domain={cirq.H: 1, cirq.CNOT: 2, cirq.T: 1, cirq.S: 1},
+        random_state=73,
+    )
+
+
 @pytest.mark.parametrize(
     "with_barriers",
     (True, False),
 )
-def test_end2end(with_barriers) -> None:
+def test_end2end(with_barriers: bool) -> None:
     # Circuit that tests all uses all possible gates
     q0, q1 = cirq.GridQubit(0, 0), cirq.GridQubit(2, 2)
     circuit = cirq.Circuit(
@@ -77,6 +89,7 @@ def test_end2end(with_barriers) -> None:
             cirq.MeasurementGate(2, key="end").on(q0, q1),
         ],
     )
+    test_layout: MovementLayout | Column
     for arc in [
         arch.DefaultLattice(idling=False, post_op_correction=True),
         arch.DefaultLattice(idling=True, post_op_correction=True),
@@ -99,7 +112,7 @@ def test_end2end(with_barriers) -> None:
             assert is_primitive
 
 
-def test_end2end_distillery():
+def test_end2end_distillery() -> None:
     q1, q2, q3 = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
     circuit = cirq.Circuit(
         [cirq.CNOT.on(q1, q2), cirq.CCZ.on(q1, q2, q3), cirq.T.on_each(q1, q2, q3)]
@@ -168,8 +181,14 @@ def test_direct_substitution() -> None:
             transversal_cnot=False,
         )
 
+    # Test TypeError is raised
+    with pytest.raises(TypeError, match="Qubits must be instances"):
+        _ = comp.replace_cirq_op(
+            cirq.CNOT.on(*cirq.LineQubit.range(2)), layout=layout, transversal_cnot=False
+        )
 
-def test_replace_cirq_op_movement(bell_circuit) -> None:
+
+def test_replace_cirq_op_movement(bell_circuit: cirq.Circuit) -> None:
     movement_layout = MovementLayout(bell_circuit, num_t_factories=2)
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
@@ -178,10 +197,8 @@ def test_replace_cirq_op_movement(bell_circuit) -> None:
         layout=movement_layout,
         transversal_cnot=True,
     )
-    ops_flattened = (
-        returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
-    )
-    expected_types = [
+    ops_flattened = list(cirq.flatten_to_ops(returned_ops))
+    expected_types: list[GateKey] = [
         lsp.Cultivate,
         lsp.Cultivate,
         cirq.CNOT,
@@ -195,19 +212,13 @@ def test_replace_cirq_op_movement(bell_circuit) -> None:
 
 
 @pytest.mark.parametrize("op_type", (cirq.S, cirq.T, cirq.CNOT))
-def test_replace_cirq_op_lattice(op_type, bell_circuit) -> None:
+def test_replace_cirq_op_lattice(op_type: cirq.Gate, bell_circuit: cirq.Circuit) -> None:
     layout = Column(bell_circuit)
 
     op_to_replace = op_type.on(*list(layout.mapped_circuit.all_qubits())[: op_type.num_qubits()])
     returned_ops = comp.replace_cirq_op(op=op_to_replace, layout=layout, transversal_cnot=False)
-    if op_type == cirq.CNOT:
-        ops_flattened = returned_ops  # Already flat
-    else:
-        ops_flattened = (
-            returned_ops[:2]
-            + [op for moment in returned_ops[2:5] for op in moment]
-            + returned_ops[5:]
-        )
+    ops_flattened = list(cirq.flatten_to_ops(returned_ops))
+    expected_types: list[GateKey]
     if op_type == cirq.S:
         expected_types = [
             lsp.Cultivate,
@@ -240,9 +251,10 @@ def test_replace_cirq_op_lattice(op_type, bell_circuit) -> None:
         arch.DefaultMovement(idling=False, post_op_correction=True),
     ],
 )
-def test_illegal_compile(arc) -> None:
+def test_illegal_compile(arc: arch.Architecture) -> None:
     # Test illegal gates
     circuit = cirq.Circuit([cirq.Rx(rads=pi / 3).on(cirq.GridQubit(0, 0))])
+    layout: MovementLayout | Column
     if arc.movement:
         layout = MovementLayout(circuit, num_t_factories=1)
     else:
@@ -266,11 +278,13 @@ def test_different_rounds() -> None:
         )
         compiled_circuit = comp.ft_compile(layout=layout, arc=architecture)
         for op in compiled_circuit.all_operations():
-            if op in cirq.GateFamily(lsp.SyndromeExtract):
-                op.gate.rounds == k
+            op = arch._require_gate_operation(op)
+            gate = op.gate
+            if isinstance(gate, lsp.SyndromeExtract):
+                assert gate.rounds == k
 
 
-def test_deterministic_compilation(random_circ) -> None:
+def test_deterministic_compilation(random_circ: cirq.Circuit) -> None:
     circuit = random_circ
     lay = Column(circuit)
     arc = arch.DefaultLattice()
@@ -279,7 +293,94 @@ def test_deterministic_compilation(random_circ) -> None:
     cirq.testing.assert_has_diagram(compiled1, str(compiled2))
 
 
-def test_other_passes(random_circ) -> None:
+def test_nondeterministic_compilation_T(random_circ2: cirq.Circuit) -> None:
+    circuit = random_circ2
+    lay = MovementLayout(circuit)
+    arc = arch.DefaultMovement()
+    compiled1 = comp.ft_compile(lay, arc, dynamic=False)
+    compiled2 = comp.ft_compile(lay, arc, dynamic=True)
+    # We expect basically the same operations except that there are ResourceCorrection gates instead
+    # of S gates
+    # Hoping that this is deterministic
+    compiled1_ops = list(compiled1.all_operations())
+    compiled2_ops = list(compiled2.all_operations())
+    assert len(compiled1_ops) == len(compiled2_ops)
+    for i, (op1, op2) in enumerate(zip(compiled1_ops, compiled2_ops)):
+        op1 = _require_gate_operation(op1)
+        op2 = _require_gate_operation(op2)
+        if op1.gate != op2.gate:
+            assert isinstance(op1.gate, cirq.ZPowGate)
+            assert isinstance(op2.gate, lsp.ResourceCorrection)
+            assert op2.gate.resource == "T"
+
+
+def test_nondeterministic_compilation_CCZ() -> None:
+    circuit = cirq.Circuit(
+        cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
+    )
+    lay = MovementDistillery(circuit, num_t_factories=0, num_ccz_factories=1)
+    arc = arch.DefaultMovement()
+    compiled1 = comp.ft_compile(lay, arc, dynamic=False)
+    compiled2 = comp.ft_compile(lay, arc, dynamic=True)
+    # We expect the same operations on the CCZ qubits until there is a ResourceCorrection gate
+    compiled1_ops = list(compiled1.all_operations())
+    compiled2_ops = list(compiled2.all_operations())
+
+    def relevant_op(op: cirq.Operation) -> bool:
+        qubits = op.qubits
+        if (
+            cirq.GridQubit(0, 0) in qubits
+            or cirq.GridQubit(0, 1) in qubits
+            or cirq.GridQubit(0, 2) in qubits
+        ):
+            return True
+        return False
+
+    reached_correction = False
+    moments1 = list(compiled1.moments)
+    moments2 = list(compiled2.moments)
+    correction_circuit = cirq.Circuit()
+    for i in range(0, len(moments1)):
+        # The circuits should be identical until we reach the correction part
+        if not reached_correction:
+            try:
+                assert len(moments1[i].operations) == len(moments2[i].operations)
+            except:
+                reached_correction = True
+                for op in moments1[i].operations:
+                    if relevant_op(op):
+                        assert isinstance(op.gate, cirq.HPowGate)
+                for op in moments2[i].operations:
+                    if relevant_op(op):
+                        assert isinstance(op.gate, lsp.ResourceCorrection)
+                        assert op.gate.resource == "CCZ"
+
+        if not reached_correction:
+            for j in range(0, len(moments2[i].operations)):
+                assert moments1[i].operations[j] == moments2[i].operations[j]
+        else:
+            # Once we reach the correction part, we want to make sure compilation does exactly what
+            # we expect on the logical qubits
+            for op in moments1[i].operations:
+                if relevant_op(op):
+                    correction_circuit.append(op)
+    # If this errors, look at the correction circuit to make sure it's not just that the CNOT order
+    # changed or the qubit indices changes
+    cirq.testing.assert_has_diagram(
+        correction_circuit,
+        textwrap.dedent(
+            """
+        (0, 0): ───H───SE(1)───X───MOVE_IZ───@───MOVE_IZ───SE(1)───MOVE_IZ───@───MOVE_IZ───SE(1)───H─────────SE(1)─────────────────────────────────
+                                             │                               │
+        (0, 1): ───H───SE(1)───X───MOVE_IZ───X───MOVE_IZ───SE(1)───MOVE_IZ───┼───────────────────────────────@───────MOVE_IZ───SE(1)───H───SE(1)───
+                                                                             │                               │
+        (0, 2): ───H───SE(1)───X───MOVE_IZ───────────────────────────────────X───MOVE_IZ───SE(1)───MOVE_IZ───X───────MOVE_IZ───SE(1)───H───SE(1)───
+        """
+        ),
+    )
+
+
+def test_other_passes(random_circ: cirq.Circuit) -> None:
     # If this test and test_deterministic_compilation both fail, that one likely causes the issue in this one
     circuit = random_circ
     lay = Column(circuit)
@@ -346,18 +447,7 @@ def test_other_passes(random_circ) -> None:
     )
 
 
-def test_verbosity(random_circ) -> None:
-    # TODO: Make this slightly more real (it's a visualization tool so not the most important but still)
-    circuit = random_circ
-    lay = Column(circuit)
-    arc = arch.DefaultLattice()
-    ops, compiled_circuit = comp.ft_compile(lay, arc, verbose=2)
-    for moment_ops in ops:
-        for op in moment_ops:
-            assert op in compiled_circuit.all_operations()
-
-
-def test_bell_movement_FF(bell_circuit) -> None:
+def test_bell_movement_FF(bell_circuit: cirq.Circuit) -> None:
     movement_layout = MovementLayout(bell_circuit)
     movement_architecture = arch.MeasureZonesOnly(
         d=7,
@@ -380,7 +470,7 @@ def test_bell_movement_FF(bell_circuit) -> None:
     )
 
 
-def test_bell_movement_FT(bell_circuit) -> None:
+def test_bell_movement_FT(bell_circuit: cirq.Circuit) -> None:
     movement_layout = MovementLayout(bell_circuit)
     movement_architecture = arch.MeasureZonesOnly(
         d=7,
@@ -403,7 +493,7 @@ def test_bell_movement_FT(bell_circuit) -> None:
     )
 
 
-def test_bell_movement_TF(bell_circuit) -> None:
+def test_bell_movement_TF(bell_circuit: cirq.Circuit) -> None:
     movement_layout = MovementLayout(bell_circuit)
     movement_architecture = arch.MeasureZonesOnly(
         d=7,
@@ -430,7 +520,7 @@ def test_bell_movement_TF(bell_circuit) -> None:
     )
 
 
-def test_bell_movement_TT(bell_circuit) -> None:
+def test_bell_movement_TT(bell_circuit: cirq.Circuit) -> None:
     movement_layout = MovementLayout(bell_circuit)
     movement_architecture = arch.MeasureZonesOnly(
         d=7,
@@ -454,7 +544,7 @@ def test_bell_movement_TT(bell_circuit) -> None:
     )
 
 
-def test_bell_lattice_FF(bell_circuit) -> None:
+def test_bell_lattice_FF(bell_circuit: cirq.Circuit) -> None:
     lattice_layout = Column(bell_circuit)
     lattice_architecture = arch.DefaultLattice(
         d=7,
@@ -481,7 +571,7 @@ def test_bell_lattice_FF(bell_circuit) -> None:
     )
 
 
-def test_bell_lattice_FT(bell_circuit) -> None:
+def test_bell_lattice_FT(bell_circuit: cirq.Circuit) -> None:
     lattice_layout = Column(bell_circuit)
     lattice_architecture = arch.DefaultLattice(
         d=7,
@@ -508,7 +598,7 @@ def test_bell_lattice_FT(bell_circuit) -> None:
     )
 
 
-def test_bell_lattice_TF(bell_circuit) -> None:
+def test_bell_lattice_TF(bell_circuit: cirq.Circuit) -> None:
     lattice_layout = Column(bell_circuit)
     lattice_architecture = arch.DefaultLattice(
         d=7,
@@ -536,7 +626,7 @@ def test_bell_lattice_TF(bell_circuit) -> None:
     )
 
 
-def test_bell_lattice_TT(bell_circuit) -> None:
+def test_bell_lattice_TT(bell_circuit: cirq.Circuit) -> None:
     lattice_layout = Column(bell_circuit)
     lattice_architecture = arch.DefaultLattice(
         d=7,
@@ -563,7 +653,7 @@ def test_bell_lattice_TT(bell_circuit) -> None:
     )
 
 
-def test_t_movement_FF(t_circuit) -> None:
+def test_t_movement_FF(t_circuit: cirq.Circuit) -> None:
     movement_layout = MovementLayout(t_circuit, num_t_factories=2)
     movement_architecture = arch.MeasureZonesOnly(
         d=7,
@@ -591,7 +681,7 @@ def test_t_movement_FF(t_circuit) -> None:
     )
 
 
-def test_t_movement_FT(t_circuit) -> None:
+def test_t_movement_FT(t_circuit: cirq.Circuit) -> None:
     movement_layout = MovementLayout(t_circuit, num_t_factories=2)
     movement_architecture = arch.MeasureZonesOnly(
         d=7,
@@ -619,7 +709,7 @@ def test_t_movement_FT(t_circuit) -> None:
     )
 
 
-def test_t_movement_TF(t_circuit) -> None:
+def test_t_movement_TF(t_circuit: cirq.Circuit) -> None:
     movement_layout = MovementLayout(t_circuit, num_t_factories=2)
     movement_architecture = arch.MeasureZonesOnly(
         d=7,
@@ -649,7 +739,7 @@ def test_t_movement_TF(t_circuit) -> None:
     )
 
 
-def test_t_movement_TT(t_circuit) -> None:
+def test_t_movement_TT(t_circuit: cirq.Circuit) -> None:
     movement_layout = MovementLayout(t_circuit, num_t_factories=2)
     movement_architecture = arch.MeasureZonesOnly(
         d=7,
@@ -681,7 +771,7 @@ def test_t_movement_TT(t_circuit) -> None:
     )
 
 
-def test_t_lattice_FF(t_circuit) -> None:
+def test_t_lattice_FF(t_circuit: cirq.Circuit) -> None:
     lattice_layout = Column(t_circuit)
     lattice_architecture = arch.DefaultLattice(
         d=7,
@@ -720,7 +810,7 @@ def test_t_lattice_FF(t_circuit) -> None:
     )
 
 
-def test_t_lattice_FT(t_circuit) -> None:
+def test_t_lattice_FT(t_circuit: cirq.Circuit) -> None:
     lattice_layout = Column(t_circuit)
     lattice_architecture = arch.DefaultLattice(
         d=7,
@@ -849,10 +939,6 @@ def test_t_lattice_FT(t_circuit) -> None:
 
 def test_ssm_moves() -> None:
     arch_type = arch.DefaultMovement
-    arch_info = {
-        "zone_ops": arch_type.zone_ops if arch_type.zone_ops is not None else cirq.Gateset(),
-        "alley_ops": arch_type.alley_ops if arch_type.alley_ops is not None else cirq.Gateset(),
-    }
     a, b, c = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
     input_circuit = cirq.Circuit(
         lsp.SyndromeExtract(1, 1).on_each(a, b),
@@ -875,7 +961,9 @@ def test_ssm_moves() -> None:
         lsp.Move(zone="measure").on(c),
     )
     # Aligning left avoids ambiguity
-    output_circuit = cirq.align_left(comp.add_moves(input_circuit, **arch_info))
+    output_circuit = cirq.align_left(
+        comp.add_moves(input_circuit, zone_ops=arch_type.zone_ops, alley_ops=arch_type.alley_ops)
+    )
     cirq.testing.assert_has_diagram(
         output_circuit,
         str(expected_output_circuit),
@@ -884,10 +972,6 @@ def test_ssm_moves() -> None:
 
 def test_mzo_moves() -> None:
     arch_type = arch.MeasureZonesOnly
-    arch_info = {
-        "zone_ops": arch_type.zone_ops if arch_type.zone_ops is not None else cirq.Gateset(),
-        "alley_ops": arch_type.alley_ops if arch_type.alley_ops is not None else cirq.Gateset(),
-    }
     a, b, c = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
     input_circuit = cirq.Circuit(
         lsp.SyndromeExtract(1, 1).on_each(a, b),
@@ -909,7 +993,9 @@ def test_mzo_moves() -> None:
         cirq.MeasurementGate(1, key="").on(c),
         lsp.Move(zone="measure").on(c),
     )
-    output_circuit = comp.add_moves(input_circuit, **arch_info)
+    output_circuit = comp.add_moves(
+        input_circuit, zone_ops=arch_type.zone_ops, alley_ops=arch_type.alley_ops
+    )
     cirq.testing.assert_has_diagram(
         output_circuit,
         str(expected_output_circuit),
@@ -918,10 +1004,6 @@ def test_mzo_moves() -> None:
 
 def test_hm_moves() -> None:
     arch_type = arch.DualSpeciesMovement
-    arch_info = {
-        "zone_ops": arch_type.zone_ops if arch_type.zone_ops is not None else cirq.Gateset(),
-        "alley_ops": arch_type.alley_ops if arch_type.alley_ops is not None else cirq.Gateset(),
-    }
     a, b, c = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
     input_circuit = cirq.Circuit(
         lsp.SyndromeExtract(1, 1).on_each(a, b),
@@ -941,26 +1023,29 @@ def test_hm_moves() -> None:
         lsp.Move(zone=None).on(b, a),
         cirq.MeasurementGate(1, key="").on(c),
     )
-    output_circuit = comp.add_moves(input_circuit, **arch_info)
+    output_circuit = comp.add_moves(
+        input_circuit, zone_ops=arch_type.zone_ops, alley_ops=arch_type.alley_ops
+    )
     cirq.testing.assert_has_diagram(
         output_circuit,
         str(expected_output_circuit),
     )
 
 
-def test_replace_cirq_op_distil_t(bell_circuit) -> None:
+def test_replace_cirq_op_distil_t(bell_circuit: cirq.Circuit) -> None:
     distillery_layout = MovementDistillery(bell_circuit, num_t_factories=2, num_ccz_factories=0)
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
-    returned_ops = comp.replace_cirq_op(
-        op=op_to_replace,
-        layout=distillery_layout,
-        transversal_cnot=True,
+    ops_flattened = list(
+        cirq.flatten_to_ops(
+            comp.replace_cirq_op(
+                op=op_to_replace,
+                layout=distillery_layout,
+                transversal_cnot=True,
+            )
+        )
     )
-    ops_flattened = (
-        returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
-    )
-    expected_types = [
+    expected_types: list[GateKey] = [
         lsp.Distil("T"),
         lsp.Distil("T"),
         cirq.CNOT,
@@ -973,19 +1058,18 @@ def test_replace_cirq_op_distil_t(bell_circuit) -> None:
         assert op in cirq.GateFamily(expected_type)
 
 
-def test_replace_cirq_op_distil_ccz(random_circ) -> None:
+def test_replace_cirq_op_distil_ccz(random_circ: cirq.Circuit) -> None:
     distillery_layout = MovementDistillery(random_circ, num_ccz_factories=2, num_t_factories=0)
 
     op_to_replace = cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
-    returned_ops = comp.replace_cirq_op(
-        op=op_to_replace, layout=distillery_layout, transversal_cnot=True
+    returned_ops = list(
+        cirq.flatten_to_ops(
+            comp.replace_cirq_op(op=op_to_replace, layout=distillery_layout, transversal_cnot=True)
+        )
     )
-    print(returned_ops)
     # We flatten them here to be explicit about the order the operations should be in
-    ops_flattened = (
-        returned_ops[:2] + [op for moment in returned_ops[2:5] for op in moment] + returned_ops[5:]
-    )
-    expected_types = [
+    ops_flattened = list(cirq.flatten_to_ops(returned_ops))
+    expected_types: list[GateKey] = [
         *([lsp.Distil("CCZ")] * 2),
         *([cirq.CNOT] * 3),
         *([cirq.MeasurementGate] * 3),
@@ -1013,13 +1097,18 @@ def test_different_rounds_distil() -> None:
         )
         compiled_circuit = comp.ft_compile(layout=layout, arc=architecture)
         for op in compiled_circuit.all_operations():
-            if op in cirq.GateFamily(lsp.SyndromeExtract):
+            if isinstance(op.gate, lsp.SyndromeExtract):
                 assert op.gate.rounds == k
 
 
-def test_teleport_resource_exceptions():
-    invalid_resource = cirq.CCZ.on(*cirq.LineQubit.range(3))
+def test_teleport_resource_exceptions() -> None:
+    qubits = [cirq.GridQubit(0, i) for i in range(3)]
+    invalid_resource = cirq.CCZ.on(*qubits)
     layout = MovementLayout(cirq.Circuit())
     with pytest.raises(ValueError, match="Invalid resource"):
         _ = comp.teleport_resource(invalid_resource, layout)
-    sometimes_valid_resource = cirq.TOFFOLI.on(*cirq.LineQubit.range(3))
+    sometimes_valid_resource = cirq.TOFFOLI.on(*qubits)
+
+    invalid_qubit = cirq.LineQubit(0)
+    with pytest.raises(TypeError, match="Qubits must be instances"):
+        _ = comp.teleport_resource(cirq.T.on(invalid_qubit), layout)

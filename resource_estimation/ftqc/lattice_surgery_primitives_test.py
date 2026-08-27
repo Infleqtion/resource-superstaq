@@ -83,7 +83,18 @@ def test_distil() -> None:
     gate = lsp.Distil("CCZ")
     assert str(gate) == "DISTIL(CCZ)"
     with pytest.raises(ValueError, match="Invalid resource"):
-        _ = lsp.Distil("Toffoli")
+        # Checking an invalid resource necessitates ignoring the Literals in the argument
+        _ = lsp.Distil("Toffoli")  # type: ignore[arg-type]
+
+
+def test_resource_correct() -> None:
+    gate = lsp.ResourceCorrection("T")
+    assert str(gate) == "ResourceCorrection(T)"
+    gate = lsp.ResourceCorrection("CCZ")
+    assert str(gate) == "ResourceCorrection(CCZ)"
+    # Checking an invalid resource necessitates ignoring the Literals in the argument
+    with pytest.raises(ValueError, match="Invalid resource"):
+        _ = lsp.ResourceCorrection("Toffoli")  # type: ignore[arg-type]
 
 
 def test_rotated_code_patch() -> None:
@@ -236,6 +247,8 @@ def test_serialization() -> None:
             lsp.Move(zone="measure").on(qubit_a),
             lsp.Distil("T").on(*factory_block),
             lsp.Distil("CCZ").on(*factory_block[:23]),
+            lsp.ResourceCorrection("T").on(qubit_a),
+            lsp.ResourceCorrection("CCZ").on(qubit_a, qubit_b, cirq.GridQubit(0, 2)),
         ]
     )
     json_str = cirq.to_json(circuit)
@@ -308,9 +321,9 @@ def test_repr() -> None:
         repr(dist_ccz)
         == "lsp.Distil(CCZ)(cirq.LineQubit(0), cirq.LineQubit(1), cirq.LineQubit(2), cirq.LineQubit(3), cirq.LineQubit(4), cirq.LineQubit(5), cirq.LineQubit(6), cirq.LineQubit(7), cirq.LineQubit(8), cirq.LineQubit(9), cirq.LineQubit(10), cirq.LineQubit(11), cirq.LineQubit(12), cirq.LineQubit(13), cirq.LineQubit(14), cirq.LineQubit(15), cirq.LineQubit(16), cirq.LineQubit(17), cirq.LineQubit(18), cirq.LineQubit(19), cirq.LineQubit(20), cirq.LineQubit(21), cirq.LineQubit(22))"
     )
-    move = lsp.Move(zone="interact").on_each(qa, qb)
+    moves = lsp.Move(zone="interact").on_each(qa, qb)
     assert (
-        repr(move)
+        repr(moves)
         == "[lsp.Move(zone=interact).on(cirq.LineQubit(0)), lsp.Move(zone=interact).on(cirq.LineQubit(1))]"
     )
 

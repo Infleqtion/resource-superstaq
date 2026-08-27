@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
+from pathlib import Path
 
 import cirq
 import numpy as np
@@ -35,7 +36,7 @@ def report() -> analysis.Report:
 
 
 @pytest.fixture
-def populated_report(report):
+def populated_report(report: analysis.Report) -> analysis.Report:
     report.load_time = 1.0
     report.rz_width = 10
     report.rz_depth = 10
@@ -53,8 +54,8 @@ def populated_report(report):
     report.primitive_width = 10
     report.primitive_depth = 10
     report.compile_time = 1.0
-    report.gates_serial = {}
-    report.gates_parallel = {}
+    report.gates_serial = {"X": (2, 3.5)}
+    report.gates_parallel = {"CZ": (1, 0.75)}
     report.time_serial = 1.0
     report.time_parallel = 1.0
     report.physical_qubits = 10
@@ -81,17 +82,20 @@ def test_get_eps() -> None:
     assert other_gates == 0
 
 
-def test_save_and_load_round_trip(report, tmp_path) -> None:
-    filepath = report.save(tmp_path)
+def test_save_and_load_round_trip(populated_report: analysis.Report, tmp_path: Path) -> None:
+    filepath = populated_report.save(tmp_path)
 
     assert filepath.exists()
     assert filepath.parent == tmp_path
 
     loaded_report = analysis.Report.load(filepath)
-    assert loaded_report.info_dict == report.info_dict
+    assert loaded_report.info_dict == populated_report.info_dict
+
+    assert isinstance(loaded_report.gates_serial["X"], tuple)
+    assert isinstance(loaded_report.gates_parallel["CZ"], tuple)
 
 
-def test_save_increments_filename(report, tmp_path) -> None:
+def test_save_increments_filename(report: analysis.Report, tmp_path: Path) -> None:
     filepath1 = report.save(tmp_path)
     filepath2 = report.save(tmp_path)
 
@@ -101,7 +105,7 @@ def test_save_increments_filename(report, tmp_path) -> None:
     assert filepath2.name == "re_dummy_file-99-ssm-10-1_1.json"
 
 
-def test_arch(report) -> None:
+def test_arch(report: analysis.Report) -> None:
     architecture = report.arch
     assert isinstance(architecture, arc.DefaultMovement)
     assert architecture.fold_cultiv
@@ -113,7 +117,7 @@ def test_arch(report) -> None:
     assert not architecture.fold_cultiv
 
 
-def test_report_contains_expected_sections(populated_report) -> None:
+def test_report_contains_expected_sections(populated_report: analysis.Report) -> None:
     report_str = populated_report.report()
 
     assert "Inputs" in report_str
@@ -126,7 +130,7 @@ def test_report_contains_expected_sections(populated_report) -> None:
     assert "1.00e+01" in report_str
 
 
-def test_line_dict(report) -> None:
+def test_line_dict(report: analysis.Report) -> None:
     info_dict = {
         "key1": (10, 1.0),
         "key2": (100, 2.0),
@@ -142,6 +146,12 @@ def test_line_dict(report) -> None:
     assert "1.00e+02" in line_dict
     assert "1.00e+00" in line_dict
     assert "2.00e+00" in line_dict
+
+
+def test_sub_report_raises_type_error(report: analysis.Report) -> None:
+    setattr(report, "load_time", (1, 2, 3))
+    with pytest.raises(TypeError, match="Expected numeric time"):
+        _ = report.sub_report(header="Inputs")
 
 
 def test_surface_code_fidelity() -> None:
@@ -167,7 +177,7 @@ def test_break_up_ops() -> None:
 
 
 @pytest.mark.parametrize("fold_cultiv", (True, False))
-def test_get_important_information_t_paths(fold_cultiv) -> None:
+def test_get_important_information_t_paths(fold_cultiv: bool) -> None:
     q = cirq.LineQubit(0)
     circuit = cirq.Circuit(
         cirq.T.on(q),

@@ -99,6 +99,7 @@ lint.ignore = [
   "S101",    # Using asserts
   "S112",    # Try except continue
   "S310",    # Suspicious URL open usage
+  "S311",    # Suspicious non-cryptographically secure randomness usage
   "S603",    # Subprocess without shell equals true
   "S607",    # Start process with partial path
   "SIM102",  # Collapsible if
