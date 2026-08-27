@@ -39,17 +39,21 @@ def test_column(circuit5: cirq.Circuit) -> None:
     column = Column(circuit5)
     column.reload_factories(ftype="s")
     column.reload_factories(ftype="t")
-    assert column.nearest_factory(qubits=cirq.GridQubit(0, 2), ftype="s") == cirq.GridQubit(0, 0)
-    assert column.nearest_factory(qubits=cirq.GridQubit(2, 2), ftype="t") in [
+    (factory1,) = column.nearest_factory(qubits=cirq.GridQubit(0, 2), ftype="s")
+    assert factory1 == cirq.GridQubit(0, 0)
+    (factory2,) = column.nearest_factory(qubits=cirq.GridQubit(2, 2), ftype="t")
+    assert factory2 in [
         cirq.GridQubit(3, 0),
         cirq.GridQubit(1, 0),
     ]
-    assert column.nearest_factory(qubits=cirq.GridQubit(2, 4), ftype="t") in [
+    (factory3,) = column.nearest_factory(qubits=cirq.GridQubit(2, 4), ftype="t")
+    assert factory3 in [
         cirq.GridQubit(1, 6),
         cirq.GridQubit(3, 6),
     ]
     # Now that (0, 0) is used, the nearest S factory to lq (0, 2) is (2, 0)
-    assert column.nearest_factory(qubits=cirq.GridQubit(0, 2), ftype="s") == cirq.GridQubit(2, 0)
+    (factory4,) = column.nearest_factory(qubits=cirq.GridQubit(0, 2), ftype="s")
+    assert factory4 == cirq.GridQubit(2, 0)
     G = column.layout_graph
     # Total number of nodes should be 7 x 6 = 42
     assert len(G.nodes) == 42
@@ -121,9 +125,12 @@ def test_sandwich(circuit5: cirq.Circuit) -> None:
     sandwich.reload_factories(ftype="s")
     sandwich.reload_factories(ftype="t")
     # Check that nearest T factory is as expected and changes when used
-    assert sandwich.nearest_factory(qubits=cirq.GridQubit(2, 2), ftype="t") == cirq.GridQubit(4, 2)
-    assert sandwich.nearest_factory(qubits=cirq.GridQubit(2, 2), ftype="t") == cirq.GridQubit(4, 1)
-    assert sandwich.nearest_factory(qubits=cirq.GridQubit(2, 4), ftype="s") == cirq.GridQubit(0, 4)
+    (factory1,) = sandwich.nearest_factory(qubits=cirq.GridQubit(2, 2), ftype="t")
+    assert factory1 == cirq.GridQubit(4, 2)
+    (factory2,) = sandwich.nearest_factory(qubits=cirq.GridQubit(2, 2), ftype="t")
+    assert factory2 == cirq.GridQubit(4, 1)
+    (factory3,) = sandwich.nearest_factory(qubits=cirq.GridQubit(2, 4), ftype="s")
+    assert factory3 == cirq.GridQubit(0, 4)
     # Check that there are no unexpected nodes in the layout graph
     G = sandwich.layout_graph
     assert len(G.nodes) == 23
@@ -169,14 +176,17 @@ def test_embedded(circuit5: cirq.Circuit) -> None:
     embedded.reload_factories(ftype="s")
     embedded.reload_factories(ftype="t")
     # Check available qubits across several situations of ambiguity
-    assert embedded.nearest_factory(cirq.GridQubit(2, 6), ftype="t") in [
+    (factory1,) = embedded.nearest_factory(cirq.GridQubit(2, 6), ftype="t")
+    assert factory1 in [
         cirq.GridQubit(0, 5),
         cirq.GridQubit(0, 7),
         cirq.GridQubit(1, 8),
         cirq.GridQubit(3, 8),
     ]
-    assert embedded.nearest_factory(cirq.GridQubit(4, 4), ftype="s") == cirq.GridQubit(6, 4)
-    assert embedded.nearest_factory(cirq.GridQubit(4, 2), ftype="s") in [
+    (factory2,) = embedded.nearest_factory(cirq.GridQubit(4, 4), ftype="s")
+    assert factory2 == cirq.GridQubit(6, 4)
+    (factory3,) = embedded.nearest_factory(cirq.GridQubit(4, 2), ftype="s")
+    assert factory3 in [
         cirq.GridQubit(4, 0),
         cirq.GridQubit(6, 2),
     ]
@@ -214,10 +224,10 @@ def test_movement(circuit5: cirq.Circuit) -> None:
     G = movement.layout_graph
     # Check factories are used up when routed
     factories = [cirq.GridQubit(1, 2), cirq.GridQubit(2, 0), cirq.GridQubit(2, 1)]
-    factory_qubit = movement.nearest_factory(qubits=cirq.GridQubit(0, 2), ftype="t")
+    (factory_qubit,) = movement.nearest_factory(qubits=cirq.GridQubit(0, 2), ftype="t")
     assert factory_qubit in factories
     factories.remove(factory_qubit)
-    new_factory_qubit = movement.nearest_factory(qubits=cirq.GridQubit(1, 1), ftype="t")
+    (new_factory_qubit,) = movement.nearest_factory(qubits=cirq.GridQubit(1, 1), ftype="t")
     assert new_factory_qubit in factories
     # Check that there are no unexpected nodes in the layout graph
     G = movement.layout_graph
@@ -245,7 +255,7 @@ def test_movement(circuit5: cirq.Circuit) -> None:
 def test_general_exceptions(circuit5: cirq.Circuit) -> None:
     movement = MovementLayout(circuit5, architecture="DSM")
     with pytest.raises(ValueError, match="not a valid"):
-        movement.reload_factories(ftype="q")
+        movement.reload_factories(ftype="q")  # type: ignore[arg-type]
     ctrl, trgt = cirq.GridQubit(0, 2), cirq.GridQubit(2, 1)
     with pytest.raises(NotImplementedError):
         _ = movement.route_cnot(ctrl=ctrl, trgt=trgt)
@@ -253,7 +263,7 @@ def test_general_exceptions(circuit5: cirq.Circuit) -> None:
         movement.reset_graph()
         _ = movement.nearest_factory(cirq.GridQubit(0, 2), "t")
     with pytest.raises(ValueError, match="No factories available"):
-        _ = movement.available_factories(ftype="toffoli")
+        _ = movement.available_factories(ftype="toffoli")  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="Not a recognized zone type"):
         _ = movement.zone_qubits(zone_type="not a zone type")
 
@@ -354,9 +364,11 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
     # Check that nearest T factory is as expected and changes when used
     t_target = cirq.GridQubit(0, 0)
     expected_t_factory = cirq.GridQubit(3, 0)
-    assert distillery.nearest_factory(qubits=t_target, ftype="t") == expected_t_factory
+    (t_factory1,) = distillery.nearest_factory(qubits=t_target, ftype="t")
+    assert t_factory1 == expected_t_factory
     expected_t_factory = cirq.GridQubit(0, 5)
-    assert distillery.nearest_factory(qubits=t_target, ftype="t") == expected_t_factory
+    (t_factory2,) = distillery.nearest_factory(qubits=t_target, ftype="t")
+    assert t_factory2 == expected_t_factory
 
     # Check that the nearest Toff factory is as expected and changes when used
     ccz_target = (cirq.GridQubit(0, 2), cirq.GridQubit(0, 3), cirq.GridQubit(0, 4))

@@ -12,19 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 import argparse
 import textwrap
 import time
+import typing
 
 import cirq
 import cirq_superstaq as css
 
 import resource_estimation as res
 from resource_estimation.analysis import STR2ARCH
+
+if typing.TYPE_CHECKING:
+    pass
 from resource_estimation.visualizations import C, make_pretty
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Resource Estimation Experiment")
 
     parser.add_argument("file", type=str, help="File in .json format to read as cirq circuit")
@@ -80,7 +86,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(args=None) -> int:
+def main(args: argparse.Namespace | None = None) -> int:
     args = args or parse_args()
     file, fid, facts, verbose, arch_name, fold_cultiv = (
         args.file,
@@ -180,7 +186,7 @@ def main(args=None) -> int:
 
     report.eps = eps
     report.t_gates = len(
-        [op for op in clifford_t_circuit.all_operations() if op.gate in cirq.GateFamily(cirq.T)],
+        [op for op in clifford_t_circuit.all_operations() if op in cirq.GateFamily(cirq.T)],
     )
     report.non_t_gates = len(list(clifford_t_circuit.all_operations())) - report.t_gates
     report.cliff_t_width = cirq.num_qubits(clifford_t_circuit)
@@ -244,6 +250,7 @@ def main(args=None) -> int:
         )
 
     t1 = time.time()
+    layt: res.ftqc.MovementLayout | res.ftqc.FactorySandwich
     if isinstance(arch, res.ftqc.DefaultMovement):
         layt = res.ftqc.MovementLayout(num_t_factories=facts, input_circuit=clifford_t_circuit)
     else:
@@ -262,16 +269,13 @@ def main(args=None) -> int:
 
     t1 = time.time()
     est = res.ftqc.ResourceEstimator(arc=arch)
-    serial_gate_counts = est.serial_circuit_cost(
-        primitive_circuit, pretty=False, verbose=verbose, layout=layt
-    )
+    serial_gate_counts = est.serial_circuit_cost(primitive_circuit, verbose=verbose, layout=layt)
     serial_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in serial_gate_counts.items()
     }
     total_time_serial = sum(serial_gate_times.values())
     parallel_gate_counts = est.parallel_circuit_cost(
         primitive_circuit,
-        pretty=False,
         verbose=verbose,
         layout=layt,
     )

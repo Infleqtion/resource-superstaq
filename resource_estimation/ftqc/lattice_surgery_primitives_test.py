@@ -73,7 +73,8 @@ def test_distil() -> None:
     gate = lsp.Distil("CCZ")
     assert str(gate) == "DISTIL(CCZ)"
     with pytest.raises(ValueError, match="Invalid resource"):
-        _ = lsp.Distil("Toffoli")
+        # Checking an invalid resource necessitates ignoring the Literals in the argument
+        _ = lsp.Distil("Toffoli")  # type: ignore[arg-type]
 
 
 def test_resource_correct() -> None:
@@ -81,8 +82,9 @@ def test_resource_correct() -> None:
     assert str(gate) == "ResourceCorrection(T)"
     gate = lsp.ResourceCorrection("CCZ")
     assert str(gate) == "ResourceCorrection(CCZ)"
+    # Checking an invalid resource necessitates ignoring the Literals in the argument
     with pytest.raises(ValueError, match="Invalid resource"):
-        _ = lsp.ResourceCorrection("Toffoli")
+        _ = lsp.ResourceCorrection("Toffoli")  # type: ignore[arg-type]
 
 
 def test_rotated_code_patch() -> None:
