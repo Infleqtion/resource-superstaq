@@ -278,20 +278,25 @@ def test_dynamic_T_resource_counts(mock_randint: mock.MagicMock) -> None:
     qubit = cirq.GridQubit(0, 0)
     static_correction = cirq.S.on(qubit)
     dynamic_correction = lsp.ResourceCorrection("T").on(qubit)
-    mock_randint.side_effect = [1, 0, 1, 0]
+    mock_randint.side_effect = [1, 0, 1, 0, 1, 1]
     static_s_gate_cost = arc.gate_cost(static_correction)
-    assert arc.gate_cost(dynamic_correction) == {}
+    assert arc.gate_cost(dynamic_correction, dynamic=True) == {}
     assert arc.gate_cost(static_correction) == static_s_gate_cost
 
-    assert arc.gate_cost(dynamic_correction) == static_s_gate_cost
+    assert arc.gate_cost(dynamic_correction, dynamic=True) == static_s_gate_cost
     assert arc.gate_cost(static_correction) == static_s_gate_cost
 
     static_correction_time = arc.op_time(static_correction)
-    assert arc.op_time(dynamic_correction) == 0.0
+    assert arc.op_time(dynamic_correction, dynamic=True) == 0.0
     assert arc.op_time(static_correction) == static_correction_time
 
-    assert arc.op_time(dynamic_correction) == static_correction_time
+    assert arc.op_time(dynamic_correction, dynamic=True) == static_correction_time
     assert arc.op_time(static_correction) == static_correction_time
+
+    # If we disable dynamic counts, even when the "roll" is says we don't have to do the gate we
+    # actually still do.
+    assert arc.op_time(dynamic_correction, dynamic=False) == static_correction_time
+    assert arc.gate_cost(dynamic_correction, dynamic=False) == static_s_gate_cost
 
 
 @mock.patch("resource_estimation.ftqc.architecture.randint")
@@ -314,27 +319,35 @@ def test_dynamic_CCZ_resource_counts(mock_randint: mock.MagicMock) -> None:
     correction_circuit.append(se_gate.on_each(*(qubit_b, qubit_c)))
     correction_circuit.append(cirq.H.on_each(*(qubit_a, qubit_b, qubit_c)))
     dynamic_op: cirq.Operation = lsp.ResourceCorrection("CCZ").on(qubit_a, qubit_b, qubit_c)
-    mock_randint.side_effect = [1, 0, 1, 0, 1, 0]
+    mock_randint.side_effect = [1, 0, 1, 0, 1, 0, 1, 1]
     est = ResourceEstimator(arc)
     normal_correction_cost = est.serial_circuit_cost(correction_circuit)
-    operation_dynamic_cost = arc.gate_cost(dynamic_op)
+    operation_dynamic_cost = arc.gate_cost(dynamic_op, dynamic=True)
     assert {} == operation_dynamic_cost
     # Should be correction applied on second flip
-    operation_dynamic_cost = arc.gate_cost(dynamic_op)
+    operation_dynamic_cost = arc.gate_cost(dynamic_op, dynamic=True)
     assert normal_correction_cost == operation_dynamic_cost
 
     normal_correction_time = est.parallel_circuit_time(correction_circuit)
-    operation_dynamic_time = arc.op_time(dynamic_op)
+    operation_dynamic_time = arc.op_time(dynamic_op, dynamic=True)
     assert 0.0 == operation_dynamic_time
-    operation_dynamic_time = arc.op_time(dynamic_op)
+    operation_dynamic_time = arc.op_time(dynamic_op, dynamic=True)
     assert isclose(normal_correction_time, operation_dynamic_time)
 
     parallel_correction_cost = est.parallel_circuit_cost(correction_circuit)
-    moment_dynamic_cost = arc.moment_cost(dynamic_op)
+    moment_dynamic_cost = arc.moment_cost(dynamic_op, dynamic=True)
     assert {} == moment_dynamic_cost
     # Should be correction applied on second flip
-    moment_dynamic_cost = arc.moment_cost(dynamic_op)
+    moment_dynamic_cost = arc.moment_cost(dynamic_op, dynamic=True)
     assert parallel_correction_cost == moment_dynamic_cost
+
+    # dynamic=False overrides the fact that we happen to flip 1 here
+    moment_dynamic_cost = arc.moment_cost(dynamic_op, dynamic=False)
+    assert parallel_correction_cost == moment_dynamic_cost
+
+    # dynamic=False overrides the fact that we happen to flip 1 here
+    moment_dynamic_cost = arc.gate_cost(dynamic_op, dynamic=False)
+    assert normal_correction_cost == operation_dynamic_cost
 
 
 def test_physical_qubit_count(lattice_estimator: est.ResourceEstimator) -> None:
