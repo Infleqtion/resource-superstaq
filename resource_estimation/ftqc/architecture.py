@@ -207,24 +207,25 @@ class Architecture(abc.ABC):
 
     ### Fundamental Cost Counting Methods ###
     # These should never be overwritten
-    def gate_cost(self, op: cirq.Operation) -> GateCounts:
+    def gate_cost(self, op: cirq.Operation, **kwargs: bool) -> GateCounts:
+        # May want to alias **kwargs type if in the future there are more different kwargs
         gate_op = _require_gate_operation(op=op)
         try:
-            return self.op_cost[type(gate_op.gate)](gate_op).gate_cost
+            return self.op_cost[type(gate_op.gate)](gate_op, **kwargs).gate_cost
         except KeyError:
             raise ValueError("Gate not recognized")
 
-    def op_time(self, op: cirq.Operation) -> float:
+    def op_time(self, op: cirq.Operation, **kwargs: bool) -> float:
         gate_op = _require_gate_operation(op=op)
         try:
-            return self.op_cost[type(gate_op.gate)](gate_op).op_time
+            return self.op_cost[type(gate_op.gate)](gate_op, **kwargs).op_time
         except KeyError:
             raise ValueError("Gate not recognized")
 
-    def moment_cost(self, op: cirq.Operation) -> GateCounts:
+    def moment_cost(self, op: cirq.Operation, **kwargs: bool) -> GateCounts:
         gate_op = _require_gate_operation(op=op)
         try:
-            return self.op_cost[type(gate_op.gate)](gate_op).moment_cost
+            return self.op_cost[type(gate_op.gate)](gate_op, **kwargs).moment_cost
         except KeyError:
             raise ValueError("Gate not recognized")
 
@@ -624,12 +625,13 @@ class DefaultMovement(Architecture):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
 
-    def correction_cost(self, op: cirq.GateOperation) -> CostDict:
+    def correction_cost(self, op: cirq.GateOperation, **kwargs: bool) -> CostDict:
         if not isinstance(op.gate, lsp.ResourceCorrection):
             raise TypeError("Operation is not an instance of ResourceCorrection")
-        return self._correction_cost(op.gate._resource)
+        dynamic = kwargs.get("dynamic")
+        return self._correction_cost(op.gate._resource, bool(dynamic))
 
-    def _correction_cost(self, resource: Literal["T", "CCZ"]) -> CostDict:
+    def _correction_cost(self, resource: Literal["T", "CCZ"], dynamic: bool) -> CostDict:
         # Total time for CCZ correction: t(H) + t(SE) + t(X) + t(SE) + 3 * t(CNOT) * t(SE) + t(H)
         # (can parallelize H gates, X gates, but 3 pairwise CNOTS means we have to do each one
         # sequentially) This means that the moment cost of this correction is one H moment cost, one
@@ -645,11 +647,11 @@ class DefaultMovement(Architecture):
         # correction
         outcome = randint(0, 1)
         if resource == "T":
-            if outcome:
+            if outcome and dynamic:
                 return CostDict(op_time=0.0, gate_cost={}, moment_cost={})
             else:
                 return self._s_cost
-        if outcome:
+        if outcome and dynamic:
             return CostDict(op_time=0.0, gate_cost={}, moment_cost={})
         else:
             h_gate_cost = collections.Counter(self._h_cost.gate_cost)
