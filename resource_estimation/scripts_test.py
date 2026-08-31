@@ -16,13 +16,11 @@ import sys
 from pathlib import Path
 
 
-REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
-
-
 def test_analyze_help() -> None:
+    repository_root = Path(__file__).resolve().parent.parent
     result = subprocess.run(
         [sys.executable, "-m", "scripts.analyze", "--help"],
-        cwd=REPOSITORY_ROOT,
+        cwd=repository_root,
         capture_output=True,
         text=True,
         check=False,
