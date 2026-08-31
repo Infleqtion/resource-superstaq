@@ -76,11 +76,11 @@ def test_logical_qubit_rejects_invalid_ids(
 ) -> None:
     with pytest.raises(error_type, match=message):
         codepatch.LogicalQubit(
-            patch_id=patch_id,
-            logical_index=logical_index,
+            patch_id=patch_id,  # type: ignore[arg-type]
+            logical_index=logical_index,  # type: ignore[arg-type]
             x_support={0},
             z_support={1},
-        )  # type: ignore[arg-type]
+        )
 
 
 @pytest.mark.parametrize("support", [{-1}, {0, -1}])
@@ -101,9 +101,11 @@ def test_code_patch_classes_are_abstract() -> None:
     assert not inspect.isabstract(codepatch.RotatedSurfaceCodePatch)
 
     with pytest.raises(TypeError, match="abstract class CodePatch"):
-        codepatch.CodePatch(patch_id=3, n=9, k=1, d=3)
+        codepatch.CodePatch(patch_id=3, n=9, k=1, d=3)  # type: ignore[abstract]
     with pytest.raises(TypeError, match="abstract class CSSCodePatch"):
-        codepatch.CSSCodePatch(patch_id=3, qldpc_code=codes.SurfaceCode(3))
+        codepatch.CSSCodePatch(  # type: ignore[abstract]
+            patch_id=3, qldpc_code=codes.SurfaceCode(3)
+        )
 
 
 def test_rotated_surface_code_patch_metadata() -> None:

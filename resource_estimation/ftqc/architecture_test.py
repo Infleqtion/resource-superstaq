@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import collections
+from collections.abc import Callable
 from math import ceil, pi
 
 import cirq
@@ -61,9 +62,11 @@ def test_architecture_rejects_even_code_distance() -> None:
         arch.DefaultLattice(d=4)
 
 
-def _legacy_surface_syndrome_cost(d: int, rounds: int, num_logical_qubits: int) -> dict[str, dict]:
+def _legacy_surface_syndrome_cost(
+    d: int, rounds: int, num_logical_qubits: int
+) -> dict[str, GateCounts]:
     patch = lsp.RotatedCodePatch(d)
-    gate_cost = {
+    gate_cost: GateCounts = {
         cirq.CZ: (patch.total_x_syndrome_cnots() + patch.total_z_syndrome_cnots())
         * num_logical_qubits
         * rounds,
@@ -78,7 +81,7 @@ def _legacy_surface_syndrome_cost(d: int, rounds: int, num_logical_qubits: int) 
         * rounds,
         cirq.ResetChannel: patch.num_measure_qubits * num_logical_qubits * rounds,
     }
-    moment_cost = {
+    moment_cost: GateCounts = {
         cirq.CZ: 4 * rounds,
         cirq.PhasedXZGate: 2 * rounds,
         cirq.MeasurementGate: rounds,
@@ -98,7 +101,7 @@ def _legacy_surface_syndrome_cost(d: int, rounds: int, num_logical_qubits: int) 
     ],
 )
 def test_architecture_syndrome_counts_match_legacy(
-    architecture_type: type[arch.Architecture],
+    architecture_type: Callable[..., arch.Architecture],
     permutation_moments_per_round: int,
 ) -> None:
     d = 5

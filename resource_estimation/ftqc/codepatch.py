@@ -140,7 +140,7 @@ class CSSCodePatch(CodePatch):
             patch_id=patch_id,
             n=int(n),
             k=int(k),
-            d=code_distance,
+            d=int(code_distance),
         )
 
     @property
