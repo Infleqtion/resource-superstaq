@@ -265,7 +265,7 @@ def test_general_exceptions(circuit5: cirq.Circuit) -> None:
     with pytest.raises(ValueError, match="No factories available"):
         _ = movement.available_factories(ftype="toffoli")  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="Not a recognized zone type"):
-        _ = movement.zone_qubits(zone_type="not a zone type")
+        _ = movement.zone_qubits(zone_type="not a zone type")  # type: ignore[arg-type]
 
 
 def test_reset_and_reload(circuit5: cirq.Circuit) -> None:

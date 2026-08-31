@@ -83,7 +83,7 @@ def test_resource_correct() -> None:
     gate = lsp.ResourceCorrection("CCZ")
     assert str(gate) == "ResourceCorrection(CCZ)"
     # Checking an invalid resource necessitates ignoring the Literals in the argument
-    with pytest.raises(ValueError, match="Invalid resource"):
+    with pytest.raises(TypeError, match="Invalid resource"):
         _ = lsp.ResourceCorrection("Toffoli")  # type: ignore[arg-type]
 
 

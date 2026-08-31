@@ -93,6 +93,7 @@ def test_all_primitives(estimator: est.ResourceEstimator) -> None:
     circuit += [lsp.SyndromeExtract(1, 1).on(q) for q in dummy_qubits]
     circuit += [lsp.ErrorCorrect(1).on(q) for q in dummy_qubits]
     arc = estimator.arc
+    layout: lyt.Layout
     if arc.movement:
         layout = lyt.MovementDistillery(
             input_circuit=circuit, num_ccz_factories=1, architecture="DSM", num_t_factories=1
@@ -169,7 +170,9 @@ def test_parallel_circuit_cost(
     expected_moment_cost = movement_estimator.arc.moment_cost(cirq.CNOT.on(qubit_a, qubit_b))
     assert estimated_moment_cost == expected_moment_cost
 
-    estimated_moment_cost = movement_estimator.parallel_circuit_cost(circuit=circuit, layout=column_layout)
+    estimated_moment_cost = movement_estimator.parallel_circuit_cost(
+        circuit=circuit, layout=column_layout
+    )
     assert estimated_moment_cost == {
         cirq.CZ: 1,
         cirq.PhasedXZGate: 2,
@@ -208,9 +211,9 @@ def test_error_handling(
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
     # Check Bad Lattice Surgery Circuit
     bad_circuit = cirq.Circuit([lsp.Cultivate(pi / 2).on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b)])
-    layout = lyt.Column(bad_circuit)
+    column_layout = lyt.Column(bad_circuit)
     with pytest.raises(ValueError, match="incompatible"):
-        _ = lattice_estimator.serial_circuit_cost(bad_circuit, layout=layout)
+        _ = lattice_estimator.serial_circuit_cost(bad_circuit, layout=column_layout)
 
     # Check Bad Movement Circuit
     bad_circuit = cirq.Circuit(
@@ -220,9 +223,9 @@ def test_error_handling(
             cirq.CNOT.on(qubit_a, qubit_b),
         ],
     )
-    layout = lyt.MovementLayout(bad_circuit, architecture="DSM")
+    movement_layout = lyt.MovementLayout(bad_circuit, architecture="DSM")
     with pytest.raises(ValueError, match="incompatible"):
-        _ = movement_estimator.serial_circuit_cost(bad_circuit, layout=layout)
+        _ = movement_estimator.serial_circuit_cost(bad_circuit, layout=movement_layout)
 
 
 # TODO: Might be worth having one or two more example tests for the critical path algorithm

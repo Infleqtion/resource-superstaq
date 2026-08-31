@@ -31,6 +31,7 @@ class Layout(abc.ABC):
     """Base class for layouts used by the fault tolerant compiler to track factory use and CNOT routing"""
 
     input_circuit: cirq.Circuit
+    architecture: typing.Literal["SSM", "MZO", "DSM", "DSNM"]
     num_t_factories: int = 0
     num_s_factories: int = 0
     num_ccz_factories: int = 0
@@ -39,6 +40,11 @@ class Layout(abc.ABC):
 
     def __post_init__(self) -> None:
         self.mapped_circuit: cirq.Circuit = cirq.Circuit()
+
+        self.inplace_cnot = self.architecture in ("MZO", "DSM")
+        self.measure_zones = self.architecture in ("MZO", "SSM")
+        self.interaction_zones = self.architecture in ("SSM")
+
         self.layout_graph: nx.Graph = nx.Graph()
         self._available_t_factories: collections.deque[tuple[cirq.GridQubit, ...]] = (
             collections.deque()
@@ -282,17 +288,15 @@ class MovementLayout(Layout):
         num_ccz_factories: int = 0,
         architecture: typing.Literal["SSM", "MZO", "DSM"] = "SSM",
     ) -> None:
-        self.inplace_cnot = architecture in ("MZO", "DSM")
-        self.measure_zones = architecture in ("MZO", "SSM")
-        self.interaction_zones = architecture in ("SSM")
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
             num_ccz_factories=num_ccz_factories,
             num_s_factories=0,
+            architecture=architecture,
         )
 
-    def _add_zones(self):
+    def _add_zones(self) -> None:
         G = self.layout_graph
         cols = max(node.col for node in G.nodes) + 1
         rows = max(node.row for node in G.nodes) + 1
@@ -318,7 +322,7 @@ class MovementLayout(Layout):
             )
         self.layout_graph = G
 
-    def zone_qubits(self, zone_type: typing.Literal["measure", "interact"]):
+    def zone_qubits(self, zone_type: typing.Literal["measure", "interact"]) -> list[cirq.GridQubit]:
         if zone_type == "measure":
             return [
                 node
@@ -334,7 +338,7 @@ class MovementLayout(Layout):
         else:
             raise ValueError(f"Not a recognized zone type: {zone_type}")
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         super().__post_init__()
         self._add_zones()
 
@@ -359,6 +363,7 @@ class Column(Layout):
             input_circuit=input_circuit,
             num_s_factories=num_s_factories,
             num_t_factories=num_t_factories,
+            architecture="DSNM",
         )
 
     def _generate(self) -> None:
@@ -433,6 +438,16 @@ class FactorySandwich(Layout):
     T | T | T | T
     """
 
+    def __init__(
+        self, input_circuit: cirq.Circuit, num_t_factories: int = 0, num_s_factories: int = 0
+    ) -> None:
+        super().__init__(
+            input_circuit=input_circuit,
+            num_t_factories=num_t_factories,
+            num_s_factories=num_s_factories,
+            architecture="DSNM",
+        )
+
     def _generate(self) -> None:
         """Places and assigns logical qubits according to the Sandwich configuration"""
         qubit_map: dict[cirq.Qid, cirq.GridQubit] = {}
@@ -487,10 +502,8 @@ class Embedded(Layout):
     So I wanted a Layout that could potentially be compatible with that kind of output
     """
 
-    # TODO: figure out a way o make the number of factories configurable
     def __init__(self, input_circuit: cirq.Circuit) -> None:
-        # TODO: Find the formula for this
-        super().__init__(input_circuit=input_circuit, num_s_factories=0, num_t_factories=0)
+        super().__init__(input_circuit=input_circuit, architecture="DSNM")
 
     def _generate(self) -> None:
         """Builds a large embedded logical qubit array by starting from a nearest neighbor array and adding rows/columns of other qubit types"""

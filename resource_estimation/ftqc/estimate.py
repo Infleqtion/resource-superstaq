@@ -18,8 +18,6 @@ import typing
 import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from functools import partial
-from typing import TYPE_CHECKING, ClassVar
 
 import cirq
 import networkx as nx
@@ -71,7 +69,10 @@ class ResourceEstimator:
     def serial_circuit_time(self, circuit: cirq.Circuit, layout: Layout) -> float:
         """Adds up the total physical time from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
-        return sum(self.arc.total_time(self.arc.gate_cost(op, layout=layout)) for op in circuit.all_operations())
+        return sum(
+            self.arc.total_time(self.arc.gate_cost(op, layout=layout))
+            for op in circuit.all_operations()
+        )
 
     def parallel_circuit_time(
         self, circuit: cirq.Circuit, layout: Layout, verbose: int = 0
@@ -141,7 +142,9 @@ class ResourceEstimator:
             # This qubit currently has the longest path
             big_qubit = max(op_qubits, key=qubit_times.__getitem__)
             big_time = qubit_times[big_qubit] + self.arc.op_time(op, layout=layout)
-            big_path = qubit_paths[big_qubit] + collections.Counter(self.arc.moment_cost(op, layout=layout))
+            big_path = qubit_paths[big_qubit] + collections.Counter(
+                self.arc.moment_cost(op, layout=layout)
+            )
             for qubit in op_qubits:
                 qubit_paths[qubit] = big_path
                 qubit_times[qubit] = big_time

@@ -24,7 +24,7 @@ import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 import resource_estimation.ftqc.layout as lyt
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.stim_functions import cultivate
-from resource_estimation.typing import GateCounts
+from resource_estimation.typing import GateCounts, _require_gate_operation
 
 
 @pytest.fixture
@@ -43,9 +43,13 @@ def test_architecture_exceptions(
     with pytest.raises(ValueError, match="Cultivation cost"):
         bad_cult = arch._require_gate_operation(lsp.Cultivate(1).on(cirq.GridQubit(0, 0)))
         _ = lattice_architecture.cultivate_cost(bad_cult)
-    # with pytest.raises(TypeError, match="require GridQubits"):
-    #     bad_move = arch._require_gate_operation(lsp.Move(zone=None).on(*cirq.LineQubit.range(2)))
-    #     _ = movement_architecture.move_cost(bad_move)
+    with pytest.raises(TypeError, match="instances of cirq.GridQubit"):
+        bad_move = arch._require_gate_operation(
+            css.MovementGate({0: 1}).on(*cirq.LineQubit.range(2))
+        )
+        _ = movement_architecture.move_cost(
+            bad_move, layout=lyt.MovementLayout(input_circuit=cirq.Circuit())
+        )
 
 
 def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
@@ -566,9 +570,7 @@ def test_dual_species_with_movement() -> None:
     # Check that partial penalty is consistent with expection of paying one move per CZ
     folded_with_full_penalty = mv_folded._cultivate_t_cost.moment_cost
     folded_with_partial_penalty = hm_folded._cultivate_t_cost.moment_cost
-    assert (
-        folded_with_partial_penalty[css.MovementGate] == folded_with_full_penalty[cirq.CZ]
-    )
+    assert folded_with_partial_penalty[css.MovementGate] == folded_with_full_penalty[cirq.CZ]
     # Check that the rest of the moments are the same
     del folded_with_full_penalty[css.MovementGate]
     del folded_with_partial_penalty[css.MovementGate]
@@ -694,7 +696,9 @@ def test_folded_architecture() -> None:
     assert folded_cultivation_time < normal_cultivation_time
 
 
-def test_logical_moves(movement_architecture: arch.DefaultMovement) -> None:  # TODO: Needs to be updated to work with CostDict
+def test_logical_moves(
+    movement_architecture: arch.DefaultMovement,
+) -> None:  # TODO: Needs to be updated to work with CostDict
     # Needs to test that logical movement gates have resources and that those resources make sense
     circuit = cirq.Circuit(cirq.H.on_each(cirq.LineQubit.range(6)))
     dsm_layout = lyt.MovementLayout(
@@ -710,6 +714,7 @@ def test_logical_moves(movement_architecture: arch.DefaultMovement) -> None:  # 
         architecture="SSM",
     )
     interaction_move = css.MovementGate({0: 1}).on(cirq.GridQubit(0, 1), cirq.GridQubit(-1, 2))
+    interaction_move = _require_gate_operation(interaction_move)
 
     # Parameters consistend for all considered moves
     dx, dy, patch_length, site_spacing = 1, 1, 14, 4
@@ -725,6 +730,7 @@ def test_logical_moves(movement_architecture: arch.DefaultMovement) -> None:  # 
 
     # Test MovementGate involving measurement zone qubit yields precompiled measurement zone cost
     measurement_move = css.MovementGate({0: 1}).on(cirq.GridQubit(1, 1), cirq.GridQubit(2, 2))
+    measurement_move = _require_gate_operation(measurement_move)
     expected_result = arch._measurement_zone_move_precompiled(
         dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
     ).op_time
@@ -733,6 +739,7 @@ def test_logical_moves(movement_architecture: arch.DefaultMovement) -> None:  # 
 
     # Test MovementGate on logical qubits yields precompiled inplace cost
     inplace_move = css.MovementGate({0: 1}).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 1))
+    inplace_move = _require_gate_operation(inplace_move)
     expected_result = arch._inplace_entanglement_move_precompiled(
         dx=dx,
         dy=dy,
@@ -769,9 +776,7 @@ def test_precompiled_moves() -> None:
     measure_zone_cost = arch._measurement_zone_move_precompiled(
         dx=2, dy=2, patch_length=5, site_spacing=3
     )
-    assert (
-        measure_zone_cost.gate_cost == measure_zone_cost.moment_cost == {css.MovementGate: 2}
-    )
+    assert measure_zone_cost.gate_cost == measure_zone_cost.moment_cost == {css.MovementGate: 2}
     expected_measure_time = arch._physical_move_time(1 * 3) + 2 * arch._physical_move_time(
         2 * 5 * 3
     )
@@ -820,7 +825,7 @@ def test_y_cult_on_movement() -> None:
 def test_distillation_cases(
     lattice_architecture: arch.DefaultLattice, movement_architecture: arch.DefaultMovement
 ) -> None:
-    
+
     t_layout = lyt.MovementDistillery(
         input_circuit=distil_15_to_1(),
         num_t_factories=1,
@@ -833,12 +838,17 @@ def test_distillation_cases(
         num_ccz_factories=1,
         architecture="SSM",
     )
-    # Confirm distil cost raises ValueError if called on other operation
-    # with pytest.raises(TypeError, match="Operation is not an instance of Distil"):
-    #     _ = movement_architecture.distil_cost(op=cirq.X.on(cirq.GridQubit(0, 0)), layout=t_layout)
+    # Confirm distil cost TypeError on non-GirdQubits
+    with pytest.raises(TypeError, match="Operation is not an instance of Distil"):
+        _ = movement_architecture.distil_cost(op=cirq.X.on(cirq.GridQubit(0, 0)), layout=t_layout)
     # Confirm that distil is only available to movement archs
     with pytest.raises(NotImplementedError, match="movement architectures only"):
         _ = lattice_architecture._distil_cost(resource="T")
+    # Confirm _distil_cost raises TypeError when provided wrong layout
+    with pytest.raises(TypeError, match="type MovementDistillery"):
+        _ = movement_architecture._distil_cost(
+            resource="T", layout=lyt.MovementLayout(input_circuit=distil_15_to_1())
+        )
     assert lsp.Distil in movement_architecture.op_cost
 
     # Make sure that distillation repetition parameter behaves as expected

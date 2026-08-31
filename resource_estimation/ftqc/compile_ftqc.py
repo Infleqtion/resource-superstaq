@@ -30,10 +30,10 @@ if TYPE_CHECKING:
     from typing import Iterator, Literal, Sequence
 
     from resource_estimation.ftqc.architecture import Architecture
-from resource_estimation.typing import _require_gate_operation
+    from resource_estimation.typing import GateKey
 
 from . import lattice_surgery_primitives as lsp
-from .layout import Layout, MovementDistillery
+from .layout import Layout, MovementDistillery, MovementLayout
 
 # IMPORTANT NOTES
 # Classical control is in the process of being implemented
@@ -362,9 +362,9 @@ def _decompose_to_primitives(
     return cirq.Circuit(ops)
 
 
-def add_moves(  # TODO: This function might need some type checking TLC
+def add_moves(
     circuit: cirq.Circuit,
-    layout: Layout,
+    layout: MovementLayout,
     verbose: int = 0,
 ) -> cirq.Circuit:
     """Handles replacement moves for both alley movement and interaction zone movement"""
@@ -373,12 +373,12 @@ def add_moves(  # TODO: This function might need some type checking TLC
 
     interaction_cycle = itertools.cycle(layout.zone_qubits("interact"))
     measurement_cycle = itertools.cycle(layout.zone_qubits("measure"))
-    ops_to_replace = [cirq.CNOT]
+    ops_to_replace: list[GateKey] = [cirq.CNOT]
     if layout.measure_zones:
         ops_to_replace.append(cirq.MeasurementGate)
-    ops_to_replace = cirq.Gateset(*ops_to_replace)
+    replacement_gateset = cirq.Gateset(*ops_to_replace)
 
-    def map_func(op: cirq.Operation, moment_idx: int) -> cirq.OP_TREE:
+    def map_func(op: cirq.Operation, moment_idx: int) -> Iterator[cirq.OP_TREE]:
         if verbose:
             knock_off_tqdm(
                 moment_idx=moment_idx,
@@ -386,7 +386,7 @@ def add_moves(  # TODO: This function might need some type checking TLC
                 tstart=tstart,
                 message="Adding Qubit Movement:",
             )
-        if op not in ops_to_replace:
+        if op not in replacement_gateset:
             yield op
         else:
             move = css.MovementGate({0: 1})
@@ -470,7 +470,7 @@ def ft_compile(
             verbose=verbose,
         )
 
-    if arc.zone_ops.gates or arc.alley_ops.gates:
+    if isinstance(layout, MovementLayout):
         circuit = add_moves(
             circuit=circuit,
             layout=layout,

@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import typing
 from functools import cached_property
 
 import cirq
@@ -275,7 +276,7 @@ class Distil(cirq.Gate):
 class ResourceCorrection(cirq.Gate):
     def __init__(self, resource: typing.Literal["T", "CCZ"]) -> None:
         if resource not in ("T", "CCZ"):
-            raise ValueError(f"Invalid resource for Correction gate: {resource!r}")
+            raise TypeError(f"Invalid resource for Correction gate: {resource!r}")
         self._resource: typing.Literal["T", "CCZ"] = resource
         self._num_qubits = 3 if resource == "CCZ" else 1
 
@@ -283,7 +284,7 @@ class ResourceCorrection(cirq.Gate):
         return self._num_qubits
 
     @property
-    def resource(self) -> typing.Literal["T", "CCZ"] | None:
+    def resource(self) -> typing.Literal["T", "CCZ"]:
         return self._resource
 
     def __str__(self) -> str:

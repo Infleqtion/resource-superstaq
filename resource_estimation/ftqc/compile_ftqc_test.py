@@ -487,7 +487,7 @@ def test_t_movement(t_circuit: cirq.Circuit) -> None:
     )
 
 
-def test_t_lattice(t_circuit: cirq.Circuit):
+def test_t_lattice(t_circuit: cirq.Circuit) -> None:
     lattice_layout = Column(t_circuit)
     lattice_architecture = arch.DefaultLattice(
         d=7,
@@ -635,7 +635,7 @@ def test_hm_moves() -> None:
     )
 
 
-def test_replace_cirq_op_distil_t(bell_circuit) -> None:
+def test_replace_cirq_op_distil_t(bell_circuit: cirq.Circuit) -> None:
     distillery_layout = MovementDistillery(
         bell_circuit, num_t_factories=2, num_ccz_factories=0, architecture="DSM"
     )
@@ -708,17 +708,18 @@ def test_different_rounds_distil() -> None:
                 assert op.gate.rounds == k
 
 
-def test_teleport_resource_exceptions():
+def test_teleport_resource_exceptions() -> None:
     invalid_resource = cirq.CCZ.on(*(cirq.GridQubit(0, i) for i in range(3)))
     layout = MovementLayout(cirq.Circuit(), architecture="DSM")
     with pytest.raises(ValueError, match="Invalid resource"):
         _ = comp.teleport_resource(invalid_resource, layout)
-    
+
     invalid_qubit = cirq.LineQubit(0)
     with pytest.raises(TypeError, match="Qubits must be instances"):
         _ = comp.teleport_resource(cirq.T.on(invalid_qubit), layout)
 
-def test_exceptions(bell_circuit: cirq.Circuit):
+
+def test_exceptions(bell_circuit: cirq.Circuit) -> None:
     # Test ft compile rejects incompatible layout-architecture combos
     inplace_layout = MovementLayout(input_circuit=bell_circuit, architecture="DSM")
     zoned_arc = arch.DefaultMovement()
