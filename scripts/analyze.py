@@ -23,7 +23,8 @@ import cirq
 import cirq_superstaq as css
 
 import resource_estimation as res
-from resource_estimation.analysis import C, STR2ARCH, make_pretty
+from resource_estimation.analysis import STR2ARCH
+from resource_estimation.visualizations import C, make_pretty
 
 if typing.TYPE_CHECKING:
     pass
