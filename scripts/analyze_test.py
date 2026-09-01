@@ -147,10 +147,3 @@ def test_cases(arch: str, fold: bool, t_path: bool, circuit_file: Path) -> None:
     else:
         exit_code = main(args)
         assert exit_code == 0
-
-
-# def test_analyze_cases() -> None:
-# need to override cd/cr/epc
-# value error for incomplete override
-# T path generation
-# fold on/off
