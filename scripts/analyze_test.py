@@ -115,10 +115,10 @@ def test_override_error_params(
         error_per_cult=error_per_cult,
     )
     exit_code = main(args)
+    assert exit_code == 0
     expected_saved_file = "re_test_circuit-99-ssm-20-0_0.json"
-    with open(expected_saved_file, "r") as f:
+    with open(expected_saved_file) as f:
         saved_data = json.load(f)
-    print(saved_data)
     assert saved_data["distance"] == code_distance
     assert saved_data["cultivation_repetition"] == cultivation_repetition
     assert saved_data["eps"] == error_per_rz
