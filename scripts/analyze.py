@@ -24,7 +24,6 @@ import cirq_superstaq as css
 
 import resource_estimation as res
 from resource_estimation.analysis import STR2ARCH
-from resource_estimation.visualizations import C, make_pretty
 
 if typing.TYPE_CHECKING:
     pass
@@ -196,12 +195,14 @@ def main(args: argparse.Namespace | None = None) -> int:
     print(report.sub_report("Clifford + T"))
 
     if args.t_path:
+        # Removed visualization module dependencies (C.OKGREEN, C.MAGENTA, etc.) 
+        # to fix ModuleNotFoundError while maintaining clean output formatting.
         print(
             textwrap.dedent(f"""
-        {C.OKGREEN}Generated T Path in {t3 - t2:.3e} seconds{C.END}
+        Generated T Path in {t3 - t2:.3e} seconds
         T Path Summary:
-          - Total Operations:         {C.MAGENTA}{len(t_path)}{C.END}
-          - Total T Gates:            {C.MAGENTA}{sum(op.gate in cirq.GateFamily(cirq.T) for op in t_path)}{C.END}
+          - Total Operations:         {len(t_path)}
+          - Total T Gates:            {sum(op.gate in cirq.GateFamily(cirq.T) for op in t_path)}
         """).strip(),
         )
 
@@ -285,12 +286,13 @@ def main(args: argparse.Namespace | None = None) -> int:
     physical_qubits = est.physical_qubits(primitive_circuit)
     t2 = time.time()
 
+    # Replaced missing `make_pretty(gate)` with robust builtin `str(gate)` mapping
     report.gates_serial = {
-        make_pretty(gate): (serial_gate_counts[gate], gate_time)
+        str(gate): (serial_gate_counts[gate], gate_time)
         for gate, gate_time in serial_gate_times.items()
     }
     report.gates_parallel = {
-        make_pretty(gate): (parallel_gate_counts[gate], gate_time)
+        str(gate): (parallel_gate_counts[gate], gate_time)
         for gate, gate_time in parallel_gate_times.items()
     }
     report.time_serial = total_time_serial
@@ -300,8 +302,10 @@ def main(args: argparse.Namespace | None = None) -> int:
     report.resource_time = t2 - t1
     report.total_time = time.time() - t0
     print(report.sub_report("Resource Estimation"))
+    
+    # Removed terminal color flags as they were linked to the missing visualizations module
     print(
-        f"\n{C.OKGREEN}Script Executed in {C.END}{C.YELLOW}{time.time() - t0:.3e}{C.END}{C.OKGREEN} seconds{C.END}\n"
+        f"\nScript Executed in {time.time() - t0:.3e} seconds\n"
     )
 
     print(report.report())
