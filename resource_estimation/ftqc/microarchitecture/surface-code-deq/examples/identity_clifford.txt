@@ -1,0 +1,1 @@
+# An empty logical circuit: the LER baseline should have no failures at p = 0.

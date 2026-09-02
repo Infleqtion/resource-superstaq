@@ -1,0 +1,4 @@
+# A minimal logical-Clifford gate-list input for the LER runner.
+H 0
+S 1
+CX 0 1

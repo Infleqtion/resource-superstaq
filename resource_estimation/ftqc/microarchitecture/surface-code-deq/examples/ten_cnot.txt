@@ -1,0 +1,12 @@
+# Ten CNOTs are the identity. Use with --no-inverse to expose the two patches
+# to exactly ten consecutive FaultTolerantCNOT gadgets.
+CX 0 1
+CX 0 1
+CX 0 1
+CX 0 1
+CX 0 1
+CX 0 1
+CX 0 1
+CX 0 1
+CX 0 1
+CX 0 1
