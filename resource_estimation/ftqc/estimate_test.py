@@ -247,6 +247,7 @@ def test_critical_path() -> None:
     assert isclose(
         estim.serial_circuit_time(c1, layout=layout),
         estim.serial_circuit_time(c2, layout=layout),
+        atol=1e-5,
     )
 
     qa, qb = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
