@@ -17,17 +17,12 @@ from __future__ import annotations
 import argparse
 import textwrap
 import time
-import typing
 
 import cirq
 import cirq_superstaq as css
 
 import resource_estimation as res
-from resource_estimation.analysis import STR2ARCH
-
-if typing.TYPE_CHECKING:
-    pass
-from resource_estimation.visualizations import C, make_pretty
+from resource_estimation.analysis import STR2ARCH, C, make_pretty
 
 
 def parse_args() -> argparse.Namespace:
@@ -311,7 +306,7 @@ def main(args: argparse.Namespace | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
     import warnings
 
