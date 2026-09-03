@@ -29,6 +29,7 @@ import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.compile_ftqc import add_moves
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
+from resource_estimation.ftqc.layout import MovementDistillery
 from resource_estimation.ftqc.stim_functions import cultivate
 from resource_estimation.typing import CostDict, GateCounts, GateKey, _require_gate_operation
 
@@ -333,7 +334,7 @@ class Architecture(abc.ABC):
     def _cultivate_t_cost(self) -> CostDict:  # pragma: no cover
         raise NotImplementedError
 
-    def _distil_cost(self, resource: Literal["T", "CCZ"]) -> CostDict:
+    def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
         raise NotImplementedError(
             "Distillation is currently reserved to distillation movement architectures only"
         )
@@ -474,7 +475,7 @@ class Architecture(abc.ABC):
     ### Extra Methods ###
     def __post_init__(self) -> None:
         # Initialize with all shared Primitives then add special ones later
-        self.op_cost: dict[type[cirq.Gate], Callable[[cirq.GateOperation], CostDict]] = {
+        self.op_cost: dict[type[cirq.Gate], Callable[..., CostDict]] = {
             lsp.Cultivate: self.cultivate_cost,
             lsp.SyndromeExtract: self.syndrome_extract_cost,
             lsp.ErrorCorrect: self.error_correct_cost,
@@ -891,27 +892,29 @@ class DefaultMovement(Architecture):
         new_time = self.total_time(new_moment_cost)
         return CostDict(op_time=new_time, gate_cost=new_gate_cost, moment_cost=new_moment_cost)
 
-    def distil_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
+    def distil_cost(
+        self, op: cirq.GateOperation, layout: MovementDistillery, **kwargs: object
+    ) -> CostDict:
         if not isinstance(op.gate, lsp.Distil):
             raise TypeError("Operation is not an instance of Distil")
-        return self._distil_cost(op.gate._resource)
+        return self._distil_cost(op.gate._resource, layout=layout)
 
-    def _distil_cost(self, resource: Literal["T", "CCZ"]) -> CostDict:
+    def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
+        if not isinstance(layout, MovementDistillery):
+            raise TypeError("layout must be a MovementDistillery for _distil_cost().")
         if resource == "T":
             mapped_circuit = distil_15_to_1()
         elif resource == "CCZ":
             mapped_circuit = ccz_8_to_1()
-        else:
-            raise ValueError(f"Unknown distillation resource: {resource!r}")
         with_moves = add_moves(
             mapped_circuit,
             zone_ops=self.zone_ops,
             alley_ops=self.alley_ops,
         )
         estimator = ResourceEstimator(self)
-        rep_time = estimator.parallel_circuit_time(with_moves)
-        rep_moments = estimator.parallel_circuit_cost(with_moves)
-        rep_gates = estimator.serial_circuit_cost(with_moves)
+        rep_time = estimator.parallel_circuit_time(with_moves, layout=layout)
+        rep_moments = estimator.parallel_circuit_cost(with_moves, layout=layout)
+        rep_gates = estimator.serial_circuit_cost(with_moves, layout=layout)
         op_time = rep_time * self.distillation_repetition
         moment_cost: GateCounts = {
             key: val * self.distillation_repetition for key, val in rep_moments.items()
