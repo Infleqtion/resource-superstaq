@@ -25,6 +25,7 @@ from tqdm import tqdm
 
 if typing.TYPE_CHECKING:  # pragma: no cover
     from resource_estimation.ftqc.architecture import Architecture
+    from resource_estimation.ftqc.layout import Layout
     from resource_estimation.typing import GateCounts, GateKey
 
 from resource_estimation.typing import _require_gate_operation
@@ -50,6 +51,7 @@ class ResourceEstimator:
     def serial_circuit_cost(
         self,
         circuit: cirq.Circuit,
+        layout: Layout,
         verbose: int = 0,
     ) -> dict[GateKey, int]:
         """Counts up the total physical gates from all logical primitives in the input circuit"""
@@ -61,15 +63,17 @@ class ResourceEstimator:
             colour="cyan",
             disable=not bool(verbose),
         ):
-            cost += collections.Counter(self.arc.gate_cost(op))
+            cost += collections.Counter(self.arc.gate_cost(op, layout=layout))
         return {op: val for op, val in cost.items()}
 
-    def serial_circuit_time(self, circuit: cirq.Circuit) -> float:
+    def serial_circuit_time(self, circuit: cirq.Circuit, layout: Layout) -> float:
         """Adds up the total physical time from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
-        return sum(self.arc.total_time(self.arc.gate_cost(op)) for op in circuit.all_operations())
+        return sum(self.arc.op_time(op, layout=layout) for op in circuit.all_operations())
 
-    def parallel_circuit_time(self, circuit: cirq.Circuit, verbose: int = 0) -> float:
+    def parallel_circuit_time(
+        self, circuit: cirq.Circuit, layout: Layout, verbose: int = 0
+    ) -> float:
         """Estimation of the critical path in the input circuit according to the most expensive operation per moment"""
         qubit_times: dict[cirq.Qid, float] = dict.fromkeys(circuit.all_qubits(), 0.0)
         total_ops = len(list(circuit.all_operations()))
@@ -77,12 +81,14 @@ class ResourceEstimator:
             circuit.all_operations(), disable=not verbose, total=total_ops, colour="cyan"
         ):
             big_time = max(qubit_times[q] for q in op.qubits)
-            big_time += self.arc.op_time(op)
+            big_time += self.arc.op_time(op, layout=layout)
             for qubit in op.qubits:
                 qubit_times[qubit] = big_time
         return max(qubit_times.values())
 
-    def critical_path(self, circuit: cirq.Circuit, verbose: int = 0) -> list[cirq.Operation]:
+    def critical_path(
+        self, circuit: cirq.Circuit, layout: Layout, verbose: int = 0
+    ) -> list[cirq.Operation]:
         """Returns the circuit's critical path in terms of the logical primitive operations
         Is very slow and expensive
         """
@@ -106,7 +112,7 @@ class ResourceEstimator:
             big_path = qubit_paths[big_qubit]
             big_time = qubit_times[big_qubit]
             big_path.append(op)
-            big_time += self.arc.op_time(op)
+            big_time += self.arc.op_time(op, layout=layout)
             for qubit in op_qubits:
                 qubit_paths[qubit] = big_path.copy()
                 qubit_times[qubit] = big_time
@@ -117,6 +123,7 @@ class ResourceEstimator:
     def parallel_circuit_cost(
         self,
         circuit: cirq.Circuit,
+        layout: Layout,
         verbose: int = 0,
     ) -> GateCounts:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
@@ -131,8 +138,10 @@ class ResourceEstimator:
             op_qubits = op.qubits
             # This qubit currently has the longest path
             big_qubit = max(op_qubits, key=qubit_times.__getitem__)
-            big_time = qubit_times[big_qubit] + self.arc.op_time(op)
-            big_path = qubit_paths[big_qubit] + collections.Counter(self.arc.moment_cost(op))
+            big_time = qubit_times[big_qubit] + self.arc.op_time(op, layout=layout)
+            big_path = qubit_paths[big_qubit] + collections.Counter(
+                self.arc.moment_cost(op, layout=layout)
+            )
             for qubit in op_qubits:
                 qubit_paths[qubit] = big_path
                 qubit_times[qubit] = big_time
