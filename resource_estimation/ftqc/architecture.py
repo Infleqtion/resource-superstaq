@@ -207,24 +207,24 @@ class Architecture(abc.ABC):
 
     ### Fundamental Cost Counting Methods ###
     # These should never be overwritten
-    def gate_cost(self, op: cirq.Operation) -> GateCounts:
+    def gate_cost(self, op: cirq.Operation, **kwargs: object) -> GateCounts:
         gate_op = _require_gate_operation(op=op)
         try:
-            return self.op_cost[type(gate_op.gate)](gate_op).gate_cost
+            return self.op_cost[type(gate_op.gate)](gate_op, **kwargs).gate_cost
         except KeyError:
             raise ValueError("Gate not recognized")
 
-    def op_time(self, op: cirq.Operation) -> float:
+    def op_time(self, op: cirq.Operation, **kwargs: object) -> float:
         gate_op = _require_gate_operation(op=op)
         try:
-            return self.op_cost[type(gate_op.gate)](gate_op).op_time
+            return self.op_cost[type(gate_op.gate)](gate_op, **kwargs).op_time
         except KeyError:
             raise ValueError("Gate not recognized")
 
-    def moment_cost(self, op: cirq.Operation) -> GateCounts:
+    def moment_cost(self, op: cirq.Operation, **kwargs: object) -> GateCounts:
         gate_op = _require_gate_operation(op=op)
         try:
-            return self.op_cost[type(gate_op.gate)](gate_op).moment_cost
+            return self.op_cost[type(gate_op.gate)](gate_op, **kwargs).moment_cost
         except KeyError:
             raise ValueError("Gate not recognized")
 
@@ -337,7 +337,7 @@ class Architecture(abc.ABC):
     ### Top Level Cost Methods ###
     # Functions used to interpret the costs of Primitives in the form of cirq operations
     # The ones here are common among all architectures currently
-    def cultivate_cost(self, op: cirq.GateOperation) -> CostDict:
+    def cultivate_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         assert isinstance(op.gate, lsp.Cultivate)
         theta = op.gate.theta
         if np.isclose(theta, np.pi / 2):
@@ -346,7 +346,7 @@ class Architecture(abc.ABC):
             return self._cultivate_t_cost
         raise ValueError(f"Cultivation cost is not defined for angle: {theta}")
 
-    def syndrome_extract_cost(self, op: cirq.Operation) -> CostDict:
+    def syndrome_extract_cost(self, op: cirq.Operation, **kwargs: object) -> CostDict:
         cost_dict = _syndrome_extract_cost(
             rounds=self.rounds,
             num_logical_qubits=len(op.qubits),
@@ -355,19 +355,19 @@ class Architecture(abc.ABC):
         cost_dict.op_time = self.total_time(moment_cost_dict=cost_dict.moment_cost)
         return cost_dict
 
-    def error_correct_cost(self, op: cirq.GateOperation) -> CostDict:
+    def error_correct_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         return CostDict(op_time=0, moment_cost={}, gate_cost={})
 
-    def measure_cost(self, op: cirq.GateOperation) -> CostDict:
+    def measure_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         return self._measure_cost
 
-    def x_cost(self, op: cirq.GateOperation) -> CostDict:
+    def x_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         return self._x_cost
 
-    def z_cost(self, op: cirq.GateOperation) -> CostDict:
+    def z_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         return self._z_cost
 
-    def reset_channel_cost(self, op: cirq.GateOperation) -> CostDict:
+    def reset_channel_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         gate_cost: GateCounts = {
             type(op.gate): op.gate.num_qubits() * self.patch.num_physical_qubits
         }
@@ -375,10 +375,10 @@ class Architecture(abc.ABC):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
 
-    def i_cost(self, op: cirq.GateOperation) -> CostDict:
+    def i_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         return self._i_cost
 
-    def h_cost(self, op: cirq.GateOperation) -> CostDict:
+    def h_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         return self._h_cost
 
     ### Extra Methods ###
@@ -447,7 +447,7 @@ class DefaultLattice(Architecture):
         del self._phys_gate_times[cirq.QubitPermutationGate]  # Remove PermutationGate
         self.__post_init__()
 
-    def split_cost(self, op: cirq.GateOperation) -> CostDict:
+    def split_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         assert isinstance(op.gate, lsp.Split)
         smooth = op.gate.smooth
         cached_cost = _split_cost(smooth, self.d)
@@ -460,7 +460,7 @@ class DefaultLattice(Architecture):
         cost_dict.op_time = op_time
         return cost_dict
 
-    def merge_cost(self, op: cirq.GateOperation) -> CostDict:
+    def merge_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         assert isinstance(op.gate, lsp.Merge)
         k = op.gate.num_qubits()
         cached_cost = _merge_cost(self.d, k, op.gate.smooth)
@@ -580,10 +580,10 @@ class DefaultMovement(Architecture):
 
     zone_ops = cirq.Gateset(cirq.CNOT, cirq.MeasurementGate)
 
-    def cnot_cost(self, op: cirq.GateOperation) -> CostDict:
+    def cnot_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         return self._cnot_cost
 
-    def syndrome_extract_cost(self, op: cirq.Operation) -> CostDict:
+    def syndrome_extract_cost(self, op: cirq.Operation, **kwargs: object) -> CostDict:
         # Build from the base cost of Syndrome Extraction by adding movement penalties CZ and Measurement moments
         base_cost = copy(super().syndrome_extract_cost(op))
         moment_cost = base_cost.moment_cost
@@ -624,7 +624,7 @@ class DefaultMovement(Architecture):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
 
-    def correction_cost(self, op: cirq.GateOperation) -> CostDict:
+    def correction_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         if not isinstance(op.gate, lsp.ResourceCorrection):
             raise TypeError("Operation is not an instance of ResourceCorrection")
         return self._correction_cost(op.gate._resource)
@@ -696,7 +696,7 @@ class DefaultMovement(Architecture):
                 op_time=total_time, gate_cost=overall_gate_cost, moment_cost=overall_moment_cost
             )
 
-    def s_cost(self, op: cirq.Operation) -> CostDict:
+    def s_cost(self, op: cirq.Operation, **kwargs: object) -> CostDict:
         return self._s_cost
 
     @cached_property
@@ -730,7 +730,7 @@ class DefaultMovement(Architecture):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
 
-    def move_cost(self, op: cirq.GateOperation) -> CostDict:
+    def move_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         """Method to handle both types of movement
         The maximum move time should be 500us, which corresponds to travelling to a zone
         Everything else should be penalized by distance away up to a distance of 500us
@@ -801,7 +801,7 @@ class DefaultMovement(Architecture):
         new_time = self.total_time(new_moment_cost)
         return CostDict(op_time=new_time, gate_cost=new_gate_cost, moment_cost=new_moment_cost)
 
-    def distil_cost(self, op: cirq.GateOperation) -> CostDict:
+    def distil_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         if not isinstance(op.gate, lsp.Distil):
             raise TypeError("Operation is not an instance of Distil")
         return self._distil_cost(op.gate._resource)
@@ -860,7 +860,7 @@ class DualSpeciesMovement(DefaultMovement):
     zone_ops = cirq.Gateset()
 
     # Syndrome Extract from Lattice Surgery
-    def syndrome_extract_cost(self, op: cirq.Operation) -> CostDict:
+    def syndrome_extract_cost(self, op: cirq.Operation, **kwargs: object) -> CostDict:
         # Get the syndrome extraction cost without the atom shuttling
         cost_dict = _syndrome_extract_cost(
             rounds=self.rounds,
@@ -932,7 +932,7 @@ class MeasureZonesOnly(DefaultMovement):
     #       b) Cultivate S with "inplace" procedure (Class must inherit from Lattice)
     # For now, I am going with option a), which is the same as DefaultMovement
 
-    def syndrome_extract_cost(self, op: cirq.Operation) -> CostDict:
+    def syndrome_extract_cost(self, op: cirq.Operation, **kwargs: object) -> CostDict:
         """Uses lattice surgery Syndrome Extraction but adds moves associated with the measurements.
         Since this class is a Movement architecture, its rounds should be low, in accordance with the promise of correlated decoding.
         """
