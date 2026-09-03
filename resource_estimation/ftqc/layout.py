@@ -298,6 +298,9 @@ class MovementLayout(Layout):
 
     def _add_zones(self) -> None:
         G = self.layout_graph
+        if not G:
+            self.layout_graph = G
+            return
         cols = max(node.col for node in G.nodes) + 1
         rows = max(node.row for node in G.nodes) + 1
         if self.interaction_zones:  # Place an interaction zone in the -1 row
