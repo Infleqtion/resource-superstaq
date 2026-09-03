@@ -70,8 +70,7 @@ class ResourceEstimator:
         """Adds up the total physical time from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
         return sum(
-            self.arc.total_time(self.arc.gate_cost(op, layout=layout))
-            for op in circuit.all_operations()
+            self.arc.op_time(op, layout=layout) for op in circuit.all_operations()
         )
 
     def parallel_circuit_time(

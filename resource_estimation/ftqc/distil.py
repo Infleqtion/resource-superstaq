@@ -209,7 +209,7 @@ def precompute_distil_cost(
     else:
         raise ValueError(f"Unknown distillation resource: {resource!r}")
     circuit_block = (
-        tuple(q for q in mapped_circuit.all_qubits() if q not in mapped_circuit_factory)
+        tuple(sorted(q for q in mapped_circuit.all_qubits() if q not in mapped_circuit_factory))
         + mapped_circuit_factory
     )
     layout_block = layout.distillation_block(layout_factory)
