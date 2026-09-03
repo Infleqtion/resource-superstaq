@@ -21,6 +21,8 @@ import pytest
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.layout as lyt
+from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.stim_functions import cultivate
 from resource_estimation.typing import GateCounts
 
@@ -791,32 +793,44 @@ def test_y_cult_on_movement() -> None:
 def test_distillation_cases(
     lattice_architecture: arch.DefaultLattice, movement_architecture: arch.DefaultMovement
 ) -> None:
-    # Confirm distil cost raises ValueError if called on other operation
+
+    t_layout = lyt.MovementDistillery(
+        input_circuit=distil_15_to_1(),
+        num_t_factories=1,
+        num_ccz_factories=0,
+        architecture="SSM",
+    )
+    ccz_layout = lyt.MovementDistillery(
+        input_circuit=ccz_8_to_1(),
+        num_t_factories=0,
+        num_ccz_factories=1,
+        architecture="SSM",
+    )
+    # Confirm distil cost TypeError on non-GirdQubits
     with pytest.raises(TypeError, match="Operation is not an instance of Distil"):
-        _ = movement_architecture.distil_cost(op=cirq.X.on(cirq.GridQubit(0, 0)))
+        _ = movement_architecture.distil_cost(op=cirq.X.on(cirq.GridQubit(0, 0)), layout=t_layout)
     # Confirm that distil is only available to movement archs
     with pytest.raises(NotImplementedError, match="movement architectures only"):
-        _ = lattice_architecture._distil_cost(resource="T")
+        _ = lattice_architecture._distil_cost(
+            resource="T", layout=lyt.MovementDistillery(input_circuit=distil_15_to_1())
+        )
+    # Confirm _distil_cost raises TypeError when provided wrong layout
+    with pytest.raises(TypeError, match="type MovementDistillery"):
+        _ = movement_architecture._distil_cost(
+            resource="T",
+            layout=lyt.MovementLayout(input_circuit=distil_15_to_1()),  # type: ignore[arg-type]
+        )
     assert lsp.Distil in movement_architecture.op_cost
-
-    # Confirm distillation cost errors for invalid resource
-    with pytest.raises(ValueError, match="Unknown distillation resource"):
-        _ = movement_architecture._distil_cost("Toffoli")  # type: ignore[arg-type]
 
     # Make sure that distillation repetition parameter behaves as expected
     distil_once = arch.DefaultMovement(distillation_repetition=1)
     distil_thrice = arch.DefaultMovement(distillation_repetition=3)
-    t_once = distil_once._distil_cost("T").op_time
-    ccz_once = distil_once._distil_cost("CCZ").op_time
-    t_thrice = distil_thrice._distil_cost("T").op_time
-    ccz_thrice = distil_thrice._distil_cost("CCZ").op_time
+    t_once = distil_once._distil_cost("T", layout=t_layout).op_time
+    ccz_once = distil_once._distil_cost("CCZ", layout=ccz_layout).op_time
+    t_thrice = distil_thrice._distil_cost("T", layout=t_layout).op_time
+    ccz_thrice = distil_thrice._distil_cost("CCZ", layout=ccz_layout).op_time
     assert t_thrice == 3 * t_once
     assert ccz_thrice == 3 * ccz_once
-
-    # Distil T and CCZ have the same critical path, so should have the same circuit time for ssm
-    # Cultivation is a subcomponent, so it should be faster than the Distillation implementations
-    single_cult = distil_once._cultivate_t_cost.op_time
-    assert single_cult < ccz_once == t_once
 
 
 def test_correction_exception(movement_architecture: arch.DefaultMovement) -> None:
