@@ -217,7 +217,7 @@ def precompute_distil_cost(
         q_circuit: q_layout for q_circuit, q_layout in zip(circuit_block, layout_block)
     }
     remapped_circuit = mapped_circuit.transform_qubits(qmap)
-    embedded_circuit = add_moves(remapped_circuit, zone_ops=arc.zone_ops, alley_ops=arc.alley_ops)
+    embedded_circuit = add_moves(remapped_circuit, layout=layout)
     estimator = ResourceEstimator(arc)
     op_time = estimator.parallel_circuit_time(embedded_circuit, layout=layout)
     moment_cost = estimator.parallel_circuit_cost(embedded_circuit, layout=layout)

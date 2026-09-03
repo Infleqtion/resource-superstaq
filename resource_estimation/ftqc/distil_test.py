@@ -53,4 +53,4 @@ def test_precompute_distil_cost() -> None:
     cult = arc._cultivate_t_cost.op_time
     t_distil = precompute_distil_cost("T", layout=layout, arc=arc).op_time
     ccz_distil = precompute_distil_cost("CCZ", layout=layout, arc=arc).op_time
-    assert cult <= ccz_distil <= t_distil
+    assert cult < ccz_distil < t_distil
