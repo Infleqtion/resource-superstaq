@@ -331,7 +331,7 @@ class Architecture(abc.ABC):
     def _cultivate_t_cost(self) -> CostDict:  # pragma: no cover
         raise NotImplementedError
 
-    def _distil_cost(self, resource: Literal["T", "CCZ"], **kwargs: object) -> CostDict:
+    def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
         raise NotImplementedError(
             "Distillation is currently reserved to distillation movement architectures only"
         )
@@ -909,9 +909,8 @@ class DefaultMovement(Architecture):
             raise TypeError("Operation is not an instance of Distil")
         return self._distil_cost(op.gate._resource, layout=layout)
 
-    def _distil_cost(self, resource: Literal["T", "CCZ"], **kwargs: object) -> CostDict:
+    def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
         # Calculates cost for single repetition based on precompiled circuit
-        layout = kwargs["layout"]
         if not isinstance(layout, MovementDistillery):
             raise TypeError(
                 "_distil_cost requires a 'layout' keyword argument of type MovementDistillery"

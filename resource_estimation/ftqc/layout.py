@@ -298,9 +298,6 @@ class MovementLayout(Layout):
 
     def _add_zones(self) -> None:
         G = self.layout_graph
-        if not G:
-            self.layout_graph = G
-            return
         cols = max(node.col for node in G.nodes) + 1
         rows = max(node.row for node in G.nodes) + 1
         if self.interaction_zones:  # Place an interaction zone in the -1 row
@@ -343,7 +340,8 @@ class MovementLayout(Layout):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self._add_zones()
+        if self.layout_graph:  # Don't add zones if there are no qubits
+            self._add_zones()
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit) -> list[cirq.GridQubit]:
         raise NotImplementedError
