@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 import copy
-import functools
+import itertools
 import os
 import sys
 import time
@@ -30,10 +30,10 @@ if TYPE_CHECKING:
     from typing import Iterator, Literal, Sequence
 
     from resource_estimation.ftqc.architecture import Architecture
-from resource_estimation.typing import _require_gate_operation
+    from resource_estimation.typing import GateKey
 
 from . import lattice_surgery_primitives as lsp
-from .layout import Layout, MovementDistillery
+from .layout import Layout, MovementDistillery, MovementLayout
 
 # IMPORTANT NOTES
 # Classical control is in the process of being implemented
@@ -364,15 +364,21 @@ def _decompose_to_primitives(
 
 def add_moves(
     circuit: cirq.Circuit,
-    zone_ops: cirq.Gateset,
-    alley_ops: cirq.Gateset,
+    layout: MovementLayout,
     verbose: int = 0,
 ) -> cirq.Circuit:
     """Handles replacement moves for both alley movement and interaction zone movement"""
     total = len(circuit)
     tstart = time.time()
 
-    def map_func(op: cirq.Operation, moment_idx: int) -> cirq.OP_TREE:
+    interaction_cycle = itertools.cycle(layout.zone_qubits("interact"))
+    measurement_cycle = itertools.cycle(layout.zone_qubits("measure"))
+    ops_to_replace: list[GateKey] = [cirq.CNOT]
+    if layout.measure_zones:
+        ops_to_replace.append(cirq.MeasurementGate)
+    replacement_gateset = cirq.Gateset(*ops_to_replace)
+
+    def map_func(op: cirq.Operation, moment_idx: int) -> Iterator[cirq.OP_TREE]:
         if verbose:
             knock_off_tqdm(
                 moment_idx=moment_idx,
@@ -380,31 +386,36 @@ def add_moves(
                 tstart=tstart,
                 message="Adding Qubit Movement:",
             )
+        if op not in replacement_gateset:
+            yield op
+        else:
+            move = css.MovementGate({0: 1})
+            move_dg = css.MovementGate({1: 0})
+            if layout.inplace_cnot and op.gate == cirq.CNOT:
+                ctrl, trgt = op.qubits
+                op_sequence = [move.on(ctrl, trgt), op, move_dg.on(ctrl, trgt)]
+            elif layout.interaction_zones and op.gate == cirq.CNOT:
+                ctrl, trgt = op.qubits
+                zone_qubit = next(interaction_cycle)
+                op_sequence = [
+                    move.on(ctrl, zone_qubit),
+                    move.on(trgt, zone_qubit),
+                    op,
+                    move_dg.on(trgt, zone_qubit),
+                    move_dg.on(ctrl, zone_qubit),
+                ]
+            elif layout.measure_zones and cirq.is_measurement(op):
+                in_move, out_move = [], []
+                # This might be inaccurate if measurement cycle wraps around
+                for q in op.qubits:
+                    zone_qubit = next(measurement_cycle)
+                    in_move.append(move.on(q, zone_qubit))
+                    out_move.append(move_dg.on(q, zone_qubit))
+                op_sequence = in_move + [op] + out_move
+            for op in op_sequence:
+                yield op
 
-        if op not in zone_ops and op not in alley_ops:
-            return op
-
-        op = _require_gate_operation(op)
-
-        op_qubits = list(op.qubits)
-        zone_type: Literal["measure", "interact"] | None = None
-
-        if op.gate in zone_ops:
-            zone_type = "interact" if op.gate == cirq.CNOT else "measure"
-
-        move_op = (
-            functools.partial(lsp.Move(zone=zone_type).on)
-            if zone_type is None
-            else functools.partial(lsp.Move(zone=zone_type).on_each)
-        )
-
-        return [
-            move_op(*op_qubits),
-            op,
-            move_op(*op_qubits[::-1]),
-        ]
-
-    return cirq.map_operations_and_unroll(circuit, map_func)
+    return cirq.map_operations_and_unroll(circuit, map_func, raise_if_add_qubits=False)
 
 
 def ft_compile(
@@ -421,6 +432,9 @@ def ft_compile(
     The passes available are post op correction and idling.
     The architecture is also the source of information for how many rounds of syndrome extraction should be performed when syndrome extraction is called for.
     """
+
+    if arc.zone_ops.gates and not (layout.measure_zones or layout.interaction_zones):
+        raise ValueError("Architecture has zone operations, but Layout does not have any zones")
     # TODO: Aligning left results in circuits that have are more expensive in terms of circuit time than not aligning left. This is probably the result of requesting a layer of parallel cultivations but realigning so the expensive cultivation operations become spread out over multiple moments. It is currently unclear if aligning left is correct or not in general, but the specific tests for ft_compile very much rely on it...
     layout = copy.deepcopy(layout)
     layout.reset_graph()
@@ -460,12 +474,11 @@ def ft_compile(
             verbose=verbose,
         )
 
-    if arc.zone_ops.gates or arc.alley_ops.gates:
+    if isinstance(layout, MovementLayout):
         circuit = add_moves(
             circuit=circuit,
+            layout=layout,
             verbose=verbose,
-            zone_ops=arc.zone_ops,
-            alley_ops=arc.alley_ops,
         )
 
     return circuit
