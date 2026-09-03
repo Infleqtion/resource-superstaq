@@ -815,7 +815,7 @@ def test_distillation_cases(
             resource="T", layout=lyt.MovementDistillery(input_circuit=distil_15_to_1())
         )
     # Confirm _distil_cost raises TypeError when provided wrong layout
-    with pytest.raises(TypeError, match="type MovementDistillery"):
+    with pytest.raises(TypeError, match="layout must be a MovementDistillery"):
         _ = movement_architecture._distil_cost(
             resource="T",
             layout=lyt.MovementLayout(input_circuit=distil_15_to_1()),  # type: ignore[arg-type]
