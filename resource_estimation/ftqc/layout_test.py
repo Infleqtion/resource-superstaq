@@ -218,7 +218,7 @@ def test_embedded(circuit5: cirq.Circuit) -> None:
 
 
 def test_movement(circuit5: cirq.Circuit) -> None:
-    movement = MovementLayout(circuit5, num_t_factories=3)
+    movement = MovementLayout(circuit5, num_t_factories=3, architecture="DSM")
     movement.reload_factories(ftype="s")
     movement.reload_factories(ftype="t")
     G = movement.layout_graph
@@ -253,7 +253,7 @@ def test_movement(circuit5: cirq.Circuit) -> None:
 
 
 def test_general_exceptions(circuit5: cirq.Circuit) -> None:
-    movement = MovementLayout(circuit5)
+    movement = MovementLayout(circuit5, architecture="DSM")
     with pytest.raises(ValueError, match="not a valid"):
         movement.reload_factories(ftype="q")  # type: ignore[arg-type]
     ctrl, trgt = cirq.GridQubit(0, 2), cirq.GridQubit(2, 1)
@@ -264,6 +264,8 @@ def test_general_exceptions(circuit5: cirq.Circuit) -> None:
         _ = movement.nearest_factory(cirq.GridQubit(0, 2), "t")
     with pytest.raises(ValueError, match="No factories available"):
         _ = movement.available_factories(ftype="toffoli")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="Not a recognized zone type"):
+        _ = movement.zone_qubits(zone_type="not a zone type")  # type: ignore[arg-type]
 
 
 def test_reset_and_reload(circuit5: cirq.Circuit) -> None:
@@ -311,7 +313,9 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
     """
     Test that the distillery works with both T and CCZ Distillation
     """
-    distillery = MovementDistillery(circuit5, num_t_factories=3, num_ccz_factories=2)
+    distillery = MovementDistillery(
+        circuit5, num_t_factories=3, num_ccz_factories=2, architecture="DSM"
+    )
     distillery.reload_factories(ftype="s")
     distillery.reload_factories(ftype="t")
     distillery.reload_factories(ftype="ccz")
@@ -373,3 +377,14 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
 
     expected_ccz_factory = (cirq.GridQubit(10, 1), cirq.GridQubit(10, 2), cirq.GridQubit(10, 3))
     assert distillery.nearest_factory(ccz_target, ftype="ccz") == expected_ccz_factory
+
+
+def test_zones(circuit5: cirq.Circuit) -> None:
+    layout = MovementLayout(
+        input_circuit=circuit5, num_t_factories=1, num_ccz_factories=1, architecture="SSM"
+    )
+    print(layout.layout_graph.nodes)
+    expected_interaction_zones = {cirq.GridQubit(-1, j) for j in range(3)}
+    expected_measurement_zones = {cirq.GridQubit(2, j) for j in range(3)}
+    assert set(layout.zone_qubits("interact")) == expected_interaction_zones
+    assert set(layout.zone_qubits("measure")) == expected_measurement_zones
