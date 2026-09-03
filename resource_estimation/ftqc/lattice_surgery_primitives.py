@@ -33,8 +33,6 @@ def custom_resolver(cirq_type: str) -> type[cirq.Gate] | None:
         return Cultivate
     if cirq_type == "lsp.ErrorCorrect":
         return ErrorCorrect
-    if cirq_type == "lsp.Move":
-        return Move
     if cirq_type == "lsp.Distil":
         return Distil
     if cirq_type == "lsp.ResourceCorrection":
@@ -275,48 +273,10 @@ class Distil(cirq.Gate):
 
 
 @cirq.value_equality
-class Move(cirq.Gate):
-    """Subclassed cirq gate to represent a iter-patch movement operation
-
-    It is currently used to describe both movement to a zone and movement through alleyways to other
-    logical qubit patches.
-    """
-
-    def __init__(self, zone: typing.Optional[typing.Literal["measure", "interact"]] = None) -> None:
-        self._num_qubits = 2 if zone is None else 1
-        self._zone = zone
-
-    def num_qubits(self) -> int:
-        return self._num_qubits
-
-    @property
-    def zone(self) -> typing.Literal["interact", "measure"] | None:
-        return self._zone
-
-    def __str__(self) -> str:
-        if self.zone is None:
-            return "MOVE"
-        return "MOVE_MZ" if self.zone == "measure" else "MOVE_IZ"
-
-    def _json_dict_(self) -> dict[str, typing.Literal["interact", "measure"] | None]:
-        return {"zone": self._zone}
-
-    def __repr__(self) -> str:
-        return f"lsp.Move(zone={self._zone})"
-
-    @classmethod
-    def _json_namespace_(cls) -> str:
-        return "lsp"
-
-    def _value_equality_values_(self) -> tuple[int, str | None]:
-        return (self._num_qubits, self._zone)
-
-
-@cirq.value_equality
 class ResourceCorrection(cirq.Gate):
     def __init__(self, resource: typing.Literal["T", "CCZ"]) -> None:
         if resource not in ("T", "CCZ"):
-            raise ValueError(f"Invalid resource for Correction gate: {resource!r}")
+            raise TypeError(f"Invalid resource for Correction gate: {resource!r}")
         self._resource: typing.Literal["T", "CCZ"] = resource
         self._num_qubits = 3 if resource == "CCZ" else 1
 
@@ -324,7 +284,7 @@ class ResourceCorrection(cirq.Gate):
         return self._num_qubits
 
     @property
-    def resource(self) -> typing.Literal["T", "CCZ"] | None:
+    def resource(self) -> typing.Literal["T", "CCZ"]:
         return self._resource
 
     def __str__(self) -> str:
