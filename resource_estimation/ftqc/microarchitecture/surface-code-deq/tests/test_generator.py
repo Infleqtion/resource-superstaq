@@ -91,6 +91,19 @@ def test_unified_surface_code_library_declares_shared_types_once() -> None:
     )
 
 
+def test_cli_defaults_to_the_complete_surface_code_library(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    output = tmp_path / "surface_code.deq"
+    monkeypatch.setattr(sys, "argv", [str(_generator_path), "--out", str(output)])
+
+    generator.main()
+
+    source = output.read_text()
+    assert "GADGET PrepareY {" in source
+    assert "COMPOSE LogicalSD3" in source
+
+
 def test_logical_s_injects_the_prepared_y_state_and_tracks_its_byproduct() -> None:
     source = generator.render_surface_code_library(3)
     logical_s = source[source.index("COMPOSE LogicalSD3 {") :]
