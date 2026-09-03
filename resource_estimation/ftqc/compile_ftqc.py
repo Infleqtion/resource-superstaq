@@ -393,11 +393,11 @@ def add_moves(
             move_dg = css.MovementGate({1: 0})
             if layout.inplace_cnot and op.gate == cirq.CNOT:
                 ctrl, trgt = op.qubits
-                op_sequece = [move.on(ctrl, trgt), op, move_dg.on(ctrl, trgt)]
+                op_sequence = [move.on(ctrl, trgt), op, move_dg.on(ctrl, trgt)]
             elif layout.interaction_zones and op.gate == cirq.CNOT:
                 ctrl, trgt = op.qubits
                 zone_qubit = next(interaction_cycle)
-                op_sequece = [
+                op_sequence = [
                     move.on(ctrl, zone_qubit),
                     move.on(trgt, zone_qubit),
                     op,
@@ -405,10 +405,14 @@ def add_moves(
                     move_dg.on(ctrl, zone_qubit),
                 ]
             elif layout.measure_zones and cirq.is_measurement(op):
-                q = op.qubits[0]  # There should only be one qubit
-                zone_qubit = next(measurement_cycle)
-                op_sequece = [move.on(q, zone_qubit), op, move_dg.on(q, zone_qubit)]
-            for op in op_sequece:
+                in_move, out_move = [], []
+                # This might be inaccurate if measurement cycle wraps around
+                for q in op.qubits:
+                    zone_qubit = next(measurement_cycle)
+                    in_move.append(move.on(q, zone_qubit))
+                    out_move.append(move_dg.on(q, zone_qubit))
+                op_sequence = in_move + [op] + out_move
+            for op in op_sequence:
                 yield op
 
     return cirq.map_operations_and_unroll(circuit, map_func, raise_if_add_qubits=False)

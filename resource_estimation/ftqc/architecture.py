@@ -712,7 +712,7 @@ class DefaultMovement(Architecture):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
 
-    def correction_cost(self, op: cirq.GateOperation) -> CostDict:
+    def correction_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
         if not isinstance(op.gate, lsp.ResourceCorrection):
             raise TypeError("Operation is not an instance of ResourceCorrection")
         return self._correction_cost(op.gate._resource)
