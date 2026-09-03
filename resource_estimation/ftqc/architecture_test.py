@@ -748,7 +748,7 @@ def test_precompiled_moves() -> None:
     )
     assert isclose(measure_zone_cost.op_time, expected_measure_time)
 
-    # Teast interaction zone movement
+    # Test interaction zone movement
     interaction_zone_cost = arch._interaction_zone_move_precompiled(
         dx=2, dy=2, patch_length=5, site_spacing=3
     )
@@ -764,11 +764,11 @@ def test_precompiled_moves() -> None:
     )
     assert isclose(expected_interaction_time, interaction_zone_cost.op_time)
 
-    # Teast inplace movement
+    # Test inplace movement
     inplace_cost = arch._inplace_entanglement_move_precompiled(
         dx=2, dy=2, patch_length=5, site_spacing=3, scratch_dx=4, scratch_dy=4
     )
-    assert inplace_cost.moment_cost == inplace_cost.moment_cost == {css.MovementGate: 3}
+    assert inplace_cost.gate_cost == inplace_cost.moment_cost == {css.MovementGate: 3}
     expected_inplace_time = (
         arch._physical_move_time(1 * 3)
         + 2 * arch._physical_move_time(2 * 5 * 3)

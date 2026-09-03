@@ -175,11 +175,12 @@ def _split_cost(smooth: bool, d: int) -> CostDict:
 
 
 def _physical_move_time(l: float, a: float = 5500, base_cost: float = 200) -> float:
-    """
-    Calculates total time to travel a distance given a constant accelleration profile in μs
-    l: physical distance in μm
-    a: acceleration in  m/s^2
-    startup_cost: flat cost every move pays in μs
+    """Calculates total time (μs) to travel a distance with a constant-acceleration profile.
+
+    Args:
+        l: Physical distance in μm.
+        a: Acceleration in m/s^2.
+        base_cost: Flat overhead each move pays in μs.
     """
     l *= 10**-6  # convert μm to m
     # a is in m/s^2, so we make sure to convert answer to μs
@@ -193,12 +194,12 @@ def _measurement_zone_move_precompiled(
     #   - RShift by one site
     #   - Move measure qubits to zone
     # Current notation denotes the move operation between the logical qubit and the zone itself as arguments
-    # Reversing the sequence of moves achives the inverse and has the same cost
+    # Reversing the sequence of moves achieves the inverse and has the same cost
     l1 = 1 * site_spacing
     t1 = _physical_move_time(l1)
 
-    l2_x = dx * patch_length * site_spacing
-    l2_y = dy * patch_length * site_spacing
+    l2_x = abs(dx) * patch_length * site_spacing
+    l2_y = abs(dy) * patch_length * site_spacing
     t2 = _physical_move_time(l2_x) + _physical_move_time(l2_y)
 
     op_time = t1 + t2
@@ -220,8 +221,8 @@ def _interaction_zone_move_precompiled(
     l1 = 1 * site_spacing
     t1 = _physical_move_time(l1)
 
-    l2_x = dx * patch_length * site_spacing
-    l2_y = dy * patch_length * site_spacing
+    l2_x = abs(dx) * patch_length * site_spacing
+    l2_y = abs(dy) * patch_length * site_spacing
     t2 = _physical_move_time(l2_x) + _physical_move_time(l2_y)
 
     # Couldn't we actually just do this in the same move as l2_x?
@@ -247,13 +248,13 @@ def _inplace_entanglement_move_precompiled(
     t1 = _physical_move_time(l1)
 
     # Punt -- Move measure qubits to logical corner
-    l2_x = patch_length * scratch_dx * site_spacing
-    l2_y = patch_length * scratch_dy * site_spacing
+    l2_x = patch_length * abs(scratch_dx) * site_spacing
+    l2_y = patch_length * abs(scratch_dy) * site_spacing
     t2 = _physical_move_time(l2_x) + _physical_move_time(l2_y)
 
     # Interact -- Move datas from ctrl to trgt
-    l3_x = patch_length * dx * site_spacing
-    l3_y = patch_length * dy * site_spacing
+    l3_x = patch_length * abs(dx) * site_spacing
+    l3_y = patch_length * abs(dy) * site_spacing
     t3 = _physical_move_time(l3_x) + _physical_move_time(l3_y)
 
     op_time = t1 + t2 + t3
