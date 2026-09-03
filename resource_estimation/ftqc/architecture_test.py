@@ -24,7 +24,7 @@ import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 import resource_estimation.ftqc.layout as lyt
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.stim_functions import cultivate
-from resource_estimation.typing import GateCounts
+from resource_estimation.typing import GateCounts, _require_gate_operation
 
 
 @pytest.fixture
@@ -43,9 +43,13 @@ def test_architecture_exceptions(
     with pytest.raises(ValueError, match="Cultivation cost"):
         bad_cult = arch._require_gate_operation(lsp.Cultivate(1).on(cirq.GridQubit(0, 0)))
         _ = lattice_architecture.cultivate_cost(bad_cult)
-    with pytest.raises(TypeError, match="require GridQubits"):
-        bad_move = arch._require_gate_operation(lsp.Move(zone=None).on(*cirq.LineQubit.range(2)))
-        _ = movement_architecture.move_cost(bad_move)
+    with pytest.raises(TypeError, match="instances of cirq.GridQubit"):
+        bad_move = arch._require_gate_operation(
+            css.MovementGate({0: 1}).on(*cirq.LineQubit.range(2))
+        )
+        _ = movement_architecture.move_cost(
+            bad_move, layout=lyt.MovementLayout(input_circuit=cirq.Circuit())
+        )
 
 
 def test_inplace_exact(lattice_architecture: arch.DefaultLattice) -> None:
@@ -105,13 +109,6 @@ def test_movement_gate_costs(d: int) -> None:
         base_cost.parallel.get(cirq.CZ, 0) + base_cost.parallel.get(cirq.MeasurementGate, 0)
     )
     assert expected_cost == cost
-
-    # Check Move
-    op1, op2 = lsp.Move(zone="interact").on_each(qubit_a, qubit_b)
-    gate_cost = arc.gate_cost(op1)
-    assert gate_cost == {css.MovementGate: 1}
-    gate_cost = arc.gate_cost(op2)
-    assert gate_cost == {css.MovementGate: 1}
 
     # Check CNOT
     op = cirq.CNOT.on(qubit_a, qubit_b)
@@ -360,17 +357,7 @@ def test_self_returns(
 
 def test_movement_moment_costs(movement_architecture: arch.DefaultMovement) -> None:
     # Test that all primitives have moment costs
-    qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
-
-    # Check Move
-    op1, op2 = lsp.Move(zone="interact").on_each(qubit_a, qubit_b)
-    moment_cost = movement_architecture.moment_cost(op1)
-    op_time = movement_architecture.op_time(op1)
-    assert moment_cost == {css.MovementGate: 1}
-    assert op_time == 500
-    moment_cost = movement_architecture.moment_cost(op2)
-    assert moment_cost == {css.MovementGate: 1}
-    assert op_time == 500
+    # Where applicable, confirm that the moment cost is exact
 
     # Check S Gate
     op = cirq.S.on(cirq.GridQubit(0, 0))
@@ -709,15 +696,60 @@ def test_folded_architecture() -> None:
     assert folded_cultivation_time < normal_cultivation_time
 
 
-def test_logical_move() -> None:
-    arc = arch.DualSpeciesMovement()
-    one_hop = lsp.Move(zone=None).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 0))
-    two_hop = lsp.Move(zone=None).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 1))
+def test_logical_moves(
+    movement_architecture: arch.DefaultMovement,
+) -> None:  # TODO: Needs to be updated to work with CostDict
+    # Needs to test that logical movement gates have resources and that those resources make sense
+    circuit = cirq.Circuit(cirq.H.on_each(cirq.LineQubit.range(6)))
+    dsm_layout = lyt.MovementLayout(
+        input_circuit=circuit,
+        num_t_factories=0,
+        num_ccz_factories=0,
+        architecture="DSM",
+    )
+    ssm_layout = lyt.MovementLayout(
+        input_circuit=circuit,
+        num_t_factories=0,
+        num_ccz_factories=0,
+        architecture="SSM",
+    )
+    interaction_move = css.MovementGate({0: 1}).on(cirq.GridQubit(0, 1), cirq.GridQubit(-1, 2))
+    interaction_move = _require_gate_operation(interaction_move)
 
-    one_cost = arc.op_time(one_hop)
-    two_cost = arc.op_time(two_hop)
+    # Parameters consistend for all considered moves
+    dx, dy, patch_length, site_spacing = 1, 1, 14, 4
+    # Parameters for inplace only
+    scratch_dx, scratch_dy = 1, 2
 
-    assert two_cost == 2 * one_cost
+    # Test MovementGate involving interaction zone qubit yields precompiled interaction zone cost
+    expected_result = arch._interaction_zone_move_precompiled(
+        dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
+    ).op_time
+    returned_result = movement_architecture.move_cost(interaction_move, layout=ssm_layout).op_time
+    assert isclose(expected_result, returned_result)
+
+    # Test MovementGate involving measurement zone qubit yields precompiled measurement zone cost
+    measurement_move = css.MovementGate({0: 1}).on(cirq.GridQubit(1, 1), cirq.GridQubit(2, 2))
+    measurement_move = _require_gate_operation(measurement_move)
+    expected_result = arch._measurement_zone_move_precompiled(
+        dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
+    ).op_time
+    returned_result = movement_architecture.move_cost(measurement_move, layout=ssm_layout).op_time
+    assert isclose(expected_result, returned_result)
+
+    # Test MovementGate on logical qubits yields precompiled inplace cost
+    inplace_move = css.MovementGate({0: 1}).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 1))
+    inplace_move = _require_gate_operation(inplace_move)
+    expected_result = arch._inplace_entanglement_move_precompiled(
+        dx=dx,
+        dy=dy,
+        patch_length=patch_length,
+        site_spacing=site_spacing,
+        scratch_dx=scratch_dx,
+        scratch_dy=scratch_dy,
+    ).op_time
+    returned_result = movement_architecture.move_cost(inplace_move, layout=dsm_layout).op_time
+    assert isclose(expected_result, returned_result)
 
 
 def test_physical_move_time() -> None:

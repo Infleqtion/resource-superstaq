@@ -26,10 +26,8 @@ import cirq_superstaq as css
 import numpy as np
 
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-from resource_estimation.ftqc.compile_ftqc import add_moves
-from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
-from resource_estimation.ftqc.estimate import ResourceEstimator
-from resource_estimation.ftqc.layout import MovementDistillery
+from resource_estimation.ftqc.distil import precompute_distil_cost
+from resource_estimation.ftqc.layout import MovementDistillery, MovementLayout
 from resource_estimation.ftqc.stim_functions import cultivate
 from resource_estimation.typing import CostDict, GateCounts, GateKey, _require_gate_operation
 
@@ -535,7 +533,7 @@ class DefaultLattice(Architecture):
             cirq.ResetChannel,
         )
         self._phys_gate_times = NEUTRAL_GATES.copy()
-        del self._phys_gate_times[css.MovementGate]  # Remove PermutationGate
+        del self._phys_gate_times[css.MovementGate]  # Remove MovementGate
         self.__post_init__()
 
     def split_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
@@ -655,7 +653,7 @@ class DefaultMovement(Architecture):
             lsp.Distil,
             lsp.SyndromeExtract,
             lsp.ErrorCorrect,
-            lsp.Move,
+            css.MovementGate,
             lsp.ResourceCorrection,
             cirq.CNOT,
             cirq.S,
@@ -821,34 +819,47 @@ class DefaultMovement(Architecture):
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
 
-    def move_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
-        """Method to handle both types of movement
-        The maximum move time should be 500us, which corresponds to travelling to a zone
-        Everything else should be penalized by distance away up to a distance of 500us
-        This reference says something about .55um/us (https://www.nature.com/articles/s41586-022-04592-6.pdf)
-        To make things easier, I'm going to call that .5um/us
-        A surface code patch has a side length of ~d physical qubits
-        If we assume qubits are spaced by ~1um, it takes about 2*d us to move a qubit to an adjacent patch
-        So if the L1 distance between logical qubits A and B is C, then we penalize Move(A, B) with time 2*C*d (up to a maximum of 500us)
-        This feels a little too weighted in favor of alleyway movement, but it is at least a rule, and it's something worth debating
+    def move_cost(
+        self, op: cirq.GateOperation, layout: MovementLayout, **kwargs: object
+    ) -> CostDict:
         """
-        assert isinstance(op.gate, lsp.Move)
-
-        gate_cost: GateCounts = {css.MovementGate: 1}
-        moment_cost: GateCounts = {css.MovementGate: 1}
-        if op.gate.zone is None:
-            ctrl, trgt = op.qubits
-            if not isinstance(ctrl, cirq.GridQubit) or not isinstance(trgt, cirq.GridQubit):
-                raise TypeError("Movement operations require GridQubits")
-            distance = abs(trgt.row - ctrl.row) + abs(trgt.col - ctrl.col)
-            penalty_factor = 2 * self.d * distance
-            time_cap = self.phys_gate_times[css.MovementGate]
-            op_time = min(penalty_factor, time_cap)
+        Costs for pre-compiled movement patterns for types of logical moves
+        - Moves to/from an interaction zone to accomplish a logical CNOT
+        - Moves to/from a measurement zone to accomplish a logical Measurement
+        - Moves between logical qubit patches to accomplish a logical CNOT with inplace entanglement
+        Total time is a function of physical distance is given by equation (1) of https://arxiv.org/pdf/2505.15907
+        The SITE_SPACING parameter gives the distance in microns between qubits that are nearest neighbor in the atom array
+        Moves with vertical and horizontal components get penalized independently for each direction
+        """
+        ctrl, trgt = op.qubits
+        if not (isinstance(ctrl, cirq.GridQubit) and isinstance(trgt, cirq.GridQubit)):
+            raise TypeError("Operation qubits must be instances of cirq.GridQubit")
+        move_type = layout.layout_graph.nodes[trgt]["patch_type"]
+        site_spacing = layout.site_spacing
+        dx = abs(trgt.col - ctrl.col)  # number of logical patches horizontally
+        dy = abs(trgt.row - ctrl.row)  # number of logical patches vertically
+        patch_length = 2 * self.d
+        if move_type == "mzone":
+            return _measurement_zone_move_precompiled(
+                dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
+            )
+        elif move_type == "izone":
+            return _interaction_zone_move_precompiled(
+                dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
+            )
         else:
-            op_time = self.phys_gate_times[
-                css.MovementGate
-            ]  # Just a basic penalty based on the literature
-        return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
+            bottom_right = max(layout.layout_graph.nodes)
+            # +1 accounts for one extra unit to get to the corner from the bottom right
+            scratch_dx = abs(bottom_right.col - trgt.row) + 1
+            scratch_dy = abs(bottom_right.row - trgt.row) + 1
+            return _inplace_entanglement_move_precompiled(
+                dx=dx,
+                dy=dy,
+                patch_length=patch_length,
+                site_spacing=site_spacing,
+                scratch_dx=scratch_dx,
+                scratch_dy=scratch_dy,
+            )
 
     @cached_property
     def _cultivate_t_cost(self) -> CostDict:
@@ -900,35 +911,24 @@ class DefaultMovement(Architecture):
         return self._distil_cost(op.gate._resource, layout=layout)
 
     def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
+        # Calculates cost for single repetition based on precompiled circuit
         if not isinstance(layout, MovementDistillery):
             raise TypeError("layout must be a MovementDistillery for _distil_cost().")
-        if resource == "T":
-            mapped_circuit = distil_15_to_1()
-        elif resource == "CCZ":
-            mapped_circuit = ccz_8_to_1()
-        with_moves = add_moves(
-            mapped_circuit,
-            zone_ops=self.zone_ops,
-            alley_ops=self.alley_ops,
+        base_cost = precompute_distil_cost(resource=resource, layout=layout, arc=self)
+        op_time = base_cost.op_time * self.distillation_repetition
+        moment_cost = collections.Counter(
+            {key: val * self.distillation_repetition for key, val in base_cost.moment_cost.items()}
         )
-        estimator = ResourceEstimator(self)
-        rep_time = estimator.parallel_circuit_time(with_moves, layout=layout)
-        rep_moments = estimator.parallel_circuit_cost(with_moves, layout=layout)
-        rep_gates = estimator.serial_circuit_cost(with_moves, layout=layout)
-        op_time = rep_time * self.distillation_repetition
-        moment_cost: GateCounts = {
-            key: val * self.distillation_repetition for key, val in rep_moments.items()
-        }
-        gate_cost: GateCounts = {
-            key: val * self.distillation_repetition for key, val in rep_gates.items()
-        }
+        gate_cost = collections.Counter(
+            {key: val * self.distillation_repetition for key, val in base_cost.gate_cost.items()}
+        )
         return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
 
     def __post_init__(self) -> None:
         super().__post_init__()
         self.op_cost[type(cirq.CNOT)] = self.cnot_cost
         self.op_cost[type(cirq.S)] = self.s_cost
-        self.op_cost[lsp.Move] = self.move_cost
+        self.op_cost[css.MovementGate] = self.move_cost
         self.op_cost[lsp.Distil] = self.distil_cost
         self.op_cost[lsp.ResourceCorrection] = self.correction_cost
 
