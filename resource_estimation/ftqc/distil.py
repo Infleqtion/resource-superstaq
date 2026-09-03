@@ -11,11 +11,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 from math import pi
+from typing import TYPE_CHECKING, Literal
 
 import cirq
 
+from resource_estimation.ftqc.compile_ftqc import add_moves
+from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
+from resource_estimation.ftqc.layout import MovementDistillery
+from resource_estimation.typing import CostDict
+
+if TYPE_CHECKING:
+    from resource_estimation.ftqc.architecture import Architecture
 
 
 def distil_15_to_1() -> cirq.Circuit:
@@ -177,3 +187,40 @@ def ccz_8_to_1() -> cirq.Circuit:
 
     mapped_circuit = cirq.Circuit(moment.transform_qubits(qmap) for moment in cir)
     return mapped_circuit
+
+
+def precompute_distil_cost(
+    resource: Literal["T", "CCZ"], layout: MovementDistillery, arc: Architecture
+) -> CostDict:
+    # Grabs prepared resource state circuit
+    # Grabs template distillation block (could be matched to the one actually used)
+    # Remaps resource state circuit to qubits in distillation block
+    # Adds moves to zones according to the layout's rules
+    # Returns resources based on the resulting sub-circuit
+    mapped_circuit_factory: tuple[cirq.GridQubit, ...]
+    if resource == "T":
+        mapped_circuit = distil_15_to_1()
+        mapped_circuit_factory = (cirq.GridQubit(7, 2),)
+        layout_factory = layout.all_factories("t")[0]
+    elif resource == "CCZ":
+        mapped_circuit = ccz_8_to_1()
+        mapped_circuit_factory = (cirq.GridQubit(5, 0), cirq.GridQubit(5, 1), cirq.GridQubit(5, 2))
+        layout_factory = layout.all_factories("ccz")[0]
+    else:
+        raise ValueError(f"Unknown distillation resource: {resource!r}")
+    circuit_block = (
+        tuple(sorted(q for q in mapped_circuit.all_qubits() if q not in mapped_circuit_factory))
+        + mapped_circuit_factory
+    )
+    layout_block = layout.distillation_block(layout_factory)
+    qmap: dict[cirq.Qid, cirq.Qid] = {
+        q_circuit: q_layout for q_circuit, q_layout in zip(circuit_block, layout_block)
+    }
+    remapped_circuit = mapped_circuit.transform_qubits(qmap)
+    embedded_circuit = add_moves(remapped_circuit, layout=layout)
+    estimator = ResourceEstimator(arc)
+    op_time = estimator.parallel_circuit_time(embedded_circuit, layout=layout)
+    moment_cost = estimator.parallel_circuit_cost(embedded_circuit, layout=layout)
+    gate_cost = estimator.serial_circuit_cost(embedded_circuit, layout=layout)
+
+    return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)

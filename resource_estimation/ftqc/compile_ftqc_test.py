@@ -99,7 +99,9 @@ def test_end2end(with_barriers: bool) -> None:
         arch.DefaultMovement(idling=False, post_op_correction=False),
     ]:
         if arc.movement:
-            test_layout = MovementLayout(input_circuit=circuit, num_t_factories=1)
+            test_layout = MovementLayout(
+                input_circuit=circuit, num_t_factories=1, architecture="SSM"
+            )
         else:
             test_layout = Column(
                 input_circuit=circuit,
@@ -117,7 +119,9 @@ def test_end2end_distillery() -> None:
     circuit = cirq.Circuit(
         [cirq.CNOT.on(q1, q2), cirq.CCZ.on(q1, q2, q3), cirq.T.on_each(q1, q2, q3)]
     )
-    layout = MovementDistillery(input_circuit=circuit, num_t_factories=1, num_ccz_factories=1)
+    layout = MovementDistillery(
+        input_circuit=circuit, num_t_factories=1, num_ccz_factories=1, architecture="SSM"
+    )
     arc = arch.DefaultMovement(post_op_correction=False, idling=False)
     compiled = comp.ft_compile(layout, arc, with_barriers=False)
     assert all(arc.primitives.validate(op) for op in compiled.all_operations())
@@ -189,7 +193,7 @@ def test_direct_substitution() -> None:
 
 
 def test_replace_cirq_op_movement(bell_circuit: cirq.Circuit) -> None:
-    movement_layout = MovementLayout(bell_circuit, num_t_factories=2)
+    movement_layout = MovementLayout(bell_circuit, num_t_factories=2, architecture="DSM")
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
     returned_ops = comp.replace_cirq_op(
@@ -256,18 +260,16 @@ def test_illegal_compile(arc: arch.Architecture) -> None:
     circuit = cirq.Circuit([cirq.Rx(rads=pi / 3).on(cirq.GridQubit(0, 0))])
     layout: MovementLayout | Column
     if arc.movement:
-        layout = MovementLayout(circuit, num_t_factories=1)
+        layout = MovementLayout(circuit, num_t_factories=1, architecture="SSM")
     else:
         layout = Column(circuit)
-    with pytest.raises(ValueError):
-        _ = comp.ft_compile(layout=layout, arc=arc)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="This compiler only handles"):
         _ = comp.ft_compile(layout=layout, arc=arc)
 
 
 def test_different_rounds() -> None:
     circuit = cirq.Circuit(cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)))
-    layout = MovementLayout(input_circuit=circuit)
+    layout = MovementLayout(input_circuit=circuit, architecture="SSM")
     for k in [1, 5, 7]:
         architecture = arch.DefaultMovement(
             idling=False,
@@ -295,7 +297,7 @@ def test_deterministic_compilation(random_circ: cirq.Circuit) -> None:
 
 def test_nondeterministic_compilation_T(random_circ2: cirq.Circuit) -> None:
     circuit = random_circ2
-    lay = MovementLayout(circuit)
+    lay = MovementDistillery(circuit, num_t_factories=1, architecture="SSM")
     arc = arch.DefaultMovement()
     compiled1 = comp.ft_compile(lay, arc, dynamic=False)
     compiled2 = comp.ft_compile(lay, arc, dynamic=True)
@@ -318,7 +320,7 @@ def test_nondeterministic_compilation_CCZ() -> None:
     circuit = cirq.Circuit(
         cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
     )
-    lay = MovementDistillery(circuit, num_t_factories=0, num_ccz_factories=1)
+    lay = MovementDistillery(circuit, num_t_factories=0, num_ccz_factories=1, architecture="SSM")
     arc = arch.DefaultMovement()
     compiled1 = comp.ft_compile(lay, arc, dynamic=False)
     compiled2 = comp.ft_compile(lay, arc, dynamic=True)
@@ -370,11 +372,19 @@ def test_nondeterministic_compilation_CCZ() -> None:
         correction_circuit,
         textwrap.dedent(
             """
-        (0, 0): ───H───SE(1)───X───MOVE_IZ───@───MOVE_IZ───SE(1)───MOVE_IZ───@───MOVE_IZ───SE(1)───H─────────SE(1)─────────────────────────────────
-                                             │                               │
-        (0, 1): ───H───SE(1)───X───MOVE_IZ───X───MOVE_IZ───SE(1)───MOVE_IZ───┼───────────────────────────────@───────MOVE_IZ───SE(1)───H───SE(1)───
-                                                                             │                               │
-        (0, 2): ───H───SE(1)───X───MOVE_IZ───────────────────────────────────X───MOVE_IZ───SE(1)───MOVE_IZ───X───────MOVE_IZ───SE(1)───H───SE(1)───
+                                                                            ┌───────────┐                                           ┌───────────┐
+        (-1, 3): ───────────────────┤   0├───┤   0├───────┤1   ├───┤1   ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+        (-1, 4): ───────────────────────────────────────────────────────────────────────────┤   0├───┤   0├───────┤1   ├───┤1   ├─────────────────────────────────────────────────────────────────
+
+        (-1, 5): ─────────────────────────────────────────────────────────────────┤   0├──────────────────────────────────────────────────┤   0├────────┤1   ├───┤1   ├───────────────────────────
+
+        (0, 0): ────H───SE(1)───X───┤0   ├────────────@────────────┤   1├────SE(1)──────────┤0   ├────────────@────────────┤   1├────SE(1)──────────H───SE(1)─────────────────────────────────────
+                                                      │                                                       │
+        (0, 1): ────H───SE(1)───X────────────┤0   ├───X───┤   1├───SE(1)──────────┤0   ├──────────────────────┼─────────────────────────────────────@────────────┤   1├───SE(1)───H───────SE(1)───
+                                                                                                              │                                     │
+        (0, 2): ────H───SE(1)───X────────────────────────────────────────────────────────────────────┤0   ├───X───┤   1├───SE(1)──────────┤0   ├────X───┤   1├───SE(1)────H───────SE(1)───────────
+                                                                            └───────────┘                                           └───────────┘
         """
         ),
     )
@@ -447,300 +457,8 @@ def test_other_passes(random_circ: cirq.Circuit) -> None:
     )
 
 
-def test_bell_movement_FF(bell_circuit: cirq.Circuit) -> None:
-    movement_layout = MovementLayout(bell_circuit)
-    movement_architecture = arch.MeasureZonesOnly(
-        d=7,
-        cultivation_repetition=1,
-        syndrome_rounds=1,
-        idling=False,
-        post_op_correction=False,
-    )
-    compiled_bell_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
-    # no idling, no post-op correction
-    cirq.testing.assert_has_diagram(
-        compiled_bell_circuit,
-        textwrap.dedent(
-            """
-                (0, 0): ───SE(1)───H───MOVE───@───#2─────
-                                       │      │   │
-                (0, 1): ───SE(1)───────#2─────X───MOVE───
-            """,
-        ),
-    )
-
-
-def test_bell_movement_FT(bell_circuit: cirq.Circuit) -> None:
-    movement_layout = MovementLayout(bell_circuit)
-    movement_architecture = arch.MeasureZonesOnly(
-        d=7,
-        cultivation_repetition=1,
-        syndrome_rounds=1,
-        idling=False,
-        post_op_correction=True,
-    )
-    compiled_bell_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
-    # no idling, yes post-op correction
-    cirq.testing.assert_has_diagram(
-        compiled_bell_circuit,
-        textwrap.dedent(
-            """
-                (0, 0): ───SE(1)───H───SE(1)───MOVE───@───#2─────SE(1)───
-                                               │      │   │
-                (0, 1): ───SE(1)───────────────#2─────X───MOVE───SE(1)───
-            """,
-        ),
-    )
-
-
-def test_bell_movement_TF(bell_circuit: cirq.Circuit) -> None:
-    movement_layout = MovementLayout(bell_circuit)
-    movement_architecture = arch.MeasureZonesOnly(
-        d=7,
-        cultivation_repetition=1,
-        syndrome_rounds=1,
-        idling=True,
-        post_op_correction=False,
-    )
-    compiled_bell_circuit = comp.ft_compile(
-        layout=movement_layout,
-        arc=movement_architecture,
-        with_barriers=False,
-    )
-    # yes idling, no post-op correction
-    cirq.testing.assert_has_diagram(
-        compiled_bell_circuit,
-        textwrap.dedent(
-            """
-                (0, 0): ───SE(1)───H───────MOVE───@───#2─────
-                                           │      │   │
-                (0, 1): ───SE(1)───SE(1)───#2─────X───MOVE───
-            """,
-        ),
-    )
-
-
-def test_bell_movement_TT(bell_circuit: cirq.Circuit) -> None:
-    movement_layout = MovementLayout(bell_circuit)
-    movement_architecture = arch.MeasureZonesOnly(
-        d=7,
-        cultivation_repetition=1,
-        syndrome_rounds=1,
-        idling=True,
-        post_op_correction=True,
-    )
-    compiled_bell_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
-
-    # yes idling, yes post-op correction
-    cirq.testing.assert_has_diagram(
-        compiled_bell_circuit,
-        textwrap.dedent(
-            """
-                (0, 0): ───SE(1)───H───────SE(1)───MOVE───@───#2─────SE(1)───
-                                                   │      │   │
-                (0, 1): ───SE(1)───SE(1)───SE(1)───#2─────X───MOVE───SE(1)───
-            """,
-        ),
-    )
-
-
-def test_bell_lattice_FF(bell_circuit: cirq.Circuit) -> None:
-    lattice_layout = Column(bell_circuit)
-    lattice_architecture = arch.DefaultLattice(
-        d=7,
-        cultivation_repetition=1,
-        syndrome_rounds=1,
-        idling=False,
-        post_op_correction=False,
-    )
-    lattice_layout.input_circuit
-    compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
-
-    # no idling, no post-op correction
-    cirq.testing.assert_has_diagram(
-        compiled_bell_circuit,
-        textwrap.dedent(
-            """
-                (0, 2): ───SE(1)───H───MERGE───SPLIT───────────────────
-                                       │       │
-                (0, 3): ───────────────#2──────#2──────MERGE───SPLIT───
-                                                       │       │
-                (0, 4): ───SE(1)───────────────────────#2──────#2──────
-            """,
-        ),
-    )
-
-
-def test_bell_lattice_FT(bell_circuit: cirq.Circuit) -> None:
-    lattice_layout = Column(bell_circuit)
-    lattice_architecture = arch.DefaultLattice(
-        d=7,
-        cultivation_repetition=1,
-        syndrome_rounds=1,
-        idling=False,
-        post_op_correction=True,
-    )
-    compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
-
-    # no idling, yes post-op correction
-    # Since all operations are inherently corrected, there is no need for extra syndrome extraction
-    cirq.testing.assert_has_diagram(
-        compiled_bell_circuit,
-        textwrap.dedent(
-            """
-                (0, 2): ───SE(1)───H───MERGE───SPLIT───────────────────
-                                       │       │
-                (0, 3): ───────────────#2──────#2──────MERGE───SPLIT───
-                                                       │       │
-                (0, 4): ───SE(1)───────────────────────#2──────#2──────
-            """,
-        ),
-    )
-
-
-def test_bell_lattice_TF(bell_circuit: cirq.Circuit) -> None:
-    lattice_layout = Column(bell_circuit)
-    lattice_architecture = arch.DefaultLattice(
-        d=7,
-        cultivation_repetition=1,
-        syndrome_rounds=1,
-        idling=True,
-        post_op_correction=False,
-    )
-    compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
-
-    # yes idling, no post-op correction
-    # (0, 3) is an ancilla qubit, so it does not get idling in the second moment
-    # The Split moments also do not get idling because, implicitly, they cn always be absorbed into a previous moment
-    cirq.testing.assert_has_diagram(
-        compiled_bell_circuit,
-        textwrap.dedent(
-            """
-                (0, 2): ───SE(1)───H───────MERGE───SPLIT───SE(1)───────────
-                                           │       │
-                (0, 3): ───────────────────#2──────#2──────MERGE───SPLIT───
-                                                           │       │
-                (0, 4): ───SE(1)───SE(1)───SE(1)───────────#2──────#2──────
-            """,
-        ),
-    )
-
-
-def test_bell_lattice_TT(bell_circuit: cirq.Circuit) -> None:
-    lattice_layout = Column(bell_circuit)
-    lattice_architecture = arch.DefaultLattice(
-        d=7,
-        cultivation_repetition=1,
-        syndrome_rounds=1,
-        idling=True,
-        post_op_correction=True,
-    )
-    compiled_bell_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
-    compiled_bell_circuit
-    # yes idling, yes post-op correction
-    # Post-op correction does not add anything in this circuit, so this circuit is the same as the last one
-    cirq.testing.assert_has_diagram(
-        compiled_bell_circuit,
-        textwrap.dedent(
-            """
-                (0, 2): ───SE(1)───H───────MERGE───SPLIT───SE(1)───────────
-                                           │       │
-                (0, 3): ───────────────────#2──────#2──────MERGE───SPLIT───
-                                                           │       │
-                (0, 4): ───SE(1)───SE(1)───SE(1)───────────#2──────#2──────
-            """,
-        ),
-    )
-
-
-def test_t_movement_FF(t_circuit: cirq.Circuit) -> None:
-    movement_layout = MovementLayout(t_circuit, num_t_factories=2)
-    movement_architecture = arch.MeasureZonesOnly(
-        d=7,
-        cultivation_repetition=1,
-        syndrome_rounds=1,
-        idling=False,
-        post_op_correction=False,
-    )
-    compiled_t_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
-    # no idling, no post-op correction
-    compiled_t_circuit = cirq.align_left(compiled_t_circuit)
-    cirq.testing.assert_has_diagram(
-        compiled_t_circuit,
-        textwrap.dedent(
-            """
-            (0, 0): ───SE(1)─────────H───MOVE───@───#2───────────────────────────────────────────────────────
-                                         │      │   │
-            (0, 1): ───SE(1)─────────────#2─────X───MOVE───#2─────X───MOVE───S───────────────────────────────
-                                                           │      │   │
-            (1, 0): ───CULT(0.785)─────────────────────────┼──────┼───┼──────────────────────────────────────
-                                                           │      │   │
-            (1, 1): ───CULT(0.785)─────────────────────────MOVE───@───#2─────MOVE_MZ───M('')───MOVE_MZ───R───
-            """,
-        ),
-    )
-
-
-def test_t_movement_FT(t_circuit: cirq.Circuit) -> None:
-    movement_layout = MovementLayout(t_circuit, num_t_factories=2)
-    movement_architecture = arch.MeasureZonesOnly(
-        d=7,
-        cultivation_repetition=1,
-        syndrome_rounds=1,
-        idling=False,
-        post_op_correction=True,
-    )
-    compiled_t_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
-    compiled_t_circuit = cirq.align_left(compiled_t_circuit)
-    # no idling, yes post-op correction
-    cirq.testing.assert_has_diagram(
-        compiled_t_circuit,
-        textwrap.dedent(
-            """
-            (0, 0): ───SE(1)─────────H───SE(1)───MOVE───@───#2─────SE(1)─────────────────────────────────────────────────────────────────────
-                                                 │      │   │
-            (0, 1): ───SE(1)─────────────────────#2─────X───MOVE───SE(1)───#2─────X───MOVE───SE(1)───S─────────SE(1)─────────────────────────
-                                                                           │      │   │
-            (1, 0): ───CULT(0.785)─────────────────────────────────────────┼──────┼───┼──────────────────────────────────────────────────────
-                                                                           │      │   │
-            (1, 1): ───CULT(0.785)─────────────────────────────────────────MOVE───@───#2─────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
-            """,
-        ),
-    )
-
-
-def test_t_movement_TF(t_circuit: cirq.Circuit) -> None:
-    movement_layout = MovementLayout(t_circuit, num_t_factories=2)
-    movement_architecture = arch.MeasureZonesOnly(
-        d=7,
-        cultivation_repetition=1,
-        syndrome_rounds=1,
-        idling=True,
-        post_op_correction=False,
-    )
-    compiled_t_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
-
-    # yes idling, no post-op correction
-    compiled_t_circuit = cirq.align_left(compiled_t_circuit)
-    cirq.testing.assert_has_diagram(
-        compiled_t_circuit,
-        textwrap.dedent(
-            """
-            (0, 0): ───SE(1)─────────H───────MOVE────@───────#2──────SE(1)───SE(1)───SE(1)───────────────────────────────────
-                                             │       │       │
-            (0, 1): ───SE(1)─────────SE(1)───#2──────X───────MOVE────#2──────X───────MOVE────S─────────SE(1)─────────────────
-                                                                     │       │       │
-            (1, 0): ───CULT(0.785)───SE(1)───SE(1)───SE(1)───SE(1)───┼───────┼───────┼───────────────────────────────────────
-                                                                     │       │       │
-            (1, 1): ───CULT(0.785)───SE(1)───────────────────────────MOVE────@───────#2──────MOVE_MZ───M('')───MOVE_MZ───R───
-
-            """,
-        ),
-    )
-
-
-def test_t_movement_TT(t_circuit: cirq.Circuit) -> None:
-    movement_layout = MovementLayout(t_circuit, num_t_factories=2)
+def test_t_movement(t_circuit: cirq.Circuit) -> None:
+    movement_layout = MovementLayout(t_circuit, num_t_factories=2, architecture="SSM")
     movement_architecture = arch.MeasureZonesOnly(
         d=7,
         cultivation_repetition=1,
@@ -757,189 +475,69 @@ def test_t_movement_TT(t_circuit: cirq.Circuit) -> None:
         compiled_t_circuit,
         textwrap.dedent(
             """
-                                                                                     ┌──────────┐   ┌──────────┐
-            (0, 0): ───SE(1)─────────H───────SE(1)───MOVE────@───────#2──────SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───────────────────────────────────
-                                                     │       │       │
-            (0, 1): ───SE(1)─────────SE(1)───SE(1)───#2──────X───────MOVE────SE(1)────#2─────────────X─────────────MOVE────SE(1)───S─────────SE(1)───SE(1)─────────────────
-                                                                                      │              │             │
-            (1, 0): ───CULT(0.785)───SE(1)───SE(1)───SE(1)───SE(1)───SE(1)───SE(1)────┼────SE(1)─────┼────SE(1)────┼───────────────────────────────────────────────────────
-                                                                                      │              │             │
-            (1, 1): ───CULT(0.785)───SE(1)───SE(1)───SE(1)────────────────────────────MOVE───────────@─────────────#2──────SE(1)───MOVE_MZ───M('')───MOVE_MZ───SE(1)───R───
-                                                                                     └──────────┘   └──────────┘
+                                                          ┌────────────┐                             ┌───────────┐
+       (-1, 0): ─────────────────────────────────┤   0├────┤   0├──────────────────┤1   ├───┤1   ├───────────────────────────────────────────────────────────────────────────────────────────
+                                                    
+       (-1, 1): ─────────────────────────────────────────────────┤   0├────────────────────────────────────┤   0├────────────┤1   ├───┤1   ├─────────────────────────────────────────────────
+                                                    
+       (0, 0): ────SE(1)─────────H───────SE(1)───┤0   ├────────────────────@────────────────┤   1├────SE(1)──────────SE(1)───SE(1)────SE(1)────SE(1)───SE(1)─────────────────────────────────
+                                                                           │
+       (0, 1): ────SE(1)─────────SE(1)───SE(1)─────────────┤0   ├──────────X───────┤   1├───SE(1)──────────┤0   ├────X───────┤   1├───SE(1)────S───────SE(1)────SE(1)────────────────────────
+                                                                                                                     │
+       (1, 0): ────CULT(0.785)───SE(1)───SE(1)───SE(1)─────SE(1)───────────SE(1)───SE(1)────SE(1)─────SE(1)──────────┼───────────────────────────────────────────────────────────────────────
+                                                                                                                     │
+       (1, 1): ────CULT(0.785)───SE(1)───SE(1)───SE(1)───────────┤0   ├──────────────────────────────────────────────@────────────────┤   1├───SE(1)───┤0   ├───M('')───┤   1├───SE(1)───R───
+                                                    
+       (2, 0): ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤   0├───────────┤1   ├───────────────
+                                                          └────────────┘                             └───────────┘   
             """,
         ),
     )
 
 
-def test_t_lattice_FF(t_circuit: cirq.Circuit) -> None:
+def test_t_lattice(t_circuit: cirq.Circuit) -> None:
     lattice_layout = Column(t_circuit)
     lattice_architecture = arch.DefaultLattice(
         d=7,
         cultivation_repetition=1,
         syndrome_rounds=1,
-        idling=False,
-        post_op_correction=False,
-    )
-    lattice_layout.input_circuit
-    compiled_t_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
-    # no idling, no post-op correction
-    compiled_t_circuit = cirq.align_left(compiled_t_circuit)
-    cirq.testing.assert_has_diagram(
-        compiled_t_circuit,
-        textwrap.dedent(
-            """
-                (0, 0): ───CULT(1.571)───────────────────────────────────────────────────────────────────────────────────────────────
-                
-                (0, 2): ───SE(1)─────────H───────MERGE───SPLIT───────────────────────────────────────────────────────────────────────
-                                                 │       │
-                (0, 3): ─────────────────────────#2──────#2──────MERGE───SPLIT───────────────────────────────────────────────────────
-                                                                 │       │
-                (0, 4): ───SE(1)─────────────────────────────────#2──────#2──────#3──────#3──────────────────────#2──────#2──────Z───
-                                                                                 │       │                       │       │
-                (0, 5): ─────────────────#3──────#3──────────────────────────────#2──────#2──────#2──────#2──────MERGE───SPLIT───────
-                                         │       │                               │       │       │       │
-                (0, 6): ───CULT(1.571)───┼───────┼───────────────────────────────┼───────┼───────MERGE───SPLIT───M('')───R───────────
-                                         │       │                               │       │
-                (1, 0): ───CULT(0.785)───┼───────┼───────────────────────────────┼───────┼───────────────────────────────────────────
-                                         │       │                               │       │
-                (1, 5): ─────────────────#2──────#2──────────────────────────────MERGE───SPLIT───────────────────────────────────────
-                                         │       │
-                (1, 6): ───CULT(0.785)───MERGE───SPLIT───M('')───R───────────────────────────────────────────────────────────────────
-            """,
-        ),
-    )
-
-
-def test_t_lattice_FT(t_circuit: cirq.Circuit) -> None:
-    lattice_layout = Column(t_circuit)
-    lattice_architecture = arch.DefaultLattice(
-        d=7,
-        cultivation_repetition=1,
-        syndrome_rounds=1,
-        idling=False,
+        idling=True,
         post_op_correction=True,
     )
     compiled_t_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
-    # no idling, yes post-op correction
-    # Only measurement gates need to be corrected
+    # yes idling, yes post-op correction
+    # I'm not sure if the splits are being handled properly. Should we idle on qubits being acted on by Split? Just the non-ancillas? There could be some discussion here
     compiled_t_circuit = cirq.align_left(compiled_t_circuit)
     cirq.testing.assert_has_diagram(
         compiled_t_circuit,
         textwrap.dedent(
             """
-                (0, 0): ───CULT(1.571)───────────────────────────────────────────────────────────────────────────────────────────────
-                
-                (0, 2): ───SE(1)─────────H───────MERGE───SPLIT───────────────────────────────────────────────────────────────────────
-                                                 │       │
-                (0, 3): ─────────────────────────#2──────#2──────MERGE───SPLIT───────────────────────────────────────────────────────
-                                                                 │       │
-                (0, 4): ───SE(1)─────────────────────────────────#2──────#2──────#3──────#3──────────────────────#2──────#2──────Z───
-                                                                                 │       │                       │       │
-                (0, 5): ─────────────────#3──────#3──────────────────────────────#2──────#2──────#2──────#2──────MERGE───SPLIT───────
-                                         │       │                               │       │       │       │
-                (0, 6): ───CULT(1.571)───┼───────┼───────────────────────────────┼───────┼───────MERGE───SPLIT───M('')───SE(1)───R───
-                                         │       │                               │       │
-                (1, 0): ───CULT(0.785)───┼───────┼───────────────────────────────┼───────┼───────────────────────────────────────────
-                                         │       │                               │       │
-                (1, 5): ─────────────────#2──────#2──────────────────────────────MERGE───SPLIT───────────────────────────────────────
-                                         │       │
-                (1, 6): ───CULT(0.785)───MERGE───SPLIT───M('')───SE(1)───R───────────────────────────────────────────────────────────
-            """,
+                                ┌──────────┐   ┌──────────┐                                   ┌──────────┐   ┌──────────┐
+       (0, 0): ───CULT(1.571)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───────────────────────────────────
+                                                                                                                                                                                                                    
+       (0, 2): ───SE(1)──────────H──────────────MERGE─────────SPLIT───SE(1)───SE(1)───SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───SE(1)───────────────────
+                                                │             │
+       (0, 3): ─────────────────────────────────#2────────────#2──────MERGE───────────SPLIT─────────────────────────────────────────────────────────────────────────────────
+                                                                      │               │
+       (0, 4): ───SE(1)──────────SE(1)──────────SE(1)─────────────────#2──────SE(1)───#2───────#3─────────────#3────────────SE(1)───────────#2──────SE(1)───#2──────Z───────
+                                                                                               │              │                             │               │
+       (0, 5): ──────────────────#3─────────────#3─────────────────────────────────────────────#2─────────────#2────────────#2──────#2──────MERGE───────────SPLIT───────────
+                                 │              │                                              │              │             │       │
+       (0, 6): ───CULT(1.571)────┼────SE(1)─────┼────SE(1)────SE(1)───SE(1)───SE(1)────────────┼──────────────┼─────────────MERGE───SPLIT───M('')───SE(1)───R───────SE(1)───
+                                 │              │                                              │              │
+       (1, 0): ───CULT(0.785)────┼────SE(1)─────┼────SE(1)────SE(1)───SE(1)───SE(1)───SE(1)────┼────SE(1)─────┼────SE(1)────SE(1)───SE(1)───────────────────────────────────
+                                 │              │                                              │              │
+       (1, 5): ──────────────────#2─────────────#2─────────────────────────────────────────────MERGE──────────SPLIT─────────────────────────────────────────────────────────
+                                 │              │
+       (1, 6): ───CULT(0.785)────MERGE──────────SPLIT─────────M('')───SE(1)───R───────SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───────────────────────────
+                                └──────────┘   └──────────┘                                   └──────────┘   └──────────┘        
+                """
         ),
     )
 
 
-# This test is just totally broken after the change to cultivation and aligning, so leaving it commented out.
-# TODO: Fix this test or remove it
-# def test_t_lattice_TF(t_circuit):
-#     lattice_layout = ColumnLayout(t_circuit)
-#     lattice_architecture = arch.DefaultLattice(
-#         d=7,
-#         cultivation_repetition=1,
-#         syndrome_rounds=1,
-#         idling=True,
-#         post_op_correction=False,
-#     )
-#     compiled_t_circuit = comp.ft_compile(
-#         layout=lattice_layout, arc=lattice_architecture
-#     )
-#     # yes idling, no post-op correction
-#     # Looks a little bit weird because Split creates opportunities to align left
-#     cirq.testing.assert_has_diagram(
-#         compiled_t_circuit,
-#         textwrap.dedent(
-#             """
-#                                          ┌──────────┐   ┌──────────┐                           ┌──────────┐   ┌──────────┐
-#                 (0, 0): ───CULT(1.571)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───────────────────────────
-
-#                 (0, 2): ───SE(1)──────────H──────────────MERGE─────────SPLIT───SE(1)───SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───────────────────────────
-#                                                          │             │
-#                 (0, 3): ─────────────────────────────────#2────────────#2──────MERGE───SPLIT─────────────────────────────────────────────────────────────────────────
-#                                                                                │       │
-#                 (0, 4): ───SE(1)──────────SE(1)──────────SE(1)─────────SE(1)───#2──────#2───────#3─────────────#3────────────SE(1)───────────#2──────#2──────Z───────
-#                                                                                                 │              │                             │       │
-#                 (0, 5): ──────────────────#3─────────────#3─────────────────────────────────────#2─────────────#2────────────#2──────#2──────MERGE───SPLIT───────────
-#                                           │              │                                      │              │             │       │
-#                 (0, 6): ───CULT(1.571)────┼────SE(1)─────┼────SE(1)────SE(1)───SE(1)───SE(1)────┼──────────────┼─────────────MERGE───SPLIT───M('')───R───────SE(1)───
-#                                           │              │                                      │              │
-#                 (1, 0): ───CULT(0.785)────┼────SE(1)─────┼────SE(1)────SE(1)───SE(1)───SE(1)────┼────SE(1)─────┼────SE(1)────SE(1)───SE(1)───────────────────────────
-#                                           │              │                                      │              │
-#                 (1, 5): ──────────────────#2─────────────#2─────────────────────────────────────MERGE──────────SPLIT─────────────────────────────────────────────────
-#                                           │              │
-#                 (1, 6): ───CULT(0.785)────MERGE──────────SPLIT─────────M('')───R───────SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───────────────────────────
-#                                          └──────────┘   └──────────┘                           └──────────┘   └──────────┘
-#                 """
-#         ),
-#     )
-
-# This test is just totally broken after the change to cultivation and aligning, so leaving it commented out.
-# TODO: Fix this test or remove it
-# def test_t_lattice_TT(t_circuit):
-#     lattice_layout = ColumnLayout(t_circuit)
-#     lattice_architecture = arch.DefaultLattice(
-#         d=7,
-#         cultivation_repetition=1,
-#         syndrome_rounds=1,
-#         idling=True,
-#         post_op_correction=True,
-#     )
-#     compiled_t_circuit = comp.ft_compile(
-#         layout=lattice_layout, arc=lattice_architecture
-#     )
-#     # yes idling, yes post-op correction
-#     # I'm not sure if the splits are being handled properly. Should we idle on qubits being acted on by Split? Just the non-ancillas? There could be some discussion here
-#     compiled_t_circuit = cirq.align_left(compiled_t_circuit)
-#     cirq.testing.assert_has_diagram(
-#         compiled_t_circuit,
-#         textwrap.dedent(
-#             """
-#                                          ┌──────────┐   ┌──────────┐                           ┌──────────┐   ┌──────────┐
-#                 (0, 0): ───CULT(1.571)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───────────────
-
-#                 (0, 2): ───SE(1)──────────H──────────────MERGE─────────SPLIT───SE(1)───SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───────────────
-#                                                          │             │
-#                 (0, 3): ─────────────────────────────────#2────────────#2──────MERGE───SPLIT─────────────────────────────────────────────────────────────────────
-#                                                                                │       │
-#                 (0, 4): ───SE(1)──────────SE(1)──────────SE(1)─────────SE(1)───#2──────#2───────#3─────────────#3────────────SE(1)───────────#2──────#2──────Z───
-#                                                                                                 │              │                             │       │
-#                 (0, 5): ──────────────────#3─────────────#3─────────────────────────────────────#2─────────────#2────────────#2──────#2──────MERGE───SPLIT───────
-#                                           │              │                                      │              │             │       │
-#                 (0, 6): ───CULT(1.571)────┼────SE(1)─────┼────SE(1)────SE(1)───SE(1)───SE(1)────┼────SE(1)─────┼─────────────MERGE───SPLIT───M('')───SE(1)───R───
-#                                           │              │                                      │              │
-#                 (1, 0): ───CULT(0.785)────┼────SE(1)─────┼────SE(1)────SE(1)───SE(1)───SE(1)────┼────SE(1)─────┼────SE(1)────SE(1)───SE(1)───SE(1)───────────────
-#                                           │              │                                      │              │
-#                 (1, 5): ──────────────────#2─────────────#2─────────────────────────────────────MERGE──────────SPLIT─────────────────────────────────────────────
-#                                           │              │
-#                 (1, 6): ───CULT(0.785)────MERGE──────────SPLIT─────────M('')───SE(1)───R────────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───────────────
-#                                          └──────────┘   └──────────┘                           └──────────┘   └──────────┘
-#                 """
-#         ),
-#     )
-
-
 def test_ssm_moves() -> None:
-    arch_type = arch.DefaultMovement
-    a, b, c = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
+    a, b, c = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(1, 0)
     input_circuit = cirq.Circuit(
         lsp.SyndromeExtract(1, 1).on_each(a, b),
         lsp.Cultivate(pi / 4).on(c),
@@ -947,23 +545,30 @@ def test_ssm_moves() -> None:
         cirq.CNOT.on(a, b),
         cirq.MeasurementGate(1, key="").on(c),
     )
+    layout = MovementLayout(
+        input_circuit=input_circuit, num_t_factories=1, num_ccz_factories=0, architecture="SSM"
+    )
+    interaction_qids = layout.zone_qubits(zone_type="interact")
+    measurement_qids = layout.zone_qubits(zone_type="measure")
     expected_output_circuit = cirq.Circuit(
         lsp.SyndromeExtract(1, 1).on_each(a, b),
         lsp.Cultivate(pi / 4).on(c),
-        lsp.Move(zone="interact").on_each(c, b),
+        css.MovementGate({0: 1}).on(c, interaction_qids[0]),
+        css.MovementGate({0: 1}).on(b, interaction_qids[0]),
         cirq.CNOT.on(c, b),
-        lsp.Move(zone="interact").on_each(b, c),
-        lsp.Move(zone="interact").on_each(a, b),
+        css.MovementGate({1: 0}).on(b, interaction_qids[0]),
+        css.MovementGate({1: 0}).on(c, interaction_qids[0]),
+        css.MovementGate({0: 1}).on(a, interaction_qids[1]),
+        css.MovementGate({0: 1}).on(b, interaction_qids[1]),
         cirq.CNOT.on(a, b),
-        lsp.Move(zone="interact").on_each(b, a),
-        lsp.Move(zone="measure").on(c),
+        css.MovementGate({1: 0}).on(b, interaction_qids[1]),
+        css.MovementGate({1: 0}).on(a, interaction_qids[1]),
+        css.MovementGate({0: 1}).on(c, measurement_qids[0]),
         cirq.MeasurementGate(1, key="").on(c),
-        lsp.Move(zone="measure").on(c),
+        css.MovementGate({1: 0}).on(c, measurement_qids[0]),
     )
     # Aligning left avoids ambiguity
-    output_circuit = cirq.align_left(
-        comp.add_moves(input_circuit, zone_ops=arch_type.zone_ops, alley_ops=arch_type.alley_ops)
-    )
+    output_circuit = cirq.align_left(comp.add_moves(circuit=layout.mapped_circuit, layout=layout))
     cirq.testing.assert_has_diagram(
         output_circuit,
         str(expected_output_circuit),
@@ -971,8 +576,7 @@ def test_ssm_moves() -> None:
 
 
 def test_mzo_moves() -> None:
-    arch_type = arch.MeasureZonesOnly
-    a, b, c = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
+    a, b, c = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(1, 0)
     input_circuit = cirq.Circuit(
         lsp.SyndromeExtract(1, 1).on_each(a, b),
         lsp.Cultivate(pi / 4).on(c),
@@ -980,22 +584,26 @@ def test_mzo_moves() -> None:
         cirq.CNOT.on(a, b),
         cirq.MeasurementGate(1, key="").on(c),
     )
+
+    layout = MovementLayout(
+        input_circuit=input_circuit, num_t_factories=1, num_ccz_factories=0, architecture="MZO"
+    )
+    measurement_qids = layout.zone_qubits(zone_type="measure")
+
     expected_output_circuit = cirq.Circuit(
         lsp.SyndromeExtract(1, 1).on_each(a, b),
         lsp.Cultivate(pi / 4).on(c),
-        lsp.Move(zone=None).on(c, b),
+        css.MovementGate({0: 1}).on(c, b),
         cirq.CNOT.on(c, b),
-        lsp.Move(zone=None).on(b, c),
-        lsp.Move(zone=None).on(a, b),
+        css.MovementGate({1: 0}).on(c, b),
+        css.MovementGate({0: 1}).on(a, b),
         cirq.CNOT.on(a, b),
-        lsp.Move(zone=None).on(b, a),
-        lsp.Move(zone="measure").on(c),
+        css.MovementGate({1: 0}).on(a, b),
+        css.MovementGate({0: 1}).on(c, measurement_qids[0]),
         cirq.MeasurementGate(1, key="").on(c),
-        lsp.Move(zone="measure").on(c),
+        css.MovementGate({1: 0}).on(c, measurement_qids[0]),
     )
-    output_circuit = comp.add_moves(
-        input_circuit, zone_ops=arch_type.zone_ops, alley_ops=arch_type.alley_ops
-    )
+    output_circuit = cirq.align_left(comp.add_moves(circuit=layout.mapped_circuit, layout=layout))
     cirq.testing.assert_has_diagram(
         output_circuit,
         str(expected_output_circuit),
@@ -1003,8 +611,7 @@ def test_mzo_moves() -> None:
 
 
 def test_hm_moves() -> None:
-    arch_type = arch.DualSpeciesMovement
-    a, b, c = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2)
+    a, b, c = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(1, 0)
     input_circuit = cirq.Circuit(
         lsp.SyndromeExtract(1, 1).on_each(a, b),
         lsp.Cultivate(pi / 4).on(c),
@@ -1012,20 +619,24 @@ def test_hm_moves() -> None:
         cirq.CNOT.on(a, b),
         cirq.MeasurementGate(1, key="").on(c),
     )
+    layout = MovementLayout(
+        input_circuit=input_circuit,
+        num_t_factories=1,
+        num_ccz_factories=0,
+        architecture="DSM",
+    )
     expected_output_circuit = cirq.Circuit(
         lsp.SyndromeExtract(1, 1).on_each(a, b),
         lsp.Cultivate(pi / 4).on(c),
-        lsp.Move(zone=None).on(c, b),
+        css.MovementGate({0: 1}).on(c, b),
         cirq.CNOT.on(c, b),
-        lsp.Move(zone=None).on(b, c),
-        lsp.Move(zone=None).on(a, b),
+        css.MovementGate({1: 0}).on(c, b),
+        css.MovementGate({0: 1}).on(a, b),
         cirq.CNOT.on(a, b),
-        lsp.Move(zone=None).on(b, a),
+        css.MovementGate({1: 0}).on(a, b),
         cirq.MeasurementGate(1, key="").on(c),
     )
-    output_circuit = comp.add_moves(
-        input_circuit, zone_ops=arch_type.zone_ops, alley_ops=arch_type.alley_ops
-    )
+    output_circuit = comp.add_moves(circuit=layout.mapped_circuit, layout=layout)
     cirq.testing.assert_has_diagram(
         output_circuit,
         str(expected_output_circuit),
@@ -1033,7 +644,9 @@ def test_hm_moves() -> None:
 
 
 def test_replace_cirq_op_distil_t(bell_circuit: cirq.Circuit) -> None:
-    distillery_layout = MovementDistillery(bell_circuit, num_t_factories=2, num_ccz_factories=0)
+    distillery_layout = MovementDistillery(
+        bell_circuit, num_t_factories=2, num_ccz_factories=0, architecture="DSM"
+    )
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
     ops_flattened = list(
@@ -1059,7 +672,9 @@ def test_replace_cirq_op_distil_t(bell_circuit: cirq.Circuit) -> None:
 
 
 def test_replace_cirq_op_distil_ccz(random_circ: cirq.Circuit) -> None:
-    distillery_layout = MovementDistillery(random_circ, num_ccz_factories=2, num_t_factories=0)
+    distillery_layout = MovementDistillery(
+        random_circ, num_ccz_factories=2, num_t_factories=0, architecture="DSM"
+    )
 
     op_to_replace = cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
     returned_ops = list(
@@ -1086,7 +701,7 @@ def test_replace_cirq_op_distil_ccz(random_circ: cirq.Circuit) -> None:
 
 def test_different_rounds_distil() -> None:
     circuit = cirq.Circuit(cirq.CNOT.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)))
-    layout = MovementDistillery(input_circuit=circuit)
+    layout = MovementDistillery(input_circuit=circuit, architecture="SSM")
     for k in [1, 5, 7]:
         architecture = arch.DefaultMovement(
             idling=False,
@@ -1102,13 +717,19 @@ def test_different_rounds_distil() -> None:
 
 
 def test_teleport_resource_exceptions() -> None:
-    qubits = [cirq.GridQubit(0, i) for i in range(3)]
-    invalid_resource = cirq.CCZ.on(*qubits)
-    layout = MovementLayout(cirq.Circuit())
+    invalid_resource = cirq.CCZ.on(*(cirq.GridQubit(0, i) for i in range(3)))
+    layout = MovementLayout(cirq.Circuit(), architecture="DSM")
     with pytest.raises(ValueError, match="Invalid resource"):
         _ = comp.teleport_resource(invalid_resource, layout)
-    sometimes_valid_resource = cirq.TOFFOLI.on(*qubits)
 
     invalid_qubit = cirq.LineQubit(0)
     with pytest.raises(TypeError, match="Qubits must be instances"):
         _ = comp.teleport_resource(cirq.T.on(invalid_qubit), layout)
+
+
+def test_exceptions(bell_circuit: cirq.Circuit) -> None:
+    # Test ft compile rejects incompatible layout-architecture combos
+    inplace_layout = MovementLayout(input_circuit=bell_circuit, architecture="DSM")
+    zoned_arc = arch.DefaultMovement()
+    with pytest.raises(ValueError, match="zone operations"):
+        _ = comp.ft_compile(layout=inplace_layout, arc=zoned_arc)
