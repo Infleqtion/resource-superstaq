@@ -43,7 +43,7 @@ class Layout(abc.ABC):
 
         self.inplace_cnot = self.architecture in ("MZO", "DSM")
         self.measure_zones = self.architecture in ("MZO", "SSM")
-        self.interaction_zones = self.architecture in ("SSM")
+        self.interaction_zones = self.architecture in ("SSM",)
 
         self.layout_graph: nx.Graph = nx.Graph()
         self._available_t_factories: collections.deque[tuple[cirq.GridQubit, ...]] = (
