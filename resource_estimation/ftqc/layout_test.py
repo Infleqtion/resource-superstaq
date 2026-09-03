@@ -380,10 +380,7 @@ def test_distillery(circuit5: cirq.Circuit) -> None:
 
 
 def test_zones(circuit5: cirq.Circuit) -> None:
-    layout = MovementLayout(
-        input_circuit=circuit5, num_t_factories=1, num_ccz_factories=1, architecture="SSM"
-    )
-    print(layout.layout_graph.nodes)
+    layout = MovementLayout(input_circuit=circuit5, num_t_factories=1, architecture="SSM")
     expected_interaction_zones = {cirq.GridQubit(-1, j) for j in range(3)}
     expected_measurement_zones = {cirq.GridQubit(2, j) for j in range(3)}
     assert set(layout.zone_qubits("interact")) == expected_interaction_zones
