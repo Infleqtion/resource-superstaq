@@ -235,9 +235,7 @@ def precompute_distil_cost(
 
     # Map the qubits in the standalone circuit to the qubits in the actual layout
     remapped_circuit = independent_circuit.transform_qubits(qmap)
-    remapped_circuit_with_moves = add_moves(
-        remapped_circuit, zone_ops=arc.zone_ops, alley_ops=arc.alley_ops
-    )
+    remapped_circuit_with_moves = add_moves(remapped_circuit, layout=layout)
 
     # Collect resources of the embedded circuit
     estimator = ResourceEstimator(arc)
