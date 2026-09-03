@@ -91,9 +91,6 @@ if __name__ == "__main__":
 
         # Add the costs to the dictionary
         resources_dict[d] = {
-            "cnot": cnot_costs,
-            "memory_d_rounds": memory_d_rounds_costs,
-            "memory_1_round": memory_1_round_costs,
             "cultivate": {
                 "gidney": {3: gidney_cultiv3_costs, 5: gidney_cultiv5_costs},
                 "yale": {3: yale_cultiv3_costs, 5: yale_cultiv5_costs},
