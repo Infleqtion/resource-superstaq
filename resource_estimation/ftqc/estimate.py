@@ -69,9 +69,7 @@ class ResourceEstimator:
     def serial_circuit_time(self, circuit: cirq.Circuit, layout: Layout) -> float:
         """Adds up the total physical time from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
-        return sum(
-            self.arc.op_time(op, layout=layout) for op in circuit.all_operations()
-        )
+        return sum(self.arc.op_time(op, layout=layout) for op in circuit.all_operations())
 
     def parallel_circuit_time(
         self, circuit: cirq.Circuit, layout: Layout, verbose: int = 0
