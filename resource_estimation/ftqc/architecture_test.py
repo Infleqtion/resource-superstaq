@@ -806,7 +806,7 @@ def test_distillation_cases(
         num_ccz_factories=1,
         architecture="SSM",
     )
-    # Confirm distil cost TypeError on non-GirdQubits
+    # Confirm distil_cost raises TypeError when called on a non-Distil gate
     with pytest.raises(TypeError, match="Operation is not an instance of Distil"):
         _ = movement_architecture.distil_cost(op=cirq.X.on(cirq.GridQubit(0, 0)), layout=t_layout)
     # Confirm that distil is only available to movement archs

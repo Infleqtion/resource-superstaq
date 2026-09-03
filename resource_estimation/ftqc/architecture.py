@@ -901,9 +901,7 @@ class DefaultMovement(Architecture):
 
     def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
         if not isinstance(layout, MovementDistillery):
-            raise TypeError(
-                "_distil_cost requires a 'layout' keyword argument of type MovementDistillery"
-            )
+            raise TypeError("layout must be a MovementDistillery for _distil_cost().")
         if resource == "T":
             mapped_circuit = distil_15_to_1()
         elif resource == "CCZ":
