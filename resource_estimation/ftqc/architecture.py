@@ -24,6 +24,7 @@ from typing import Callable, Literal
 import cirq
 import numpy as np
 
+import resource_estimation.ftqc.codepatch as codepatch
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.compile_ftqc import add_moves
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
@@ -114,7 +115,7 @@ def _merge_cost(
 def _syndrome_extract_cost(
     rounds: int,
     num_logical_qubits: int,
-    d: int,
+    patch: codepatch.CSSCodePatch,
 ) -> CostDict:
     """Calculates the cost of syndrome extraction in terms of physical gates"""
     # This is how SE should look...
@@ -130,21 +131,14 @@ def _syndrome_extract_cost(
     #            CZ  |  |
     #               CZ  |
     #                  CZ
-    patch = lsp.RotatedCodePatch(d)
+    x_check_weight = patch.total_x_check_weight()
+    z_check_weight = patch.total_z_check_weight()
+    phased_xz_gates = 2 * (x_check_weight + patch.num_x_stabilizers() + patch.num_z_stabilizers())
     gate_cost: GateCounts = {
         cirq.MeasurementGate: patch.num_measure_qubits * num_logical_qubits * rounds,
-        cirq.CZ: (patch.total_z_syndrome_cnots() + patch.total_x_syndrome_cnots())
-        * num_logical_qubits
-        * rounds,
+        cirq.CZ: (x_check_weight + z_check_weight) * num_logical_qubits * rounds,
         cirq.ResetChannel: patch.num_measure_qubits * num_logical_qubits * rounds,
-        cirq.PhasedXZGate: num_logical_qubits
-        * rounds
-        * (
-            (10 * patch.num_x_stabs(full=True))  # 5 Hadamards on left and 5 Hadamards on right
-            + (2 * patch.num_z_stabs(full=True))  # 1 Hadamard on left and 1 Hadamard on right
-            + (6 * patch.num_x_stabs(full=False))  # 3 Hadamards on left and 3 Hadamards on right
-            + (2 * patch.num_z_stabs(full=False))  # 1 Hadamard on left and 1 Hadamard on right
-        ),
+        cirq.PhasedXZGate: phased_xz_gates * num_logical_qubits * rounds,
     }
     moment_cost: GateCounts = {
         cirq.MeasurementGate: rounds,
@@ -195,7 +189,9 @@ class Architecture(abc.ABC):
         self.post_op_correction: bool = post_op_correction
         self.movement: bool = movement
         self.d: int = d
-        self.patch: lsp.RotatedCodePatch = lsp.RotatedCodePatch(self.d)
+        self.patch: codepatch.RotatedSurfaceCodePatch = codepatch.RotatedSurfaceCodePatch(
+            patch_id=0, d=self.d
+        )
         self.cultivation_repetition: int = cultivation_repetition
         self.cultivation_fault_distance: Literal[3, 5] = cultivation_fault_distance
         self.syndrome_rounds: int | None = syndrome_rounds
@@ -272,8 +268,8 @@ class Architecture(abc.ABC):
         )
         se_moment_cost = collections.Counter(
             _syndrome_extract_cost(
-                rounds=ceil(self.d / 2), num_logical_qubits=1, d=self.d
-            ).moment_cost,
+                rounds=ceil(self.d / 2), num_logical_qubits=1, patch=self.patch
+            ).moment_cost
         )
 
         # TODO: Perhaps cannonical cost includes SE before and afer for a total of two more units of SE
@@ -283,8 +279,8 @@ class Architecture(abc.ABC):
         # For the gate cost, let's just approximate it with one round of syndrome extraction with an additional d-1 diagonal of CZ gates
         se_gate_cost = collections.Counter(
             _syndrome_extract_cost(
-                rounds=ceil(self.d / 2), num_logical_qubits=1, d=self.d
-            ).gate_cost,
+                rounds=ceil(self.d / 2), num_logical_qubits=1, patch=self.patch
+            ).gate_cost
         )
         Y_gate_cost = se_gate_cost.copy()
         Y_gate_cost[cirq.CZ] += self.d - 1
@@ -348,9 +344,7 @@ class Architecture(abc.ABC):
 
     def syndrome_extract_cost(self, op: cirq.Operation) -> CostDict:
         cost_dict = _syndrome_extract_cost(
-            rounds=self.rounds,
-            num_logical_qubits=len(op.qubits),
-            d=self.d,
+            rounds=self.rounds, num_logical_qubits=len(op.qubits), patch=self.patch
         )
         cost_dict.op_time = self.total_time(moment_cost_dict=cost_dict.moment_cost)
         return cost_dict
@@ -863,9 +857,7 @@ class DualSpeciesMovement(DefaultMovement):
     def syndrome_extract_cost(self, op: cirq.Operation) -> CostDict:
         # Get the syndrome extraction cost without the atom shuttling
         cost_dict = _syndrome_extract_cost(
-            rounds=self.rounds,
-            num_logical_qubits=len(op.qubits),
-            d=self.d,
+            rounds=self.rounds, num_logical_qubits=len(op.qubits), patch=self.patch
         )
         cost_dict.op_time = self.total_time(cost_dict.moment_cost)
         return cost_dict
@@ -937,9 +929,7 @@ class MeasureZonesOnly(DefaultMovement):
         Since this class is a Movement architecture, its rounds should be low, in accordance with the promise of correlated decoding.
         """
         base_cost = _syndrome_extract_cost(
-            rounds=self.rounds,
-            num_logical_qubits=len(op.qubits),
-            d=self.d,
+            rounds=self.rounds, num_logical_qubits=len(op.qubits), patch=self.patch
         )
         moment_cost = base_cost.moment_cost
         gate_cost = base_cost.gate_cost
