@@ -174,6 +174,95 @@ def _split_cost(smooth: bool, d: int) -> CostDict:
     return CostDict(gate_cost=gate_cost, moment_cost={}, op_time=-1)
 
 
+def _physical_move_time(l: float, a: float = 5500, base_cost: float = 200) -> float:
+    """Calculates total time (μs) to travel a distance with a constant-acceleration profile.
+
+    Args:
+        l: Physical distance in μm.
+        a: Acceleration in m/s^2.
+        base_cost: Flat overhead each move pays in μs.
+    """
+    l *= 10**-6  # convert μm to m
+    # a is in m/s^2, so we make sure to convert answer to μs
+    return 2 * np.sqrt(l / a) * 10**6 + base_cost
+
+
+def _measurement_zone_move_precompiled(
+    dx: int, dy: int, patch_length: int, site_spacing: float
+) -> CostDict:
+    # A logical Move to a measurement zone
+    #   - RShift by one site
+    #   - Move measure qubits to zone
+    # Current notation denotes the move operation between the logical qubit and the zone itself as arguments
+    # Reversing the sequence of moves achieves the inverse and has the same cost
+    l1 = 1 * site_spacing
+    t1 = _physical_move_time(l1)
+
+    l2_x = abs(dx) * patch_length * site_spacing
+    l2_y = abs(dy) * patch_length * site_spacing
+    t2 = _physical_move_time(l2_x) + _physical_move_time(l2_y)
+
+    op_time = t1 + t2
+    return CostDict(
+        gate_cost={css.MovementGate: 2}, moment_cost={css.MovementGate: 2}, op_time=op_time
+    )
+
+
+def _interaction_zone_move_precompiled(
+    dx: int, dy: int, patch_length: int, site_spacing: float
+) -> CostDict:
+    # A logical Move to an interaction zone
+    #   - RShift by one site
+    #   - Move data qubits to zone
+    #   - Squeeze zone qubits
+    # Current notation denotes an operation between a logical qubit and the zone itself as arguments
+    # Therefore compiled circuits see two logical movement operations to prepare one logical CNOT
+    # Reversing the sequence of moves achieves the inverse and has the same cost
+    l1 = 1 * site_spacing
+    t1 = _physical_move_time(l1)
+
+    l2_x = abs(dx) * patch_length * site_spacing
+    l2_y = abs(dy) * patch_length * site_spacing
+    t2 = _physical_move_time(l2_x) + _physical_move_time(l2_y)
+
+    # Couldn't we actually just do this in the same move as l2_x?
+    l3 = 0.25 * site_spacing  # Squeeze sites for interaction
+    t3 = _physical_move_time(l3)
+    op_time = t1 + t2 + t3
+    return CostDict(
+        gate_cost={css.MovementGate: 3}, moment_cost={css.MovementGate: 3}, op_time=op_time
+    )
+
+
+def _inplace_entanglement_move_precompiled(
+    dx: int, dy: int, patch_length: int, site_spacing: float, scratch_dx: int, scratch_dy: int
+) -> CostDict:
+    # A logical CNOT operation performed inplace using movement
+    #   - RShift by one unit to get alternating columns of data and ancilla qubits on control and target patches
+    #   - Send measure qubits of the target patch to the corner of the array
+    #   - Move data qubits from the control patch to the now free space in the target patch
+    # Reversing the sequence of moves achieves the inverse and has the same cost
+
+    # Shift -- align columns
+    l1 = 1 * site_spacing
+    t1 = _physical_move_time(l1)
+
+    # Punt -- Move measure qubits to logical corner
+    l2_x = patch_length * abs(scratch_dx) * site_spacing
+    l2_y = patch_length * abs(scratch_dy) * site_spacing
+    t2 = _physical_move_time(l2_x) + _physical_move_time(l2_y)
+
+    # Interact -- Move datas from ctrl to trgt
+    l3_x = patch_length * abs(dx) * site_spacing
+    l3_y = patch_length * abs(dy) * site_spacing
+    t3 = _physical_move_time(l3_x) + _physical_move_time(l3_y)
+
+    op_time = t1 + t2 + t3
+    return CostDict(
+        op_time=op_time, gate_cost={css.MovementGate: 3}, moment_cost={css.MovementGate: 3}
+    )
+
+
 class Architecture(abc.ABC):
     """Class for representing device architectures.
 

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import collections
-from math import ceil, pi
+from math import ceil, isclose, pi
 
 import cirq
 import cirq_superstaq as css
@@ -716,6 +716,65 @@ def test_logical_move() -> None:
     two_cost = arc.op_time(two_hop)
 
     assert two_cost == 2 * one_cost
+
+
+def test_physical_move_time() -> None:
+    #  Test moving 55μm takes 200 μs in agreement with https://arxiv.org/pdf/2505.15907 when there is no startup penalty
+    expected_microseconds = 200
+    returned_microseconds = arch._physical_move_time(55, a=5500, base_cost=0)
+    assert isclose(expected_microseconds, returned_microseconds)
+
+    # Test that base cost is additive
+    no_startup = arch._physical_move_time(l=100, a=5500, base_cost=0)
+    yes_startup = arch._physical_move_time(l=100, a=5500, base_cost=100)
+    difference = yes_startup - no_startup
+    assert isclose(difference, 100)
+
+    # Test scaling goes as as sqrt when there is no startup penalty
+    t100 = arch._physical_move_time(l=100, base_cost=0)
+    t400 = arch._physical_move_time(l=400, base_cost=0)
+    factor = t400 / t100
+    assert isclose(factor, 2)
+
+
+def test_precompiled_moves() -> None:
+    # Test measurement zone movement
+    measure_zone_cost = arch._measurement_zone_move_precompiled(
+        dx=2, dy=2, patch_length=5, site_spacing=3
+    )
+    assert measure_zone_cost.gate_cost == measure_zone_cost.moment_cost == {css.MovementGate: 2}
+    expected_measure_time = arch._physical_move_time(1 * 3) + 2 * arch._physical_move_time(
+        2 * 5 * 3
+    )
+    assert isclose(measure_zone_cost.op_time, expected_measure_time)
+
+    # Test interaction zone movement
+    interaction_zone_cost = arch._interaction_zone_move_precompiled(
+        dx=2, dy=2, patch_length=5, site_spacing=3
+    )
+    assert (
+        interaction_zone_cost.gate_cost
+        == interaction_zone_cost.moment_cost
+        == {css.MovementGate: 3}
+    )
+    expected_interaction_time = (
+        arch._physical_move_time(1 * 3)
+        + 2 * arch._physical_move_time(2 * 5 * 3)
+        + arch._physical_move_time(0.25 * 3)
+    )
+    assert isclose(expected_interaction_time, interaction_zone_cost.op_time)
+
+    # Test inplace movement
+    inplace_cost = arch._inplace_entanglement_move_precompiled(
+        dx=2, dy=2, patch_length=5, site_spacing=3, scratch_dx=4, scratch_dy=4
+    )
+    assert inplace_cost.gate_cost == inplace_cost.moment_cost == {css.MovementGate: 3}
+    expected_inplace_time = (
+        arch._physical_move_time(1 * 3)
+        + 2 * arch._physical_move_time(2 * 5 * 3)
+        + 2 * arch._physical_move_time(4 * 5 * 3)
+    )
+    assert isclose(expected_inplace_time, inplace_cost.op_time)
 
 
 def test_y_cult_on_movement() -> None:
