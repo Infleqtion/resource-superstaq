@@ -110,7 +110,7 @@ def _render_gate(gate: LogicalGate, *, distance: int) -> str:
     if gate.name == "S":
         return f"    LogicalSD{distance} {gate.qubits[0]}"
     if gate.name == "CX":
-        return f"    FaultTolerantCNOTD{distance} {gate.qubits[0]} {gate.qubits[1]}"
+        return f"    LogicalCNOTD{distance} {gate.qubits[0]} {gate.qubits[1]}"
     raise AssertionError(f"unsupported gate {gate.name!r}")
 
 

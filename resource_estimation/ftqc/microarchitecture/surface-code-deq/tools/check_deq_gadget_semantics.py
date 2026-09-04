@@ -89,7 +89,7 @@ CHOI_GATES = (
     ),
     ChoiGate(
         name="CNOT",
-        operation="FaultTolerantCNOTD3",
+        operation="LogicalCNOTD3",
         pauli_images=(
             PauliImage(
                 LogicalFactor("X", 0),

@@ -16,7 +16,7 @@ The unified `surface-code` library contains:
   logical measurements, and virtual frame updates.
 - Fault-tolerant lattice surgery: horizontal `MXX` and vertical `MZZ`, each
   with typed begin, merge-round, and end gadgets.
-- Composed Clifford operations: `FaultTolerantCNOTD*`, `LogicalSD*`, and
+- Composed Clifford operations: `LogicalCNOTD*`, `LogicalSD*`, and
   `LogicalHadamardD*`.
 - `PrepareY`, an encoded `|+i⟩` preparation built from the XXZZ-boundary state
   and its reverse-time diagonal-twist transition.

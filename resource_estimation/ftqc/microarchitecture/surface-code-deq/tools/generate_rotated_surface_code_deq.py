@@ -73,7 +73,7 @@ def _logical_s_gadget_text(distance: int) -> str:
 COMPOSE LogicalSD{distance} {{
     INPUT {patch_code} 0
     PrepareY 1
-    FaultTolerantCNOTD{distance} 0 1
+    LogicalCNOTD{distance} 0 1
     MeasureZ 1
     # A 1 outcome leaves Z*S on the data, so update its Z frame.
     CONDITIONAL rec[-1] Z0 0
@@ -422,7 +422,7 @@ def render_cnot(distance: int = 3, *, merged_rounds: int | None = None) -> str:
         (
             "# Port 0 is the control and port 1 is the target.",
             "# Internal port 2 is a |+> mediator patch.",
-            f"COMPOSE FaultTolerantCNOTD{distance} {{",
+            f"COMPOSE LogicalCNOTD{distance} {{",
             f"    INPUT {patch_code} 0",
             f"    INPUT {patch_code} 1",
             "    PrepareX 2",

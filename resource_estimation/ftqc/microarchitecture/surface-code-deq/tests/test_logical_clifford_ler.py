@@ -59,7 +59,7 @@ def test_cycle_program_can_run_a_known_identity_without_an_inverse() -> None:
         num_logical_qubits=2,
         include_inverse=False,
     )
-    assert program.count("FaultTolerantCNOTD3 0 1") == 10
+    assert program.count("LogicalCNOTD3 0 1") == 10
     assert "U†U" not in program
     assert program.count("ASSERT_EQ") == 2
 

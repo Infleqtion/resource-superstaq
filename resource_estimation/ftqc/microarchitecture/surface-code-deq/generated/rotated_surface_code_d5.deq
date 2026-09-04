@@ -594,7 +594,7 @@ COMPOSE LogicalHadamardD5 {
 
 # Port 0 is the control and port 1 is the target.
 # Internal port 2 is a |+> mediator patch.
-COMPOSE FaultTolerantCNOTD5 {
+COMPOSE LogicalCNOTD5 {
     INPUT RotatedSurfaceCodeW5H5 0
     INPUT RotatedSurfaceCodeW5H5 1
     PrepareX 2
@@ -614,7 +614,7 @@ COMPOSE FaultTolerantCNOTD5 {
 COMPOSE LogicalSD5 {
     INPUT RotatedSurfaceCodeW5H5 0
     PrepareY 1
-    FaultTolerantCNOTD5 0 1
+    LogicalCNOTD5 0 1
     MeasureZ 1
     # A 1 outcome leaves Z*S on the data, so update its Z frame.
     CONDITIONAL rec[-1] Z0 0

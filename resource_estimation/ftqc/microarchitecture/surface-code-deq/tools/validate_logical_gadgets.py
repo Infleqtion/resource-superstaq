@@ -99,7 +99,7 @@ def _gates_at_distance(distance: int) -> tuple[checker.ChoiGate, ...]:
     operation_names = {
         "LogicalS": f"LogicalSD{distance}",
         "LogicalH": f"LogicalHadamardD{distance}",
-        "CNOT": f"FaultTolerantCNOTD{distance}",
+        "CNOT": f"LogicalCNOTD{distance}",
     }
     return tuple(
         replace(gate, operation=operation_names[gate.name])

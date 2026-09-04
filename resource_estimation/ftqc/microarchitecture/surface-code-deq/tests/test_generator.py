@@ -85,7 +85,7 @@ def test_si1000_noise_rejects_invalid_physical_error_rates() -> None:
 def test_unified_surface_code_library_declares_shared_types_once() -> None:
     source = generator.render_surface_code_library(3)
     assert source.count("CODE RotatedSurfaceCodeW3H3 [[9,1,3]]") == 1
-    assert "COMPOSE FaultTolerantCNOTD3" in source
+    assert "COMPOSE LogicalCNOTD3" in source
     assert "COMPOSE LogicalHadamardD3" in source
     assert "COMPOSE LogicalSD3" in source
     assert "COMPOSE PrepareY" in source
@@ -100,7 +100,7 @@ def test_logical_s_injects_the_prepared_y_state_and_tracks_its_byproduct() -> No
     source = generator.render_surface_code_library(3)
     logical_s = source[source.index("COMPOSE LogicalSD3 {") :]
     assert "PrepareY 1" in logical_s
-    assert "FaultTolerantCNOTD3 0 1" in logical_s
+    assert "LogicalCNOTD3 0 1" in logical_s
     assert "MeasureZ 1" in logical_s
     assert "CONDITIONAL rec[-1] Z0 0" in logical_s
 
@@ -263,7 +263,7 @@ def test_shared_surgery_library_defines_a_mediator_based_cnot() -> None:
     assert "GADGET MergeBeginZZ" in source
     assert "COMPOSE FaultTolerantMXXD3" in source
     assert "COMPOSE FaultTolerantMZZD3" in source
-    assert "COMPOSE FaultTolerantCNOTD3" in source
+    assert "COMPOSE LogicalCNOTD3" in source
     assert "PrepareX 2" in source
     assert "FaultTolerantMZZD3 0 2" in source
     assert "FaultTolerantMXXD3 2 1" in source
