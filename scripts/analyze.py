@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import textwrap
 import time
+from pathlib import Path
 
 import cirq
 import cirq_superstaq as css
@@ -25,7 +26,7 @@ import resource_estimation as res
 from resource_estimation.analysis import STR2ARCH, C, make_pretty
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Resource Estimation Experiment")
 
     parser.add_argument("file", type=str, help="File in .json format to read as cirq circuit")
@@ -78,7 +79,7 @@ def parse_args() -> argparse.Namespace:
         default=0.0,
         help="Approximate error per cultivation derived elsewhere. Must also override other parameters",
     )
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 
 def main(args: argparse.Namespace | None = None) -> int:
@@ -301,7 +302,7 @@ def main(args: argparse.Namespace | None = None) -> int:
 
     print(report.report())
     if not args.nosave:
-        report.save()
+        report.save(savedir=Path(file).parent)
     return 0
 
 
