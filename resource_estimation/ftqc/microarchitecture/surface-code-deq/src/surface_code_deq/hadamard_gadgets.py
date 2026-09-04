@@ -45,9 +45,7 @@ def swap_qec_schedule(
         }
     else:
         raise ValueError(f"unknown SWAP-QEC direction: {direction}")
-    shifted_stabilizers = patch.stabilizers(
-        lambda x, y: patch_size + y * distance + x
-    )
+    shifted_stabilizers = patch.stabilizers(lambda x, y: patch_size + y * distance + x)
     qec_schedule, _ = cnot_syndrome_schedule(
         shifted_stabilizers,
         ancilla_offset=2 * patch_size,
@@ -92,11 +90,7 @@ def swap_qec_schedule(
     qec_schedule = remap_reused_ancillas(qec_schedule)
     new_targets = targets(range(patch_size, 2 * patch_size))
     swap_pairs = targets(
-        [
-            qubit
-            for index in range(patch_size)
-            for qubit in (index, patch_size + index)
-        ]
+        [qubit for index in range(patch_size) for qubit in (index, patch_size + index)]
     )
     coordinates = dict(input_coordinates)
     coordinates.update(data_coordinates)
@@ -127,7 +121,13 @@ def _remap_schedule(schedule: list[str], wire_map: dict[int, int]) -> list[str]:
         operation, *line_targets = line.split()
         remapped.append(
             " ".join(
-                (operation, *(str(wire_map.get(int(target), int(target))) for target in line_targets))
+                (
+                    operation,
+                    *(
+                        str(wire_map.get(int(target), int(target)))
+                        for target in line_targets
+                    ),
+                )
             )
         )
     return remapped
@@ -199,7 +199,9 @@ def _corner_movement_hook_orders(
     return orders
 
 
-def _layout_stabilizers(layout: HadamardDeformationLayout) -> list[tuple[str, tuple[int, ...]]]:
+def _layout_stabilizers(
+    layout: HadamardDeformationLayout,
+) -> list[tuple[str, tuple[int, ...]]]:
     """Convert one mixed-layout check list into DEQ's CSS-code form."""
     return [
         (check[0][0], tuple(qubit for _, qubit in check))
@@ -344,7 +346,9 @@ def logical_hadamard_gadget_text(distance: int) -> str:
         },
         include_ticks=False,
     )
-    retained_targets = [return_wire(x, y) for y in range(distance) for x in range(distance)]
+    retained_targets = [
+        return_wire(x, y) for y in range(distance) for x in range(distance)
+    ]
     return_added_targets = [
         return_wire(x, y) for y in range(distance) for x in range(distance - 1)
     ]
@@ -357,13 +361,19 @@ def logical_hadamard_gadget_text(distance: int) -> str:
     northwest_wires = {
         **{index: qubit for index, qubit in enumerate(retained_targets)},
         **{patch_size + index: 2 * patch_size + index for index in range(patch_size)},
-        **{2 * patch_size + index: 3 * patch_size + index for index in range(patch_size)},
+        **{
+            2 * patch_size + index: 3 * patch_size + index
+            for index in range(patch_size)
+        },
     }
     southwest_schedule, _ = swap_qec_schedule(distance, "SW", include_ticks=False)
     southwest_wires = {
         **{index: 2 * patch_size + index for index in range(patch_size)},
         **{patch_size + index: 3 * patch_size + index for index in range(patch_size)},
-        **{2 * patch_size + index: 4 * patch_size + index for index in range(patch_size)},
+        **{
+            2 * patch_size + index: 4 * patch_size + index
+            for index in range(patch_size)
+        },
     }
     frame_code = f"HadamardFrameD{distance}"
     extension_code = f"HadamardExtensionD{distance}"
@@ -373,9 +383,7 @@ def logical_hadamard_gadget_text(distance: int) -> str:
     corner_targets = list(range(2 * patch_size))
     shifted_patch_targets = list(range(patch_size, 2 * patch_size))
     return_targets = [
-        return_wire(x, y)
-        for y in range(distance)
-        for x in range(return_width)
+        return_wire(x, y) for y in range(distance) for x in range(return_width)
     ]
 
     stages = (
@@ -406,7 +414,10 @@ def logical_hadamard_gadget_text(distance: int) -> str:
             f"HadamardExtensionSED{distance}",
             extension_code,
             extension_targets,
-            ["# One additional extraction round on the extension layout.", *extension_round],
+            [
+                "# One additional extraction round on the extension layout.",
+                *extension_round,
+            ],
             extension_code,
             extension_targets,
         ),
@@ -426,7 +437,10 @@ def logical_hadamard_gadget_text(distance: int) -> str:
             f"HadamardDomainWallSED{distance}",
             corner_code,
             corner_targets,
-            ["# One additional extraction round on the domain-wall layout.", *domain_wall_round],
+            [
+                "# One additional extraction round on the domain-wall layout.",
+                *domain_wall_round,
+            ],
             corner_code,
             corner_targets,
         ),
@@ -515,4 +529,6 @@ def logical_hadamard_gadget_text(distance: int) -> str:
             "}",
         )
     )
-    return document(_hadamard_code_text(distance, extension, domain_wall), *stages, composition)
+    return document(
+        _hadamard_code_text(distance, extension, domain_wall), *stages, composition
+    )
