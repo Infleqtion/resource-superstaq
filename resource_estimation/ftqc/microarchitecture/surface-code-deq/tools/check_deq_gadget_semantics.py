@@ -106,6 +106,13 @@ CHOI_GATES = (
 )
 
 
+PREPARE_Y_STATE = ChoiStabilizer(
+    name="PrepareYState",
+    observable=(LogicalFactor("Y", 0),),
+    port_count=1,
+)
+
+
 def _choi_stabilizers(gate: ChoiGate) -> tuple[ChoiStabilizer, ...]:
     """Return the independent Choi stabilizers for ``gate``.
 
@@ -274,6 +281,24 @@ def _logical_effect_source(gates: tuple[ChoiGate, ...] = CHOI_GATES) -> str:
         _choi_program_text(gate, stabilizer) for gate, stabilizer in checks
     )
     return "\n\n".join(parts)
+
+
+def _prepare_y_state_source() -> str:
+    """Return a direct logical-``+Y`` assertion for the preparation gadget."""
+    return "\n\n".join(
+        (
+            _choi_measurement_text(PREPARE_Y_STATE, distance=3),
+            "\n".join(
+                (
+                    "PROGRAM PrepareYState {",
+                    "    PrepareY 0",
+                    "    CheckPrepareYState 0",
+                    "    ASSERT_EQ rec[-1] 0",
+                    "}",
+                )
+            ),
+        )
+    )
 
 
 def run_deq(*arguments: str) -> str:
@@ -511,6 +536,8 @@ def main() -> None:
             generator.render_surface_code_library(3)
             + "\n"
             + _logical_effect_source(selected_gates)
+            + "\n"
+            + _prepare_y_state_source()
         )
         jit_path = temporary_directory / "logical_effects_d3.jit"
         transpile_library(source_path, jit_path)
@@ -520,6 +547,10 @@ def main() -> None:
                 check_choi_stabilizer(source_path, jit_path, stabilizer)
             except AssertionError as error:
                 failures.append(str(error))
+        try:
+            check_choi_stabilizer(source_path, jit_path, PREPARE_Y_STATE)
+        except AssertionError as error:
+            failures.append(str(error))
         if failures:
             raise AssertionError("\n".join(failures))
 

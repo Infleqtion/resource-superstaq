@@ -78,11 +78,13 @@ def test_ler_arguments_request_jit_window_decoding() -> None:
         errors=10,
         batch_size=5,
         jobs=1,
+        seed=123,
     )
     assert "--jit" in arguments
     assert arguments[arguments.index("--batch-size") + 1] == "5"
     assert arguments[arguments.index("--coordinator") + 1] == "window"
     assert arguments[arguments.index("--decoder-config") + 1] == '{"pre_iter": 10}'
+    assert arguments[arguments.index("--seed") + 1] == "123"
     assert runner.logical_error_count("  Logical errors: 7\n") == 7
 
 

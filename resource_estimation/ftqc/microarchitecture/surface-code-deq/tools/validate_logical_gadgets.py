@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
-"""Find logical-gadget graphlike fault weights with ideal terminal readout.
+"""Find logical-gadget fault weights with ideal terminal readout.
 
 The SI1000 noise is applied only to the generated library. Ideal encoded Bell
 preparation, terminal syndrome extraction, and final Choi measurement are
 appended afterwards, so they close the experiment without adding noisy faults.
+
+The default report uses Stim's fast graphlike-distance search.  Pass
+``--sat-problem-dir`` to additionally emit an exact weighted-DIMACS MaxSAT
+problem for each Choi check.  Those problems retain arbitrary detector
+hyperedges. Pass ``--rc2`` to solve them in-process using PySAT's RC2 MaxSAT
+solver.
 """
 
 from __future__ import annotations
@@ -112,6 +118,36 @@ def _shortest_graphlike_error(
     return error_model, error_model.shortest_graphlike_error()
 
 
+def _shortest_error_sat_problem(circuit: stim.Circuit) -> str:
+    """Encode the exact circuit fault-distance problem as WDIMACS MaxSAT.
+
+    Unlike ``_shortest_graphlike_error``, this retains non-graphlike detector
+    hyperedges and mutually exclusive outcomes from individual circuit noise
+    mechanisms.  The returned string must be solved by a MaxSAT solver; its
+    optimal cost is the minimum number of physical fault mechanisms causing an
+    undetected logical-observable flip.
+    """
+    return circuit.shortest_error_sat_problem(format="WDIMACS")
+
+
+def _shortest_error_rc2_cost(circuit: stim.Circuit) -> int:
+    """Return the exact circuit fault distance using PySAT's RC2 solver."""
+    try:
+        from pysat.examples.rc2 import RC2
+        from pysat.formula import WCNF
+    except ImportError as error:
+        raise RuntimeError(
+            "exact MaxSAT solving requires the optional 'sat' dependency; "
+            "install it with `pip install -e '.[sat]'`"
+        ) from error
+
+    problem = WCNF(from_string=_shortest_error_sat_problem(circuit))
+    with RC2(problem) as solver:
+        if solver.compute() is None:
+            raise RuntimeError("Stim's exact fault-distance problem was unsatisfiable")
+        return solver.cost
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -137,6 +173,19 @@ def main() -> None:
         help="preserve the generated detector-annotated DEQ and Stim files here",
     )
     parser.add_argument(
+        "--sat-problem-dir",
+        type=Path,
+        help=(
+            "write one exact non-graphlike WDIMACS MaxSAT problem per Choi "
+            "check; solve these files with an external MaxSAT solver"
+        ),
+    )
+    parser.add_argument(
+        "--rc2",
+        action="store_true",
+        help="solve each exact non-graphlike fault-distance problem with PySAT RC2",
+    )
+    parser.add_argument(
         "--prepare-y-boundary-rounds",
         type=int,
         help="override the number of repeated XXZZ-boundary rounds in PrepareY",
@@ -156,6 +205,8 @@ def main() -> None:
     )
     if args.work_dir is not None:
         args.work_dir.mkdir(parents=True, exist_ok=True)
+    if args.sat_problem_dir is not None:
+        args.sat_problem_dir.mkdir(parents=True, exist_ok=True)
     directory_context = (
         tempfile.TemporaryDirectory(prefix="surface-code-deq-cnot-distance-")
         if args.work_dir is None
@@ -181,6 +232,13 @@ def main() -> None:
             )
             stim_path = jit_path.with_suffix("").with_suffix(".stim")
             circuit = stim.Circuit.from_file(stim_path)
+            if args.sat_problem_dir is not None:
+                sat_path = args.sat_problem_dir / f"{stabilizer.name}.wcnf"
+                sat_path.write_text(_shortest_error_sat_problem(circuit))
+                print(f"{stabilizer.name}: wrote exact MaxSAT problem {sat_path}")
+            if args.rc2:
+                exact_cost = _shortest_error_rc2_cost(circuit)
+                print(f"{stabilizer.name}: exact fault weight {exact_cost}")
             _, shortest_error = _shortest_graphlike_error(circuit)
             print(f"{stabilizer.name}: graphlike fault weight {len(shortest_error)}")
             if args.explain:

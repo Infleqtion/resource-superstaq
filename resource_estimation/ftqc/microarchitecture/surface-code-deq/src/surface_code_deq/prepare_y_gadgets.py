@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .deq_text import code_text, generated_document, indent, targets, validate_distance
+from .deq_text import code_text, document, generated_document, indent, targets, validate_distance
 from .rotated_surface_code import RotatedSurfaceCode
 from .schedules import check_ancilla_coordinates, cnot_syndrome_schedule
 from .visualization import circuit_from_schedule
@@ -46,7 +46,7 @@ def _boundary_round(
 
 
 def prepare_y_gadget_text(distance: int, *, boundary_rounds: int | None) -> str:
-    """Render logical ``|+i>`` preparation as one ordinary-patch gadget."""
+    """Render logical ``|+i>`` preparation as typed boundary and transition stages."""
     validate_distance(distance)
     boundary = YBoundarySurfaceCode(distance)
     minimum_rounds = distance // 2
@@ -60,25 +60,66 @@ def prepare_y_gadget_text(distance: int, *, boundary_rounds: int | None) -> str:
     patch = RotatedSurfaceCode(distance, distance)
     boundary_round, z_targets, x_targets = _boundary_round(boundary)
     transition, _ = y_transition_inverse_schedule(distance)
-    return "\n".join(
+    boundary_code = f"YBoundaryStateD{distance}"
+    boundary_targets = list(range(1, patch.num_data_qubits))
+    boundary_preparation = "\n".join(
         (
-            "# Encoded |+i> preparation via Gidney's reverse-time diagonal twist.",
-            "# The XXZZ-boundary state is internal; wire 0 is restored during the transition.",
-            "GADGET PrepareY {",
-            "    # 1. Prepare the missing-corner XXZZ boundary state.",
+            f"GADGET PrepareYBoundaryD{distance} {{",
+            "    # Prepare the missing-corner XXZZ state and extract its first syndrome.",
             f"    R {targets(z_targets)}",
             f"    RX {targets(x_targets)}",
             indent(boundary_round),
-            "    # 2. Repeat XXZZ-boundary syndrome extraction for fault tolerance.",
-            f"    REPEAT {boundary_rounds} {{",
-            indent(boundary_round, spaces=8),
-            "    }",
-            "    # 3. Restore the corner and map to the ordinary rotated patch.",
-            "    #    The terminal record-controlled CX operations fix the +Y frame.",
+            f"    OUTPUT {boundary_code} {targets(boundary_targets)}",
+            "}",
+        )
+    )
+    boundary_syndrome_extraction = "\n".join(
+        (
+            f"GADGET PrepareYBoundarySED{distance} {{",
+            f"    INPUT {boundary_code} {targets(boundary_targets)}",
+            "    # One additional XXZZ-boundary syndrome-extraction round.",
+            indent(boundary_round),
+            f"    OUTPUT {boundary_code} {targets(boundary_targets)}",
+            "}",
+        )
+    )
+    transition_gadget = "\n".join(
+        (
+            f"GADGET PrepareYTransitionD{distance} {{",
+            f"    INPUT {boundary_code} {targets(boundary_targets)}",
+            "    # Restore the corner and map the XXZZ state to an ordinary patch.",
+            "    # The terminal record-controlled CX operations fix the +Y frame.",
             indent(transition),
             f"    OUTPUT {patch.type_name} {targets(range(patch.num_data_qubits))}",
             "}",
         )
+    )
+    composition = "\n".join(
+        (
+            "# Keep the full-rank boundary state on a distinct composition port.",
+            "# This prevents the transition's restored corner from aliasing it.",
+            "COMPOSE PrepareY {",
+            f"    PrepareYBoundaryD{distance} 0",
+            f"    REPEAT {boundary_rounds} {{",
+            f"        PrepareYBoundarySED{distance} 0",
+            "    }",
+            f"    PrepareYTransitionD{distance} IN(0) OUT(1)",
+            f"    OUTPUT {patch.type_name} 1",
+            "}",
+        )
+    )
+    return document(
+        code_text(
+            boundary_code,
+            boundary.num_data_qubits,
+            None,
+            None,
+            boundary.stabilizers(),
+        ),
+        boundary_preparation,
+        boundary_syndrome_extraction,
+        transition_gadget,
+        composition,
     )
 
 

@@ -5,5 +5,4 @@ __pycache__/
 .venv-deq/
 *.egg-info/
 generated/*.jit
-generated/*.jit.txt*
 generated/*.stim

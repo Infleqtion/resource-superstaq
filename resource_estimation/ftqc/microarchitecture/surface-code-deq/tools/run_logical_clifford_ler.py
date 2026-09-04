@@ -172,6 +172,7 @@ def ler_arguments(
     errors: int,
     batch_size: int,
     jobs: int,
+    seed: int | None = None,
 ) -> tuple[str, ...]:
     """Return the DEQ JIT/window-decoder invocation for one LER experiment."""
     return (
@@ -207,6 +208,7 @@ def ler_arguments(
         str(batch_size),
         "--jobs",
         str(jobs),
+        *(("--seed", str(seed)) if seed is not None else ()),
     )
 
 
@@ -231,6 +233,7 @@ def run_zero_noise_preflight(
     shots: int,
     batch_size: int,
     jobs: int,
+    seed: int | None = None,
 ) -> None:
     """Compile and require a deterministic, window-decoded zero-noise cycle."""
     run_deq("transpile", str(library_path), "--out", str(jit_path), "--jobs", str(jobs))
@@ -249,6 +252,7 @@ def run_zero_noise_preflight(
             errors=1,
             batch_size=batch_size,
             jobs=jobs,
+            seed=seed,
         ),
         capture_output=True,
     )
@@ -283,6 +287,11 @@ def main() -> None:
     parser.add_argument("--buffer-radius", type=int, default=2)
     parser.add_argument("--lookahead-radius", type=int, default=0)
     parser.add_argument("--jobs", type=int, default=1)
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="fixed DEQ sampler seed; pass this when comparing decoders",
+    )
     parser.add_argument(
         "--ideal-shots",
         type=int,
@@ -350,6 +359,7 @@ def main() -> None:
             shots=args.ideal_shots,
             batch_size=args.batch_size,
             jobs=args.jobs,
+            seed=args.seed,
         )
 
     run_deq(
@@ -374,6 +384,7 @@ def main() -> None:
             errors=args.errors,
             batch_size=args.batch_size,
             jobs=args.jobs,
+            seed=args.seed,
         )
     )
 

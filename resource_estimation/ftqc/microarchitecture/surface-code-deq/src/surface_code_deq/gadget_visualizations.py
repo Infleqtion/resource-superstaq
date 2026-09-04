@@ -337,3 +337,5 @@ def gadget_circuits(distance: int, basis: str = "XX") -> dict[str, object]:
             coordinates=merge_end_coordinates,
         ),
     }
+
+

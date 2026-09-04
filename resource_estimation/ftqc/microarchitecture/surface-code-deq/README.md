@@ -46,6 +46,21 @@ stabilizers of the composed S, H, and CNOT channels.
 .venv-deq/bin/python tools/check_deq_gadget_semantics.py
 ```
 
+## Check fault distance
+
+The graphlike fault-distance check uses the same Choi construction with ideal
+terminal readout. To also export exact, non-graphlike fault-distance MaxSAT
+problems, use Stim's circuit-level encoding:
+
+```bash
+.venv-deq/bin/python tools/validate_logical_gadgets.py --distance 5 \
+  --sat-problem-dir /tmp/d5-fault-distance
+```
+
+This writes one WDIMACS `.wcnf` problem per independent Choi stabilizer. Solve
+each with a MaxSAT solver; its optimal cost is the corresponding full
+circuit-level fault distance. The usual console report remains graphlike.
+
 ## Run a logical-error-rate experiment
 
 The experiment takes a text file containing one `H`, `S`, or `CX` gate per
@@ -62,6 +77,38 @@ reported (unless `--skip-ideal-check` is explicit).
 
 `examples/two_qubit_clifford.txt` shows the input format. Replace the identity
 input with any H/S/CX gate list once its zero-noise preflight passes.
+
+## PyMatching graphlike reference decoder
+
+`pymatching_window_decoder.py` is DEQ's `black-box-python` adapter for a
+strictly graphlike decoding hypergraph. It retains one `pymatching.Matching`
+per DEQ hypergraph and returns the original DEQ hyperedge ids, so it rejects
+parallel endpoint pairs instead of allowing PyMatching to merge them.
+
+Use the existing experiment with only the decoder selection changed:
+
+```bash
+.venv-deq/bin/python tools/run_logical_clifford_ler.py \
+  --circuit examples/identity_clifford.txt --num-logical-qubits 1 --distance 3 \
+  --noise-p 0.001 --shots 100000 --errors 100 \
+  --decoder black-box-python \
+  --decoder-config '{"file":"pymatching_window_decoder.py","parallel":1}'
+```
+
+DEQ's Python hypergraph protocol supplies only detector vertices and a fault
+probability. It does not tag a one-detector fault as a physical boundary versus
+the window coordinator's future-time carry interface. Consequently the adapter
+refuses an unclassified one-detector fault. After independently auditing a
+window, pass Python-specific options under `py_config`, for example
+`"py_config":{"physical_boundary_vertices":[...],"timing":true}`. The
+`assume_all_boundaries_physical` switch exists solely for an independently
+verified test graph. With `timing`, the adapter prints count, total, mean, and
+p50/p95/p99 `Matching.decode` latency at reset/interpreter shutdown.
+
+The current noisy SI1000 d=3 identity window is deliberately rejected: its
+first decoder hypergraph has support counts 1:8, 2:7, 3:5, and 4:3. This is a
+non-graphlike circuit-level model, so a PyMatching window run would not test
+the same decoder problem without an explicit graphification approximation.
 
 For a known identity circuit, `--no-inverse` runs the supplied gates exactly
 once. For example, `examples/ten_cnot.txt` applies ten consecutive CNOTs:

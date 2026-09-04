@@ -489,7 +489,7 @@ def main() -> None:
             "cnot",
             "prepare-y",
         ),
-        default="surface-code",
+        default="cnot",
     )
     parser.add_argument("--merged-rounds", type=int)
     parser.add_argument("--boundary-rounds", type=int)

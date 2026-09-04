@@ -13,10 +13,13 @@ dependencies = [
     "deq-runtime",
     "protobuf>=7.35.1",
     "stim>=1.15",
+    "numpy>=1.24",
+    "pymatching>=2.4",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+sat = ["python-sat>=1.8"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/surface_code_deq"]

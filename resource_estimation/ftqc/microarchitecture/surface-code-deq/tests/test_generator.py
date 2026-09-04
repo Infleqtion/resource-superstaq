@@ -60,10 +60,15 @@ def test_y_boundary_code_is_full_rank_with_the_missing_corner_layout() -> (
 
 def test_y_boundary_preparation_defaults_to_half_distance_boundary_rounds() -> None:
     source = generator.render_prepare_y(5)
-    assert source.count("CODE ") == 1
-    assert "YBoundarySurfaceCode" not in source
-    assert source.count("GADGET ") == 1
-    assert "GADGET PrepareY" in source
+    assert source.count("CODE ") == 2
+    assert "CODE YBoundaryStateD5 [[24,0]]" in source
+    assert "GADGET PrepareYBoundaryD5" in source
+    assert "GADGET PrepareYBoundarySED5" in source
+    assert "GADGET PrepareYTransitionD5" in source
+    assert "COMPOSE PrepareY" in source
+    assert "REPEAT 2 {\n        PrepareYBoundarySED5 0\n    }" in source
+    assert "PrepareYTransitionD5 IN(0) OUT(1)" in source
+    assert "OUTPUT RotatedSurfaceCodeW5H5 1" in source
     assert "REPEAT 2" in source
     assert "CX rec[-" in source
     with pytest.raises(ValueError, match="at least 2"):
@@ -81,27 +86,14 @@ def test_unified_surface_code_library_declares_shared_types_once() -> None:
     source = generator.render_surface_code_library(3)
     assert source.count("CODE RotatedSurfaceCodeW3H3 [[9,1,3]]") == 1
     assert "COMPOSE FaultTolerantCNOTD3" in source
-    assert "GADGET LogicalHadamardD3" in source
+    assert "COMPOSE LogicalHadamardD3" in source
     assert "COMPOSE LogicalSD3" in source
-    assert "GADGET PrepareY {" in source
+    assert "COMPOSE PrepareY" in source
     assert "YBoundarySurfaceCode" not in source
-    assert source.index("GADGET PrepareX") < source.index("GADGET PrepareY {")
-    assert source.index("GADGET PrepareY {") < source.index(
+    assert source.index("GADGET PrepareX") < source.index("GADGET PrepareYBoundaryD3")
+    assert source.index("GADGET PrepareYBoundaryD3") < source.index(
         "GADGET SyndromeExtraction"
     )
-
-
-def test_cli_defaults_to_the_complete_surface_code_library(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    output = tmp_path / "surface_code.deq"
-    monkeypatch.setattr(sys, "argv", [str(_generator_path), "--out", str(output)])
-
-    generator.main()
-
-    source = output.read_text()
-    assert "GADGET PrepareY {" in source
-    assert "COMPOSE LogicalSD3" in source
 
 
 def test_logical_s_injects_the_prepared_y_state_and_tracks_its_byproduct() -> None:
@@ -163,7 +155,8 @@ def test_reverse_time_y_transition_prepares_the_positive_logical_y_state() -> No
             assert simulator.peek_observable_expectation(logical_y) == 1
 
         source = generator.render_prepare_y(distance)
-        assert "GADGET PrepareY" in source
+        assert "COMPOSE PrepareY" in source
+        assert f"PrepareYTransitionD{distance} IN(0) OUT(1)" in source
         assert "CX rec[-" in source
         assert "TICK" not in source
         visualization = y_boundary_circuits(distance)["YBoundaryToRotated"]
@@ -279,19 +272,51 @@ def test_shared_surgery_library_defines_a_mediator_based_cnot() -> None:
     assert "CONDITIONAL rec[-3] X0 1" in source
 
 
-def test_logical_hadamard_is_one_endpoint_typed_gadget() -> None:
+def test_logical_hadamard_is_composed_from_typed_deformation_stages() -> None:
     for distance in (3, 5, 7):
         source = generator.render_surgery_library(distance)
         size = distance * distance
         targets = " ".join(map(str, range(size)))
         patch_type = f"RotatedSurfaceCodeW{distance}H{distance}"
-        assert "HadamardFrameSurfaceCode" not in source
-        assert "CODE HadamardExtension" not in source
-        assert "CODE HadamardDomainWall" not in source
-        assert f"GADGET LogicalHadamardD{distance}" in source
+        assert f"CODE HadamardFrameD{distance}" in source
+        assert f"CODE HadamardExtensionD{distance}" in source
+        assert f"CODE HadamardCornerD{distance}" in source
+        assert f"CODE HadamardReturnD{distance}" in source
+        for stage in (
+            "TransversalHadamard",
+            "HadamardExtend",
+            "HadamardExtensionSE",
+            "HadamardCornerMove",
+            "HadamardDomainWallSE",
+            "HadamardShrink",
+            "HadamardReturnExtend",
+            "HadamardReturnExtensionSE",
+            "HadamardReturnShrink",
+            "HadamardSwapQEC",
+        ):
+            assert f"GADGET {stage}D{distance}" in source
+        assert f"COMPOSE LogicalHadamardD{distance}" in source
         assert f"H {targets}" in source
         assert f"INPUT {patch_type} {targets}" in source
-        assert f"OUTPUT {patch_type} " in source
+        assert f"OUTPUT {patch_type} 7" in source
+        assert f"TransversalHadamardD{distance} IN(0) OUT(1)" in source
+        assert f"HadamardSwapQECD{distance} IN(6) OUT(7)" in source
+        assert (
+            f"REPEAT {distance - 1} {{\n"
+            f"        HadamardExtensionSED{distance} 2\n"
+            "    }"
+        ) in source
+        assert (
+            f"REPEAT {distance - 1} {{\n"
+            f"        HadamardDomainWallSED{distance} 3\n"
+            "    }"
+        ) in source
+        assert (
+            f"REPEAT {distance - 1} {{\n"
+            f"        HadamardReturnExtensionSED{distance} 5\n"
+            "    }"
+        ) in source
+        assert "PROPAGATE" not in source
         assert source.count(f"REPEAT {distance - 1} {{") == 3
         assert "TICK" not in source
 

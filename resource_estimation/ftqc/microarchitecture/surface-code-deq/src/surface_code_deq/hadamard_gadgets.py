@@ -1,8 +1,8 @@
-"""DEQ rendering and schedules for the monolithic logical-H gadget."""
+"""DEQ rendering and schedules for the staged logical-H deformation."""
 
 from __future__ import annotations
 
-from .deq_text import indent, targets
+from .deq_text import code_text, document, indent, targets
 from .hadamard import HadamardDeformationLayout
 from .rotated_surface_code import RotatedSurfaceCode
 from .schedules import (
@@ -133,10 +133,6 @@ def _remap_schedule(schedule: list[str], wire_map: dict[int, int]) -> list[str]:
     return remapped
 
 
-def _repeat_schedule(count: int, schedule: list[str]) -> list[str]:
-    return [f"REPEAT {count} {{", *[f"    {line}" for line in schedule], "}"]
-
-
 def _extension_hook_orders(
     layout: HadamardDeformationLayout,
 ) -> dict[int, dict[str, tuple[tuple[int, int], ...]]]:
@@ -203,8 +199,93 @@ def _corner_movement_hook_orders(
     return orders
 
 
+def _layout_stabilizers(layout: HadamardDeformationLayout) -> list[tuple[str, tuple[int, ...]]]:
+    """Convert one mixed-layout check list into DEQ's CSS-code form."""
+    return [
+        (check[0][0], tuple(qubit for _, qubit in check))
+        for check in layout.syndrome_checks()
+    ]
+
+
+def _hadamard_code_text(
+    distance: int,
+    extension: HadamardDeformationLayout,
+    corner: HadamardDeformationLayout,
+) -> str:
+    """Render the four transient code types used by the H deformation.
+
+    Each logical representative is chosen on the physical boundary that the
+    following stage preserves.  DEQ can therefore derive the measurement
+    frame directly from each typed boundary, without a ``PROPAGATE`` record.
+    """
+    patch = RotatedSurfaceCode(distance, distance)
+    return_patch = RotatedSurfaceCode(2 * distance - 1, distance)
+    frame_stabilizers = [
+        ("Z" if pauli == "X" else "X", support)
+        for pauli, support in patch.stabilizers()
+    ]
+    corner_logical_z = (
+        corner.wire(distance - 1, 0),
+        *(corner.wire(x, 0) for x in range(distance, 2 * distance)),
+    )
+    return document(
+        code_text(
+            f"HadamardFrameD{distance}",
+            patch.num_data_qubits,
+            "*".join(f"X{x}" for x in range(distance)),
+            "*".join(f"Z{distance * y}" for y in range(distance)),
+            frame_stabilizers,
+            distance=distance,
+        ),
+        code_text(
+            f"HadamardExtensionD{distance}",
+            extension.num_data_qubits,
+            "*".join(f"X{extension.wire(x, 0)}" for x in range(distance)),
+            "*".join(f"Z{extension.wire(0, y)}" for y in range(distance)),
+            _layout_stabilizers(extension),
+            distance=distance,
+        ),
+        code_text(
+            f"HadamardCornerD{distance}",
+            corner.num_data_qubits,
+            "*".join(f"X{corner.wire(distance, y)}" for y in range(distance)),
+            "*".join(f"Z{qubit}" for qubit in corner_logical_z),
+            _layout_stabilizers(corner),
+            distance=distance,
+        ),
+        code_text(
+            f"HadamardReturnD{distance}",
+            return_patch.num_data_qubits,
+            return_patch.logical_x(),
+            return_patch.logical_z(),
+            return_patch.stabilizers(),
+            distance=distance,
+        ),
+    )
+
+
+def _hadamard_stage_text(
+    name: str,
+    input_code: str,
+    input_targets: list[int],
+    body: list[str],
+    output_code: str,
+    output_targets: list[int],
+) -> str:
+    """Render one endpoint-typed H-deformation stage."""
+    return "\n".join(
+        (
+            f"GADGET {name} {{",
+            f"    INPUT {input_code} {targets(input_targets)}",
+            indent(body),
+            f"    OUTPUT {output_code} {targets(output_targets)}",
+            "}",
+        )
+    )
+
+
 def logical_hadamard_gadget_text(distance: int) -> str:
-    """Render the complete H deformation as one endpoint-typed DEQ gadget."""
+    """Render the complete H deformation as typed, composable DEQ stages."""
     patch = RotatedSurfaceCode(distance, distance)
     patch_size = patch.num_data_qubits
     extension = HadamardDeformationLayout(distance, "extension")
@@ -284,37 +365,154 @@ def logical_hadamard_gadget_text(distance: int) -> str:
         **{patch_size + index: 3 * patch_size + index for index in range(patch_size)},
         **{2 * patch_size + index: 4 * patch_size + index for index in range(patch_size)},
     }
-    lines = [
-        "# 1. Apply transversal H, extend right, and extract extension syndromes.",
-        f"H {targets(patch_targets)}",
-        f"RX {targets(list(range(patch_size, 2 * patch_size - 1)))}",
-        *extension_round,
-        *_repeat_schedule(distance - 1, extension_round),
-        "# 2. Add the missing corner and extract domain-wall syndromes.",
-        f"R {2 * patch_size - 1}",
-        *domain_wall_round,
-        *_repeat_schedule(distance - 1, domain_wall_round),
-        "# 3. Measure away the H-frame half and extract one ordinary syndrome.",
-        f"M {targets(patch_targets)}",
-        *shrink_round,
-        "# 4. Extend left, extract return syndromes, then remove the excess columns.",
-        f"R {targets(return_added_targets)}",
-        *return_extension_round,
-        *_repeat_schedule(distance - 1, return_extension_round),
-        f"M {targets(return_removed_targets)}",
-        *return_shrink_round,
-        "# 5. Use two SWAP-QEC translations to return to the original footprint.",
-        *_remap_schedule(northwest_schedule, northwest_wires),
-        *_remap_schedule(southwest_schedule, southwest_wires),
+    frame_code = f"HadamardFrameD{distance}"
+    extension_code = f"HadamardExtensionD{distance}"
+    corner_code = f"HadamardCornerD{distance}"
+    return_code = f"HadamardReturnD{distance}"
+    extension_targets = list(range(2 * patch_size - 1))
+    corner_targets = list(range(2 * patch_size))
+    shifted_patch_targets = list(range(patch_size, 2 * patch_size))
+    return_targets = [
+        return_wire(x, y)
+        for y in range(distance)
+        for x in range(return_width)
     ]
-    return "\n".join(
+
+    stages = (
+        _hadamard_stage_text(
+            f"TransversalHadamardD{distance}",
+            patch.type_name,
+            patch_targets,
+            [
+                "# Change to the H frame without changing the patch footprint.",
+                f"H {targets(patch_targets)}",
+            ],
+            frame_code,
+            patch_targets,
+        ),
+        _hadamard_stage_text(
+            f"HadamardExtendD{distance}",
+            frame_code,
+            patch_targets,
+            [
+                "# Add the right half in |+> and establish the extension checks.",
+                f"RX {targets(list(range(patch_size, 2 * patch_size - 1)))}",
+                *extension_round,
+            ],
+            extension_code,
+            extension_targets,
+        ),
+        _hadamard_stage_text(
+            f"HadamardExtensionSED{distance}",
+            extension_code,
+            extension_targets,
+            ["# One additional extraction round on the extension layout.", *extension_round],
+            extension_code,
+            extension_targets,
+        ),
+        _hadamard_stage_text(
+            f"HadamardCornerMoveD{distance}",
+            extension_code,
+            extension_targets,
+            [
+                "# Complete the corner and move the lower boundary.",
+                f"R {2 * patch_size - 1}",
+                *domain_wall_round,
+            ],
+            corner_code,
+            corner_targets,
+        ),
+        _hadamard_stage_text(
+            f"HadamardDomainWallSED{distance}",
+            corner_code,
+            corner_targets,
+            ["# One additional extraction round on the domain-wall layout.", *domain_wall_round],
+            corner_code,
+            corner_targets,
+        ),
+        _hadamard_stage_text(
+            f"HadamardShrinkD{distance}",
+            corner_code,
+            corner_targets,
+            [
+                "# Remove the H-frame half and retain the right ordinary patch.",
+                f"M {targets(patch_targets)}",
+                *shrink_round,
+            ],
+            patch.type_name,
+            shifted_patch_targets,
+        ),
+        _hadamard_stage_text(
+            f"HadamardReturnExtendD{distance}",
+            patch.type_name,
+            shifted_patch_targets,
+            [
+                "# Extend left and establish the rectangular return patch.",
+                f"R {targets(return_added_targets)}",
+                *return_extension_round,
+            ],
+            return_code,
+            return_targets,
+        ),
+        _hadamard_stage_text(
+            f"HadamardReturnExtensionSED{distance}",
+            return_code,
+            return_targets,
+            [
+                "# One additional extraction round on the return layout.",
+                *return_extension_round,
+            ],
+            return_code,
+            return_targets,
+        ),
+        _hadamard_stage_text(
+            f"HadamardReturnShrinkD{distance}",
+            return_code,
+            return_targets,
+            [
+                "# Remove the excess columns and restore a square ordinary patch.",
+                f"M {targets(return_removed_targets)}",
+                *return_shrink_round,
+            ],
+            patch.type_name,
+            retained_targets,
+        ),
+        _hadamard_stage_text(
+            f"HadamardSwapQECD{distance}",
+            patch.type_name,
+            retained_targets,
+            [
+                "# Two SWAP-QEC translations return to the original footprint.",
+                *_remap_schedule(northwest_schedule, northwest_wires),
+                *_remap_schedule(southwest_schedule, southwest_wires),
+            ],
+            patch.type_name,
+            list(range(3 * patch_size, 4 * patch_size)),
+        ),
+    )
+    composition = "\n".join(
         (
-            "# Complete transversal-H deformation. Intermediate codes remain",
-            "# generator-only geometry; this gadget exposes only ordinary patches.",
-            f"GADGET LogicalHadamardD{distance} {{",
-            f"    INPUT {patch.type_name} {targets(patch_targets)}",
-            indent(lines),
-            f"    OUTPUT {patch.type_name} {targets(list(range(3 * patch_size, 4 * patch_size)))}",
+            "# The transient codes make each deformation boundary explicit.",
+            f"COMPOSE LogicalHadamardD{distance} {{",
+            f"    INPUT {patch.type_name} 0",
+            f"    TransversalHadamardD{distance} IN(0) OUT(1)",
+            f"    HadamardExtendD{distance} IN(1) OUT(2)",
+            f"    REPEAT {distance - 1} {{",
+            f"        HadamardExtensionSED{distance} 2",
+            "    }",
+            f"    HadamardCornerMoveD{distance} IN(2) OUT(3)",
+            f"    REPEAT {distance - 1} {{",
+            f"        HadamardDomainWallSED{distance} 3",
+            "    }",
+            f"    HadamardShrinkD{distance} IN(3) OUT(4)",
+            f"    HadamardReturnExtendD{distance} IN(4) OUT(5)",
+            f"    REPEAT {distance - 1} {{",
+            f"        HadamardReturnExtensionSED{distance} 5",
+            "    }",
+            f"    HadamardReturnShrinkD{distance} IN(5) OUT(6)",
+            f"    HadamardSwapQECD{distance} IN(6) OUT(7)",
+            f"    OUTPUT {patch.type_name} 7",
             "}",
         )
     )
+    return document(_hadamard_code_text(distance, extension, domain_wall), *stages, composition)
