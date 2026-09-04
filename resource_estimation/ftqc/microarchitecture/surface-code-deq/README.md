@@ -28,11 +28,11 @@ not abstract `MPP` instructions. CNOT uses a `|+⟩` mediator through
 ## Generate and transpile
 
 ```bash
-.venv-deq/bin/python tools/generate_rotated_surface_code_deq.py --distance 3 \
+python tools/generate_rotated_surface_code_deq.py --distance 3 \
   --operation surface-code --merged-rounds 3 \
   --out generated/rotated_surface_code_d3.deq
-.venv-deq/bin/python -m deq transpile generated/rotated_surface_code_d3.deq \
-  --out /tmp/rotated_surface_code_d3.deq.jit --jobs 1
+python -m deq transpile generated/rotated_surface_code_d3.deq \
+  --out rotated_surface_code_d3.deq.jit --jobs 1
 ```
 
 ## Validate logical channels
@@ -43,7 +43,7 @@ stabilizers of the composed S, H, and CNOT channels.
 
 ```bash
 
-.venv-deq/bin/python tools/check_deq_gadget_semantics.py
+python tools/check_deq_gadget_semantics.py
 ```
 
 ## Check fault distance
@@ -53,8 +53,8 @@ terminal readout. To also export exact, non-graphlike fault-distance MaxSAT
 problems, use Stim's circuit-level encoding:
 
 ```bash
-.venv-deq/bin/python tools/validate_logical_gadgets.py --distance 5 \
-  --sat-problem-dir /tmp/d5-fault-distance
+python tools/validate_logical_gadgets.py --distance 5 \
+  --sat-problem-dir d5-fault-distance
 ```
 
 This writes one WDIMACS `.wcnf` problem per independent Choi stabilizer. Solve
@@ -70,7 +70,7 @@ reported (unless `--skip-ideal-check` is explicit).
 
 ```bash
 
-.venv-deq/bin/python tools/run_logical_clifford_ler.py \
+python tools/run_logical_clifford_ler.py \
   --circuit examples/identity_clifford.txt --num-logical-qubits 1 --distance 3 \
   --noise-p 0.001 --shots 100000 --errors 100
 ```
@@ -88,7 +88,7 @@ parallel endpoint pairs instead of allowing PyMatching to merge them.
 Use the existing experiment with only the decoder selection changed:
 
 ```bash
-.venv-deq/bin/python tools/run_logical_clifford_ler.py \
+python tools/run_logical_clifford_ler.py \
   --circuit examples/identity_clifford.txt --num-logical-qubits 1 --distance 3 \
   --noise-p 0.001 --shots 100000 --errors 100 \
   --decoder black-box-python \
@@ -115,7 +115,7 @@ once. For example, `examples/ten_cnot.txt` applies ten consecutive CNOTs:
 
 ```bash
 
-.venv-deq/bin/python tools/run_logical_clifford_ler.py \
+python tools/run_logical_clifford_ler.py \
   --circuit examples/ten_cnot.txt --num-logical-qubits 2 --distance 3 \
   --no-inverse --noise-p 0.001 --shots 100000 --errors 100
 ```
@@ -124,7 +124,7 @@ once. For example, `examples/ten_cnot.txt` applies ten consecutive CNOTs:
 
 ```bash
 
-.venv-deq/bin/python tools/generate_rotated_surface_code_deq.py --distance 3 \
+python tools/generate_rotated_surface_code_deq.py --distance 3 \
   --operation surface-code --noise-model si1000 --noise-p 0.001 \
   --out generated/rotated_surface_code_d3_si1000_p0.001.deq
 ```
