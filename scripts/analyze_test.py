@@ -61,27 +61,21 @@ def make_namespace(**kwargs: str | float | int | None) -> argparse.Namespace:
     return argparse.Namespace(**defaults)
 
 
-def test_parse_args(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        "sys.argv",
-        ["analyze.py", "circuit.json", "--fid", "0.95", "--facts", "10"],
-    )
-    args = parse_args()
+def test_parse_args() -> None:
+    args = parse_args(["circuit.json", "--fid", "0.95", "--facts", "10"])
 
     assert args.file == "circuit.json"
     assert args.fid == 0.95
     assert args.facts == 10
-    assert args.t_path is False  # default
-    assert args.arch == "ssm"  # default
+    assert args.t_path is False
+    assert args.arch == "ssm"
 
 
 def test_analyze_defaults(
     circuit_file: Path,
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.chdir(tmp_path)
     args = make_namespace(file=str(circuit_file))
     exit_code = main(args)
     assert exit_code == 0
@@ -89,7 +83,7 @@ def test_analyze_defaults(
     captured = capsys.readouterr()
     assert "Generated Script Results" in captured.out
 
-    expected_saved_file = "re_test_circuit-99-ssm-20-0_0.json"
+    expected_saved_file = tmp_path / "re_test_circuit-99-ssm-20-0_0.json"
     assert os.path.isfile(expected_saved_file)
 
     with open(expected_saved_file) as f:
@@ -102,10 +96,7 @@ def test_analyze_defaults(
     assert saved_data["physical_qubits"] > 0
 
 
-def test_override_error_params(
-    circuit_file: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
+def test_override_error_params(circuit_file: Path, tmp_path: Path) -> None:
     code_distance, cultivation_repetition, error_per_rz, error_per_cult = 19, 7, 8e-5, 9e-6
     args = make_namespace(
         file=str(circuit_file),
@@ -116,7 +107,7 @@ def test_override_error_params(
     )
     exit_code = main(args)
     assert exit_code == 0
-    expected_saved_file = "re_test_circuit-99-ssm-20-0_0.json"
+    expected_saved_file = tmp_path / "re_test_circuit-99-ssm-20-0_0.json"
     with open(expected_saved_file) as f:
         saved_data = json.load(f)
     assert saved_data["distance"] == code_distance
