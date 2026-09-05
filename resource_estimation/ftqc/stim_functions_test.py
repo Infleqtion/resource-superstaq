@@ -63,39 +63,56 @@ def test_saved_gidney(
 ) -> None:
     example_gidney = gidney3 if fault_distance == 3 else gidney5
     dsurface = 2 * fault_distance + 1
-    saved_cost = load_saved_cost(
+    cost_from_load = load_saved_cost(
         dsurface=dsurface,
-        op_key="cultivate",
         style="gidney",
         fault_distance=fault_distance,
     )
-    cultivate_cost = cultivate(
+    cost_from_file = cultivate(
         dsurface=dsurface,
         fold=False,
-        for_test=True,
         fault_distance=fault_distance,
+        load_from_file=True,
     )
-    counted_cost = count_stim_resources(stim_circuit=example_gidney)
-    assert saved_cost == counted_cost
-    assert cultivate_cost == counted_cost
+
+    cost_from_counts = count_stim_resources(stim_circuit=example_gidney)
+
+    with pytest.warns(UserWarning, match="save cultivation costs"):
+        cost_from_generate = cultivate(
+            dsurface=dsurface,
+            fold=False,
+            fault_distance=fault_distance,
+            load_from_file=False,
+        )
+
+    assert cost_from_load == cost_from_file == cost_from_counts == cost_from_generate
 
 
 @pytest.mark.parametrize("fault_distance", (3, 5))
 def test_saved_yale(fault_distance: Literal[3, 5]) -> None:
     # There is no stim circuit for this cultivation circuit, so there are only saved and generated costs
-    saved_cost = load_saved_cost(
-        dsurface=2 * fault_distance + 1,
-        op_key="cultivate",
+    dsurface = 2*fault_distance + 1
+    cost_from_load = load_saved_cost(
+        dsurface=dsurface,
         style="yale",
         fault_distance=fault_distance,
     )
-    cultivate_cost = cultivate(
-        dsurface=2 * fault_distance + 1,
-        fold=True,
-        for_test=True,
+
+    cost_from_file = cultivate(
+        dsurface=dsurface,
         fault_distance=fault_distance,
+        fold=True,
+        load_from_file=True,
     )
-    assert saved_cost == cultivate_cost
+
+    with pytest.warns(UserWarning, match="save cultivation costs"):
+        cost_from_generate = cultivate(
+            dsurface=dsurface,
+            fault_distance=fault_distance,
+            fold=True,
+            load_from_file=False,
+        )
+    assert cost_from_load == cost_from_file == cost_from_generate
 
 
 def test_error_handling() -> None:
@@ -103,7 +120,7 @@ def test_error_handling() -> None:
     with pytest.raises(ValueError, match="Unknown Instruction"):
         _ = count_stim_resources(bad_circuit)
     with pytest.raises(ValueError, match="fault_distance values 3 and 5"):
-        _ = cultivate(dsurface=15, fault_distance=7, fold=False, for_test=False)  # type: ignore[arg-type]
+        _ = cultivate(dsurface=15, fault_distance=7, fold=False)   # type: ignore[arg-type]
 
 
 def test_cultivation_low_distance_warning() -> None:
@@ -111,14 +128,12 @@ def test_cultivation_low_distance_warning() -> None:
     with pytest.warns(UserWarning, match="Returning result for d=7"):
         cultivate(
             dsurface=5,
-            for_test=True,
             fold=False,
             fault_distance=3,
         )
     with pytest.warns(UserWarning, match="Returning result for d=11"):
         cultivate(
             dsurface=7,
-            for_test=True,
             fold=False,
             fault_distance=5,
         )

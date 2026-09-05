@@ -20,6 +20,16 @@ GateKey: TypeAlias = type[cirq.Gate] | cirq.Gate
 GateCounts: TypeAlias = dict[GateKey, int]
 StrCounts: TypeAlias = dict[str, int]
 
+STR2GATE: dict[str, GateKey] = {
+    "PhasedXZGate": cirq.PhasedXZGate,
+    "QubitPermutationGate": cirq.QubitPermutationGate,
+    "MeasurementGate": cirq.MeasurementGate,
+    "CZ": cirq.CZ,
+    "ResetChannel": cirq.ResetChannel,
+    "CCZ": cirq.CCZ,
+}
+GATE2STR = {v: k for k, v in STR2GATE.items()}
+
 
 @dataclass
 class CountsDict:

@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from . import (
-    analysis,
     compile_gateset,
     ftqc,
+    data,
 )
 
 __all__ = [
     "compile_gateset",
     "ftqc",
-    "analysis",
+    "data",
 ]
