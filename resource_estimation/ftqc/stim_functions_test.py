@@ -91,7 +91,7 @@ def test_saved_gidney(
 @pytest.mark.parametrize("fault_distance", (3, 5))
 def test_saved_yale(fault_distance: Literal[3, 5]) -> None:
     # There is no stim circuit for this cultivation circuit, so there are only saved and generated costs
-    dsurface = 2*fault_distance + 1
+    dsurface = 2 * fault_distance + 1
     cost_from_load = load_saved_cost(
         dsurface=dsurface,
         style="yale",
@@ -120,7 +120,7 @@ def test_error_handling() -> None:
     with pytest.raises(ValueError, match="Unknown Instruction"):
         _ = count_stim_resources(bad_circuit)
     with pytest.raises(ValueError, match="fault_distance values 3 and 5"):
-        _ = cultivate(dsurface=15, fault_distance=7, fold=False)   # type: ignore[arg-type]
+        _ = cultivate(dsurface=15, fault_distance=7, fold=False)  # type: ignore[arg-type]
 
 
 def test_cultivation_low_distance_warning() -> None:

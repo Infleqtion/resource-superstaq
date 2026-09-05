@@ -109,7 +109,7 @@ def analyze(args: argparse.Namespace | None = None) -> int:
     # Flag to note when we are going to want to overwrite the error pipeline
     overwrite_error_params = args.code_distance > 0
 
-    report = res.analysis.Report(
+    report = res.data.analysis.Report(
         filename=file,
         program_fidelity=fid,
         num_factories=facts,
@@ -153,10 +153,10 @@ def analyze(args: argparse.Namespace | None = None) -> int:
 
     t1 = time.time()
     if overwrite_error_params:
-        rz_gates, other_gates = res.analysis.break_up_ops(cliff_rz_circuit=rz_circuit)
+        rz_gates, other_gates = res.data.analysis.break_up_ops(cliff_rz_circuit=rz_circuit)
         eps = args.error_per_rz
     else:
-        eps, rz_gates, other_gates = res.analysis.get_eps(
+        eps, rz_gates, other_gates = res.data.analysis.get_eps(
             rz_circuit,
             approximation_fidelity=1 - synthesis_error,
         )
@@ -174,7 +174,7 @@ def analyze(args: argparse.Namespace | None = None) -> int:
     )
     t2 = time.time()
     if args.t_path:
-        t_path = res.analysis.get_t_path(circuit=clifford_t_circuit, verbose=verbose)
+        t_path = res.data.analysis.get_t_path(circuit=clifford_t_circuit, verbose=verbose)
         t3 = time.time()
     else:
         print("Skipped T Path Generation")
@@ -206,7 +206,7 @@ def analyze(args: argparse.Namespace | None = None) -> int:
         # Fault distance limited by 1e-6 at distance 3 for both
         cultivation_fault_distance = 3 if args.error_per_cult >= 2e-7 else 5
         distance = args.code_distance
-        expected_fidelity = 1 - res.analysis.error_estimate(
+        expected_fidelity = 1 - res.data.analysis.error_estimate(
             code_distance=distance,
             error_per_rz=eps,
             error_per_cult=args.error_per_cult,
@@ -215,7 +215,7 @@ def analyze(args: argparse.Namespace | None = None) -> int:
         )
     else:
         cultivation_repetition, distance, gates, expected_fidelity, cultivation_fault_distance = (
-            res.analysis.get_important_information(
+            res.data.analysis.get_important_information(
                 clifford_t_circuit=clifford_t_circuit,
                 pfid=1 - gate_error,
                 fold_cultiv=fold_cultiv,
@@ -303,5 +303,3 @@ def analyze(args: argparse.Namespace | None = None) -> int:
     if not args.nosave:
         report.save()
     return 0
-
-

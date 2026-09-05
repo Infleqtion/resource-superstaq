@@ -15,4 +15,5 @@
 
 if __name__ == "__main__":
     from resource_estimation.data import cultivate_json
+
     cultivate_json()

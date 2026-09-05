@@ -11,12 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import resource_estimation.data.analysis as analysis
 from resource_estimation.data.analyze import analyze
 from resource_estimation.data.cultivate_json import cultivate_json
-import resource_estimation.data.analysis as analysis
 
-__all__ = [
-        "analyze",
-        "cultivate_json",
-        "analysis"
-]
+__all__ = ["analyze", "cultivate_json", "analysis"]

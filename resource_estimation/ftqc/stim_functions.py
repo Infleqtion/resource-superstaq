@@ -24,11 +24,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Literal
 
-import cirq
 import cultiv
 import stim
 
-from resource_estimation.typing import CountsDict, GateKey, STR2GATE
+from resource_estimation.typing import STR2GATE, CountsDict, GateKey
 
 
 def count_stim_resources(
@@ -111,7 +110,7 @@ def load_saved_cost(
     """
     data_dir = Path(__file__).resolve().parents[2] / "resource_estimation" / "data"
     cost_file = data_dir / "_cultivate_costs.json"
-    with open(cost_file, 'r') as f:
+    with open(cost_file, "r") as f:
         saved_costs = json.load(f)
     loaded_costs = saved_costs[str(dsurface)][style][str(fault_distance)]
     serial_cost = {STR2GATE[k]: v for k, v in loaded_costs["serial"].items()}
@@ -154,12 +153,14 @@ def cultivate(
         )
     warnings.warn("To save cultivation costs run `cultivate_json.cultivate_json()`")
     if fold:
-        resources = CountsDict(**cultiv.make_cirq_circuits.dirty_count(
-            cultiv.make_cirq_circuits.make_cirq_circuit(
-                code_distance=dsurface,
-                fault_distance=fault_distance,
-            ),
-        ))
+        resources = CountsDict(
+            **cultiv.make_cirq_circuits.dirty_count(
+                cultiv.make_cirq_circuits.make_cirq_circuit(
+                    code_distance=dsurface,
+                    fault_distance=fault_distance,
+                ),
+            )
+        )
     else:
         stim_circuit = cultiv.make_end2end_cultivation_circuit(
             dcolor=fault_distance,

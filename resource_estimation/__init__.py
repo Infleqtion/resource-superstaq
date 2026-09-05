@@ -13,8 +13,8 @@
 # limitations under the License.
 from . import (
     compile_gateset,
-    ftqc,
     data,
+    ftqc,
 )
 
 __all__ = [
