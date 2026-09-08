@@ -176,9 +176,13 @@ def _physical_move_time(l: float, a: float = 5500, base_cost: float = 200) -> fl
         a: Acceleration in m/s^2.
         base_cost: Flat overhead each move pays in μs.
     """
-    l *= 10**-6  # convert μm to m
+    if l < 0:
+        raise ValueError("Distance l must be non-negative")
+    if a <= 0:
+        raise ValueError("Acceleration a must be positive")
+    l_m = 10**-6 * l  # convert μm to m
     # a is in m/s^2, so we make sure to convert answer to μs
-    return 2 * np.sqrt(l / a) * 10**6 + base_cost
+    return 2 * np.sqrt(l_m / a) * 10**6 + base_cost
 
 
 def _measurement_zone_move_precompiled(
