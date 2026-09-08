@@ -904,6 +904,8 @@ class DefaultMovement(Architecture):
             mapped_circuit = distil_15_to_1()
         elif resource == "CCZ":
             mapped_circuit = ccz_8_to_1()
+        else:
+            raise ValueError("Unknown distillation resource encountered")
         with_moves = add_moves(
             mapped_circuit,
             zone_ops=self.zone_ops,
