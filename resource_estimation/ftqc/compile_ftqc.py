@@ -432,9 +432,14 @@ def ft_compile(
     The passes available are post op correction and idling.
     The architecture is also the source of information for how many rounds of syndrome extraction should be performed when syndrome extraction is called for.
     """
-
-    if arc.zone_ops.gates and not (layout.measure_zones or layout.interaction_zones):
-        raise ValueError("Architecture has zone operations, but Layout does not have any zones")
+    zone_ops_but_no_zones = arc.zone_ops.gates and not (
+        layout.measure_zones or layout.interaction_zones
+    )
+    zones_but_no_zone_ops = (
+        layout.measure_zones or layout.interaction_zones
+    ) and not arc.zone_ops.gates
+    if zone_ops_but_no_zones or zones_but_no_zone_ops:
+        raise ValueError("Mismatch between Architecture zone ops and Layout zones")
     # TODO: Aligning left results in circuits that have are more expensive in terms of circuit time than not aligning left. This is probably the result of requesting a layer of parallel cultivations but realigning so the expensive cultivation operations become spread out over multiple moments. It is currently unclear if aligning left is correct or not in general, but the specific tests for ft_compile very much rely on it...
     layout = copy.deepcopy(layout)
     layout.reset_graph()

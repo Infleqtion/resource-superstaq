@@ -645,5 +645,5 @@ def test_exceptions(bell_circuit: cirq.Circuit) -> None:
     # Test ft compile rejects incompatible layout-architecture combos
     inplace_layout = MovementLayout(input_circuit=bell_circuit, architecture="DSM")
     zoned_arc = arch.DefaultMovement()
-    with pytest.raises(ValueError, match="zone operations"):
+    with pytest.raises(ValueError, match="Mismatch between"):
         _ = comp.ft_compile(layout=inplace_layout, arc=zoned_arc)
