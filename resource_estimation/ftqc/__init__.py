@@ -19,6 +19,12 @@ from resource_estimation.ftqc.architecture import (
     MeasureZonesOnly,
     Superconductor,
 )
+from resource_estimation.ftqc.codepatch import (
+    CodePatch,
+    CSSCodePatch,
+    LogicalQubit,
+    RotatedSurfaceCodePatch,
+)
 from resource_estimation.ftqc.compile_ftqc import (
     add_moves,
     ft_compile,
@@ -64,6 +70,8 @@ from resource_estimation.ftqc.stim_functions import (
 __all__ = [
     "Architecture",
     "BufferCodePatch",
+    "CSSCodePatch",
+    "CodePatch",
     "Column",
     "Cultivate",
     "DefaultLattice",
@@ -75,6 +83,7 @@ __all__ = [
     "FactorySandwich",
     "IntermediatePatch",
     "Layout",
+    "LogicalQubit",
     "Merge",
     "MeasureZonesOnly",
     "MovementLayout",
@@ -84,6 +93,7 @@ __all__ = [
     "ReactionDynamics",
     "ResourceEstimator",
     "RotatedCodePatch",
+    "RotatedSurfaceCodePatch",
     "Split",
     "Superconductor",
     "SyndromeExtract",
