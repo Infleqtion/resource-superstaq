@@ -802,7 +802,7 @@ def test_physical_move_time() -> None:
     difference = yes_startup - no_startup
     assert isclose(difference, 100)
 
-    # Test scaling goes as as sqrt when there is no startup penalty
+    # Test scaling goes as sqrt when there is no startup penalty
     t100 = arch._physical_move_time(l=100, base_cost=0)
     t400 = arch._physical_move_time(l=400, base_cost=0)
     factor = t400 / t100
