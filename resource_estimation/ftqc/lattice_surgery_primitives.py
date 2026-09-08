@@ -276,7 +276,7 @@ class Distil(cirq.Gate):
 class ResourceCorrection(cirq.Gate):
     def __init__(self, resource: typing.Literal["T", "CCZ"]) -> None:
         if resource not in ("T", "CCZ"):
-            raise TypeError(f"Invalid resource for Correction gate: {resource!r}")
+            raise ValueError(f"Invalid resource for Correction gate: {resource!r}")
         self._resource: typing.Literal["T", "CCZ"] = resource
         self._num_qubits = 3 if resource == "CCZ" else 1
 
