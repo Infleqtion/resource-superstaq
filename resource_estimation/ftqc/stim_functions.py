@@ -125,9 +125,9 @@ def cultivate(
     load_from_file: bool = True,
 ) -> CountsDict:
     """
-    Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
-    If the final patch size is less than 25 it reads from saved resources instead of calling the functions directly
-    The `for_test` argument is to turn off the loading behvior for the purpose of testing
+    Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney).
+    If the final patch size is at most 25, saved resources are used when available.
+    Set `load_from_file` to `False` to generate costs directly.
     """
     if fault_distance not in (3, 5):
         raise ValueError(
@@ -151,7 +151,9 @@ def cultivate(
             style=style,
             fault_distance=fault_distance,
         )
-    warnings.warn("To save cultivation costs run `cultivate_json.cultivate_json()`")
+    warnings.warn(
+        "To save cultivation costs, run `from resource_estimation.data import cultivate_json; cultivate_json()`"
+    )
     if fold:
         resources = CountsDict(
             **cultiv.make_cirq_circuits.dirty_count(
