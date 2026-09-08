@@ -808,6 +808,12 @@ def test_physical_move_time() -> None:
     factor = t400 / t100
     assert isclose(factor, 2)
 
+    # Confirm that invalid values raise ValueError
+    with pytest.raises(ValueError, match="must be non-negative"):
+        _ = arch._physical_move_time(l=-10)
+    with pytest.raises(ValueError, match="must be positive"):
+        _ = arch._physical_move_time(l=1, a=-10)
+
 
 def test_precompiled_moves() -> None:
     # Test measurement zone movement
