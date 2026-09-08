@@ -192,11 +192,11 @@ def ccz_8_to_1() -> cirq.Circuit:
 def precompute_distil_cost(
     resource: Literal["T", "CCZ"], layout: MovementDistillery, arc: Architecture
 ) -> CostDict:
-    # Grabs prepared resource state circuit
-    # Grabs template distillation block (could be matched to the one actually used)
-    # Remaps resource state circuit to qubits in distillation block
-    # Adds moves to zones according to the layout's rules
-    # Returns resources based on the resulting sub-circuit
+    """Precompute the cost of a T/CCZ distillation circuit on a specific layout.
+
+    The template distillation circuit is remapped onto the layout's factory block, movement is
+    inserted via `add_moves`, and op-time / moment-cost / gate-cost are returned.
+    """
     mapped_circuit_factory: tuple[cirq.GridQubit, ...]
     if resource == "T":
         mapped_circuit = distil_15_to_1()
