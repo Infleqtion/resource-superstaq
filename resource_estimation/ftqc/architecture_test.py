@@ -898,6 +898,9 @@ def test_distillation_cases(
             resource="T",
             layout=lyt.MovementLayout(input_circuit=distil_15_to_1()),  # type: ignore[arg-type]
         )
+    # Confirm _distil_cost raises ValueError when given invalid resource
+    with pytest.raises(ValueError, match="Unknown distillation resource"):
+        _ = movement_architecture._distil_cost(resource="Toffoli", layout=ccz_layout)  # type: ignore[arg-type]
     assert lsp.Distil in movement_architecture.op_cost
 
     # Make sure that distillation repetition parameter behaves as expected
