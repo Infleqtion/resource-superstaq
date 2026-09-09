@@ -405,13 +405,10 @@ def add_moves(
                     move_dg.on(ctrl, zone_qubit),
                 ]
             elif layout.measure_zones and cirq.is_measurement(op):
-                in_move, out_move = [], []
-                # This might be inaccurate if measurement cycle wraps around
+                op_sequence = []
                 for q in op.qubits:
                     zone_qubit = next(measurement_cycle)
-                    in_move.append(move.on(q, zone_qubit))
-                    out_move.append(move_dg.on(q, zone_qubit))
-                op_sequence = in_move + [op] + out_move
+                    op_sequence.extend([move.on(q, zone_qubit), op, move_dg.on(q, zone_qubit)])
             for op in op_sequence:
                 yield op
 
