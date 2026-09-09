@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
-from .types import Coordinates, PauliProduct
+from .deq_text import validate_distance
+from .gadgets.core import Schedule
+from .gadgets.hadamard import hadamard_gadgets, swap_qec_schedule
+from .gadgets.memory import patch_gadgets
+from .gadgets.prepare_y import prepare_y_gadgets
+from .gadgets.surgery import surgery_gadgets
+from .surgery_geometry import SurgeryBasis
+from .types import Coordinates
 
 
-def circuit_from_schedule(lines: list[str], *, coordinates: Coordinates):
+def circuit_from_schedule(schedule: Schedule, *, coordinates: Coordinates):
     """Build a coordinate-annotated Stim circuit from a shared schedule.
 
     Importing Stim lazily keeps DEQ source rendering independent of the
@@ -13,7 +20,7 @@ def circuit_from_schedule(lines: list[str], *, coordinates: Coordinates):
     """
     import stim
 
-    body = stim.Circuit("\n".join(lines))
+    body = stim.Circuit("\n".join(schedule.lines(include_ticks=True)))
     result = stim.Circuit()
     for qubit, (x, y) in sorted(coordinates.items()):
         if qubit < body.num_qubits:
@@ -22,59 +29,28 @@ def circuit_from_schedule(lines: list[str], *, coordinates: Coordinates):
     return result
 
 
-def stim_rotated_patch_coordinates(
-    distance: int, stabilizers: list[PauliProduct]
-) -> Coordinates:
-    """Map Stim's rotated-memory geometry into the project's wire numbering."""
-    import stim
-
-    reference = stim.Circuit.generated(
-        "surface_code:rotated_memory_z", distance=distance, rounds=1
-    )
-    reference_coordinates = reference.get_final_qubit_coordinates()
-    data_by_stim_qubit = {
-        qubit: ((int(x) - 1) // 2) + distance * ((int(y) - 1) // 2)
-        for qubit, (x, y) in reference_coordinates.items()
-        if int(x) % 2 and int(y) % 2
+def gadget_stim_circuits(distance: int, basis: SurgeryBasis = "XX") -> dict[str, object]:
+    """Return coordinate-preserving Stim views of every physical gadget."""
+    validate_distance(distance)
+    ordinary = patch_gadgets(distance)
+    prepare_y = prepare_y_gadgets(distance)
+    surgery = surgery_gadgets(distance, basis)
+    hadamard = hadamard_gadgets(distance)
+    northwest_schedule, northwest_coordinates = swap_qec_schedule(distance, "NW")
+    southwest_schedule, southwest_coordinates = swap_qec_schedule(distance, "SW")
+    return {
+        **{name: spec.stim_circuit() for name, spec in ordinary.items()},
+        **{name: spec.stim_circuit() for name, spec in prepare_y.items()},
+        **{
+            name: spec.stim_circuit()
+            for name, spec in hadamard.items()
+            if name != "HadamardSwapQEC"
+        },
+        "HadamardSwapQECNW": circuit_from_schedule(
+            northwest_schedule, coordinates=northwest_coordinates
+        ),
+        "HadamardSwapQECSW": circuit_from_schedule(
+            southwest_schedule, coordinates=southwest_coordinates
+        ),
+        **{name: spec.stim_circuit() for name, spec in surgery.gadgets.items()},
     }
-
-    x_ancillas: set[int] = set()
-    interactions: list[tuple[int, int]] = []
-    measured_ancillas: list[int] = []
-    for instruction in reference:
-        if instruction.name == "H":
-            x_ancillas.update(target.value for target in instruction.targets_copy())
-        elif instruction.name == "CX":
-            targets = [target.value for target in instruction.targets_copy()]
-            interactions.extend(zip(targets[::2], targets[1::2]))
-        elif instruction.name == "MR":
-            measured_ancillas = [target.value for target in instruction.targets_copy()]
-            break
-
-    coordinates = {
-        data: (
-            reference_coordinates[stim_qubit][0] / 2,
-            reference_coordinates[stim_qubit][1] / 2,
-        )
-        for stim_qubit, data in data_by_stim_qubit.items()
-    }
-    check_coordinates: dict[PauliProduct, tuple[float, float]] = {}
-    for ancilla in measured_ancillas:
-        support = {
-            data_by_stim_qubit[target]
-            for control, target in interactions
-            if control == ancilla and target in data_by_stim_qubit
-        } | {
-            data_by_stim_qubit[control]
-            for control, target in interactions
-            if target == ancilla and control in data_by_stim_qubit
-        }
-        pauli = "X" if ancilla in x_ancillas else "Z"
-        x, y = reference_coordinates[ancilla]
-        check_coordinates[(pauli, tuple(sorted(support)))] = (x / 2, y / 2)
-
-    if set(check_coordinates) != set(stabilizers):
-        raise AssertionError("DEQ stabilizers do not match Stim's rotated-memory code")
-    for ancilla_index, stabilizer in enumerate(stabilizers):
-        coordinates[distance * distance + ancilla_index] = check_coordinates[stabilizer]
-    return coordinates

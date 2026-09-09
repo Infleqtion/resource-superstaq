@@ -1,4 +1,5 @@
 """Geometry and DEQ type metadata for a rotated planar surface-code patch."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -47,10 +48,12 @@ class RotatedSurfaceCode:
         # four-body check is centered at an even coordinate (2x+2, 2y+2).
         for y in range(self.height - 1):
             for x in range(self.width - 1):
-                products.append((
-                    "Z" if (x + y) % 2 == 0 else "X",
-                    (wire(x, y), wire(x + 1, y), wire(x, y + 1), wire(x + 1, y + 1)),
-                ))
+                products.append(
+                    (
+                        "Z" if (x + y) % 2 == 0 else "X",
+                        (wire(x, y), wire(x + 1, y), wire(x, y + 1), wire(x + 1, y + 1)),
+                    )
+                )
         # Stim places X boundaries along the top/bottom and Z boundaries on
         # the left/right, with the stagger shown by its rotated-memory tasks.
         for x in range(0, self.width - 1, 2):
@@ -84,10 +87,17 @@ class RotatedSurfaceCode:
             ]
         raise ValueError("side must be top, bottom, left, or right")
 
-    def logical_x(self, wire_at: WireMap | None = None) -> str:
+    def logical_pauli(self, pauli: str, wire_at: WireMap | None = None) -> dict[int, str]:
+        """Return a physical representative of one logical Pauli."""
         wire = wire_at or self.canonical_wire
-        return "*".join(f"X{wire(0, y)}" for y in range(self.height))
-
-    def logical_z(self, wire_at: WireMap | None = None) -> str:
-        wire = wire_at or self.canonical_wire
-        return "*".join(f"Z{wire(x, 0)}" for x in range(self.width))
+        if pauli == "X":
+            return {wire(0, y): "X" for y in range(self.height)}
+        if pauli == "Z":
+            return {wire(x, 0): "Z" for x in range(self.width)}
+        if pauli == "Y":
+            return {
+                wire(0, 0): "Y",
+                **{wire(x, 0): "Z" for x in range(1, self.width)},
+                **{wire(0, y): "X" for y in range(1, self.height)},
+            }
+        raise ValueError("logical Pauli must be X, Y, or Z")

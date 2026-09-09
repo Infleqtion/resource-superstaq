@@ -1,9 +1,12 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.ipynb_checkpoints/
 .venv/
 .venv-deq/
 *.egg-info/
 generated/*.jit
 generated/*.jit.txt*
 generated/*.stim
+generated/rotated_surface_code_d*.deq
+!generated/rotated_surface_code_d3.deq

@@ -1,16 +1,5 @@
-import importlib.util
-from pathlib import Path
-import sys
-
 import stim
-
-
-_tool_path = Path(__file__).parents[1] / "tools" / "validate_logical_gadgets.py"
-_spec = importlib.util.spec_from_file_location("minimum_fault_weight", _tool_path)
-assert _spec and _spec.loader
-minimum_fault_weight = importlib.util.module_from_spec(_spec)
-sys.modules[_spec.name] = minimum_fault_weight
-_spec.loader.exec_module(minimum_fault_weight)
+from surface_code_deq.verification import distance as minimum_fault_weight
 
 
 def test_shortest_error_sat_problem_exports_wdimacs() -> None:

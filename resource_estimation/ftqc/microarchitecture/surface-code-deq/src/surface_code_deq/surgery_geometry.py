@@ -8,7 +8,6 @@ from typing import Literal, NamedTuple, TypeAlias
 from .rotated_surface_code import RotatedSurfaceCode
 from .types import PauliProduct
 
-
 SurgeryBasis: TypeAlias = Literal["XX", "ZZ"]
 
 
@@ -68,13 +67,9 @@ def merge_layout(
     second_dimensions = (second_patch.width, second_patch.height)
     first_join_extent = first_dimensions[join_axis]
     if first_dimensions[transverse_axis] != second_dimensions[transverse_axis]:
-        raise ValueError(
-            f"M{basis} requires patches with equal {axis_names[transverse_axis]}s"
-        )
+        raise ValueError(f"M{basis} requires patches with equal {axis_names[transverse_axis]}s")
     if first_join_extent % 2 == 0:
-        raise ValueError(
-            f"M{basis} requires the first patch {axis_names[join_axis]} to be odd"
-        )
+        raise ValueError(f"M{basis} requires the first patch {axis_names[join_axis]} to be odd")
 
     merged_dimensions = list(first_dimensions)
     merged_dimensions[join_axis] += 1 + second_dimensions[join_axis]

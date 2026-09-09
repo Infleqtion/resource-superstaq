@@ -2,22 +2,16 @@
 
 from __future__ import annotations
 
-import importlib.util
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
-
+from surface_code_deq.decoders import pymatching as decoder_module
 
 ROOT = Path(__file__).parents[1]
 DECODER_PATH = ROOT / "pymatching_window_decoder.py"
-SPEC = importlib.util.spec_from_file_location("pymatching_window_decoder", DECODER_PATH)
-assert SPEC and SPEC.loader
-decoder_module = importlib.util.module_from_spec(SPEC)
-sys.modules[SPEC.name] = decoder_module
-SPEC.loader.exec_module(decoder_module)
 
 
 class Edge:
@@ -41,9 +35,7 @@ def test_graphlike_correction_uses_original_deq_edge_indices() -> None:
             Edge([2]),  # DEQ edge 2, physical boundary
         ],
     )
-    decoder = decoder_module.Decoder(
-        hypergraph, {"physical_boundary_vertices": [2]}
-    )
+    decoder = decoder_module.Decoder(hypergraph, {"physical_boundary_vertices": [2]})
 
     assert decoder.decode([0, 1]) == [0]
     assert decoder.decode([2]) == [2]
@@ -94,7 +86,8 @@ def test_noiseless_existing_d3_window_runs_with_pymatching(tmp_path: Path) -> No
     """The existing d=3 identity fixture supplies an empty graph at p=0."""
     command = [
         sys.executable,
-        "tools/run_logical_clifford_ler.py",
+        "-m",
+        "surface_code_deq.verification.ler",
         "--circuit",
         "examples/identity_clifford.txt",
         "--num-logical-qubits",

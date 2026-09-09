@@ -5,10 +5,36 @@ distance `d ≥ 3`.
 
 ## What the library provides
 
-`tools/generate_rotated_surface_code_deq.py` is the single source of generated
-DEQ files. `RotatedSurfaceCode(width, height)` is the construction API, while
+`surface_code_deq.library.build_library` is the single source of generated DEQ
+files. `RotatedSurfaceCode(width, height)` is the construction API, while
 each emitted `CODE` uses a concrete compiler-safe name such as
 `RotatedSurfaceCodeW3H3`.
+
+The implementation has three layers:
+
+- `rotated_surface_code.py`, `surgery_geometry.py`, `hadamard_geometry.py`, and
+  `prepare_y_geometry.py` define code geometry and stabilizers.
+- `gadgets/core.py` defines the shared instruction, schedule, typed-port, and
+  gadget model. `gadgets/memory.py`, `gadgets/surgery.py`,
+  `gadgets/hadamard.py`, and `gadgets/prepare_y.py` are the physical source of
+  both DEQ output and Stim diagrams. `library.py` only assembles complete
+  libraries.
+- `surface_code_deq.verification` contains logical-gate specifications, Choi
+  programs, logical-error-rate runners, and fault-distance checks. Verification
+  programs are not embedded in production libraries.
+
+For a compact audit path, start with `gadgets/memory.py` for ordinary patch
+operations and `gadgets/surgery.py` for lattice surgery. Each `GadgetSpec`
+contains the physical schedule, display coordinates, typed inputs and outputs,
+and any readout expression. DEQ generation and Stim visualization render that
+same object, so there is no second schedule implementation to compare by hand.
+
+Install the package in editable mode once so tests, notebooks, and commands all
+use the same imports:
+
+```bash
+python -m pip install -e '.[dev]'
+```
 
 The unified `surface-code` library contains:
 
@@ -28,8 +54,8 @@ not abstract `MPP` instructions. CNOT uses a `|+⟩` mediator through
 ## Generate and transpile
 
 ```bash
-python tools/generate_rotated_surface_code_deq.py --distance 3 \
-  --operation surface-code --merged-rounds 3 \
+surface-code-deq-generate --distance 3 \
+  --merged-rounds 3 \
   --out generated/rotated_surface_code_d3.deq
 python -m deq transpile generated/rotated_surface_code_d3.deq \
   --out rotated_surface_code_d3.deq.jit --jobs 1
@@ -37,13 +63,14 @@ python -m deq transpile generated/rotated_surface_code_d3.deq \
 
 ## Validate logical channels
 
-The Choi checker transpiles d=3, d=5, and d=7 libraries, then uses DEQ's
-frame-aware JIT runtime to require the expected signed logical-Pauli
-stabilizers of the composed S, H, and CNOT channels.
+The Choi checker prepares encoded Bell pairs, applies each S, H, or CNOT
+gadget, and measures a complete stabilizer description of the expected Choi
+state. This checks both the logical Clifford action and every output code-space
+stabilizer. Use `--distance` to select the code distance (default: 3).
 
 ```bash
 
-python tools/check_deq_gadget_semantics.py
+surface-code-deq-verify
 ```
 
 ## Check fault distance
@@ -53,11 +80,11 @@ terminal readout. To also export exact, non-graphlike fault-distance MaxSAT
 problems, use Stim's circuit-level encoding:
 
 ```bash
-python tools/validate_logical_gadgets.py --distance 5 \
+surface-code-deq-distance --distance 5 \
   --sat-problem-dir d5-fault-distance
 ```
 
-This writes one WDIMACS `.wcnf` problem per independent Choi stabilizer. Solve
+This writes one WDIMACS `.wcnf` problem per independent logical-Pauli check. Solve
 each with a MaxSAT solver; its optimal cost is the corresponding full
 circuit-level fault distance. The usual console report remains graphlike.
 
@@ -70,7 +97,7 @@ reported (unless `--skip-ideal-check` is explicit).
 
 ```bash
 
-python tools/run_logical_clifford_ler.py \
+surface-code-deq-ler \
   --circuit examples/identity_clifford.txt --num-logical-qubits 1 --distance 3 \
   --noise-p 0.001 --shots 100000 --errors 100
 ```
@@ -88,7 +115,7 @@ parallel endpoint pairs instead of allowing PyMatching to merge them.
 Use the existing experiment with only the decoder selection changed:
 
 ```bash
-python tools/run_logical_clifford_ler.py \
+surface-code-deq-ler \
   --circuit examples/identity_clifford.txt --num-logical-qubits 1 --distance 3 \
   --noise-p 0.001 --shots 100000 --errors 100 \
   --decoder black-box-python \
@@ -115,7 +142,7 @@ once. For example, `examples/ten_cnot.txt` applies ten consecutive CNOTs:
 
 ```bash
 
-python tools/run_logical_clifford_ler.py \
+surface-code-deq-ler \
   --circuit examples/ten_cnot.txt --num-logical-qubits 2 --distance 3 \
   --no-inverse --noise-p 0.001 --shots 100000 --errors 100
 ```
@@ -124,8 +151,8 @@ python tools/run_logical_clifford_ler.py \
 
 ```bash
 
-python tools/generate_rotated_surface_code_deq.py --distance 3 \
-  --operation surface-code --noise-model si1000 --noise-p 0.001 \
+surface-code-deq-generate --distance 3 \
+  --noise-model si1000 --noise-p 0.001 \
   --out generated/rotated_surface_code_d3_si1000_p0.001.deq
 ```
 
@@ -148,7 +175,44 @@ right `d-1` columns. This leaves the patch one data column to the right of its
 starting footprint. The two final SWAP-QEC steps move northwest and southwest,
 for a net one-column translation back to the left.
 
+## Cultivation reference and manual DEQ gadgets
+
+The cultivation package provides an actual-T d=3 check core, an exact small
+state-vector reference, and explicit DEQ check/error models consuming external
+raw measurements. It validates the handoff to color-code stabilization and
+terminal decoder-selected Pauli corrections. Input preparation and stabilization
+are ideal in this regression; physical injection and surface-code escape remain
+outside its scope.
+
+```bash
+python tools/check_cultivation_handoff.py --coordinator window --rounds 2 \
+  --export-prefix generated/cultivation_d3_reference
+```
+
+See [cultivation architecture](docs/cultivation-architecture.md) for conventions,
+manual model construction, state ownership, and integration tests. The checker
+requires the dependencies in `pyproject.toml`; the local `.venv-deq` environment
+can be used where the system Python has an older protobuf runtime.
+
 ## Explore the gadgets
+
+Open [the cultivation walkthrough](examples/cultivation_flow.html) in a browser
+to explore seven recorded scenarios with both DEQ coordinators. Click through
+the physical circuit, acceptance checks, stabilization, decoder payload, and
+logical fidelity; compare alternative Pauli corrections in the final stage.
+This standalone page works offline and displays results from actual runs.
+
+For live simulations, open
+[notebooks/explore_cultivation.ipynb](notebooks/explore_cultivation.ipynb) in
+Jupyter, run its control cell, and click **Run physical simulation + DEQ**.
+Choose the fault, coordinator, stabilization rounds, and seed. The notebook
+requires the `notebooks` optional dependencies and uses `.venv-deq/bin/python`
+as its simulation worker when available. DEQ's local services must be permitted.
+To regenerate the browser page:
+
+```bash
+python tools/demo_cultivation.py --export-html examples/cultivation_flow.html
+```
 
 Open [notebooks/explore_rotated_surface_code_deq.ipynb](notebooks/explore_rotated_surface_code_deq.ipynb)
 in Jupyter for interactive and full-page Crumble views of the ordinary and

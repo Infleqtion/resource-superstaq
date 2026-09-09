@@ -1,16 +1,7 @@
-import importlib.util
 from pathlib import Path
-import sys
 
 import pytest
-
-
-_runner_path = Path(__file__).parents[1] / "tools" / "run_logical_clifford_ler.py"
-_spec = importlib.util.spec_from_file_location("logical_clifford_ler", _runner_path)
-assert _spec and _spec.loader
-runner = importlib.util.module_from_spec(_spec)
-sys.modules[_spec.name] = runner
-_spec.loader.exec_module(runner)
+from surface_code_deq.verification import ler as runner
 
 
 def test_gate_list_parser_and_inverse_circuit(tmp_path: Path) -> None:

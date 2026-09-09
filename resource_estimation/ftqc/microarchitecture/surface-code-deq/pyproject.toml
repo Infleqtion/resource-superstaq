@@ -17,8 +17,15 @@ dependencies = [
     "pymatching>=2.4",
 ]
 
+[project.scripts]
+surface-code-deq-generate = "surface_code_deq.library:main"
+surface-code-deq-ler = "surface_code_deq.verification.ler:main"
+surface-code-deq-verify = "surface_code_deq.verification.choi:main"
+surface-code-deq-distance = "surface_code_deq.verification.distance:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+notebooks = ["ipywidgets>=8", "ipykernel>=6"]
 sat = ["python-sat>=1.8"]
 
 [tool.hatch.build.targets.wheel]
@@ -26,6 +33,7 @@ packages = ["src/surface_code_deq"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 markers = [
     "integration: launches DEQ's worker-process integration test",
 ]
