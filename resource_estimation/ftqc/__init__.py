@@ -47,6 +47,7 @@ from resource_estimation.ftqc.lattice_surgery_primitives import (
     ErrorCorrect,
     IntermediatePatch,
     Merge,
+    ResourceCorrection,
     RotatedCodePatch,
     Split,
     SyndromeExtract,
