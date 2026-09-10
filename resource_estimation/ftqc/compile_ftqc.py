@@ -18,7 +18,6 @@ import functools
 import os
 import sys
 import time
-from itertools import combinations
 from math import pi
 from typing import TYPE_CHECKING, cast
 
@@ -89,10 +88,7 @@ def _requires_resource(op: cirq.Operation, transversal_cnot: bool) -> bool:
 
 
 def replace_cirq_op(
-    op: cirq.Operation,
-    layout: Layout,
-    transversal_cnot: bool,
-    dynamic: bool = False,
+    op: cirq.Operation, layout: Layout, transversal_cnot: bool, movement: bool = False
 ) -> list[cirq.Operation | cirq.Moment]:
     """Replacement logic similar to decomposition for cirq operations to be converted to primitives.
 
@@ -116,14 +112,14 @@ def replace_cirq_op(
             lsp.Split(partitions=[1] * (len(path_patches[1:])), smooth=False).on(*path_patches[1:]),
         ]
     if _requires_resource(op, transversal_cnot):
-        return teleport_resource(op, layout, dynamic)
+        return teleport_resource(op, layout, movement=movement)
     raise ValueError(
         f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} gate: {op.gate}",
     )
 
 
 def teleport_resource(
-    op: cirq.Operation, layout: Layout, dynamic: bool = False
+    op: cirq.Operation, layout: Layout, movement: bool = False
 ) -> list[cirq.Moment | cirq.Operation]:
     distil_t = layout.distil and op in cirq.GateFamily(cirq.T)
     if not all(isinstance(q, cirq.GridQubit) for q in op.qubits):
@@ -138,11 +134,11 @@ def teleport_resource(
     if distil_t:
         ftype = "t"
         prep_gate = lsp.Distil("T")
-        correction = lsp.ResourceCorrection("T") if dynamic else cirq.S
+        correction = lsp.ResourceCorrection("T") if movement else cirq.S
     elif cultivate_t:
         ftype = "t"
         prep_gate = lsp.Cultivate(pi / 4)
-        correction = lsp.ResourceCorrection("T") if dynamic else cirq.S
+        correction = lsp.ResourceCorrection("T") if movement else cirq.S
     elif cultivate_s:
         ftype = "s"
         prep_gate = lsp.Cultivate(pi / 2)
@@ -150,15 +146,15 @@ def teleport_resource(
     elif distil_ccz:
         ftype = "ccz"
         prep_gate = lsp.Distil("CCZ")
-        if dynamic:
-            correction = lsp.ResourceCorrection("CCZ")
-        else:
-            correction = [
-                *cirq.H.on_each(*op.qubits),
-                *cirq.X.on_each(*op.qubits),
-                *cirq.CNOT.on_each(*combinations(op.qubits, 2)),
-                *cirq.H.on_each(*op.qubits),
-            ]
+        correction = lsp.ResourceCorrection("CCZ")
+        # CCZ distillation is movement-only, update this if that changes
+        # else:
+        #     correction = [
+        #         *cirq.H.on_each(*op.qubits),
+        #         *cirq.X.on_each(*op.qubits),
+        #         *cirq.CNOT.on_each(*combinations(op.qubits, 2)),
+        #         *cirq.H.on_each(*op.qubits),
+        #     ]
     else:
         raise ValueError(f"Invalid resource encountered: {op.gate}")
     available_factories = layout.available_factories(ftype)
@@ -341,7 +337,6 @@ def _decompose_to_primitives(
     circuit: cirq.Circuit,
     layout: Layout,
     arc: Architecture,
-    dynamic: bool = False,
 ) -> cirq.Circuit:
     primitives = cirq.Gateset(
         *(cirq.GateFamily(g._gate, ignore_global_phase=False) for g in arc.primitives.gates),
@@ -350,7 +345,7 @@ def _decompose_to_primitives(
 
     def _map_fn(op: cirq.Operation) -> cirq.OP_TREE:
         return replace_cirq_op(
-            op=op, layout=layout, transversal_cnot=transversal_cnot, dynamic=dynamic
+            op=op, layout=layout, transversal_cnot=transversal_cnot, movement=arc.movement
         )
 
     # TODO: can we turn layout into a decomposition_context?
@@ -413,7 +408,6 @@ def ft_compile(
     verbose: int = 1,
     with_barriers: bool = False,
     skip_validation: bool = False,
-    dynamic: bool = False,
 ) -> cirq.Circuit:
     """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T + CCZ gateset to a cirq circuit of primitives.
     The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
@@ -432,7 +426,7 @@ def ft_compile(
     else:
         validate_ops(circuit, verbose=verbose)
 
-    circuit = _decompose_to_primitives(circuit, layout=layout, arc=arc, dynamic=dynamic)
+    circuit = _decompose_to_primitives(circuit, layout=layout, arc=arc)
 
     # Handling State Prep
     # In a more optimized world this could happen the moment before the first logical operation
