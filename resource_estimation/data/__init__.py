@@ -11,19 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import subprocess
+import resource_estimation.data.analysis as analysis
+from resource_estimation.data.analyze import analyze
+from resource_estimation.data.cultivate_json import cultivate_json
 
-
-def test_clifford_t() -> None:
-    result = subprocess.run(["python", "scripts/clifford_t.py"])
-    assert result
-
-
-def test_scaling() -> None:
-    result = subprocess.run(["python", "scripts/scaling.py", "10", "20"])
-    assert result
-
-
-def test_rz_games() -> None:
-    result = subprocess.run(["python", "scripts/rz_games.py", ".122441", "12", "0"])
-    assert result
+__all__ = ["analyze", "cultivate_json", "analysis"]
