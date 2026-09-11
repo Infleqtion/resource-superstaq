@@ -223,8 +223,8 @@ def _interaction_zone_move_precompiled(
     l2_y = abs(dy) * patch_length * site_spacing
     t2 = _physical_move_time(l2_x) + _physical_move_time(l2_y)
 
-# TODO: Consider whether the squeeze (l3) can be merged into the l2 move to avoid an extra movement overhead.
-l3 = 0.25 * site_spacing  # Squeeze sites for interaction
+    # TODO: Consider whether the squeeze (l3) can be merged into the l2 move to avoid an extra movement overhead.
+    l3 = 0.25 * site_spacing  # Squeeze sites for interaction
     t3 = _physical_move_time(l3)
     op_time = t1 + t2 + t3
     return CostDict(
