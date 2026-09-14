@@ -8,13 +8,6 @@ from collections import defaultdict
 import cirq
 
 
-class ResourceStateBasis(enum.Enum):
-    """Basis of one leg of a resource-state injection."""
-
-    X = "X"
-    Z = "Z"
-
-
 @dataclasses.dataclass(frozen=True)
 class ResourceStateTag:
     """Metadata describing one qubit of an injected resource state.
@@ -40,7 +33,7 @@ class ResourceStateTag:
     qubit_index: int
     num_qubits: int
     classical_controls: tuple[cirq.Condition, ...] = ()
-    basis: ResourceStateBasis = ResourceStateBasis.Z
+    basis: cirq.Pauli = cirq.Z
 
     @property
     def is_classically_controlled(self) -> bool:
@@ -93,7 +86,7 @@ def _is_non_clifford_unitary(operation: cirq.Operation) -> bool:
     return cirq.has_unitary(operation) or cirq.is_parameterized(operation)
 
 
-def _resource_state_basis(gate: cirq.Gate, qubit_index: int, num_qubits: int) -> ResourceStateBasis:
+def _resource_state_basis(gate: cirq.Gate, qubit_index: int, num_qubits: int) -> cirq.Pauli:
     """Return the injection basis for one ordered gate leg.
 
     Controls in CCZ/CZ/CCX/CX use Z-basis injection, targets use X-basis injections.
@@ -101,13 +94,13 @@ def _resource_state_basis(gate: cirq.Gate, qubit_index: int, num_qubits: int) ->
     """
     if isinstance(gate, (cirq.CXPowGate, cirq.CCXPowGate)):
         if qubit_index == num_qubits - 1:
-            return ResourceStateBasis.X
+            return cirq.X
         else:
-            return ResourceStateBasis.Z
+            return cirq.Z
     elif isinstance(gate, cirq.XPowGate):
-        return ResourceStateBasis.X
+        return cirq.X
     elif isinstance(gate, (cirq.ZPowGate, cirq.CZPowGate, cirq.CCZPowGate)):
-        return ResourceStateBasis.Z
+        return cirq.Z
     else:
         raise ValueError(f"{gate} is not a supported resource state gate.")
 
@@ -195,16 +188,14 @@ def replace_resource_gates(
                 if use_joint_meas:
                     pauli_string: cirq.PauliString[cirq.Qid] = (
                         cirq.PauliString(cirq.Z(data_qubit), cirq.Z(ancilla))
-                        if basis is ResourceStateBasis.Z
+                        if basis is cirq.Z
                         else cirq.PauliString(cirq.X(data_qubit), cirq.X(ancilla))
                     )
                     teleportation_operations.append(cirq.measure_single_paulistring(pauli_string))
 
                 else:
                     cnot_qubits = (
-                        (data_qubit, ancilla)
-                        if basis is ResourceStateBasis.Z
-                        else (ancilla, data_qubit)
+                        (data_qubit, ancilla) if basis is cirq.Z else (ancilla, data_qubit)
                     )
                     teleportation_operations.append(cirq.CNOT(*cnot_qubits))
 

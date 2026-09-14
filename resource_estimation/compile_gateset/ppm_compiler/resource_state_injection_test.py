@@ -4,7 +4,6 @@ import cirq
 import sympy
 
 from resource_estimation.compile_gateset.ppm_compiler import (
-    ResourceStateBasis,
     ResourceStateTag,
     replace_resource_gates,
 )
@@ -48,7 +47,7 @@ def test_replaces_t_and_ccz_with_resource_ancillas() -> None:
         for tag in operation.tags
         if isinstance(tag, ResourceStateTag)
     ]
-    assert all(tag.basis is ResourceStateBasis.Z for tag in tags)
+    assert all(tag.basis is cirq.Z for tag in tags)
 
 
 def test_toffoli_reverses_cnot_direction_on_target_resource_leg() -> None:
@@ -72,9 +71,9 @@ def test_toffoli_reverses_cnot_direction_on_target_resource_leg() -> None:
         key=lambda tag: tag.qubit_index,
     )
     assert [tag.basis for tag in tags] == [
-        ResourceStateBasis.Z,
-        ResourceStateBasis.Z,
-        ResourceStateBasis.X,
+        cirq.Z,
+        cirq.Z,
+        cirq.X,
     ]
 
 
@@ -109,9 +108,9 @@ def test_joint_measurement_teleportation() -> None:
         key=lambda tag: tag.qubit_index,
     )
     assert [tag.basis for tag in tags] == [
-        ResourceStateBasis.Z,
-        ResourceStateBasis.Z,
-        ResourceStateBasis.X,
+        cirq.Z,
+        cirq.Z,
+        cirq.X,
     ]
 
 
