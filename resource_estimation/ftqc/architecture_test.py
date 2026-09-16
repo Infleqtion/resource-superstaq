@@ -892,12 +892,12 @@ def test_distillation_cases(
         _ = lattice_architecture._distil_cost(
             resource="T", layout=lyt.MovementDistillery(input_circuit=distil_15_to_1())
         )
-    # # Confirm _distil_cost raises TypeError when provided wrong layout
-    # with pytest.raises(TypeError, match="layout must be a MovementDistillery"):
-    #     _ = movement_architecture._distil_cost(
-    #         resource="T",
-    #         layout=lyt.MovementLayout(input_circuit=distil_15_to_1()),  # type: ignore[arg-type]
-    #     )
+    # Confirm distil_cost raises TypeError when provided wrong layout
+    with pytest.raises(TypeError, match="layout must be a MovementDistillery"):
+        _ = movement_architecture.distil_cost(
+            op=lsp.Distil("T").on(*cirq.LineQubit.range(31)),  # type: ignore[arg-type]
+            layout=lyt.MovementLayout(input_circuit=distil_15_to_1()),  # type: ignore[arg-type]
+        )
     # Confirm _distil_cost raises ValueError when given invalid resource
     with pytest.raises(ValueError, match="Unknown distillation resource"):
         _ = movement_architecture._distil_cost(resource="Toffoli", layout=ccz_layout)  # type: ignore[arg-type]
