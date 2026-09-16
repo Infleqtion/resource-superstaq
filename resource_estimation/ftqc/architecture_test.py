@@ -14,6 +14,7 @@
 import collections
 from collections.abc import Callable
 from math import ceil, isclose, pi
+from typing import Literal
 
 import cirq
 import cirq_superstaq as css
@@ -820,8 +821,19 @@ def test_logical_moves(
         scratch_dx=scratch_dx,
         scratch_dy=scratch_dy,
     ).op_time
-    returned_result = movement_architecture.move_cost(inplace_move, layout=dsm_layout).op_time
+    returned_result = arch.DualSpeciesMovement().move_cost(inplace_move, layout=dsm_layout).op_time
     assert isclose(expected_result, returned_result)
+
+
+@pytest.mark.parametrize("mode", ["MZO", "DSM"])
+def test_move_cost_rejects_protocol_mismatch(mode: Literal["MZO", "DSM"]) -> None:
+    circuit = cirq.Circuit(cirq.CNOT(*cirq.LineQubit.range(2)))
+    layout = lyt.MovementLayout(circuit, num_t_factories=0, architecture=mode)
+    op = _require_gate_operation(
+        css.MovementGate({0: 1}).on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1))
+    )
+    with pytest.raises(ValueError, match="Mismatch between"):
+        arch.DefaultMovement().move_cost(op, layout)
 
 
 def test_physical_move_time() -> None:

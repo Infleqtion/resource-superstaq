@@ -11,9 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Literal
+
 import cirq
 import pytest
 
+import resource_estimation.ftqc.architecture as arch
 from resource_estimation.ftqc.layout import (
     Column,
     Embedded,
@@ -385,3 +388,36 @@ def test_zones(circuit5: cirq.Circuit) -> None:
     expected_measurement_zones = {cirq.GridQubit(2, j) for j in range(3)}
     assert set(layout.zone_qubits("interact")) == expected_interaction_zones
     assert set(layout.zone_qubits("measure")) == expected_measurement_zones
+
+
+@pytest.mark.parametrize("mode", ["SSM", "MZO", "DSM", "DSNM"])
+@pytest.mark.parametrize("arc_mode", ["SSM", "MZO", "DSM", "DSNM"])
+def test_validate_protocols(
+    mode: Literal["SSM", "MZO", "DSM", "DSNM"],
+    arc_mode: Literal["SSM", "MZO", "DSM", "DSNM"],
+) -> None:
+    circuit = cirq.Circuit(cirq.X(cirq.LineQubit(0)))
+    layout = (
+        Column(circuit)
+        if mode == "DSNM"
+        else MovementLayout(circuit, num_t_factories=0, architecture=mode)
+    )
+    architecture = {
+        "SSM": arch.DefaultMovement,
+        "MZO": arch.MeasureZonesOnly,
+        "DSM": arch.DualSpeciesMovement,
+        "DSNM": arch.DefaultLattice,
+    }[arc_mode](d=5)
+    if mode == arc_mode:
+        layout.validate(architecture)
+    else:
+        with pytest.raises(ValueError, match="Mismatch between"):
+            layout.validate(architecture)
+
+
+@pytest.mark.parametrize("flag", ["measure_zones", "interaction_zones", "inplace_cnot"])
+def test_validate_individual_capabilities(flag: str, circuit5: cirq.Circuit) -> None:
+    layout = MovementLayout(circuit5)
+    setattr(layout, flag, not getattr(layout, flag))
+    with pytest.raises(ValueError, match="Mismatch between"):
+        layout.validate(arch.DefaultMovement())

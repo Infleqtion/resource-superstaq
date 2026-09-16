@@ -96,7 +96,7 @@ def test_all_primitives(estimator: est.ResourceEstimator) -> None:
     layout: lyt.Layout
     if arc.movement:
         layout = lyt.MovementDistillery(
-            input_circuit=circuit, num_ccz_factories=1, architecture="DSM", num_t_factories=1
+            input_circuit=circuit, num_ccz_factories=1, architecture="SSM", num_t_factories=1
         )
         t_factory = layout.all_factories("t")[0]
         ccz_factory = layout.all_factories("ccz")[0]
@@ -164,14 +164,15 @@ def test_parallel_circuit_cost(
 
     # Test parallel CNOT gates get counted as parallel
     circuit = cirq.Circuit(cirq.CNOT.on(qubit_a, qubit_b), cirq.CNOT.on(qubit_c, qubit_d))
+    movement_layout = lyt.MovementLayout(circuit)
     estimated_moment_cost = movement_estimator.parallel_circuit_cost(
-        circuit=circuit, layout=column_layout
+        circuit=circuit, layout=movement_layout
     )
     expected_moment_cost = movement_estimator.arc.moment_cost(cirq.CNOT.on(qubit_a, qubit_b))
     assert estimated_moment_cost == expected_moment_cost
 
     estimated_moment_cost = movement_estimator.parallel_circuit_cost(
-        circuit=circuit, layout=column_layout
+        circuit=circuit, layout=movement_layout
     )
     assert estimated_moment_cost == {
         cirq.CZ: 1,
@@ -187,7 +188,7 @@ def test_self_returns(
     circuit = cirq.Circuit(
         [lsp.ErrorCorrect(2).on(qubit_a, qubit_b), cirq.ResetChannel().on(qubit_a)],
     )
-    layout = lyt.MovementLayout(circuit, num_t_factories=0, architecture="DSM")
+    layout = lyt.MovementLayout(circuit, num_t_factories=0, architecture="SSM")
     cost = movement_estimator.serial_circuit_cost(circuit=circuit, layout=layout)
     assert cost == {
         cirq.ResetChannel: 49,
@@ -199,7 +200,7 @@ def test_self_returns(
             cirq.ResetChannel().on_each(qubit_a, qubit_b),
         ],
     )
-    cost = lattice_estimator.serial_circuit_cost(circuit=circuit, layout=layout)
+    cost = lattice_estimator.serial_circuit_cost(circuit=circuit, layout=lyt.Column(circuit))
     assert cost == {
         cirq.ResetChannel: 2 * 49,
     }
@@ -223,7 +224,7 @@ def test_error_handling(
             cirq.CNOT.on(qubit_a, qubit_b),
         ],
     )
-    movement_layout = lyt.MovementLayout(bad_circuit, architecture="DSM")
+    movement_layout = lyt.MovementLayout(bad_circuit, architecture="SSM")
     with pytest.raises(ValueError, match="incompatible"):
         _ = movement_estimator.serial_circuit_cost(bad_circuit, layout=movement_layout)
 
@@ -241,7 +242,7 @@ def test_critical_path() -> None:
     c2 += cirq.CNOT.on(q0, q1)
     arc = arch.DefaultMovement()
     # Both have same layout
-    layout = lyt.MovementLayout(c1, num_t_factories=1, architecture="DSM", num_ccz_factories=1)
+    layout = lyt.MovementLayout(c1, num_t_factories=1, architecture="SSM", num_ccz_factories=1)
     estim = est.ResourceEstimator(arc)
     # Should be identical aside from floating point errors
     assert isclose(
@@ -375,6 +376,26 @@ def test_physical_qubit_count(lattice_estimator: est.ResourceEstimator) -> None:
     expected_num_physical_qubits = 98  # 2 * (2 * d**2 - 1)
     num_physical_qubits = lattice_estimator.physical_qubits(test_circuit)
     assert num_physical_qubits == expected_num_physical_qubits
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        "serial_circuit_cost",
+        "serial_circuit_time",
+        "parallel_circuit_cost",
+        "parallel_circuit_time",
+        "critical_path",
+    ],
+)
+@pytest.mark.parametrize("mode", ["MZO", "DSM"])
+def test_estimator_rejects_protocol_mismatch(
+    method: str, mode: typing.Literal["MZO", "DSM"]
+) -> None:
+    layout = lyt.MovementLayout(cirq.Circuit(cirq.X(cirq.LineQubit(0))), architecture=mode)
+    estimator = est.ResourceEstimator(arch.DefaultMovement())
+    with pytest.raises(ValueError, match="Mismatch between"):
+        getattr(estimator, method)(layout.mapped_circuit, layout=layout)
 
 
 def local_pauli(pauli: cirq.Pauli, qubit_index: int = 0) -> cirq.PauliString[cirq.LineQubit]:

@@ -247,7 +247,17 @@ def main(args: argparse.Namespace | None = None) -> int:
     t1 = time.time()
     layt: res.ftqc.MovementLayout | res.ftqc.FactorySandwich
     if isinstance(arch, res.ftqc.DefaultMovement):
-        layt = res.ftqc.MovementLayout(num_t_factories=facts, input_circuit=clifford_t_circuit)
+        layt = res.ftqc.MovementLayout(
+            num_t_factories=facts,
+            input_circuit=clifford_t_circuit,
+            architecture=(
+                "MZO"
+                if isinstance(arch, res.ftqc.MeasureZonesOnly)
+                else "DSM"
+                if isinstance(arch, res.ftqc.DualSpeciesMovement)
+                else "SSM"
+            ),
+        )
     else:
         layt = res.ftqc.FactorySandwich(
             input_circuit=clifford_t_circuit,
