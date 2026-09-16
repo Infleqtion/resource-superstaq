@@ -898,8 +898,8 @@ class DefaultMovement(Architecture):
         return self._distil_cost(op.gate._resource, layout=layout)
 
     def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
-        if not isinstance(layout, MovementDistillery):
-            raise TypeError("layout must be a MovementDistillery for _distil_cost().")
+        # if not isinstance(layout, MovementDistillery):
+        #     raise TypeError("layout must be a MovementDistillery for _distil_cost().")
         if resource == "T":
             mapped_circuit = distil_15_to_1()
         elif resource == "CCZ":
