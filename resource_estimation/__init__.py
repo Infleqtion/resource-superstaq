@@ -15,10 +15,12 @@ from . import (
     analysis,
     compile_gateset,
     ftqc,
+    typing,
 )
 
 __all__ = [
+    "analysis",
     "compile_gateset",
     "ftqc",
-    "analysis",
+    "typing",
 ]
