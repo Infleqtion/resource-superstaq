@@ -39,6 +39,13 @@ def bell_circuit() -> cirq.Circuit:
 
 
 @pytest.fixture
+def t_circuit() -> cirq.Circuit:
+    qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
+    circuit = cirq.Circuit([cirq.H.on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b), cirq.T.on(qubit_b)])
+    return circuit
+
+
+@pytest.fixture
 def random_circ() -> cirq.Circuit:
     return cirq.testing.random_circuit(
         qubits=5,
@@ -447,6 +454,85 @@ def test_other_passes(random_circ: cirq.Circuit) -> None:
         idling_corrected_resources["SE(7)"]
         >= corrected_resources["SE(7)"]
         >= uncorrected_resources["SE(7)"]
+    )
+
+
+def test_t_movement(t_circuit: cirq.Circuit) -> None:
+    movement_layout = MovementLayout(t_circuit, num_t_factories=2, architecture="SSM")
+    movement_architecture = arch.MeasureZonesOnly(
+        d=7,
+        cultivation_repetition=1,
+        syndrome_rounds=1,
+        idling=True,
+        post_op_correction=True,
+    )
+    compiled_t_circuit = comp.ft_compile(layout=movement_layout, arc=movement_architecture)
+    # yes idling, yes post-op correction
+    compiled_t_circuit = cirq.align_left(compiled_t_circuit)
+    # This test was updated both by aligning left and to reflect the change to make cultivation happen later in the circuit,
+    # The old version is left commented out below
+    cirq.testing.assert_has_diagram(
+        compiled_t_circuit,
+        textwrap.dedent(
+            """
+                                                          ┌────────────┐                             ┌───────────┐
+       (-1, 0): ─────────────────────────────────┤   0├────┤   0├──────────────────┤1   ├───┤1   ├───────────────────────────────────────────────────────────────────────────────────────────
+                                                    
+       (-1, 1): ─────────────────────────────────────────────────┤   0├────────────────────────────────────┤   0├────────────┤1   ├───┤1   ├─────────────────────────────────────────────────
+                                                    
+       (0, 0): ────SE(1)─────────H───────SE(1)───┤0   ├────────────────────@────────────────┤   1├────SE(1)──────────SE(1)───SE(1)────SE(1)────SE(1)───SE(1)─────────────────────────────────
+                                                                           │
+       (0, 1): ────SE(1)─────────SE(1)───SE(1)─────────────┤0   ├──────────X───────┤   1├───SE(1)──────────┤0   ├────X───────┤   1├───SE(1)────S───────SE(1)────SE(1)────────────────────────
+                                                                                                                     │
+       (1, 0): ────CULT(0.785)───SE(1)───SE(1)───SE(1)─────SE(1)───────────SE(1)───SE(1)────SE(1)─────SE(1)──────────┼───────────────────────────────────────────────────────────────────────
+                                                                                                                     │
+       (1, 1): ────CULT(0.785)───SE(1)───SE(1)───SE(1)───────────┤0   ├──────────────────────────────────────────────@────────────────┤   1├───SE(1)───┤0   ├───M('')───┤   1├───SE(1)───R───
+                                                    
+       (2, 0): ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤   0├───────────┤1   ├───────────────
+                                                          └────────────┘                             └───────────┘   
+            """,
+        ),
+    )
+
+
+def test_t_lattice(t_circuit: cirq.Circuit) -> None:
+    lattice_layout = Column(t_circuit)
+    lattice_architecture = arch.DefaultLattice(
+        d=7,
+        cultivation_repetition=1,
+        syndrome_rounds=1,
+        idling=True,
+        post_op_correction=True,
+    )
+    compiled_t_circuit = comp.ft_compile(layout=lattice_layout, arc=lattice_architecture)
+    # yes idling, yes post-op correction
+    # I'm not sure if the splits are being handled properly. Should we idle on qubits being acted on by Split? Just the non-ancillas? There could be some discussion here
+    compiled_t_circuit = cirq.align_left(compiled_t_circuit)
+    cirq.testing.assert_has_diagram(
+        compiled_t_circuit,
+        textwrap.dedent(
+            """
+                                ┌──────────┐   ┌──────────┐                                   ┌──────────┐   ┌──────────┐
+       (0, 0): ───CULT(1.571)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───────────────────────────────────
+                                                                                                                                                                                                                    
+       (0, 2): ───SE(1)──────────H──────────────MERGE─────────SPLIT───SE(1)───SE(1)───SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───SE(1)───────────────────
+                                                │             │
+       (0, 3): ─────────────────────────────────#2────────────#2──────MERGE───────────SPLIT─────────────────────────────────────────────────────────────────────────────────
+                                                                      │               │
+       (0, 4): ───SE(1)──────────SE(1)──────────SE(1)─────────────────#2──────SE(1)───#2───────#3─────────────#3────────────SE(1)───────────#2──────SE(1)───#2──────Z───────
+                                                                                               │              │                             │               │
+       (0, 5): ──────────────────#3─────────────#3─────────────────────────────────────────────#2─────────────#2────────────#2──────#2──────MERGE───────────SPLIT───────────
+                                 │              │                                              │              │             │       │
+       (0, 6): ───CULT(1.571)────┼────SE(1)─────┼────SE(1)────SE(1)───SE(1)───SE(1)────────────┼──────────────┼─────────────MERGE───SPLIT───M('')───SE(1)───R───────SE(1)───
+                                 │              │                                              │              │
+       (1, 0): ───CULT(0.785)────┼────SE(1)─────┼────SE(1)────SE(1)───SE(1)───SE(1)───SE(1)────┼────SE(1)─────┼────SE(1)────SE(1)───SE(1)───────────────────────────────────
+                                 │              │                                              │              │
+       (1, 5): ──────────────────#2─────────────#2─────────────────────────────────────────────MERGE──────────SPLIT─────────────────────────────────────────────────────────
+                                 │              │
+       (1, 6): ───CULT(0.785)────MERGE──────────SPLIT─────────M('')───SE(1)───R───────SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───────────────────────────
+                                └──────────┘   └──────────┘                                   └──────────┘   └──────────┘        
+                """
+        ),
     )
 
 
