@@ -392,9 +392,12 @@ def test_physical_qubit_count(lattice_estimator: est.ResourceEstimator) -> None:
 def test_estimator_rejects_protocol_mismatch(
     method: str, mode: typing.Literal["MZO", "DSM"]
 ) -> None:
+    # Check all five estimator entry points against both mismatched layouts (ten cases).
+    # X is supported and needs no routing, so rejection must come from the configuration.
     layout = lyt.MovementLayout(cirq.Circuit(cirq.X(cirq.LineQubit(0))), architecture=mode)
-    estimator = est.ResourceEstimator(arch.DefaultMovement())
+    estimator = est.ResourceEstimator(arch.DefaultMovement())  # SSM, not MZO or DSM.
     with pytest.raises(ValueError, match="Mismatch between"):
+        # Select the method for this case and pass the circuit mapped onto the layout.
         getattr(estimator, method)(layout.mapped_circuit, layout=layout)
 
 

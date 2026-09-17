@@ -827,11 +827,15 @@ def test_logical_moves(
 
 @pytest.mark.parametrize("mode", ["MZO", "DSM"])
 def test_move_cost_rejects_protocol_mismatch(mode: Literal["MZO", "DSM"]) -> None:
+    # Direct movement costing must reject mismatches even when compilation is bypassed.
+    # The CNOT circuit gives the layout two data sites at (0, 0) and (0, 1).
     circuit = cirq.Circuit(cirq.CNOT(*cirq.LineQubit.range(2)))
     layout = lyt.MovementLayout(circuit, num_t_factories=0, architecture=mode)
+    # {0: 1} moves the first operand to the second; neither operand is a zone here.
     op = _require_gate_operation(
         css.MovementGate({0: 1}).on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1))
     )
+    # DefaultMovement is SSM, so neither an MZO nor a DSM layout is compatible.
     with pytest.raises(ValueError, match="Mismatch between"):
         arch.DefaultMovement().move_cost(op, layout)
 

@@ -730,8 +730,9 @@ def test_teleport_resource_exceptions() -> None:
 
 @pytest.mark.parametrize("mode", ["MZO", "DSM"])
 def test_exceptions(bell_circuit: cirq.Circuit, mode: Literal["MZO", "DSM"]) -> None:
-    # Test ft compile rejects incompatible layout-architecture combos
+    # Compilation must reject both in-place CNOT layouts when paired with SSM protocols.
     inplace_layout = MovementLayout(input_circuit=bell_circuit, architecture=mode)
-    zoned_arc = arch.DefaultMovement()
+    zoned_arc = arch.DefaultMovement()  # SSM requires measurement and interaction zones.
+    # The old "any zones" check rejected DSM but missed MZO, which has measurement zones.
     with pytest.raises(ValueError, match="Mismatch between"):
         _ = comp.ft_compile(layout=inplace_layout, arc=zoned_arc)

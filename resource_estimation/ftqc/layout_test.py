@@ -396,12 +396,15 @@ def test_validate_protocols(
     mode: Literal["SSM", "MZO", "DSM", "DSNM"],
     arc_mode: Literal["SSM", "MZO", "DSM", "DSNM"],
 ) -> None:
+    # The two parametrizations test all 16 pairings: four matching and twelve mismatched.
     circuit = cirq.Circuit(cirq.X(cirq.LineQubit(0)))
+    # DSNM uses a nonmovement layout; the other modes select different movement protocols.
     layout = (
         Column(circuit)
         if mode == "DSNM"
         else MovementLayout(circuit, num_t_factories=0, architecture=mode)
     )
+    # Choose the architecture independently of the layout. DefaultMovement is the SSM model.
     architecture = {
         "SSM": arch.DefaultMovement,
         "MZO": arch.MeasureZonesOnly,
@@ -409,6 +412,7 @@ def test_validate_protocols(
         "DSNM": arch.DefaultLattice,
     }[arc_mode](d=5)
     if mode == arc_mode:
+        # A matching configuration must validate without raising an exception.
         layout.validate(architecture)
     else:
         with pytest.raises(ValueError, match="Mismatch between"):
@@ -417,7 +421,9 @@ def test_validate_protocols(
 
 @pytest.mark.parametrize("flag", ["measure_zones", "interaction_zones", "inplace_cnot"])
 def test_validate_individual_capabilities(flag: str, circuit5: cirq.Circuit) -> None:
+    # Each capability must be checked independently, even when the mode is still named SSM.
     layout = MovementLayout(circuit5)
+    # Flip only the selected flag, leaving the other flags and the graph unchanged.
     setattr(layout, flag, not getattr(layout, flag))
     with pytest.raises(ValueError, match="Mismatch between"):
         layout.validate(arch.DefaultMovement())

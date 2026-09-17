@@ -36,17 +36,21 @@ def test_rz_games() -> None:
 
 @pytest.mark.parametrize("architecture", ["ssm", "mzo", "dsm"])
 def test_analyze_movement_layout(architecture: str, tmp_path: Path) -> None:
+    # The real CLI must select a compatible layout and complete estimation in each mode.
     a, b = cirq.LineQubit.range(2)
+    # Exercise both CNOT and measurement, whose movement protocols differ between modes.
     circuit = cirq.Circuit(cirq.CNOT(a, b), cirq.measure(a))
+    # Give the CLI a circuit file in pytest's temporary directory.
     circuit_path = tmp_path / "circuit.json"
     cirq.to_json(circuit, circuit_path)
     result = subprocess.run(
         [
-            sys.executable,
+            sys.executable,  # Use the same Python environment as the tests.
             "scripts/analyze.py",
             str(circuit_path),
             "--arch",
             architecture,
+            # Set all four overrides together to bypass automatic parameter selection.
             "--code-distance",
             "7",
             "--cultivation-repetition",
@@ -55,6 +59,7 @@ def test_analyze_movement_layout(architecture: str, tmp_path: Path) -> None:
             "0.001",
             "--error-per-cult",
             "0.000001",
+            # This Clifford-only circuit needs no T factories or saved report files.
             "--facts",
             "0",
             "--nosave",
@@ -63,4 +68,5 @@ def test_analyze_movement_layout(architecture: str, tmp_path: Path) -> None:
         text=True,
         check=False,
     )
+    # Check successful completion, not exact resource totals; show CLI output on failure.
     assert result.returncode == 0, result.stdout + result.stderr
