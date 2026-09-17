@@ -907,12 +907,12 @@ class DefaultMovement(Architecture):
     ) -> CostDict:
         if not isinstance(op.gate, lsp.Distil):
             raise TypeError("Operation is not an instance of Distil")
+        if not isinstance(layout, MovementDistillery):
+            raise TypeError("layout must be a MovementDistillery for distil_cost().")
         return self._distil_cost(op.gate._resource, layout=layout)
 
     def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
         # Calculates cost for single repetition based on precompiled circuit
-        if not isinstance(layout, MovementDistillery):
-            raise TypeError("layout must be a MovementDistillery for _distil_cost().")
         base_cost = precompute_distil_cost(resource=resource, layout=layout, arc=self)
         op_time = base_cost.op_time * self.distillation_repetition
         moment_cost = collections.Counter(

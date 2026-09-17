@@ -97,7 +97,7 @@ class ResourceEstimator:
         """
         layout.validate(self.arc)
         warnings.warn(
-            "This function can be very expensive.\nIf you just want the physical operations or circuit time, use `critical_path_ops` or `parallel_circuit_time` instead.",
+            "This function can be very expensive.\nFor physical operations or circuit time, use `parallel_circuit_cost` or `parallel_circuit_time`, respectively.",
         )
         qubit_paths: dict[cirq.Qid, list[cirq.Operation]] = {
             qubit: [] for qubit in circuit.all_qubits()
