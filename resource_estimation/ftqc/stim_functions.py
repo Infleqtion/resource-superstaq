@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import collections
 import json
+import os
 import typing
 import warnings
 from pathlib import Path
@@ -23,22 +24,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Literal
 
-import cirq
 import cultiv
 import stim
 
-from resource_estimation.typing import CountsDict, GateKey
-
-DATA_DIR = Path(__file__).resolve().parents[2] / "data"
-
-STR2GATE: dict[str, GateKey] = {
-    "PhasedXZGate": cirq.PhasedXZGate,
-    "QubitPermutationGate": cirq.QubitPermutationGate,
-    "MeasurementGate": cirq.MeasurementGate,
-    "CZ": cirq.CZ,
-    "ResetChannel": cirq.ResetChannel,
-    "CCZ": cirq.CCZ,
-}
+from resource_estimation.typing import STR2GATE, CountsDict, GateKey
 
 
 def count_stim_resources(
@@ -105,22 +94,25 @@ def count_stim_resources(
     return CountsDict(serial=total_serial, parallel=total_parallel)
 
 
+def _check_cost_file() -> bool:
+    data_dir = Path(__file__).resolve().parents[2] / "resource_estimation" / "data"
+    return os.path.isfile(data_dir / "_cultivate_costs.json")
+
+
 def load_saved_cost(
     dsurface: int,
-    op_key: typing.Literal["cultivate"],
     style: typing.Literal["gidney", "yale"],
     fault_distance: typing.Literal[3, 5],
 ) -> CountsDict:
     """
-    Gets saved serial and parallel costs from the `cultivate_costs.json` file
+    Loads saved cultivation costs from _cultivate_costs.json in the data directory
     Converts saved strings to proper cirq gate objects
     """
-    with open(DATA_DIR / "cultivate_costs.json") as f:
+    data_dir = Path(__file__).resolve().parents[2] / "resource_estimation" / "data"
+    cost_file = data_dir / "_cultivate_costs.json"
+    with open(cost_file, "r") as f:
         saved_costs = json.load(f)
-    loaded_costs = saved_costs[str(dsurface)][op_key][style][str(fault_distance)]
-    # Check to make sure there are no out of bounds gates saved
-    assert all(k in STR2GATE for k in loaded_costs.get("serial"))
-    assert all(k in STR2GATE for k in loaded_costs.get("parallel"))
+    loaded_costs = saved_costs[str(dsurface)][style][str(fault_distance)]
     serial_cost = {STR2GATE[k]: v for k, v in loaded_costs["serial"].items()}
     parallel_cost = {STR2GATE[k]: v for k, v in loaded_costs["parallel"].items()}
     return CountsDict(serial=serial_cost, parallel=parallel_cost)
@@ -130,13 +122,17 @@ def cultivate(
     dsurface: int,
     fault_distance: Literal[3, 5],
     fold: bool = False,
-    for_test: bool = False,
+    load_from_file: bool = True,
 ) -> CountsDict:
     """
-    Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
-    If the final patch size is less than 25 it reads from saved resources instead of calling the functions directly
-    The `for_test` argument is to turn off the loading behvior for the purpose of testing
+    Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney).
+    If the final patch size is at most 25, saved resources are used when available.
+    Set `load_from_file` to `False` to generate costs directly.
     """
+    if fault_distance not in (3, 5):
+        raise ValueError(
+            "Saved cultivation costs are only available for fault_distance values 3 and 5.",
+        )
     if dsurface < 7 and fault_distance == 3:
         warnings.warn(
             "Code distance must be an odd value of at least 2 * fault_distance + 1. Returning result for d=7",
@@ -148,25 +144,25 @@ def cultivate(
         )
         dsurface = 11
     style: Literal["yale", "gidney"] = "yale" if fold else "gidney"
-    if dsurface <= 25 and not for_test:
-        if fault_distance not in (3, 5):
-            raise ValueError(
-                "Saved cultivation costs are only available for fault_distance values 3 and 5.",
-            )
+    has_cost_file = _check_cost_file()
+    if load_from_file and dsurface <= 25 and has_cost_file:
         return load_saved_cost(
             dsurface=dsurface,
-            op_key="cultivate",
             style=style,
             fault_distance=fault_distance,
         )
+    warnings.warn(
+        "To save cultivation costs, run `from resource_estimation.data import cultivate_json; cultivate_json()`"
+    )
     if fold:
-        resources = cultiv.make_cirq_circuits.dirty_count(
-            cultiv.make_cirq_circuits.make_cirq_circuit(
-                code_distance=dsurface,
-                fault_distance=fault_distance,
-            ),
+        resources = CountsDict(
+            **cultiv.make_cirq_circuits.dirty_count(
+                cultiv.make_cirq_circuits.make_cirq_circuit(
+                    code_distance=dsurface,
+                    fault_distance=fault_distance,
+                ),
+            )
         )
-        resources = CountsDict(serial=resources["serial"], parallel=resources["parallel"])
     else:
         stim_circuit = cultiv.make_end2end_cultivation_circuit(
             dcolor=fault_distance,
