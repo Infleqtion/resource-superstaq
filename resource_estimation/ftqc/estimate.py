@@ -55,6 +55,7 @@ class ResourceEstimator:
         verbose: int = 0,
     ) -> dict[GateKey, int]:
         """Counts up the total physical gates from all logical primitives in the input circuit"""
+        layout.validate(self.arc)
         self.validate_circuit_ops(circuit=circuit)
         cost: collections.Counter[GateKey] = collections.Counter()
         for op in tqdm(
@@ -68,6 +69,7 @@ class ResourceEstimator:
 
     def serial_circuit_time(self, circuit: cirq.Circuit, layout: Layout) -> float:
         """Adds up the total physical time from all logical primitives in the input circuit"""
+        layout.validate(self.arc)
         self.validate_circuit_ops(circuit=circuit)
         return sum(self.arc.op_time(op, layout=layout) for op in circuit.all_operations())
 
@@ -75,6 +77,7 @@ class ResourceEstimator:
         self, circuit: cirq.Circuit, layout: Layout, verbose: int = 0
     ) -> float:
         """Estimation of the critical path in the input circuit according to the most expensive operation per moment"""
+        layout.validate(self.arc)
         qubit_times: dict[cirq.Qid, float] = dict.fromkeys(circuit.all_qubits(), 0.0)
         total_ops = len(list(circuit.all_operations()))
         for op in tqdm(
@@ -92,6 +95,7 @@ class ResourceEstimator:
         """Returns the circuit's critical path in terms of the logical primitive operations
         Is very slow and expensive
         """
+        layout.validate(self.arc)
         warnings.warn(
             "This function can be very expensive.\nFor physical operations or circuit time, use `parallel_circuit_cost` or `parallel_circuit_time`, respectively.",
         )
@@ -127,6 +131,7 @@ class ResourceEstimator:
         verbose: int = 0,
     ) -> GateCounts:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""
+        layout.validate(self.arc)
         qubit_paths: dict[cirq.Qid, collections.Counter[GateKey]] = {
             qubit: collections.Counter() for qubit in circuit.all_qubits()
         }

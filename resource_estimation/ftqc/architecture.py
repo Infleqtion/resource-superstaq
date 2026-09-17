@@ -832,6 +832,7 @@ class DefaultMovement(Architecture):
         ctrl, trgt = op.qubits
         if not (isinstance(ctrl, cirq.GridQubit) and isinstance(trgt, cirq.GridQubit)):
             raise TypeError("Operation qubits must be instances of cirq.GridQubit")
+        layout.validate(self)
         move_type = layout.layout_graph.nodes[trgt]["patch_type"]
         site_spacing = layout.site_spacing
         dx = abs(trgt.col - ctrl.col)  # number of logical patches horizontally

@@ -14,6 +14,7 @@
 import collections
 import textwrap
 from math import pi
+from typing import Literal
 
 import cirq
 import cirq_superstaq as css
@@ -459,7 +460,7 @@ def test_other_passes(random_circ: cirq.Circuit) -> None:
 
 def test_t_movement(t_circuit: cirq.Circuit) -> None:
     movement_layout = MovementLayout(t_circuit, num_t_factories=2, architecture="SSM")
-    movement_architecture = arch.MeasureZonesOnly(
+    movement_architecture = arch.DefaultMovement(
         d=7,
         cultivation_repetition=1,
         syndrome_rounds=1,
@@ -727,9 +728,11 @@ def test_teleport_resource_exceptions() -> None:
         _ = comp.teleport_resource(cirq.T.on(invalid_qubit), layout)
 
 
-def test_exceptions(bell_circuit: cirq.Circuit) -> None:
-    # Test ft compile rejects incompatible layout-architecture combos
-    inplace_layout = MovementLayout(input_circuit=bell_circuit, architecture="DSM")
-    zoned_arc = arch.DefaultMovement()
+@pytest.mark.parametrize("mode", ["MZO", "DSM"])
+def test_exceptions(bell_circuit: cirq.Circuit, mode: Literal["MZO", "DSM"]) -> None:
+    # Compilation must reject both in-place CNOT layouts when paired with SSM protocols.
+    inplace_layout = MovementLayout(input_circuit=bell_circuit, architecture=mode)
+    zoned_arc = arch.DefaultMovement()  # SSM requires measurement and interaction zones.
+    # The old "any zones" check rejected DSM but missed MZO, which has measurement zones.
     with pytest.raises(ValueError, match="Mismatch between"):
         _ = comp.ft_compile(layout=inplace_layout, arc=zoned_arc)

@@ -25,6 +25,9 @@ import networkx as nx
 import numpy as np
 import numpy.typing as npt
 
+if typing.TYPE_CHECKING:  # pragma: no cover
+    from resource_estimation.ftqc.architecture import Architecture
+
 
 @dataclass
 class Layout(abc.ABC):
@@ -66,6 +69,16 @@ class Layout(abc.ABC):
             for moment in self.input_circuit
         )
         self.mapped_circuit = mapped_circuit
+
+    def validate(self, arc: Architecture) -> None:
+        """Check that compilation and costing use the layout's movement protocols."""
+        if (
+            arc.movement != isinstance(self, MovementLayout)
+            or self.measure_zones != (cirq.MeasurementGate(1) in arc.zone_ops)
+            or self.interaction_zones != (cirq.CNOT in arc.zone_ops)
+            or self.inplace_cnot != (cirq.CNOT in arc.alley_ops)
+        ):
+            raise ValueError("Mismatch between Architecture movement protocols and Layout zones")
 
     def reset_graph(self) -> None:
         """Reset the graph to its starting state by setting all factory qubits to the `used` state"""
