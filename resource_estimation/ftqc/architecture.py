@@ -22,6 +22,7 @@ from random import randint
 from typing import Callable, Literal
 
 import cirq
+import cirq_superstaq as css
 import numpy as np
 
 import resource_estimation.ftqc.codepatch as codepatch
@@ -29,6 +30,7 @@ import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 from resource_estimation.ftqc.compile_ftqc import add_moves
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.estimate import ResourceEstimator
+from resource_estimation.ftqc.layout import MovementDistillery
 from resource_estimation.ftqc.stim_functions import cultivate
 from resource_estimation.typing import CostDict, GateCounts, GateKey, _require_gate_operation
 
@@ -37,7 +39,7 @@ NEUTRAL_GATES: dict[GateKey, float] = {  # From Harvard paper (https://arxiv.org
     cirq.PhasedXZGate: 5.0,  # Based on single qubit gate times
     cirq.ResetChannel: 400,  # A few hundred us
     cirq.MeasurementGate: 1000,  # Best guess from 500us for atom movement during readout
-    cirq.QubitPermutationGate: 500,
+    css.MovementGate: 500,
     cirq.CCZ: 0.27,
 }
 
@@ -167,6 +169,99 @@ def _split_cost(smooth: bool, d: int) -> CostDict:
     return CostDict(gate_cost=gate_cost, moment_cost={}, op_time=-1)
 
 
+def _physical_move_time(l: float, a: float = 5500, base_cost: float = 200) -> float:
+    """Calculates total time (μs) to travel a distance with a constant-acceleration profile.
+
+    Args:
+        l: Physical distance in μm.
+        a: Acceleration in m/s^2.
+        base_cost: Flat overhead each move pays in μs.
+    """
+    if l < 0:
+        raise ValueError("Distance l must be non-negative")
+    if a <= 0:
+        raise ValueError("Acceleration a must be positive")
+    l_m = 10**-6 * l  # convert μm to m
+    # a is in m/s^2, so we make sure to convert answer to μs
+    return 2 * np.sqrt(l_m / a) * 10**6 + base_cost
+
+
+def _measurement_zone_move_precompiled(
+    dx: int, dy: int, patch_length: int, site_spacing: float
+) -> CostDict:
+    # A logical Move to a measurement zone
+    #   - RShift by one site
+    #   - Move measure qubits to zone
+    # Current notation denotes the move operation between the logical qubit and the zone itself as arguments
+    # Reversing the sequence of moves achieves the inverse and has the same cost
+    l1 = 1 * site_spacing
+    t1 = _physical_move_time(l1)
+
+    l2_x = abs(dx) * patch_length * site_spacing
+    l2_y = abs(dy) * patch_length * site_spacing
+    t2 = _physical_move_time(l2_x) + _physical_move_time(l2_y)
+
+    op_time = t1 + t2
+    return CostDict(
+        gate_cost={css.MovementGate: 2}, moment_cost={css.MovementGate: 2}, op_time=op_time
+    )
+
+
+def _interaction_zone_move_precompiled(
+    dx: int, dy: int, patch_length: int, site_spacing: float
+) -> CostDict:
+    # A logical Move to an interaction zone
+    #   - RShift by one site
+    #   - Move data qubits to zone
+    #   - Squeeze zone qubits
+    # Current notation denotes an operation between a logical qubit and the zone itself as arguments
+    # Therefore compiled circuits see two logical movement operations to prepare one logical CNOT
+    # Reversing the sequence of moves achieves the inverse and has the same cost
+    l1 = 1 * site_spacing
+    t1 = _physical_move_time(l1)
+
+    l2_x = abs(dx) * patch_length * site_spacing
+    l2_y = abs(dy) * patch_length * site_spacing
+    t2 = _physical_move_time(l2_x) + _physical_move_time(l2_y)
+
+    # Couldn't we actually just do this in the same move as l2_x?
+    l3 = 0.25 * site_spacing  # Squeeze sites for interaction
+    t3 = _physical_move_time(l3)
+    op_time = t1 + t2 + t3
+    return CostDict(
+        gate_cost={css.MovementGate: 3}, moment_cost={css.MovementGate: 3}, op_time=op_time
+    )
+
+
+def _inplace_entanglement_move_precompiled(
+    dx: int, dy: int, patch_length: int, site_spacing: float, scratch_dx: int, scratch_dy: int
+) -> CostDict:
+    # A logical CNOT operation performed inplace using movement
+    #   - RShift by one unit to get alternating columns of data and ancilla qubits on control and target patches
+    #   - Send measure qubits of the target patch to the corner of the array
+    #   - Move data qubits from the control patch to the now free space in the target patch
+    # Reversing the sequence of moves achieves the inverse and has the same cost
+
+    # Shift -- align columns
+    l1 = 1 * site_spacing
+    t1 = _physical_move_time(l1)
+
+    # Punt -- Move measure qubits to logical corner
+    l2_x = patch_length * abs(scratch_dx) * site_spacing
+    l2_y = patch_length * abs(scratch_dy) * site_spacing
+    t2 = _physical_move_time(l2_x) + _physical_move_time(l2_y)
+
+    # Interact -- Move datas from ctrl to trgt
+    l3_x = patch_length * abs(dx) * site_spacing
+    l3_y = patch_length * abs(dy) * site_spacing
+    t3 = _physical_move_time(l3_x) + _physical_move_time(l3_y)
+
+    op_time = t1 + t2 + t3
+    return CostDict(
+        op_time=op_time, gate_cost={css.MovementGate: 3}, moment_cost={css.MovementGate: 3}
+    )
+
+
 class Architecture(abc.ABC):
     """Class for representing device architectures.
 
@@ -239,7 +334,7 @@ class Architecture(abc.ABC):
     def _cultivate_t_cost(self) -> CostDict:  # pragma: no cover
         raise NotImplementedError
 
-    def _distil_cost(self, resource: Literal["T", "CCZ"]) -> CostDict:
+    def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
         raise NotImplementedError(
             "Distillation is currently reserved to distillation movement architectures only"
         )
@@ -378,7 +473,7 @@ class Architecture(abc.ABC):
     ### Extra Methods ###
     def __post_init__(self) -> None:
         # Initialize with all shared Primitives then add special ones later
-        self.op_cost: dict[type[cirq.Gate], Callable[[cirq.GateOperation], CostDict]] = {
+        self.op_cost: dict[type[cirq.Gate], Callable[..., CostDict]] = {
             lsp.Cultivate: self.cultivate_cost,
             lsp.SyndromeExtract: self.syndrome_extract_cost,
             lsp.ErrorCorrect: self.error_correct_cost,
@@ -438,7 +533,7 @@ class DefaultLattice(Architecture):
             cirq.ResetChannel,
         )
         self._phys_gate_times = NEUTRAL_GATES.copy()
-        del self._phys_gate_times[cirq.QubitPermutationGate]  # Remove PermutationGate
+        del self._phys_gate_times[css.MovementGate]  # Remove PermutationGate
         self.__post_init__()
 
     def split_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
@@ -582,10 +677,10 @@ class DefaultMovement(Architecture):
         base_cost = copy(super().syndrome_extract_cost(op))
         moment_cost = base_cost.moment_cost
         gate_cost = base_cost.gate_cost
-        moment_cost[cirq.QubitPermutationGate] = 2 * (
+        moment_cost[css.MovementGate] = 2 * (
             moment_cost[cirq.MeasurementGate] + moment_cost[cirq.CZ]
         )
-        gate_cost[cirq.QubitPermutationGate] = moment_cost[cirq.QubitPermutationGate]
+        gate_cost[css.MovementGate] = moment_cost[css.MovementGate]
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return CostDict(moment_cost=moment_cost, gate_cost=gate_cost, op_time=op_time)
 
@@ -607,13 +702,13 @@ class DefaultMovement(Architecture):
     def _h_cost(self) -> CostDict:
         gate_cost: GateCounts = {
             cirq.PhasedXZGate: self.patch.num_data_qubits,
-            cirq.QubitPermutationGate: 1,
+            css.MovementGate: 1,
         }
         # Transversal Hadamard with repermuted qubits
         # Technically the physical repermutation could be carried out digitally because there are no connectivity constraints
         moment_cost: GateCounts = {
             cirq.PhasedXZGate: 1,
-            cirq.QubitPermutationGate: 1,
+            css.MovementGate: 1,
         }
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
@@ -705,7 +800,7 @@ class DefaultMovement(Architecture):
         gates_from_middle_fold: GateCounts = {
             cirq.CZ: (self.d - 1) ** 2,
             cirq.PhasedXZGate: self.d,
-            cirq.QubitPermutationGate: 2,
+            css.MovementGate: 2,
         }
         gate_cost = collections.Counter(gates_from_syndrome) + collections.Counter(
             gates_from_middle_fold
@@ -716,7 +811,7 @@ class DefaultMovement(Architecture):
         moments_from_middle_fold: GateCounts = {
             cirq.CZ: 1,
             cirq.PhasedXZGate: 1,
-            cirq.QubitPermutationGate: 2,
+            css.MovementGate: 2,
         }
         moment_cost = collections.Counter(moments_from_syndrome) + collections.Counter(
             moments_from_middle_fold
@@ -737,19 +832,19 @@ class DefaultMovement(Architecture):
         """
         assert isinstance(op.gate, lsp.Move)
 
-        gate_cost: GateCounts = {cirq.QubitPermutationGate: 1}
-        moment_cost: GateCounts = {cirq.QubitPermutationGate: 1}
+        gate_cost: GateCounts = {css.MovementGate: 1}
+        moment_cost: GateCounts = {css.MovementGate: 1}
         if op.gate.zone is None:
             ctrl, trgt = op.qubits
             if not isinstance(ctrl, cirq.GridQubit) or not isinstance(trgt, cirq.GridQubit):
                 raise TypeError("Movement operations require GridQubits")
             distance = abs(trgt.row - ctrl.row) + abs(trgt.col - ctrl.col)
             penalty_factor = 2 * self.d * distance
-            time_cap = self.phys_gate_times[cirq.QubitPermutationGate]
+            time_cap = self.phys_gate_times[css.MovementGate]
             op_time = min(penalty_factor, time_cap)
         else:
             op_time = self.phys_gate_times[
-                cirq.QubitPermutationGate
+                css.MovementGate
             ]  # Just a basic penalty based on the literature
         return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
 
@@ -766,11 +861,11 @@ class DefaultMovement(Architecture):
         # Each penalized moment gets penalized with two Moves
         moment_cost = base_cultivation_cost.parallel
         penalties = 2 * (moment_cost.get(cirq.CZ, 0) + moment_cost.get(cirq.MeasurementGate, 0))
-        moment_cost[cirq.QubitPermutationGate] = penalties
+        moment_cost[css.MovementGate] = penalties
 
         # Adjust gate cost to reflect Moves
         gate_cost = base_cultivation_cost.serial
-        gate_cost[cirq.QubitPermutationGate] = penalties
+        gate_cost[css.MovementGate] = penalties
 
         # Apply cultivation repetition penalty
         gate_cost = {gate: cost * self.cultivation_repetition for gate, cost in gate_cost.items()}
@@ -787,35 +882,39 @@ class DefaultMovement(Architecture):
         # To get the updated cost for the zoned architecture, just add movement where necessary
         new_moment_cost = base_cultivation_cost.moment_cost.copy()
         new_gate_cost = base_cultivation_cost.gate_cost.copy()
-        permutations_to_add = sum(
+        movements_to_add = sum(
             v for k, v in new_moment_cost.items() if k is cirq.MeasurementGate or k is cirq.CZ
         )
-        new_moment_cost[cirq.QubitPermutationGate] = permutations_to_add
-        new_gate_cost[cirq.QubitPermutationGate] = permutations_to_add
+        new_moment_cost[css.MovementGate] = movements_to_add
+        new_gate_cost[css.MovementGate] = movements_to_add
         new_time = self.total_time(new_moment_cost)
         return CostDict(op_time=new_time, gate_cost=new_gate_cost, moment_cost=new_moment_cost)
 
-    def distil_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
+    def distil_cost(
+        self, op: cirq.GateOperation, layout: MovementDistillery, **kwargs: object
+    ) -> CostDict:
         if not isinstance(op.gate, lsp.Distil):
             raise TypeError("Operation is not an instance of Distil")
-        return self._distil_cost(op.gate._resource)
+        return self._distil_cost(op.gate._resource, layout=layout)
 
-    def _distil_cost(self, resource: Literal["T", "CCZ"]) -> CostDict:
+    def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
+        if not isinstance(layout, MovementDistillery):
+            raise TypeError("layout must be a MovementDistillery for _distil_cost().")
         if resource == "T":
             mapped_circuit = distil_15_to_1()
         elif resource == "CCZ":
             mapped_circuit = ccz_8_to_1()
         else:
-            raise ValueError(f"Unknown distillation resource: {resource!r}")
+            raise ValueError("Unknown distillation resource encountered")
         with_moves = add_moves(
             mapped_circuit,
             zone_ops=self.zone_ops,
             alley_ops=self.alley_ops,
         )
         estimator = ResourceEstimator(self)
-        rep_time = estimator.parallel_circuit_time(with_moves)
-        rep_moments = estimator.parallel_circuit_cost(with_moves)
-        rep_gates = estimator.serial_circuit_cost(with_moves)
+        rep_time = estimator.parallel_circuit_time(with_moves, layout=layout)
+        rep_moments = estimator.parallel_circuit_cost(with_moves, layout=layout)
+        rep_gates = estimator.serial_circuit_cost(with_moves, layout=layout)
         op_time = rep_time * self.distillation_repetition
         moment_cost: GateCounts = {
             key: val * self.distillation_repetition for key, val in rep_moments.items()
@@ -878,8 +977,8 @@ class DualSpeciesMovement(DefaultMovement):
         gate_cost = base_cultivation_cost.serial
         moment_cost = base_cultivation_cost.parallel
         if self.fold_cultiv:
-            moment_cost[cirq.QubitPermutationGate] = 1 * moment_cost.get(cirq.CZ, 0)
-            gate_cost[cirq.QubitPermutationGate] = 1 * moment_cost.get(cirq.CZ, 0)
+            moment_cost[css.MovementGate] = 1 * moment_cost.get(cirq.CZ, 0)
+            gate_cost[css.MovementGate] = 1 * moment_cost.get(cirq.CZ, 0)
 
         gate_cost = {gate: cost * self.cultivation_repetition for gate, cost in gate_cost.items()}
         moment_cost = {
@@ -933,8 +1032,8 @@ class MeasureZonesOnly(DefaultMovement):
         )
         moment_cost = base_cost.moment_cost
         gate_cost = base_cost.gate_cost
-        moment_cost[cirq.QubitPermutationGate] = 2 * moment_cost.get(cirq.MeasurementGate, 0)
-        gate_cost[cirq.QubitPermutationGate] = moment_cost[cirq.QubitPermutationGate]
+        moment_cost[css.MovementGate] = 2 * moment_cost.get(cirq.MeasurementGate, 0)
+        gate_cost[css.MovementGate] = moment_cost[css.MovementGate]
         op_time = self.total_time(moment_cost_dict=moment_cost)
         return CostDict(moment_cost=moment_cost, gate_cost=gate_cost, op_time=op_time)
 
@@ -951,15 +1050,15 @@ class MeasureZonesOnly(DefaultMovement):
         moment_cost = base_cultivation_cost.parallel
         if self.fold_cultiv:
             # Penalize CZ by half
-            moment_cost[cirq.QubitPermutationGate] = 1 * moment_cost.get(cirq.CZ, 0)
-            gate_cost[cirq.QubitPermutationGate] = moment_cost[cirq.QubitPermutationGate]
+            moment_cost[css.MovementGate] = 1 * moment_cost.get(cirq.CZ, 0)
+            gate_cost[css.MovementGate] = moment_cost[css.MovementGate]
         else:
             # Do not penalize at all
-            moment_cost[cirq.QubitPermutationGate] = 0
-            gate_cost[cirq.QubitPermutationGate] = 0
+            moment_cost[css.MovementGate] = 0
+            gate_cost[css.MovementGate] = 0
         # Penalize Measure by two moves per Measure to represent going to/from an Measurement Zone
-        moment_cost[cirq.QubitPermutationGate] += 2 * moment_cost.get(cirq.MeasurementGate, 0)
-        gate_cost[cirq.QubitPermutationGate] += 2 * moment_cost.get(cirq.MeasurementGate, 0)
+        moment_cost[css.MovementGate] += 2 * moment_cost.get(cirq.MeasurementGate, 0)
+        gate_cost[css.MovementGate] += 2 * moment_cost.get(cirq.MeasurementGate, 0)
 
         gate_cost = {gate: cost * self.cultivation_repetition for gate, cost in gate_cost.items()}
         moment_cost = {
@@ -974,11 +1073,9 @@ class MeasureZonesOnly(DefaultMovement):
         # Penalize measurements but not entangling gates
         new_moment_cost = copy(base_cultivation_cost.moment_cost)
         new_gate_cost = copy(base_cultivation_cost.gate_cost)
-        permutations_to_add = sum(
-            v for k, v in new_moment_cost.items() if k is cirq.MeasurementGate
-        )
-        new_moment_cost[cirq.QubitPermutationGate] = permutations_to_add
-        new_gate_cost[cirq.QubitPermutationGate] = permutations_to_add
+        movements_to_add = sum(v for k, v in new_moment_cost.items() if k is cirq.MeasurementGate)
+        new_moment_cost[css.MovementGate] = movements_to_add
+        new_gate_cost[css.MovementGate] = movements_to_add
         new_time = self.total_time(new_moment_cost)
         return CostDict(op_time=new_time, gate_cost=new_gate_cost, moment_cost=new_moment_cost)
 

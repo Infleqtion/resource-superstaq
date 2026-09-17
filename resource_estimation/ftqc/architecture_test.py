@@ -13,15 +13,18 @@
 # limitations under the License.
 import collections
 from collections.abc import Callable
-from math import ceil, pi
+from math import ceil, isclose, pi
 
 import cirq
+import cirq_superstaq as css
 import numpy as np
 import pytest
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.codepatch as codepatch
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.layout as lyt
+from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.stim_functions import cultivate
 from resource_estimation.typing import GateCounts
 
@@ -91,7 +94,7 @@ def _legacy_surface_syndrome_cost(
 
 
 @pytest.mark.parametrize(
-    ("architecture_type", "permutation_moments_per_round"),
+    ("architecture_type", "movement_moments_per_round"),
     [
         (arch.DefaultLattice, 0),
         (arch.DefaultMovement, 10),
@@ -102,7 +105,7 @@ def _legacy_surface_syndrome_cost(
 )
 def test_architecture_syndrome_counts_match_legacy(
     architecture_type: Callable[..., arch.Architecture],
-    permutation_moments_per_round: int,
+    movement_moments_per_round: int,
 ) -> None:
     d = 5
     rounds = 2
@@ -112,10 +115,10 @@ def test_architecture_syndrome_counts_match_legacy(
     operation = lsp.SyndromeExtract(num_logical_qubits, rounds).on(*qubits)
     expected = _legacy_surface_syndrome_cost(d, rounds, num_logical_qubits)
 
-    if permutation_moments_per_round:
-        permutations = permutation_moments_per_round * rounds
-        expected["gate_cost"][cirq.QubitPermutationGate] = permutations
-        expected["moment_cost"][cirq.QubitPermutationGate] = permutations
+    if movement_moments_per_round:
+        movements = movement_moments_per_round * rounds
+        expected["gate_cost"][css.MovementGate] = movements
+        expected["moment_cost"][css.MovementGate] = movements
 
     assert architecture.gate_cost(operation) == expected["gate_cost"]
     assert architecture.moment_cost(operation) == expected["moment_cost"]
@@ -179,8 +182,8 @@ def test_movement_gate_costs(d: int) -> None:
         cost = arc.gate_cost(op)
         base_cost = cultivate(dsurface=d, fault_distance=3)
     expected_cost = base_cost.serial
-    # To account for movement we add the QubitPermutationGates to the base cost
-    expected_cost[cirq.QubitPermutationGate] = 2 * (
+    # To account for movement we add the MovementGate to the base cost
+    expected_cost[css.MovementGate] = 2 * (
         base_cost.parallel.get(cirq.CZ, 0) + base_cost.parallel.get(cirq.MeasurementGate, 0)
     )
     assert expected_cost == cost
@@ -188,9 +191,9 @@ def test_movement_gate_costs(d: int) -> None:
     # Check Move
     op1, op2 = lsp.Move(zone="interact").on_each(qubit_a, qubit_b)
     gate_cost = arc.gate_cost(op1)
-    assert gate_cost == {cirq.QubitPermutationGate: 1}
+    assert gate_cost == {css.MovementGate: 1}
     gate_cost = arc.gate_cost(op2)
-    assert gate_cost == {cirq.QubitPermutationGate: 1}
+    assert gate_cost == {css.MovementGate: 1}
 
     # Check CNOT
     op = cirq.CNOT.on(qubit_a, qubit_b)
@@ -211,7 +214,7 @@ def test_movement_gate_costs(d: int) -> None:
     )
     assert cost == {
         cirq.CZ: arc.patch.total_z_check_weight() + arc.patch.total_x_check_weight(),
-        cirq.QubitPermutationGate: 10,
+        css.MovementGate: 10,
         cirq.MeasurementGate: arc.patch.num_measure_qubits,
         cirq.ResetChannel: arc.patch.num_measure_qubits,
         cirq.PhasedXZGate: phased_xz_gates,
@@ -222,7 +225,7 @@ def test_movement_gate_costs(d: int) -> None:
     cost = arc.gate_cost(op)
     assert cost == {
         cirq.CZ: 2 * (arc.patch.total_z_check_weight() + arc.patch.total_x_check_weight()),
-        cirq.QubitPermutationGate: 10,
+        css.MovementGate: 10,
         cirq.MeasurementGate: arc.patch.num_measure_qubits * 2,
         cirq.ResetChannel: arc.patch.num_measure_qubits * 2,
         cirq.PhasedXZGate: 2 * phased_xz_gates,
@@ -233,7 +236,7 @@ def test_movement_gate_costs(d: int) -> None:
     cost = arc.gate_cost(op)
     expected_cost = collections.Counter(arc.gate_cost(lsp.SyndromeExtract(1, 1).on(qubit_a)))
     expected_cost += collections.Counter(
-        {cirq.CZ: (d - 1) ** 2, cirq.PhasedXZGate: d, cirq.QubitPermutationGate: 2}
+        {cirq.CZ: (d - 1) ** 2, cirq.PhasedXZGate: d, css.MovementGate: 2}
     )
     assert cost == expected_cost
 
@@ -252,7 +255,7 @@ def test_movement_gate_costs(d: int) -> None:
             cirq.H.on(qubit_a),
             {
                 cirq.PhasedXZGate: arc.patch.num_data_qubits,
-                cirq.QubitPermutationGate: 1,
+                css.MovementGate: 1,
             },
         ),
     ]
@@ -435,10 +438,10 @@ def test_movement_moment_costs(movement_architecture: arch.DefaultMovement) -> N
     op1, op2 = lsp.Move(zone="interact").on_each(qubit_a, qubit_b)
     moment_cost = movement_architecture.moment_cost(op1)
     op_time = movement_architecture.op_time(op1)
-    assert moment_cost == {cirq.QubitPermutationGate: 1}
+    assert moment_cost == {css.MovementGate: 1}
     assert op_time == 500
     moment_cost = movement_architecture.moment_cost(op2)
-    assert moment_cost == {cirq.QubitPermutationGate: 1}
+    assert moment_cost == {css.MovementGate: 1}
     assert op_time == 500
 
     # Check S Gate
@@ -448,7 +451,7 @@ def test_movement_moment_costs(movement_architecture: arch.DefaultMovement) -> N
         cirq.MeasurementGate: 1,
         cirq.CZ: 5,
         cirq.PhasedXZGate: 3,
-        cirq.QubitPermutationGate: 12,
+        css.MovementGate: 12,
         cirq.ResetChannel: 1,
     }
 
@@ -459,7 +462,7 @@ def test_movement_moment_costs(movement_architecture: arch.DefaultMovement) -> N
         cirq.MeasurementGate: 1,
         cirq.CZ: 4,
         cirq.PhasedXZGate: 2,
-        cirq.QubitPermutationGate: 10,
+        css.MovementGate: 10,
         cirq.ResetChannel: 1,
     }
 
@@ -474,7 +477,7 @@ def test_movement_moment_costs(movement_architecture: arch.DefaultMovement) -> N
     # Check H Gate
     op = cirq.H.on(cirq.GridQubit(0, 0))
     cost = movement_architecture.moment_cost(op)
-    assert cost == {cirq.PhasedXZGate: 1, cirq.QubitPermutationGate: 1}
+    assert cost == {cirq.PhasedXZGate: 1, css.MovementGate: 1}
 
     op = cirq.X.on(cirq.GridQubit(0, 0))
     cost = movement_architecture.moment_cost(op)
@@ -578,7 +581,7 @@ def test_timing(
         (cirq.CZ, 0.27),
         (cirq.MeasurementGate, 1000.0),
         (cirq.I, 0.0),
-        (cirq.QubitPermutationGate, 500.0),
+        (css.MovementGate, 500.0),
         (cirq.ResetChannel, 400.0),
     ]
     for gate, time in gates_with_time:
@@ -652,12 +655,10 @@ def test_dual_species_with_movement() -> None:
     # Check that partial penalty is consistent with expection of paying one move per CZ
     folded_with_full_penalty = mv_folded._cultivate_t_cost.moment_cost
     folded_with_partial_penalty = hm_folded._cultivate_t_cost.moment_cost
-    assert (
-        folded_with_partial_penalty[cirq.QubitPermutationGate] == folded_with_full_penalty[cirq.CZ]
-    )
+    assert folded_with_partial_penalty[css.MovementGate] == folded_with_full_penalty[cirq.CZ]
     # Check that the rest of the moments are the same
-    del folded_with_full_penalty[cirq.QubitPermutationGate]
-    del folded_with_partial_penalty[cirq.QubitPermutationGate]
+    del folded_with_full_penalty[css.MovementGate]
+    del folded_with_partial_penalty[css.MovementGate]
     assert folded_with_partial_penalty == folded_with_full_penalty
 
 
@@ -681,8 +682,8 @@ def test_mzo(fold: bool) -> None:
     dsnm_se = dsnm.syndrome_extract_cost(se_op).moment_cost
 
     # First check that moves are correct two times over
-    mzo_se_moves = mzo_se[cirq.QubitPermutationGate]
-    ssm_se_moves = ssm_se[cirq.QubitPermutationGate]
+    mzo_se_moves = mzo_se[css.MovementGate]
+    ssm_se_moves = ssm_se[css.MovementGate]
     dsnm_se_measures = dsnm_se[cirq.MeasurementGate]
     move_diff = ssm_se_moves - mzo_se_moves
     # Confirm that the difference is explained by the lack of CZ penalties
@@ -691,8 +692,8 @@ def test_mzo(fold: bool) -> None:
     assert mzo_se_moves == 2 * dsnm_se_measures
 
     # As an extra check confirm that all other values are the same
-    del mzo_se[cirq.QubitPermutationGate]
-    del ssm_se[cirq.QubitPermutationGate]
+    del mzo_se[css.MovementGate]
+    del ssm_se[css.MovementGate]
     assert mzo_se == ssm_se
     assert mzo_se == dsnm_se
 
@@ -703,16 +704,16 @@ def test_mzo(fold: bool) -> None:
     mzo_t_cult = mzo._cultivate_t_cost.moment_cost
     ssm_t_cult = ssm._cultivate_t_cost.moment_cost
 
-    mzo_cult_moves = mzo_t_cult[cirq.QubitPermutationGate]
-    ssm_cult_moves = ssm_t_cult[cirq.QubitPermutationGate]
+    mzo_cult_moves = mzo_t_cult[css.MovementGate]
+    ssm_cult_moves = ssm_t_cult[css.MovementGate]
     move_diff = ssm_cult_moves - mzo_cult_moves
     cz_movement_penalty = 1 if fold else 0
 
     # Confirm that movements are attributable to the CZ movement penalty
     assert move_diff == (2 - cz_movement_penalty) * ssm_t_cult[cirq.CZ]
 
-    del mzo_t_cult[cirq.QubitPermutationGate]
-    del ssm_t_cult[cirq.QubitPermutationGate]
+    del mzo_t_cult[css.MovementGate]
+    del ssm_t_cult[css.MovementGate]
     assert mzo_t_cult == ssm_t_cult
 
 
@@ -791,6 +792,71 @@ def test_logical_move() -> None:
     assert two_cost == 2 * one_cost
 
 
+def test_physical_move_time() -> None:
+    #  Test moving 55μm takes 200 μs in agreement with https://arxiv.org/pdf/2505.15907 when there is no startup penalty
+    expected_microseconds = 200
+    returned_microseconds = arch._physical_move_time(55, a=5500, base_cost=0)
+    assert isclose(expected_microseconds, returned_microseconds)
+
+    # Test that base cost is additive
+    no_startup = arch._physical_move_time(l=100, a=5500, base_cost=0)
+    yes_startup = arch._physical_move_time(l=100, a=5500, base_cost=100)
+    difference = yes_startup - no_startup
+    assert isclose(difference, 100)
+
+    # Test scaling goes as sqrt when there is no startup penalty
+    t100 = arch._physical_move_time(l=100, base_cost=0)
+    t400 = arch._physical_move_time(l=400, base_cost=0)
+    factor = t400 / t100
+    assert isclose(factor, 2)
+
+    # Confirm that invalid values raise ValueError
+    with pytest.raises(ValueError, match="must be non-negative"):
+        _ = arch._physical_move_time(l=-10)
+    with pytest.raises(ValueError, match="must be positive"):
+        _ = arch._physical_move_time(l=1, a=-10)
+
+
+def test_precompiled_moves() -> None:
+    # Test measurement zone movement
+    measure_zone_cost = arch._measurement_zone_move_precompiled(
+        dx=2, dy=2, patch_length=5, site_spacing=3
+    )
+    assert measure_zone_cost.gate_cost == measure_zone_cost.moment_cost == {css.MovementGate: 2}
+    expected_measure_time = arch._physical_move_time(1 * 3) + 2 * arch._physical_move_time(
+        2 * 5 * 3
+    )
+    assert isclose(measure_zone_cost.op_time, expected_measure_time)
+
+    # Test interaction zone movement
+    interaction_zone_cost = arch._interaction_zone_move_precompiled(
+        dx=2, dy=2, patch_length=5, site_spacing=3
+    )
+    assert (
+        interaction_zone_cost.gate_cost
+        == interaction_zone_cost.moment_cost
+        == {css.MovementGate: 3}
+    )
+    expected_interaction_time = (
+        arch._physical_move_time(1 * 3)
+        + 2 * arch._physical_move_time(2 * 5 * 3)
+        + arch._physical_move_time(0.25 * 3)
+    )
+    assert isclose(expected_interaction_time, interaction_zone_cost.op_time)
+
+    # Test inplace movement
+    inplace_cost = arch._inplace_entanglement_move_precompiled(
+        dx=2, dy=2, patch_length=5, site_spacing=3, scratch_dx=4, scratch_dy=4
+    )
+    assert inplace_cost.gate_cost == inplace_cost.moment_cost == {css.MovementGate: 3}
+    expected_inplace_time = (
+        arch._physical_move_time(1 * 3)
+        + 2 * arch._physical_move_time(2 * 5 * 3)
+        + 2 * arch._physical_move_time(4 * 5 * 3)
+    )
+    assert isclose(expected_inplace_time, inplace_cost.op_time)
+
+
 def test_y_cult_on_movement() -> None:
     ssm = arch.DefaultMovement(d=11)
     mzo = arch.MeasureZonesOnly(d=11)
@@ -805,32 +871,47 @@ def test_y_cult_on_movement() -> None:
 def test_distillation_cases(
     lattice_architecture: arch.DefaultLattice, movement_architecture: arch.DefaultMovement
 ) -> None:
-    # Confirm distil cost raises ValueError if called on other operation
+
+    t_layout = lyt.MovementDistillery(
+        input_circuit=distil_15_to_1(),
+        num_t_factories=1,
+        num_ccz_factories=0,
+        architecture="SSM",
+    )
+    ccz_layout = lyt.MovementDistillery(
+        input_circuit=ccz_8_to_1(),
+        num_t_factories=0,
+        num_ccz_factories=1,
+        architecture="SSM",
+    )
+    # Confirm distil_cost raises TypeError when called on a non-Distil gate
     with pytest.raises(TypeError, match="Operation is not an instance of Distil"):
-        _ = movement_architecture.distil_cost(op=cirq.X.on(cirq.GridQubit(0, 0)))
+        _ = movement_architecture.distil_cost(op=cirq.X.on(cirq.GridQubit(0, 0)), layout=t_layout)
     # Confirm that distil is only available to movement archs
     with pytest.raises(NotImplementedError, match="movement architectures only"):
-        _ = lattice_architecture._distil_cost(resource="T")
-    assert lsp.Distil in movement_architecture.op_cost
-
-    # Confirm distillation cost errors for invalid resource
+        _ = lattice_architecture._distil_cost(
+            resource="T", layout=lyt.MovementDistillery(input_circuit=distil_15_to_1())
+        )
+    # Confirm _distil_cost raises TypeError when provided wrong layout
+    with pytest.raises(TypeError, match="layout must be a MovementDistillery"):
+        _ = movement_architecture._distil_cost(
+            resource="T",
+            layout=lyt.MovementLayout(input_circuit=distil_15_to_1()),  # type: ignore[arg-type]
+        )
+    # Confirm _distil_cost raises ValueError when given invalid resource
     with pytest.raises(ValueError, match="Unknown distillation resource"):
-        _ = movement_architecture._distil_cost("Toffoli")  # type: ignore[arg-type]
+        _ = movement_architecture._distil_cost(resource="Toffoli", layout=ccz_layout)  # type: ignore[arg-type]
+    assert lsp.Distil in movement_architecture.op_cost
 
     # Make sure that distillation repetition parameter behaves as expected
     distil_once = arch.DefaultMovement(distillation_repetition=1)
     distil_thrice = arch.DefaultMovement(distillation_repetition=3)
-    t_once = distil_once._distil_cost("T").op_time
-    ccz_once = distil_once._distil_cost("CCZ").op_time
-    t_thrice = distil_thrice._distil_cost("T").op_time
-    ccz_thrice = distil_thrice._distil_cost("CCZ").op_time
+    t_once = distil_once._distil_cost("T", layout=t_layout).op_time
+    ccz_once = distil_once._distil_cost("CCZ", layout=ccz_layout).op_time
+    t_thrice = distil_thrice._distil_cost("T", layout=t_layout).op_time
+    ccz_thrice = distil_thrice._distil_cost("CCZ", layout=ccz_layout).op_time
     assert t_thrice == 3 * t_once
     assert ccz_thrice == 3 * ccz_once
-
-    # Distil T and CCZ have the same critical path, so should have the same circuit time for ssm
-    # Cultivation is a subcomponent, so it should be faster than the Distillation implementations
-    single_cult = distil_once._cultivate_t_cost.op_time
-    assert single_cult < ccz_once == t_once
 
 
 def test_correction_exception(movement_architecture: arch.DefaultMovement) -> None:
