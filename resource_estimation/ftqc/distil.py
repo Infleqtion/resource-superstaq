@@ -40,7 +40,7 @@ def distil_15_to_1() -> cirq.Circuit:
     C4  Q4  Q12  C12
     C5  Q5  Q13  C13
     C6  Q6  Q14  C14
-    C7  Q7    F  <- Output Factory Qubit
+    C7  Q7  F0  <- Output Factory Qubit
     """
     qubits = cirq.LineQubit.range(15) + [cirq.NamedQubit("F")]
     cults = [cirq.NamedQubit(f"C{i}") for i in range(15)]
@@ -121,7 +121,7 @@ def ccz_8_to_1() -> cirq.Circuit:
        C1  Q4  Q8  C5
        C2  Q5  Q9  C6
        C3  Q6  Q10 C7
-       Q0  Q1  Q2  __ <- three out qubits
+       F0  F1  F2  __ <- three out qubits
 
     Returns:
         The magic state distillation circuit.
@@ -194,33 +194,53 @@ def precompute_distil_cost(
 ) -> CostDict:
     """Precompute the cost of a T/CCZ distillation circuit on a specific layout.
 
-    The template distillation circuit is remapped onto the layout's factory block, movement is
-    inserted via `add_moves`, and op-time / moment-cost / gate-cost are returned.
+    The template distillation circuit is remapped onto the layout's factory block as a standalone circuit to be resourcesd.
+    Then movement is inserted via `add_moves`, and op-time / moment-cost / gate-cost are returned.
+
+    Coordinates for the factory qubits in distillation blocks are based on the set layouts in `distil_15_to_1` and `ccz_8_to_1`.
+    Once a distillation block has been resourced as a standalone circuit, its cost can be re-used each time a distillation operation is encountered in a circuit of primitive operations.
     """
-    mapped_circuit_factory: tuple[cirq.GridQubit, ...]
+    # First treat the distillation block as an independent circuit, noting its factory qubits
+    # The factory qubit coordinates are based on the layouts described in the distillation circuit generating functions
+    independent_circuit_factory: tuple[cirq.GridQubit, ...]
     if resource == "T":
-        mapped_circuit = distil_15_to_1()
-        mapped_circuit_factory = (cirq.GridQubit(7, 2),)
+        independent_circuit = distil_15_to_1()
+        independent_circuit_factory = (cirq.GridQubit(7, 2),)
         layout_factory = layout.all_factories("t")[0]
     elif resource == "CCZ":
-        mapped_circuit = ccz_8_to_1()
-        mapped_circuit_factory = (cirq.GridQubit(5, 0), cirq.GridQubit(5, 1), cirq.GridQubit(5, 2))
+        independent_circuit = ccz_8_to_1()
+        independent_circuit_factory = (
+            cirq.GridQubit(5, 0),
+            cirq.GridQubit(5, 1),
+            cirq.GridQubit(5, 2),
+        )
         layout_factory = layout.all_factories("ccz")[0]
     else:
         raise ValueError(f"Unknown distillation resource: {resource!r}")
+
+    # Represent the standalone circuit as an ordered block of qubits where the factory qubits are at the end
     circuit_block = (
-        tuple(sorted(q for q in mapped_circuit.all_qubits() if q not in mapped_circuit_factory))
-        + mapped_circuit_factory
+        tuple(
+            sorted(
+                q for q in independent_circuit.all_qubits() if q not in independent_circuit_factory
+            )
+        )
+        + independent_circuit_factory
     )
+    # Do the same with the factory block in the actual layout and create a mapping
     layout_block = layout.distillation_block(layout_factory)
     qmap: dict[cirq.Qid, cirq.Qid] = {
         q_circuit: q_layout for q_circuit, q_layout in zip(circuit_block, layout_block)
     }
-    remapped_circuit = mapped_circuit.transform_qubits(qmap)
-    embedded_circuit = add_moves(remapped_circuit, layout=layout)
+
+    # Map the qubits in the standalone circuit to the qubits in the actual layout
+    remapped_circuit = independent_circuit.transform_qubits(qmap)
+    remapped_circuit_with_moves = add_moves(remapped_circuit, layout=layout)
+
+    # Collect resources of the embedded circuit
     estimator = ResourceEstimator(arc)
-    op_time = estimator.parallel_circuit_time(embedded_circuit, layout=layout)
-    moment_cost = estimator.parallel_circuit_cost(embedded_circuit, layout=layout)
-    gate_cost = estimator.serial_circuit_cost(embedded_circuit, layout=layout)
+    op_time = estimator.parallel_circuit_time(remapped_circuit_with_moves, layout=layout)
+    moment_cost = estimator.parallel_circuit_cost(remapped_circuit_with_moves, layout=layout)
+    gate_cost = estimator.serial_circuit_cost(remapped_circuit_with_moves, layout=layout)
 
     return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
