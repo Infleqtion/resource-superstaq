@@ -23,6 +23,7 @@ from resource_estimation.ftqc.stim_functions import (
     cultivate,
     load_saved_cost,
 )
+from resource_estimation.typing import CountsDict
 
 
 @pytest.fixture
@@ -72,20 +73,11 @@ def test_saved_gidney(
         dsurface=dsurface,
         fold=False,
         fault_distance=fault_distance,
-        load_from_file=True,
     )
 
     cost_from_counts = count_stim_resources(stim_circuit=example_gidney)
 
-    with pytest.warns(UserWarning, match="save cultivation costs"):
-        cost_from_generate = cultivate(
-            dsurface=dsurface,
-            fold=False,
-            fault_distance=fault_distance,
-            load_from_file=False,
-        )
-
-    assert cost_from_load == cost_from_file == cost_from_counts == cost_from_generate
+    assert cost_from_load == cost_from_file == cost_from_counts
 
 
 @pytest.mark.parametrize("fault_distance", (3, 5))
@@ -102,17 +94,30 @@ def test_saved_yale(fault_distance: Literal[3, 5]) -> None:
         dsurface=dsurface,
         fault_distance=fault_distance,
         fold=True,
-        load_from_file=True,
     )
 
-    with pytest.warns(UserWarning, match="save cultivation costs"):
-        cost_from_generate = cultivate(
-            dsurface=dsurface,
-            fault_distance=fault_distance,
-            fold=True,
-            load_from_file=False,
+    cost_from_generate = CountsDict(
+        **cultiv.make_cirq_circuits.dirty_count(
+            cultiv.make_cirq_circuits.make_cirq_circuit(
+                code_distance=dsurface,
+                fault_distance=fault_distance,
+            )
         )
+    )
     assert cost_from_load == cost_from_file == cost_from_generate
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("fold", (True, False))
+def test_large_cultivate_paths(fold: bool) -> None:
+    costs = cultivate(
+        dsurface=27,
+        fault_distance=3,
+        fold=fold,
+    )
+
+    assert costs.serial
+    assert costs.parallel
 
 
 def test_error_handling() -> None:

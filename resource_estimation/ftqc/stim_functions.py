@@ -15,10 +15,9 @@ from __future__ import annotations
 
 import collections
 import json
-import os
 import typing
 import warnings
-from pathlib import Path
+from importlib.resources import files
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -94,10 +93,6 @@ def count_stim_resources(
     return CountsDict(serial=total_serial, parallel=total_parallel)
 
 
-def _check_cost_file() -> bool:
-    data_dir = Path(__file__).resolve().parents[2] / "resource_estimation" / "data"
-    return os.path.isfile(data_dir / "_cultivate_costs.json")
-
 
 def load_saved_cost(
     dsurface: int,
@@ -108,9 +103,8 @@ def load_saved_cost(
     Loads saved cultivation costs from _cultivate_costs.json in the data directory
     Converts saved strings to proper cirq gate objects
     """
-    data_dir = Path(__file__).resolve().parents[2] / "resource_estimation" / "data"
-    cost_file = data_dir / "_cultivate_costs.json"
-    with open(cost_file, "r") as f:
+    cost_file = files("resource_estimation").joinpath("data/_cultivate_costs.json")
+    with cost_file.open("r", encoding="utf-8") as f:
         saved_costs = json.load(f)
     loaded_costs = saved_costs[str(dsurface)][style][str(fault_distance)]
     serial_cost = {STR2GATE[k]: v for k, v in loaded_costs["serial"].items()}
@@ -122,12 +116,10 @@ def cultivate(
     dsurface: int,
     fault_distance: Literal[3, 5],
     fold: bool = False,
-    load_from_file: bool = True,
 ) -> CountsDict:
     """
     Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney).
-    If the final patch size is at most 25, saved resources are used when available.
-    Set `load_from_file` to `False` to generate costs directly.
+    If the final patch size is at most 25, saved resources are used.
     """
     if fault_distance not in (3, 5):
         raise ValueError(
@@ -144,16 +136,12 @@ def cultivate(
         )
         dsurface = 11
     style: Literal["yale", "gidney"] = "yale" if fold else "gidney"
-    has_cost_file = _check_cost_file()
-    if load_from_file and dsurface <= 25 and has_cost_file:
+    if dsurface <= 25:
         return load_saved_cost(
             dsurface=dsurface,
             style=style,
             fault_distance=fault_distance,
         )
-    warnings.warn(
-        "To save cultivation costs, run `from resource_estimation.data import cultivate_json; cultivate_json()`"
-    )
     if fold:
         resources = CountsDict(
             **cultiv.make_cirq_circuits.dirty_count(
