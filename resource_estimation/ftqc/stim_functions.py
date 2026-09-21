@@ -93,7 +93,6 @@ def count_stim_resources(
     return CountsDict(serial=total_serial, parallel=total_parallel)
 
 
-
 def load_saved_cost(
     dsurface: int,
     style: typing.Literal["gidney", "yale"],
