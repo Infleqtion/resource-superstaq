@@ -60,8 +60,8 @@ primitive_circuit = res.ftqc.ft_compile(layout=layout, arc=arch, verbose=True)
 
 # Estimate Resources
 estimator = res.ftqc.ResourceEstimator(arc=arch)
-gate_cost = estimator.parallel_circuit_cost(primitive_circuit, pretty=True)
-circuit_time = estimator.parallel_circuit_time(primitive_circuit)
+gate_cost = estimator.parallel_circuit_cost(primitive_circuit, layout=layout)
+circuit_time = estimator.parallel_circuit_time(primitive_circuit, layout=layout)
 physical_qubits = estimator.physical_qubits(primitive_circuit)
 ```
 
