@@ -18,7 +18,7 @@ if __name__ == "__main__":  # pragma: no cover
     import sys
     import warnings
 
-    from resource_estimation.data import analyze
+    import resource_estimation.data.analyze as analyze
 
     warnings.filterwarnings("ignore", category=FutureWarning)
-    sys.exit(analyze())
+    sys.exit(analyze.analyze())

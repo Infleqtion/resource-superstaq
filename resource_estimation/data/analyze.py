@@ -15,9 +15,10 @@
 from __future__ import annotations
 
 import argparse
+import pathlib
 import textwrap
 import time
-from pathlib import Path
+from typing import Sequence
 
 import cirq
 import cirq_superstaq as css
@@ -26,7 +27,7 @@ import resource_estimation as res
 from resource_estimation.data.analysis import STR2ARCH, C, make_pretty
 
 
-def parse_args(args: list[str] | None = None) -> argparse.Namespace:
+def parse_args(args: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Resource Estimation Experiment")
 
     parser.add_argument("file", type=str, help="File in .json format to read as cirq circuit")
@@ -302,5 +303,5 @@ def analyze(args: argparse.Namespace | None = None) -> int:
 
     print(report.report())
     if not args.nosave:
-        report.save(savedir=Path(file).parent)
+        report.save(savedir=pathlib.Path(file).parent)
     return 0
