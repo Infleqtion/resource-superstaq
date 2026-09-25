@@ -367,7 +367,12 @@ def add_moves(
     layout: MovementLayout,
     verbose: int = 0,
 ) -> cirq.Circuit:
-    """Handles replacement moves for both alley movement and interaction zone movement"""
+    """
+    Add logical css.MovementGate operations according to the architecture/layout type
+    For layouts with zones, target the next zone in a cycle
+    For inplace CNOTs, move the control to the target logical patch
+    The movement sequence is designed to be simple and repeatable to make resourcing easier at lower levels of the stack, but a more dedicated compiler pass could be swapped in with a more efficient policy for logical movement
+    """
     total = len(circuit)
     tstart = time.time()
 

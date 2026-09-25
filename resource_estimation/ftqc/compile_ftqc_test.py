@@ -641,6 +641,72 @@ def test_teleport_resource_exceptions() -> None:
         _ = comp.teleport_resource(cirq.T.on(invalid_qubit), layout)
 
 
+def test_add_moves() -> None:
+    line_qubits = cirq.LineQubit.range(8)
+    cnot_circuit = cirq.Circuit([cirq.CNOT.on_each(*zip(line_qubits[::2], line_qubits[1::2]))])
+    measure_circuit = cirq.Circuit([cirq.measure_each(*line_qubits)])
+
+    cnot_zoned_layout = MovementLayout(input_circuit=cnot_circuit, architecture="SSM")
+    meas_zoned_layout = MovementLayout(input_circuit=measure_circuit, architecture="MZO")
+    cnot_inplace_layout = MovementLayout(input_circuit=cnot_circuit, architecture="DSM")
+    expected_moment_types: list[GateKey]
+
+    # Test that interaction zones makes sense for a zoned layout
+    # There should be three interaction zones, so we expect to see an extra moment for the final CNOT
+    circuit_with_moves = comp.add_moves(cnot_zoned_layout.mapped_circuit, layout=cnot_zoned_layout)
+    expected_moment_types = [
+        css.MovementGate,  # Move controls to the three available interaction zones
+        css.MovementGate,  # Move targets to the three available interaction zones
+        cirq.CNOT,  # Perform the CNOT operation
+        css.MovementGate,  # Move the controls from the three available interaction zones
+        css.MovementGate,  # Move the targets from the three available interaction zones
+        css.MovementGate,  # Move the controls to the three available interaction zones
+        css.MovementGate,  # Move the targets to the three available interaction zones
+        cirq.CNOT,  # Perform the CNOT operation
+        css.MovementGate,  # Move the controls from the three available interaction zones
+        css.MovementGate,  # Move the targeets from the three available interaction zones
+    ]
+    moments_match_expected = [
+        all(op in cirq.GateFamily(expected_op) for op in moment)
+        for moment, expected_op in zip(circuit_with_moves, expected_moment_types)
+    ]
+    assert all(moments_match_expected)
+
+    # Test that the measurement zone makes sense for a zoned layout
+    circuit_with_moves = comp.add_moves(meas_zoned_layout.mapped_circuit, layout=meas_zoned_layout)
+    expected_moment_types = [
+        css.MovementGate,  # Populate the three available measurement zones
+        cirq.MeasurementGate,  # Measure the logical patches
+        css.MovementGate,  # Exit the three filled measurement zones
+        css.MovementGate,  # Populate the three available measurement zones
+        cirq.MeasurementGate,  # Measure the logical patches
+        css.MovementGate,  # Exit the three filled measurement zones
+        css.MovementGate,  # Populate the three available measurement zones
+        cirq.MeasurementGate,  # Measure the logical patches
+        css.MovementGate,  # Exit the three filled measurement zones
+    ]
+    moments_match_expected = [
+        all(op in cirq.GateFamily(expected_op) for op in moment)
+        for moment, expected_op in zip(circuit_with_moves, expected_moment_types)
+    ]
+    assert all(moments_match_expected)
+
+    # Test that inplace moves make sense for an inplace layout
+    circuit_with_moves = comp.add_moves(
+        cnot_inplace_layout.mapped_circuit, layout=cnot_inplace_layout
+    )
+    expected_moment_types = [
+        css.MovementGate,  # Move all controls to their respective targets
+        cirq.CNOT,  # Perform the CNOT operation
+        css.MovementGate,  # Move all controls from their respective targets
+    ]
+    moments_match_expected = [
+        all(op in cirq.GateFamily(expected_op) for op in moment)
+        for moment, expected_op in zip(circuit_with_moves, expected_moment_types)
+    ]
+    assert all(moments_match_expected)
+
+
 def test_exceptions(bell_circuit: cirq.Circuit) -> None:
     # Test ft compile rejects incompatible layout-architecture combos
     inplace_layout = MovementLayout(input_circuit=bell_circuit, architecture="DSM")
