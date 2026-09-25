@@ -38,7 +38,6 @@ def _format_counts_dict(
 
 def cultivate_json(savefile: Path | str | None = None, max_dist: int = 25) -> None:
     """Saves cultivation costs in a json for later use"""
-    # I don't know how to test this properly
     if savefile is None:  # pragma: no cover
         savefile = str(
             Path(__file__).resolve().parents[2]
