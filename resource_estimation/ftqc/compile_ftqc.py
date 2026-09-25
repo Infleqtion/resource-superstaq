@@ -442,7 +442,6 @@ def ft_compile(
     ) and not arc.zone_ops.gates
     if zone_ops_but_no_zones or zones_but_no_zone_ops:
         raise ValueError("Mismatch between Architecture zone ops and Layout zones")
-    # TODO: Aligning left results in circuits that have are more expensive in terms of circuit time than not aligning left. This is probably the result of requesting a layer of parallel cultivations but realigning so the expensive cultivation operations become spread out over multiple moments. It is currently unclear if aligning left is correct or not in general, but the specific tests for ft_compile very much rely on it...
     layout = copy.deepcopy(layout)
     layout.reset_graph()
     G = layout.layout_graph
