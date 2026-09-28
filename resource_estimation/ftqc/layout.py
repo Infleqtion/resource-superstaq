@@ -31,13 +31,20 @@ class Layout(abc.ABC):
     """Base class for layouts used by the fault tolerant compiler to track factory use and CNOT routing"""
 
     input_circuit: cirq.Circuit
+    architecture: typing.Literal["SSM", "MZO", "DSM", "DSNM"]
     num_t_factories: int = 0
     num_s_factories: int = 0
     num_ccz_factories: int = 0
     distil: bool = False
+    site_spacing: int = 4
 
     def __post_init__(self) -> None:
         self.mapped_circuit: cirq.Circuit = cirq.Circuit()
+
+        self.inplace_cnot = self.architecture in ("MZO", "DSM")
+        self.measure_zones = self.architecture in ("MZO", "SSM")
+        self.interaction_zones = self.architecture in ("SSM",)
+
         self.layout_graph: nx.Graph = nx.Graph()
         self._available_t_factories: collections.deque[tuple[cirq.GridQubit, ...]] = (
             collections.deque()
@@ -129,7 +136,6 @@ class Layout(abc.ABC):
                 for idx in range(self.num_s_factories)
             ],
         )
-        G.add_edges_from((n1, n2) for n1, n2 in itertools.combinations(G.nodes, 2))
         self._all_factories = {node for node in G if G.nodes[node]["patch_type"] == "factory"}
         self.layout_graph = G
 
@@ -250,11 +256,12 @@ class Layout(abc.ABC):
         color_dict = {
             "t": "red",
             "s": "yellow",
-            "ccz": "black",
             "data": "green",
             "ancilla": "blue",
             "block": "pink",
             "ccz": "orange",
+            "mzone": "gray",
+            "izone": "lightgray",
         }
         G = self.layout_graph
         node_color = []
@@ -275,14 +282,66 @@ class MovementLayout(Layout):
 
     # TODO: build this implementation
     def __init__(
-        self, input_circuit: cirq.Circuit, num_t_factories: int = 1, num_ccz_factories: int = 0
+        self,
+        input_circuit: cirq.Circuit,
+        num_t_factories: int = 1,
+        num_ccz_factories: int = 0,
+        architecture: typing.Literal["SSM", "MZO", "DSM"] = "SSM",
     ) -> None:
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
             num_ccz_factories=num_ccz_factories,
             num_s_factories=0,
+            architecture=architecture,
         )
+
+    def _add_zones(self) -> None:
+        G = self.layout_graph
+        cols = max(node.col for node in G.nodes) + 1
+        rows = max(node.row for node in G.nodes) + 1
+        if self.interaction_zones:  # Place an interaction zone in the -1 row
+            G.add_nodes_from(
+                [
+                    (
+                        cirq.GridQubit(-1, col),
+                        dict(patch_type="izone"),
+                    )
+                    for col in range(cols)
+                ],
+            )
+        if self.measure_zones:  # Place a measurement zone in the final row
+            G.add_nodes_from(
+                [
+                    (
+                        cirq.GridQubit(rows, col),
+                        dict(patch_type="mzone"),
+                    )
+                    for col in range(cols)
+                ],
+            )
+        self.layout_graph = G
+
+    def zone_qubits(self, zone_type: typing.Literal["measure", "interact"]) -> list[cirq.GridQubit]:
+        if zone_type == "measure":
+            return [
+                node
+                for node in self.layout_graph.nodes
+                if self.layout_graph.nodes[node]["patch_type"] == "mzone"
+            ]
+        if zone_type == "interact":
+            return [
+                node
+                for node in self.layout_graph.nodes
+                if self.layout_graph.nodes[node]["patch_type"] == "izone"
+            ]
+        else:
+            raise ValueError(f"Not a recognized zone type: {zone_type}")
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.layout_graph:  # Don't add zones if there are no qubits
+            self._add_zones()
 
     def route_cnot(self, ctrl: cirq.GridQubit, trgt: cirq.GridQubit) -> list[cirq.GridQubit]:
         raise NotImplementedError
@@ -305,6 +364,7 @@ class Column(Layout):
             input_circuit=input_circuit,
             num_s_factories=num_s_factories,
             num_t_factories=num_t_factories,
+            architecture="DSNM",
         )
 
     def _generate(self) -> None:
@@ -379,6 +439,16 @@ class FactorySandwich(Layout):
     T | T | T | T
     """
 
+    def __init__(
+        self, input_circuit: cirq.Circuit, num_t_factories: int = 0, num_s_factories: int = 0
+    ) -> None:
+        super().__init__(
+            input_circuit=input_circuit,
+            num_t_factories=num_t_factories,
+            num_s_factories=num_s_factories,
+            architecture="DSNM",
+        )
+
     def _generate(self) -> None:
         """Places and assigns logical qubits according to the Sandwich configuration"""
         qubit_map: dict[cirq.Qid, cirq.GridQubit] = {}
@@ -433,10 +503,8 @@ class Embedded(Layout):
     So I wanted a Layout that could potentially be compatible with that kind of output
     """
 
-    # TODO: figure out a way o make the number of factories configurable
     def __init__(self, input_circuit: cirq.Circuit) -> None:
-        # TODO: Find the formula for this
-        super().__init__(input_circuit=input_circuit, num_s_factories=0, num_t_factories=0)
+        super().__init__(input_circuit=input_circuit, architecture="DSNM")
 
     def _generate(self) -> None:
         """Builds a large embedded logical qubit array by starting from a nearest neighbor array and adding rows/columns of other qubit types"""
@@ -546,12 +614,17 @@ class MovementDistillery(MovementLayout):
     """
 
     def __init__(
-        self, input_circuit: cirq.Circuit, num_t_factories: int = 0, num_ccz_factories: int = 0
+        self,
+        input_circuit: cirq.Circuit,
+        num_t_factories: int = 0,
+        num_ccz_factories: int = 0,
+        architecture: typing.Literal["SSM", "MZO", "DSM"] = "SSM",
     ) -> None:
         super().__init__(
             input_circuit=input_circuit,
             num_t_factories=num_t_factories,
             num_ccz_factories=num_ccz_factories,
+            architecture=architecture,
         )
         self.distil = True
 
