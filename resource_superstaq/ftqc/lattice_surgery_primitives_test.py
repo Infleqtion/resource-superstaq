@@ -17,7 +17,7 @@ import cirq
 import numpy as np
 import pytest
 
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+import resource_superstaq.ftqc.lattice_surgery_primitives as lsp
 
 
 def test_merge() -> None:

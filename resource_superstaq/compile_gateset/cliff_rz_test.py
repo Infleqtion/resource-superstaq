@@ -14,7 +14,7 @@
 import cirq
 import cirq_superstaq as css
 
-import resource_estimation.compile_gateset as cliff
+import resource_superstaq.compile_gateset as cliff
 from scripts.circuits import fermi_hubbard, kanamori
 
 

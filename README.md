@@ -31,7 +31,7 @@ python3 -m pip install -e .
 ### Python Example
 ```python
 import cirq
-import resource_estimation as res
+import resource_superstaq as rss
 
 # Prepare Input Circuit
 qubits = 3
@@ -42,24 +42,24 @@ circuit = cirq.Circuit(
 )
 
 # Two Stage Compile to Clifford + T
-cliff_rz_circuit = res.compile_gateset.compile_gateset(
+cliff_rz_circuit = rss.compile_gateset.compile_gateset(
     circuit,
-    gateset=res.compile_gateset.clifford_rz_gateset(),
+    gateset=rss.compile_gateset.clifford_rz_gateset(),
 )
-cliff_t_circuit = res.compile_gateset.compile_gateset(
+cliff_t_circuit = rss.compile_gateset.compile_gateset(
     cliff_rz_circuit,
-    gateset=res.compile_gateset.clifford_t_gateset(atol=.001),
+    gateset=rss.compile_gateset.clifford_t_gateset(atol=.001),
 )
 
 # Prepare Architecture and Layout
-arch = res.ftqc.DefaultMovement(d=11)
-layout = res.ftqc.MovementLayout(input_circuit=cliff_t_circuit, num_t_factories=5)
+arch = rss.ftqc.DefaultMovement(d=11)
+layout = rss.ftqc.MovementLayout(input_circuit=cliff_t_circuit, num_t_factories=5)
 
 # FT Compile
-primitive_circuit = res.ftqc.ft_compile(layout=layout, arc=arch, verbose=True)
+primitive_circuit = rss.ftqc.ft_compile(layout=layout, arc=arch, verbose=True)
 
 # Estimate Resources
-estimator = res.ftqc.ResourceEstimator(arc=arch)
+estimator = rss.ftqc.ResourceEstimator(arc=arch)
 gate_cost = estimator.parallel_circuit_cost(primitive_circuit, layout=layout)
 circuit_time = estimator.parallel_circuit_time(primitive_circuit, layout=layout)
 physical_qubits = estimator.physical_qubits(primitive_circuit)

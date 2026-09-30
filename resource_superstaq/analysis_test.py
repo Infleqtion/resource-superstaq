@@ -18,8 +18,8 @@ import cirq
 import numpy as np
 import pytest
 
-import resource_estimation.analysis as analysis
-import resource_estimation.ftqc.architecture as arc
+import resource_superstaq.analysis as analysis
+import resource_superstaq.ftqc.architecture as arc
 
 
 @pytest.fixture

@@ -17,8 +17,8 @@ import cirq
 import pytest
 from qldpc import codes
 
-import resource_estimation.ftqc.codepatch as codepatch
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+import resource_superstaq.ftqc.codepatch as codepatch
+import resource_superstaq.ftqc.lattice_surgery_primitives as lsp
 
 
 def test_logical_qubit() -> None:

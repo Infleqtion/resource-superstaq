@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from resource_estimation.ftqc.architecture import (
+from resource_superstaq.ftqc.architecture import (
     Architecture,
     DefaultLattice,
     DefaultMovement,
@@ -19,13 +19,13 @@ from resource_estimation.ftqc.architecture import (
     MeasureZonesOnly,
     Superconductor,
 )
-from resource_estimation.ftqc.codepatch import (
+from resource_superstaq.ftqc.codepatch import (
     CodePatch,
     CSSCodePatch,
     LogicalQubit,
     RotatedSurfaceCodePatch,
 )
-from resource_estimation.ftqc.compile_ftqc import (
+from resource_superstaq.ftqc.compile_ftqc import (
     add_moves,
     ft_compile,
     handle_idling,
@@ -34,13 +34,13 @@ from resource_estimation.ftqc.compile_ftqc import (
     teleport_resource,
     validate_ops,
 )
-from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
-from resource_estimation.ftqc.estimate import (
+from resource_superstaq.ftqc.distil import ccz_8_to_1, distil_15_to_1
+from resource_superstaq.ftqc.estimate import (
     ReactionDepthEstimator,
     ReactionDynamics,
     ResourceEstimator,
 )
-from resource_estimation.ftqc.lattice_surgery_primitives import (
+from resource_superstaq.ftqc.lattice_surgery_primitives import (
     BufferCodePatch,
     Cultivate,
     EndpointPatch,
@@ -53,14 +53,14 @@ from resource_estimation.ftqc.lattice_surgery_primitives import (
     SyndromeExtract,
     custom_resolver,
 )
-from resource_estimation.ftqc.layout import (
+from resource_superstaq.ftqc.layout import (
     Column,
     Embedded,
     FactorySandwich,
     Layout,
     MovementLayout,
 )
-from resource_estimation.ftqc.stim_functions import (
+from resource_superstaq.ftqc.stim_functions import (
     STR2GATE,
     count_stim_resources,
     cultivate,

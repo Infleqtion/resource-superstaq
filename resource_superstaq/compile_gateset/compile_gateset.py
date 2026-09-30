@@ -15,11 +15,11 @@ from __future__ import annotations
 
 import cirq
 
-from resource_estimation.compile_gateset.cliff_rz import (
+from resource_superstaq.compile_gateset.cliff_rz import (
     CliffordTGateset,
     CliffRzGateset,
 )
-from resource_estimation.compile_gateset.clifford_t import compile_cirq_to_clifford_t
+from resource_superstaq.compile_gateset.clifford_t import compile_cirq_to_clifford_t
 
 
 def clifford_rz_gateset(atol: float = 1e-8) -> cirq.Gateset:

@@ -19,8 +19,8 @@ from pathlib import Path
 import cultiv
 import tqdm
 
-from resource_estimation.ftqc.stim_functions import STR2GATE, count_stim_resources
-from resource_estimation.typing import (
+from resource_superstaq.ftqc.stim_functions import STR2GATE, count_stim_resources
+from resource_superstaq.typing import (
     CountsDict,
     StrCounts,
 )

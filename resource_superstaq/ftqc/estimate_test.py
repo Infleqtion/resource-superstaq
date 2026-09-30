@@ -23,12 +23,12 @@ import numpy as np
 import pytest
 from numpy import isclose
 
-import resource_estimation.ftqc.architecture as arch
-import resource_estimation.ftqc.estimate as est
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-import resource_estimation.ftqc.layout as lyt
-from resource_estimation.ftqc import ResourceEstimator, ccz_8_to_1, distil_15_to_1
-from resource_estimation.typing import GateKey
+import resource_superstaq.ftqc.architecture as arch
+import resource_superstaq.ftqc.estimate as est
+import resource_superstaq.ftqc.lattice_surgery_primitives as lsp
+import resource_superstaq.ftqc.layout as lyt
+from resource_superstaq.ftqc import ResourceEstimator, ccz_8_to_1, distil_15_to_1
+from resource_superstaq.typing import GateKey
 
 
 @pytest.fixture
@@ -299,7 +299,7 @@ def test_critical_path() -> None:
         assert all(op in cirq.GateFamily(expected) for op, expected in zip(path2, expected_types))
 
 
-@mock.patch("resource_estimation.ftqc.architecture.randint")
+@mock.patch("resource_superstaq.ftqc.architecture.randint")
 def test_dynamic_T_resource_counts(mock_randint: mock.MagicMock) -> None:
     arc = arch.DefaultMovement()
     qubit = cirq.GridQubit(0, 0)
@@ -321,7 +321,7 @@ def test_dynamic_T_resource_counts(mock_randint: mock.MagicMock) -> None:
     assert arc.op_time(static_correction) == static_correction_time
 
 
-@mock.patch("resource_estimation.ftqc.architecture.randint")
+@mock.patch("resource_superstaq.ftqc.architecture.randint")
 def test_dynamic_CCZ_resource_counts(mock_randint: mock.MagicMock) -> None:
     arc = arch.DefaultMovement()
     qubit_a, qubit_b, qubit_c = (cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))

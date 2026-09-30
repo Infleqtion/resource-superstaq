@@ -18,7 +18,7 @@ import cultiv
 import pytest
 import stim
 
-from resource_estimation.ftqc.stim_functions import (
+from resource_superstaq.ftqc.stim_functions import (
     count_stim_resources,
     cultivate,
     load_saved_cost,

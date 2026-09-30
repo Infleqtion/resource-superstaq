@@ -33,8 +33,8 @@ import cirq
 import numpy as np
 import numpy.typing as npt
 
-import resource_estimation.ftqc.architecture as arch
-from resource_estimation.typing import _require_gate_operation
+import resource_superstaq.ftqc.architecture as arch
+from resource_superstaq.typing import _require_gate_operation
 
 InfoValue = float | int | str | bool | dict[str, tuple[int, float]]
 InfoSection = dict[str, InfoValue]

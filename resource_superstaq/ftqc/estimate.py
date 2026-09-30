@@ -24,11 +24,11 @@ import networkx as nx
 from tqdm import tqdm
 
 if typing.TYPE_CHECKING:  # pragma: no cover
-    from resource_estimation.ftqc.architecture import Architecture
-    from resource_estimation.ftqc.layout import Layout
-    from resource_estimation.typing import GateCounts, GateKey
+    from resource_superstaq.ftqc.architecture import Architecture
+    from resource_superstaq.ftqc.layout import Layout
+    from resource_superstaq.typing import GateCounts, GateKey
 
-from resource_estimation.typing import _require_gate_operation
+from resource_superstaq.typing import _require_gate_operation
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 

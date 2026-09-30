@@ -10,10 +10,10 @@ readme = "README.md"
 requires-python = ">=3.9"
 
 [tool.setuptools.packages.find]
-include = ["resource_estimation*"]
+include = ["resource_superstaq*"]
 
 [tool.setuptools.dynamic]
-version = { attr = "resource_estimation._version.__version__" }
+version = { attr = "resource_superstaq._version.__version__" }
 dependencies = { file = ["requirements.txt"] }
 
 # Check script configuration:

@@ -11,21 +11,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from resource_estimation import typing
-from resource_estimation.compile_gateset.cliff_rz import (
+from resource_superstaq import typing
+from resource_superstaq.compile_gateset.cliff_rz import (
     CliffRzGateset,
     eject_z,
     phx_to_zhzhz,
     zpow_to_rz,
 )
-from resource_estimation.compile_gateset.clifford_t import (
+from resource_superstaq.compile_gateset.clifford_t import (
     approx_rz,
     cin_cliffs,
     compile_cirq_to_clifford_t,
     process_cirq_str,
     toffoli_decompose,
 )
-from resource_estimation.compile_gateset.compile_gateset import (
+from resource_superstaq.compile_gateset.compile_gateset import (
     clifford_rz_gateset,
     clifford_t_gateset,
     compile_gateset,
