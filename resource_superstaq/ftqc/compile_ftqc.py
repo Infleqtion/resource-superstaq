@@ -29,8 +29,8 @@ import tqdm
 if TYPE_CHECKING:
     from typing import Iterator, Literal, Sequence
 
-    from resource_estimation.ftqc.architecture import Architecture
-    from resource_estimation.typing import GateKey
+    from resource_superstaq.ftqc.architecture import Architecture
+    from resource_superstaq.typing import GateKey
 
 from . import lattice_surgery_primitives as lsp
 from .layout import Layout, MovementDistillery, MovementLayout

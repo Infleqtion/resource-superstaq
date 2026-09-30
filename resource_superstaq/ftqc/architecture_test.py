@@ -20,13 +20,13 @@ import cirq_superstaq as css
 import numpy as np
 import pytest
 
-import resource_estimation.ftqc.architecture as arch
-import resource_estimation.ftqc.codepatch as codepatch
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-import resource_estimation.ftqc.layout as lyt
-from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
-from resource_estimation.ftqc.stim_functions import cultivate
-from resource_estimation.typing import GateCounts, _require_gate_operation
+import resource_superstaq.ftqc.architecture as arch
+import resource_superstaq.ftqc.codepatch as codepatch
+import resource_superstaq.ftqc.lattice_surgery_primitives as lsp
+import resource_superstaq.ftqc.layout as lyt
+from resource_superstaq.ftqc.distil import ccz_8_to_1, distil_15_to_1
+from resource_superstaq.ftqc.stim_functions import cultivate
+from resource_superstaq.typing import GateCounts, _require_gate_operation
 
 
 @pytest.fixture

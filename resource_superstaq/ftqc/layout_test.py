@@ -14,7 +14,7 @@
 import cirq
 import pytest
 
-from resource_estimation.ftqc.layout import (
+from resource_superstaq.ftqc.layout import (
     Column,
     Embedded,
     FactorySandwich,

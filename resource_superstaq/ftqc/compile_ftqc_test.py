@@ -19,16 +19,16 @@ import cirq
 import cirq_superstaq as css
 import pytest
 
-import resource_estimation.ftqc.architecture as arch
-import resource_estimation.ftqc.compile_ftqc as comp
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-from resource_estimation.ftqc.layout import (
+import resource_superstaq.ftqc.architecture as arch
+import resource_superstaq.ftqc.compile_ftqc as comp
+import resource_superstaq.ftqc.lattice_surgery_primitives as lsp
+from resource_superstaq.ftqc.layout import (
     Column,
     Embedded,
     MovementDistillery,
     MovementLayout,
 )
-from resource_estimation.typing import GateKey, _require_gate_operation
+from resource_superstaq.typing import GateKey, _require_gate_operation
 
 
 @pytest.fixture

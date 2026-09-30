@@ -16,10 +16,10 @@ from math import pi
 import cirq
 import pytest
 
-from resource_estimation.ftqc.architecture import DefaultMovement
-from resource_estimation.ftqc.distil import distil_15_to_1, precompute_distil_cost
-from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
-from resource_estimation.ftqc.layout import MovementDistillery
+from resource_superstaq.ftqc.architecture import DefaultMovement
+from resource_superstaq.ftqc.distil import distil_15_to_1, precompute_distil_cost
+from resource_superstaq.ftqc.lattice_surgery_primitives import Cultivate
+from resource_superstaq.ftqc.layout import MovementDistillery
 
 
 def test_15_to_one() -> None:

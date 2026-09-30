@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from types import NotImplementedType
     from typing import Iterator
 
-    from resource_estimation.typing import GateKey
+    from resource_superstaq.typing import GateKey
 
 
 @cirq.transformer

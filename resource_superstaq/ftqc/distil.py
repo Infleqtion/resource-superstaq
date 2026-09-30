@@ -18,14 +18,14 @@ from typing import TYPE_CHECKING, Literal
 
 import cirq
 
-from resource_estimation.ftqc.compile_ftqc import add_moves
-from resource_estimation.ftqc.estimate import ResourceEstimator
-from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
-from resource_estimation.ftqc.layout import MovementDistillery
-from resource_estimation.typing import CostDict
+from resource_superstaq.ftqc.compile_ftqc import add_moves
+from resource_superstaq.ftqc.estimate import ResourceEstimator
+from resource_superstaq.ftqc.lattice_surgery_primitives import Cultivate
+from resource_superstaq.ftqc.layout import MovementDistillery
+from resource_superstaq.typing import CostDict
 
 if TYPE_CHECKING:
-    from resource_estimation.ftqc.architecture import Architecture
+    from resource_superstaq.ftqc.architecture import Architecture
 
 
 def distil_15_to_1() -> cirq.Circuit:

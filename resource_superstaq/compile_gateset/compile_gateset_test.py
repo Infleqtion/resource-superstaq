@@ -16,7 +16,7 @@ from math import pi
 import cirq
 import pytest
 
-from resource_estimation.compile_gateset import (
+from resource_superstaq.compile_gateset import (
     CliffRzGateset,
     clifford_t_gateset,
     compile_gateset,

@@ -25,12 +25,12 @@ import cirq
 import cirq_superstaq as css
 import numpy as np
 
-import resource_estimation.ftqc.codepatch as codepatch
-import resource_estimation.ftqc.lattice_surgery_primitives as lsp
-from resource_estimation.ftqc.distil import precompute_distil_cost
-from resource_estimation.ftqc.layout import MovementDistillery, MovementLayout
-from resource_estimation.ftqc.stim_functions import cultivate
-from resource_estimation.typing import CostDict, GateCounts, GateKey, _require_gate_operation
+import resource_superstaq.ftqc.codepatch as codepatch
+import resource_superstaq.ftqc.lattice_surgery_primitives as lsp
+from resource_superstaq.ftqc.distil import precompute_distil_cost
+from resource_superstaq.ftqc.layout import MovementDistillery, MovementLayout
+from resource_superstaq.ftqc.stim_functions import cultivate
+from resource_superstaq.typing import CostDict, GateCounts, GateKey, _require_gate_operation
 
 NEUTRAL_GATES: dict[GateKey, float] = {  # From Harvard paper (https://arxiv.org/pdf/2506.20661)
     cirq.CZ: 0.27,

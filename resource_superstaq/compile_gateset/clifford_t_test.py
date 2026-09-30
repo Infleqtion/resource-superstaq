@@ -17,7 +17,7 @@ import cirq
 import numpy as np
 import pytest
 
-from resource_estimation.compile_gateset import (
+from resource_superstaq.compile_gateset import (
     approx_rz,
     compile_cirq_to_clifford_t,
     process_cirq_str,

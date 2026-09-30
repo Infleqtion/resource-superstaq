@@ -28,7 +28,7 @@ import cirq_superstaq as css
 import cultiv
 import stim
 
-from resource_estimation.typing import CountsDict, GateKey
+from resource_superstaq.typing import CountsDict, GateKey
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
