@@ -161,7 +161,15 @@ def teleport_resource(
             ]
     else:
         raise ValueError(f"Invalid resource encountered: {op.gate}")
-    available_factories = layout.available_factories(ftype)
+
+    available_factories = None
+    all_factories = None
+    try:
+        available_factories = layout.available_factories(ftype)
+    # This is morally incorrect, please fix
+    # Basically this is the "is this heterogeneous or homogeneous" check
+    except AssertionError:
+        available_factories = layout.available_factories(ftype, op.qubits[0].row)
     all_factories = layout.all_factories(ftype)
     operations: list[cirq.Moment | cirq.Operation] = []
     if not available_factories:
@@ -171,7 +179,9 @@ def teleport_resource(
                 prep_gate.on(*layout.distillation_block(factory)) for factory in all_factories
             ]
         else:
-            operations += [prep_gate.on(*factory) for factory in all_factories]
+            operations += [prep_gate.on(*factory)
+                for factory in all_factories
+                if layout.layout_graph.nodes[factory[0]]["used"]]
         layout.reload_factories(ftype=ftype)
     # These should be tuples of qubits
     routed_factory = layout.nearest_factory(op_qubits, ftype=ftype)
@@ -221,7 +231,6 @@ def handle_idling(
     )
     non_ancillas_candidates: set[cirq.GridQubit] = set(logical_qubits + s_factories + t_factories)
     # Ensures no idling happens on qubits that are not used in the circuit
-    # This is a bit faster
     non_ancillas: set[cirq.Qid] = {
         q for op in circuit.all_operations() for q in op.qubits if q in non_ancillas_candidates
     }
