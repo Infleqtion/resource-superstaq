@@ -19,6 +19,9 @@ import typing
 import cirq
 from qldpc import codes
 from qldpc.objects import Pauli
+from sympy.abc import x, y
+import numpy as np
+from dataclasses import dataclass, field
 
 
 def _validate_id(value: int, name: str) -> int:
@@ -27,6 +30,48 @@ def _validate_id(value: int, name: str) -> int:
     if value < 0:
         raise ValueError(f"{name} must be nonnegative.")
     return value
+
+class PhysicalQubit(cirq.Qid):
+    """A physical qubit represented as a wire in a Cirq circuit"""
+    def __init__(self, patch_id: int, local_coord: tuple[int, int], role: tuple[typing.Literal['data', 'measure'], typing.Literal['X', 'Z'] | None], info: dict[str, int] | None = None) -> None:
+        """
+        patch_id: the patch id of the CodePatch object to which this physical qubit belongs
+        local_coord: local coordinate tuple representing the position of this qubit in the footprint of the CodePatch
+        role: Designation of the job of the physical qubit as a data or measure qubit
+        """
+        self._patch_id = _validate_id(patch_id, "patch_id")
+        self._local_coord = local_coord
+        self._role = role
+        self._info = info
+
+    @property
+    def patch_id(self) -> int:
+        return self._patch_id
+
+    @property
+    def local_coord(self) -> tuple[int, int]:
+        return self._local_coord
+
+    @property
+    def role(self) -> tuple[typing.Literal['data', 'measure'], typing.Literal['X', 'Z'] | None]:
+        return self._role
+
+    @property
+    def info(self) -> dict[str, int] | None:
+        return self._info
+    
+    @property
+    def dimension(self) -> int:
+        return 2
+
+    def _comparison_key(self) -> tuple[int, int, int, typing.Literal["data", "measure"], typing.Literal["X", "Z"] | None]:
+        return self.patch_id, self.local_coord[0], self.local_coord[1], self.role[0], self.role[1]
+
+    def __str__(self) -> str:
+        return f"{self.patch_id}:({self.local_coord[0], self.local_coord[1]}, {self.role[1] if self.role[1] else self.role[0]})"
+
+    def __repr__(self) -> str:
+        return f"codepatch.PhysicalQubit({self.patch_id!r}, {self.local_coord!r}, {self.role})"    
 
 
 class LogicalQubit(cirq.Qid):
@@ -127,6 +172,17 @@ class CodePatch(abc.ABC):
         """The total number of data and measurement qubits in the code patch."""
         return self.num_data_qubits + self.num_measure_qubits
 
+    @property
+    def footprint(self) -> Rect:
+        qubits = self.default_layout()
+        rows = [q.local_coord[0] for q in qubits]
+        cols = [q.local_coord[1] for q in qubits]
+
+        return Rect(
+            rows=max(rows) - min(rows) + 1,
+            cols=max(cols) - min(cols) + 1,
+        )   
+
 
 class CSSCodePatch(CodePatch):
     """Metadata shared by qLDPC CSS code patches."""
@@ -205,3 +261,190 @@ class RotatedSurfaceCodePatch(CSSCodePatch):
             f"k={self.k!r}",
         ]
         return f"codepatch.RotatedSurfaceCodePatch({', '.join(args)})"
+
+    def default_layout(self) -> list[PhysicalQubit]:
+        def transform(x: int, y: int) -> tuple[int, int]:
+            return (
+                (x + y)//2,
+                (x - y + 2 * (self.d - 1))//2,
+            )
+        qubits = []
+        # Data Qubits
+        for r in range(self.d):
+            for c in range(self.d):
+                local_coord = transform(2*r, 2*c)
+                role = ("data", None)
+                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
+        # Interior weight 4 checks
+        for r in range(self.d-1):
+            for c in range(self.d-1):
+                basis = "X" if (r+c)%2==0 else "Z"
+                role = ("measure", basis)
+                local_coord = transform(2*r+1, 2*c+1)
+                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
+        # Boundary weight 2 checks
+        for k in range(self.d - 1):
+            if k%2==0:
+                # Top Z Boundary
+                local_coord = transform(-1, 2*k+1)
+                role = ("measure", "Z")
+                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
+                # Right X Boundary
+                local_coord = transform(2*k+1, 2*self.d-1)
+                role = ("measure", "X")
+                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
+            else:
+                # Bottom Z Boundary
+                local_coord = transform(2*self.d-1, 2*k+1)
+                role = ("measure", "Z")
+                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
+                # Left X Boundary
+                local_coord = transform(2*k+1, -1)
+                role = ("measure", "X")
+                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
+        return qubits
+
+class BBCodePatch(CSSCodePatch):
+    """A Bivariate Bicyle code patch generated from the qldpc library"""
+
+    def __init__(self, patch_id: int, l: int, m: int):
+        ## Using the polynomial from Quera STAR paper  ##
+        # Probably needs better logic for choosing coeffs
+        orders = {x: l, y: m}
+        poly_a = 1 + y**3 + x * y**2 + x * y**4
+        poly_b = 1 + y**-3 + x**-1 * y**-2 + x**-1 * y**-4
+        qldpc_code = codes.BBCode(orders, poly_a, poly_b)
+        super().__init__(patch_id=patch_id, qldpc_code=qldpc_code)
+
+    def __repr__(self) -> str:
+        args = [
+            f"patch_id={self.patch_id!r}",
+            f"l={self.qldpc_code.orders[0]!r}",
+            f"m={self.qldpc_code.orders[1]!r}",
+        ]
+        return f"codepatch.BBCodePatch({', '.join(args)})"
+
+    def default_layout(self) -> list[PhysicalQubit]:
+        """Produces a plaquette-based physical layout for the physical qubits in the code patch"""
+        qubits = []
+        l, m = self.qldpc_code.orders
+        for index in range(self.n):
+            half, col, row = map(int, np.unravel_index(index, (2, l, m)))
+            if half == 0:  # L data + X check
+                data_local_coord = (2 * row, 2 * col)
+                meas_local_coord = (2 * row, 2 * col + 1)
+                basis = "X"
+            else:  # R data + Z check
+                data_local_coord = (2 * row + 1, 2 * col + 1)
+                meas_local_coord = (2 * row + 1, 2 * col)
+                basis = "Z"
+            data_qubit = PhysicalQubit(patch_id=self.patch_id, local_coord=data_local_coord, role=("data", None))
+            meas_qubit = PhysicalQubit(patch_id=self.patch_id, local_coord=meas_local_coord, role=("measure", basis))
+            qubits.extend([data_qubit, meas_qubit])
+        return qubits
+
+
+@dataclass(frozen=True)
+class Rect:
+    rows: int
+    cols: int
+    def __post_init__(self):
+        if self.rows <= 0 or self.cols <= 0:
+            raise ValueError("Rect dimensions must be positive")
+
+class Placeable(typing.Protocol):
+    @property
+    def footprint(self) -> Rect:
+        ...
+
+@dataclass(frozen=True)
+class Placement:
+    element: Placeable
+    row: int
+    col: int
+
+    @property
+    def row_end(self) -> int:
+        return self.row + self.element.footprint.rows
+
+    @property
+    def col_end(self) -> int:
+        return self.col + self.element.footprint.cols
+
+    def overlaps(self, placement: Placement):
+        return not (
+            placement.row_end <= self.row
+            or self.row_end <= placement.row
+            or placement.col_end <= self.col
+            or self.col_end <= placement.col
+        )
+
+@dataclass
+class Zone:
+    rows: int
+    cols: int
+    role: str
+
+    @property
+    def footprint(self) -> Rect:
+        return Rect(self.rows, self.cols)
+
+@dataclass
+class Layout2:
+    rows: int
+    cols: int
+    spacing: float = 1.0
+    placements: dict[int, Placement] = field(default_factory=dict)
+    regions: dict[int, Zone] = field(default_factory=dict)
+
+    def add(self, element: Placeable, row, col) -> int:
+        """Adds a new proposed placement if possible, returning its unique identifier"""
+        candidate_placement = Placement(element=element, row=row, col=col)
+        if not self.in_bounds(placement=candidate_placement):
+            raise ValueError("This placement is out of bounds")
+        if self.occupied(placement=candidate_placement):
+            raise ValueError("This space is already occupied")
+        next_id = max(self.placements, default=0) + 1
+        self.placements[next_id] = candidate_placement
+        return next_id
+
+    def remove(self, placement_id: int):
+        """Removes the Placement at placement_id"""
+        del self.placements[placement_id]
+
+    def move(self, placement_id: int, row: int, col: int) -> None:
+        """Moves the anchor of a Placement with placement_id to the given row, col coordinate"""
+        prior_placement = self.placements[placement_id]
+        candidate_placement = Placement(element=prior_placement.element, row=row, col=col)
+        if not self.in_bounds(candidate_placement):
+            raise ValueError("This placement is out of bounds")
+        if self.occupied(placement=candidate_placement, exclude=placement_id):
+            raise ValueError("This space is already occupied")
+        self.placements[placement_id] = candidate_placement
+
+    def global_coord(self, placement_id: int, local_coord: tuple[int, int]) -> tuple[int, int]:
+        """Returns global coordinate for a local object within the Placement with the given placement_id"""
+        placement = self.placements[placement_id]
+        r, c = local_coord
+        return placement.row + r, placement.col + c
+        
+    def occupied(self, placement: Placement, exclude: int | None = None) -> bool:
+        """Returns True if the proposed Placement overlaps with any existing placement, subject to excluding one placement"""
+        return any(placement.overlaps(prior_placement) for pid, prior_placement in self.placements.items() if pid != exclude)
+
+    def in_bounds(self, placement: Placement):
+        """Returns True if the proposed placement is within the bounds of the Layout"""
+        return (
+            placement.row >= 0
+            and placement.col >= 0
+            and placement.row_end <= self.rows
+            and placement.col_end <= self.cols
+        )
+
+    def get_patch(self, patch_id: int):
+        for placement in self.placements.values():
+            element = placement.element
+            if isinstance(element, CodePatch) and element.patch_id == patch_id:
+                return element
+        raise ValueError(f"Found no CodePatch with patch_id={patch_id} in Layout")
+        
