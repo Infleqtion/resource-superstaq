@@ -40,6 +40,9 @@ from resource_estimation.ftqc.estimate import (
     ReactionDynamics,
     ResourceEstimator,
 )
+from resource_estimation.ftqc.interfaces import (
+    PhysicalImplementation,
+)
 from resource_estimation.ftqc.lattice_surgery_primitives import (
     BufferCodePatch,
     Cultivate,
@@ -68,6 +71,7 @@ from resource_estimation.ftqc.stim_functions import (
 )
 
 __all__ = [
+    "PhysicalImplementation",
     "Architecture",
     "BufferCodePatch",
     "CSSCodePatch",
