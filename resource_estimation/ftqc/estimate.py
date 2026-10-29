@@ -25,6 +25,7 @@ from tqdm import tqdm
 
 if typing.TYPE_CHECKING:  # pragma: no cover
     from resource_estimation.ftqc.architecture import Architecture
+    from resource_estimation.ftqc.interfaces import PhysicalImplementation
     from resource_estimation.ftqc.layout import Layout
     from resource_estimation.typing import GateCounts, GateKey
 
@@ -36,8 +37,11 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 class ResourceEstimator:
     """Class for resource estimator objects defined by the given architecture"""
 
-    def __init__(self, arc: Architecture) -> None:
+    def __init__(
+        self, arc: Architecture, *, physical_implementation: PhysicalImplementation | None = None
+    ) -> None:
         self.arc = arc
+        self.physical_implementation = physical_implementation
 
     def validate_circuit_ops(self, circuit: cirq.Circuit) -> None:
         """Checks that the input circuit contains only valid operations and warns of operations still in progress"""
@@ -54,7 +58,11 @@ class ResourceEstimator:
         layout: Layout,
         verbose: int = 0,
     ) -> dict[GateKey, int]:
-        """Counts up the total physical gates from all logical primitives in the input circuit"""
+        """Count gates using supplied CX circuits or the architectural cost models.
+
+        Circuit-derived counts retain their actual physical gate names. The
+        optional implementation affects this method only, not timing or paths.
+        """
         self.validate_circuit_ops(circuit=circuit)
         cost: collections.Counter[GateKey] = collections.Counter()
         for op in tqdm(
@@ -63,7 +71,21 @@ class ResourceEstimator:
             colour="cyan",
             disable=not bool(verbose),
         ):
-            cost += collections.Counter(self.arc.gate_cost(op, layout=layout))
+            if self.physical_implementation is not None and op.gate == cirq.CNOT:
+                n = self.arc.patch.num_data_qubits
+                wires = cirq.LineQubit.range(2 * n)
+                physical = self.physical_implementation.build_circuit(
+                    primitive=cirq.CNOT,
+                    encoding=self.arc.patch,
+                    registers={"control_data": wires[:n], "target_data": wires[n:]},
+                )
+                if not physical.all_qubits() <= set(wires):
+                    raise ValueError("CX implementation introduced undeclared physical workspace")
+                cost.update(
+                    _require_gate_operation(gate).gate for gate in physical.all_operations()
+                )
+            else:
+                cost += collections.Counter(self.arc.gate_cost(op, layout=layout))
         return {op: val for op, val in cost.items()}
 
     def serial_circuit_time(self, circuit: cirq.Circuit, layout: Layout) -> float:
