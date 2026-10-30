@@ -345,7 +345,7 @@ class Architecture(abc.ABC):
         return CostDict(op_time=0, moment_cost={}, gate_cost={})
 
     @cached_property
-    def _measure_cost(self) -> CostDict:
+    def _measure_cost(self) -> CostDict:  # pragma: no cover
         raise NotImplementedError
 
     @property
@@ -374,7 +374,9 @@ class Architecture(abc.ABC):
     ### Top Level Cost Methods ###
     # Functions used to interpret the costs of Primitives in the form of cirq operations
     # The ones here are common among all architectures currently
-    def syndrome_extract_cost(self, op: cirq.Operation, **kwargs: object) -> CostDict:
+    def syndrome_extract_cost(
+        self, op: cirq.Operation, **kwargs: object
+    ) -> CostDict:  # pragma: no cover
         raise NotImplementedError
 
     def error_correct_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
@@ -415,7 +417,7 @@ class Architecture(abc.ABC):
             cirq.ResetChannel: self.reset_channel_cost,
         }
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # pragma: no cover (remove pragma post future subclasses)
         name = self.__name__
         distance = self.d
         return f"{name}(d={distance})"
