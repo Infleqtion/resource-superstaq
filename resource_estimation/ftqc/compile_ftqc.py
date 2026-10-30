@@ -26,6 +26,8 @@ import cirq
 import cirq_superstaq as css
 import tqdm
 
+import resource_estimation as rss
+
 if TYPE_CHECKING:
     from typing import Iterator, Literal, Sequence
 
@@ -430,7 +432,7 @@ def ft_compile(
 ) -> cirq.Circuit:
     """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T + CCZ gateset to a cirq circuit of primitives.
     The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
-    The architecture input contains information about what primtives are accessible to the compiler and which extra passes should be added to the primitive circuit.
+    The architecture input contains information about what primitives are accessible to the compiler and which extra passes should be added to the primitive circuit.
     The passes available are post op correction and idling.
     The architecture is also the source of information for how many rounds of syndrome extraction should be performed when syndrome extraction is called for.
     """
@@ -462,6 +464,9 @@ def ft_compile(
         state_prep += css.barrier(*sorted(circuit.all_qubits()))
     circuit = state_prep + circuit
 
+    assert isinstance(arc, rss.ftqc.SurfaceArchitecture), (
+        "Only surface code architecture is supported"
+    )
     if arc.post_op_correction:
         circuit = post_op_syndrome_extraction(
             circuit=circuit,
