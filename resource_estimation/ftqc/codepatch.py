@@ -14,14 +14,17 @@
 from __future__ import annotations
 
 import abc
+import collections
+import re
 import typing
+from dataclasses import dataclass, field
 
 import cirq
+import numpy as np
+import sympy
 from qldpc import codes
 from qldpc.objects import Pauli
 from sympy.abc import x, y
-import numpy as np
-from dataclasses import dataclass, field
 
 
 def _validate_id(value: int, name: str) -> int:
@@ -304,30 +307,297 @@ class RotatedSurfaceCodePatch(CSSCodePatch):
                 qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
         return qubits
 
-class BBCodePatch(CSSCodePatch):
-    """A Bivariate Bicyle code patch generated from the qldpc library"""
+BBTerm = tuple[int, int]
+"""An exponent pair (i, j) standing for the monomial x^i y^j."""
 
-    def __init__(self, patch_id: int, l: int, m: int):
-        ## Using the polynomial from Quera STAR paper  ##
-        # Probably needs better logic for choosing coeffs
-        orders = {x: l, y: m}
-        poly_a = 1 + y**3 + x * y**2 + x * y**4
-        poly_b = 1 + y**-3 + x**-1 * y**-2 + x**-1 * y**-4
-        qldpc_code = codes.BBCode(orders, poly_a, poly_b)
+BBPolynomial = typing.Union[str, sympy.Expr, typing.Sequence[BBTerm]]
+"""A BB polynomial: a string such as "x^3 + y + y^2", a sympy expression, or (i, j) terms."""
+
+
+def _parse_bb_polynomial(text: str) -> list[BBTerm]:
+    """Parse e.g. "1 + y + x + x*y^-2" into exponent pairs (i, j)."""
+    terms = []
+    for raw in text.replace(" ", "").split("+"):
+        if not raw:
+            raise ValueError(f"Empty term in polynomial {text!r}.")
+        i = j = 0
+        if raw != "1":
+            for factor in raw.split("*"):
+                match = re.fullmatch(r"([xy])(?:\^(-?\d+))?", factor)
+                if not match:
+                    raise ValueError(f"Cannot parse factor {factor!r} in {text!r}.")
+                power = int(match.group(2) or 1)
+                if match.group(1) == "x":
+                    i += power
+                else:
+                    j += power
+        terms.append((i, j))
+    return terms
+
+
+def _sympy_bb_terms(poly: sympy.Expr) -> list[BBTerm]:
+    """Exponent pairs of a sympy polynomial in x and y with unit coefficients."""
+    terms = []
+    for term in sympy.Add.make_args(sympy.expand(poly)):
+        coeff, monomial = term.as_coeff_Mul()
+        powers = monomial.as_powers_dict()
+        if coeff != 1 or set(powers) - {x, y, sympy.S.One}:
+            raise ValueError(f"BB polynomial terms must be monomials in x and y, not {term}.")
+        terms.append((int(powers.get(x, 0)), int(powers.get(y, 0))))
+    return terms
+
+
+def _format_bb_term(term: BBTerm) -> str:
+    parts = [f"{v}^{p}" if p != 1 else v for v, p in zip("xy", term) if p]
+    return "*".join(parts) or "1"
+
+
+# ----- GF(2) helpers for choosing short logical operators -----
+
+
+def _gf2_row_reduce(matrix: np.ndarray) -> tuple[np.ndarray, list[int]]:
+    """Return (reduced row echelon form, pivot columns) of a 0/1 matrix over GF(2)."""
+    reduced = np.array(matrix, dtype=np.uint8, ndmin=2)
+    pivots: list[int] = []
+    row = 0
+    for column in range(reduced.shape[1]):
+        if row == reduced.shape[0]:
+            break
+        hits = np.flatnonzero(reduced[row:, column])
+        if not hits.size:
+            continue
+        pivot = row + int(hits[0])
+        reduced[[row, pivot]] = reduced[[pivot, row]]
+        others = np.flatnonzero(reduced[:, column])
+        reduced[others[others != row]] ^= reduced[row]
+        pivots.append(column)
+        row += 1
+    return reduced, pivots
+
+
+def _gf2_rank(matrix: np.ndarray) -> int:
+    return len(_gf2_row_reduce(matrix)[1])
+
+
+def _gf2_nullspace(matrix: np.ndarray) -> np.ndarray:
+    """Rows v spanning {v : matrix @ v = 0} over GF(2)."""
+    reduced, pivots = _gf2_row_reduce(matrix)
+    free = [c for c in range(reduced.shape[1]) if c not in set(pivots)]
+    basis = np.zeros((len(free), reduced.shape[1]), dtype=np.uint8)
+    for k, f in enumerate(free):
+        basis[k, f] = 1
+        for r, p in enumerate(pivots):
+            basis[k, p] = reduced[r, f]
+    return basis
+
+
+def _gf2_inverse(matrix: np.ndarray) -> np.ndarray:
+    size = matrix.shape[0]
+    reduced, _ = _gf2_row_reduce(np.hstack([matrix, np.eye(size, dtype=np.uint8)]))
+    return reduced[:, size:]
+
+
+def _quotient_basis(kernel_of: np.ndarray, stabilizers: np.ndarray) -> np.ndarray:
+    """Vectors of ker(kernel_of) that are independent modulo rowspace(stabilizers)."""
+    rows, current = list(stabilizers), _gf2_rank(stabilizers)
+    chosen = []
+    for vector in _gf2_nullspace(kernel_of):
+        if _gf2_rank(np.vstack([*rows, vector])) > current:
+            rows.append(vector)
+            chosen.append(vector)
+            current += 1
+    return np.array(chosen, dtype=np.uint8).reshape(-1, kernel_of.shape[1])
+
+
+def _low_weight_lz(
+    hx: np.ndarray, hz: np.ndarray, trials: int = 100, seed: int = 0
+) -> np.ndarray | None:
+    """A logical-Z basis of the shortest representatives found, or None if incomplete."""
+    rng = np.random.default_rng(seed)
+    kernel = _gf2_nullspace(hx)
+    n = hx.shape[1]
+    found: dict[bytes, np.ndarray] = {}
+    for _ in range(trials):
+        order = rng.permutation(n)
+        for row in _gf2_row_reduce(kernel[:, order])[0]:
+            vector = np.zeros(n, dtype=np.uint8)
+            vector[order] = row
+            found.setdefault(vector.tobytes(), vector)
+    rows, current = list(hz), _gf2_rank(hz)
+    k = n - _gf2_rank(hx) - current
+    chosen: list[np.ndarray] = []
+    for vector in sorted(found.values(), key=lambda v: int(v.sum())):
+        if len(chosen) == k:
+            break
+        if _gf2_rank(np.vstack([*rows, vector])) > current:
+            rows.append(vector)
+            chosen.append(vector)
+            current += 1
+    if len(chosen) < k:
+        return None
+    return np.array(chosen, dtype=np.uint8)
+
+
+def _low_weight_logicals(hx: np.ndarray, hz: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """A paired logical basis (lz @ lx.T = I) with short Z logicals, then greedily shortened X.
+
+    Z logicals come from random information sets of ker(hx); X logicals are paired to them and
+    shortened by adding X checks. Rotation gadgets act on Z supports, so those are shortest.
+    """
+    hx, hz = np.asarray(hx, dtype=np.uint8), np.asarray(hz, dtype=np.uint8)
+    lx = _quotient_basis(hz, hx)
+    lz = _low_weight_lz(hx, hz)
+    if lz is None:
+        lz = _quotient_basis(hx, hz)
+    lx = _gf2_inverse(lz @ lx.T % 2).T @ lx % 2
+    for _ in range(4):
+        improved = False
+        for row in lx:
+            for stabilizer in hx:
+                candidate = row ^ stabilizer
+                if candidate.sum() < row.sum():
+                    row[:] = candidate
+                    improved = True
+        if not improved:
+            break
+    return lx.astype(np.uint8), lz
+
+
+class BBCodePatch(CSSCodePatch):
+    """A bivariate bicycle (BB) code patch generated from the qldpc library.
+
+    The group is Z_l x Z_m, with x of order l and y of order m. Polynomials A and B give
+    ``matrix_x = [A | B]`` and ``matrix_z = [B^T | A^T]``. Data qubits 0..lm-1 form the left half
+    and lm..2lm-1 the right half; inside a half, group element x^i y^j has index i*m + j. X and Z
+    checks use the same group indexing.
+    """
+
+    def __init__(
+        self,
+        patch_id: int,
+        l: int,  # noqa: E741
+        m: int,
+        poly_a: BBPolynomial | None = None,
+        poly_b: BBPolynomial | None = None,
+        *,
+        distance: int | None = None,
+        low_weight_logicals: bool = True,
+    ) -> None:
+        """Builds a BB code patch.
+
+        Args:
+            patch_id: The patch id.
+            l: The order of x.
+            m: The order of y.
+            poly_a: Polynomial A as a string ("x^3 + y + y^2"), sympy expression or (i, j) terms.
+                Defaults (with poly_b) to the polynomials from the QuEra STAR paper.
+            poly_b: Polynomial B, in the same forms as poly_a.
+            distance: The known code distance. If omitted, qldpc computes it exactly, which is slow
+                for large codes.
+            low_weight_logicals: If True (the default), the logical qubits use short logical-Z
+                representatives (and paired, greedily shortened logical X) instead of qldpc's
+                default basis. Rotation gadgets act on logical-Z supports.
+        """
+        for value, name in ((l, "l"), (m, "m")):
+            if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+                raise ValueError(f"{name} must be a positive integer.")
+        if (poly_a is None) != (poly_b is None):
+            raise ValueError("Pass both poly_a and poly_b, or neither.")
+        if poly_a is None or poly_b is None:
+            # Polynomials from the QuEra STAR paper.
+            poly_a = 1 + y**3 + x * y**2 + x * y**4
+            poly_b = 1 + y**-3 + x**-1 * y**-2 + x**-1 * y**-4
+        self._l, self._m = l, m
+        terms_a, terms_b = self._terms(poly_a), self._terms(poly_b)
+        self._poly_a = self._reduce_terms(terms_a)
+        self._poly_b = self._reduce_terms(terms_b)
+        # qldpc gets the polynomials as written: reduced ones may lose x or y entirely.
+        qldpc_code = codes.BBCode(
+            {x: l, y: m},
+            sum((x**i * y**j for i, j in terms_a), sympy.S.Zero),
+            sum((x**i * y**j for i, j in terms_b), sympy.S.Zero),
+        )
+        if distance is not None:
+            if not isinstance(distance, int) or isinstance(distance, bool) or distance < 1:
+                raise ValueError("distance must be a positive integer.")
+            # Cache the known distance so qldpc does not search for it.
+            qldpc_code._distance = distance
+        if low_weight_logicals:
+            qldpc_code.set_logical_ops_xz(
+                *_low_weight_logicals(qldpc_code.matrix_x, qldpc_code.matrix_z)
+            )
         super().__init__(patch_id=patch_id, qldpc_code=qldpc_code)
 
+    @property
+    def l(self) -> int:  # noqa: E743
+        """The order of x."""
+        return self._l
+
+    @property
+    def m(self) -> int:
+        """The order of y."""
+        return self._m
+
+    @property
+    def poly_a(self) -> tuple[BBTerm, ...]:
+        """Polynomial A as exponent pairs (i, j), reduced mod (l, m)."""
+        return self._poly_a
+
+    @property
+    def poly_b(self) -> tuple[BBTerm, ...]:
+        """Polynomial B as exponent pairs (i, j), reduced mod (l, m)."""
+        return self._poly_b
+
+    @property
+    def half(self) -> int:
+        """Data qubits per half (= lm = number of X checks = number of Z checks)."""
+        return self.l * self.m
+
+    def index(self, term: BBTerm) -> int:
+        """Index of group element x^i y^j inside one half (also its X/Z check index)."""
+        return (term[0] % self.l) * self.m + term[1] % self.m
+
+    def polynomials(self) -> tuple[str, str]:
+        """Polynomials A and B as strings."""
+        return (
+            " + ".join(map(_format_bb_term, self.poly_a)),
+            " + ".join(map(_format_bb_term, self.poly_b)),
+        )
+
+    @staticmethod
+    def _terms(poly: BBPolynomial) -> list[BBTerm]:
+        if isinstance(poly, str):
+            return _parse_bb_polynomial(poly)
+        if isinstance(poly, sympy.Expr):
+            return _sympy_bb_terms(poly)
+        return [(int(i), int(j)) for i, j in poly]
+
+    def _reduce_terms(self, terms: list[BBTerm]) -> tuple[BBTerm, ...]:
+        # Coefficients live in GF(2), so terms that coincide modulo (l, m) cancel in pairs.
+        counts = collections.Counter((i % self.l, j % self.m) for i, j in terms)
+        normal = tuple(term for term, count in counts.items() if count % 2)
+        if not normal:
+            raise ValueError("BB polynomials must have at least one term modulo (l, m).")
+        return normal
+
     def __repr__(self) -> str:
+        poly_a, poly_b = self.polynomials()
         args = [
             f"patch_id={self.patch_id!r}",
-            f"l={self.qldpc_code.orders[0]!r}",
-            f"m={self.qldpc_code.orders[1]!r}",
+            f"l={self.l!r}",
+            f"m={self.m!r}",
+            f"poly_a={poly_a!r}",
+            f"poly_b={poly_b!r}",
+            f"n={self.n!r}",
+            f"k={self.k!r}",
+            f"d={self.d!r}",
         ]
         return f"codepatch.BBCodePatch({', '.join(args)})"
 
     def default_layout(self) -> list[PhysicalQubit]:
         """Produces a plaquette-based physical layout for the physical qubits in the code patch"""
         qubits = []
-        l, m = self.qldpc_code.orders
+        l, m = self.l, self.m
         for index in range(self.n):
             half, col, row = map(int, np.unravel_index(index, (2, l, m)))
             if half == 0:  # L data + X check

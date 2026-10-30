@@ -20,6 +20,7 @@ from resource_estimation.ftqc.architecture import (
     Superconductor,
 )
 from resource_estimation.ftqc.codepatch import (
+    BBCodePatch,
     CodePatch,
     CSSCodePatch,
     LogicalQubit,
@@ -75,6 +76,7 @@ __all__ = [
     "Architecture",
     "BufferCodePatch",
     "CSSCodePatch",
+    "BBCodePatch",
     "CodePatch",
     "Column",
     "Cultivate",

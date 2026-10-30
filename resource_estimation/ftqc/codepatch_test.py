@@ -14,8 +14,10 @@
 import inspect
 
 import cirq
+import numpy as np
 import pytest
 from qldpc import codes
+from sympy.abc import x, y
 
 import resource_estimation.ftqc.codepatch as codepatch
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
@@ -186,3 +188,138 @@ def test_surface_code_patch_counts_match_legacy(d: int) -> None:
     )
     assert patch.total_x_check_weight() == legacy_patch.total_x_syndrome_cnots()
     assert patch.total_z_check_weight() == legacy_patch.total_z_syndrome_cnots()
+
+
+def _bb_matrices(
+    l: int,  # noqa: E741
+    m: int,
+    poly_a: list[tuple[int, int]],
+    poly_b: list[tuple[int, int]],
+) -> tuple[np.ndarray, np.ndarray]:
+    """Reference [A | B], [B^T | A^T] built directly from shifted identity matrices."""
+
+    def poly(terms: list[tuple[int, int]]) -> np.ndarray:
+        shift_x = np.roll(np.eye(l, dtype=int), 1, axis=1)
+        shift_y = np.roll(np.eye(m, dtype=int), 1, axis=1)
+        matrix = np.zeros((l * m, l * m), dtype=int)
+        for i, j in terms:
+            matrix += np.kron(
+                np.linalg.matrix_power(shift_x, i), np.linalg.matrix_power(shift_y, j)
+            )
+        return matrix % 2
+
+    a, b = poly(poly_a), poly(poly_b)
+    return np.hstack([a, b]), np.hstack([b.T, a.T])
+
+
+def test_bb_code_patch_metadata() -> None:
+    patch = codepatch.BBCodePatch(4, 6, 6, "x^3 + y + y^2", "y^3 + x + x^2", distance=6)
+
+    assert isinstance(patch, codepatch.CSSCodePatch)
+    assert not inspect.isabstract(codepatch.BBCodePatch)
+    assert patch.patch_id == 4
+    assert (patch.l, patch.m, patch.half) == (6, 6, 36)
+    assert patch.code_params == (72, 12, 6)
+    assert patch.num_measure_qubits == 72
+    assert patch.num_physical_qubits == 144
+    assert patch.num_x_stabilizers() == patch.num_z_stabilizers() == 36
+    assert patch.total_x_check_weight() == patch.total_z_check_weight() == 216
+    assert patch.num_logical_qubits == 12
+    assert {q.patch_id for q in patch.logical_qubits} == {4}
+    assert patch.poly_a == ((3, 0), (0, 1), (0, 2))
+    assert patch.poly_b == ((0, 3), (1, 0), (2, 0))
+    assert patch.polynomials() == ("x^3 + y + y^2", "y^3 + x + x^2")
+    assert patch.index((7, -1)) == 11
+    assert repr(patch) == (
+        "codepatch.BBCodePatch(patch_id=4, l=6, m=6, poly_a='x^3 + y + y^2', "
+        "poly_b='y^3 + x + x^2', n=72, k=12, d=6)"
+    )
+
+
+@pytest.mark.parametrize(
+    ("l", "m", "poly_a", "poly_b", "distance"),
+    [
+        (4, 7, "1 + y + x + x*y^2", "1 + y^-1 + x + x*y^-2", 6),
+        (6, 6, "x^3 + y + y^2", "y^3 + x + x^2", 6),
+        (15, 3, "x^9 + y + y^2", "1 + x^2 + x^7", 10),
+        (9, 6, "x^3 + y + y^2", "y^3 + x + x^2", 10),
+        (12, 6, "x^3 + y + y^2", "y^3 + x + x^2", 12),
+    ],
+)
+def test_bb_code_patch_matches_matrices(
+    l: int,  # noqa: E741
+    m: int,
+    poly_a: str,
+    poly_b: str,
+    distance: int,
+) -> None:
+    patch = codepatch.BBCodePatch(1, l, m, poly_a, poly_b, distance=distance)
+    hx, hz = _bb_matrices(l, m, list(patch.poly_a), list(patch.poly_b))
+
+    assert patch.patch_id == 1
+    assert patch.d == distance
+    np.testing.assert_array_equal(np.asarray(patch.qldpc_code.matrix_x), hx)
+    np.testing.assert_array_equal(np.asarray(patch.qldpc_code.matrix_z), hz)
+    assert len(patch.default_layout()) == patch.num_physical_qubits
+
+
+def test_bb_code_patch_polynomial_forms_agree() -> None:
+    a_terms, b_terms = [(0, 0), (0, 1), (1, 0), (1, 2)], [(0, 0), (0, 6), (1, 0), (1, 5)]
+    patches = [
+        codepatch.BBCodePatch(0, 4, 7, "1 + y + x + x*y^2", "1 + y^-1 + x + x*y^-2", distance=6),
+        codepatch.BBCodePatch(0, 4, 7, 1 + y + x + x * y**2, 1 + y**-1 + x + x * y**-2, distance=6),
+        codepatch.BBCodePatch(0, 4, 7, a_terms, b_terms, distance=6),
+    ]
+
+    assert patches[0].poly_a == tuple(a_terms)
+    assert patches[0].poly_b == tuple(b_terms)
+    for patch in patches:
+        assert set(patch.poly_a) == set(a_terms)
+        assert set(patch.poly_b) == set(b_terms)
+        np.testing.assert_array_equal(
+            np.asarray(patch.qldpc_code.matrix_x), np.asarray(patches[0].qldpc_code.matrix_x)
+        )
+
+
+def test_bb_code_patch_default_star_polynomials() -> None:
+    patch = codepatch.BBCodePatch(patch_id=2, l=4, m=5)
+    reference = codes.BBCode(
+        {x: 4, y: 5},
+        1 + y**3 + x * y**2 + x * y**4,
+        1 + y**-3 + x**-1 * y**-2 + x**-1 * y**-4,
+    )
+
+    assert patch.code_params == (40, 8, 2)
+    np.testing.assert_array_equal(
+        np.asarray(patch.qldpc_code.matrix_x), np.asarray(reference.matrix_x)
+    )
+    assert len(patch.default_layout()) == patch.num_physical_qubits == 80
+    assert patch.footprint == codepatch.Rect(rows=10, cols=8)
+
+
+def test_bb_code_patch_repeated_terms_cancel() -> None:
+    # With m = 2, y^3 = y and x*y^2 = x*y^4 = x, so the x terms cancel over GF(2).
+    patch = codepatch.BBCodePatch(patch_id=0, l=5, m=2)
+
+    assert patch.polynomials() == ("1 + y", "1 + y")
+    assert patch.code_params == (20, 10, 2)
+
+
+@pytest.mark.parametrize(
+    ("args", "kwargs", "error"),
+    [
+        ((0, 6), {}, "l must be a positive integer"),
+        ((6, True), {}, "m must be a positive integer"),
+        ((6, 6, "x"), {}, "Pass both poly_a and poly_b"),
+        ((6, 6, "x + ", "y"), {}, "Empty term"),
+        ((6, 6, "x + z", "y"), {}, "Cannot parse factor 'z'"),
+        ((6, 6, x + 2 * y, y), {}, "must be monomials in x and y"),
+        ((6, 6, "x + x^7", "y"), {}, "at least one term"),
+        ((6, 6, "x^3 + y + y^2", "y^3 + x + x^2"), {"distance": 0}, "distance must be"),
+    ],
+)
+def test_bb_code_patch_rejects_bad_input(
+    args: tuple[object, ...], kwargs: dict[str, object], error: str
+) -> None:
+    with pytest.raises(ValueError, match=error):
+        codepatch.BBCodePatch(0, *args, **kwargs)  # type: ignore[arg-type]
