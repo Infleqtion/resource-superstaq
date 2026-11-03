@@ -19,6 +19,7 @@ import cirq
 import cirq_superstaq as css
 import numpy as np
 import pytest
+import qldpc
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.codepatch as codepatch
@@ -42,6 +43,17 @@ def movement_architecture() -> arch.DefaultMovement:
 def test_architecture_exceptions(
     lattice_architecture: arch.DefaultLattice, movement_architecture: arch.DefaultMovement
 ) -> None:
+
+    class FakeArch(arch.Architecture):
+        def __init__(self, code: qldpc.codes.CSSCode) -> None:
+            super().__init__(code=code)
+
+        def __name__() -> str:
+            return "FakeArch"
+
+    c6_code = qldpc.codes.C6Code()
+    with pytest.raises(ValueError, match="Unable to determine"):
+        _ = FakeArch(c6_code)
     with pytest.raises(ValueError, match="Cultivation cost"):
         bad_cult = arch._require_gate_operation(lsp.Cultivate(1).on(cirq.GridQubit(0, 0)))
         _ = lattice_architecture.cultivate_cost(bad_cult)

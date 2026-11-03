@@ -279,10 +279,16 @@ class Architecture(abc.ABC):
         self.syndrome_rounds: int | None = syndrome_rounds
         self._primitives: cirq.Gateset = cirq.Gateset()
         self._phys_gate_times: dict[GateKey, float]
-        self.d: int = distance_to_use or int(
-            code.get_distance_bound(num_trials=100)
-        )  # TODO: Re-evaluate lazy distance calculation
         self.patch: rss.ftqc.codepatch.CodePatch
+
+        if distance_to_use is not None:
+            self.d = distance_to_use
+        else:
+            set_distance = code.get_distance_if_known()
+            if set_distance is None:
+                raise ValueError("Unable to determine a code distance for `code`.")
+            self.d = int(set_distance)
+
         self.__post_init__()
 
     ### Fundamental Cost Counting Methods ###
