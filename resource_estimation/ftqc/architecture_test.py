@@ -48,12 +48,20 @@ def test_architecture_exceptions(
         def __init__(self, code: qldpc.codes.CSSCode) -> None:
             super().__init__(code=code)
 
-        def __name__() -> str:
+        @property
+        def __name__(self) -> str:
             return "FakeArch"
 
+    # Test successful instantiation
+    good_arch = FakeArch(code=qldpc.codes.SteaneCode())
+    assert good_arch.d == 3
+
+    # Test unsuccessful instantiation
     c6_code = qldpc.codes.C6Code()
     with pytest.raises(ValueError, match="Unable to determine"):
         _ = FakeArch(c6_code)
+
+    # Test other exceptions
     with pytest.raises(ValueError, match="Cultivation cost"):
         bad_cult = arch._require_gate_operation(lsp.Cultivate(1).on(cirq.GridQubit(0, 0)))
         _ = lattice_architecture.cultivate_cost(bad_cult)
