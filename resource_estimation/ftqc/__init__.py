@@ -18,6 +18,7 @@ from resource_estimation.ftqc.architecture import (
     DualSpeciesMovement,
     MeasureZonesOnly,
     Superconductor,
+    SurfaceArchitecture,
 )
 from resource_estimation.ftqc.codepatch import (
     CodePatch,
@@ -69,6 +70,7 @@ from resource_estimation.ftqc.stim_functions import (
 
 __all__ = [
     "Architecture",
+    "SurfaceArchitecture",
     "BufferCodePatch",
     "CSSCodePatch",
     "CodePatch",
