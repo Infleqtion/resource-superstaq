@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Recognizing compiler ResourceStateTag declarations for T/T-dagger states."""
+"""Recognizing grouped compiler ResourceStateTag preparation declarations."""
 
 from __future__ import annotations
 
@@ -32,16 +32,24 @@ class NonCliffordError(ValueError):
 class NotCertifiedError(ValueError):
     """Unable to certify equality due to resource-matching failure or circuit equality failure."""
 
-# T state representative
 @dataclass(frozen=True)
-class TState:
-    """Exact symbolic state (|0> + exp(+/-i*pi/4)|1>)/sqrt(2)."""
+class ResourceState:
+    """Symbolic preparation: a compiler gate and the basis of each ordered leg.
 
-    dagger: bool = False
+    Equality compares declarations, not state vectors. Resource IDs identify groups
+    within one circuit and are deliberately excluded from this descriptor.
+    """
 
-    def __post_init__(self) -> None:
-        if type(self.dagger) is not bool:
-            raise ValueError("dagger must be a boolean")
+    gate: cirq.Gate
+    bases: tuple[cirq.Pauli, ...]
+
+
+@dataclass(frozen=True)
+class ResourceGroup:
+    """One preparation and its wires, ordered by the compiler's qubit_index."""
+
+    state: ResourceState
+    qubits: tuple[cirq.Qid, ...]
 
 
 def reject_non_clifford(operation: cirq.Operation) -> None:
@@ -54,76 +62,105 @@ def reject_non_clifford(operation: cirq.Operation) -> None:
     ):
         raise NonCliffordError(f"Verifier called with non-Cliffords: {operation!r}")
 
-# Recognizes stand-in operators for T states
-def resource_state(operation: cirq.Operation) -> TState | None:
-    gate = operation.untagged.gate
+def resource_state(operation: cirq.Operation) -> ResourceStateTag | None:
+    """Recognize one leg of an unconditional compiler preparation declaration."""
     tag = next((tag for tag in operation.tags if isinstance(tag, ResourceStateTag)), None)
-    if tag is not None:
-        if (
-            gate != cirq.I
-            or len(operation.qubits) != 1
-            or tag.num_qubits != 1
-            or tag.qubit_index != 0
-            or tag.classical_controls
-            or tag.basis != cirq.Z
-            or not isinstance(tag.gate, cirq.ZPowGate)
-            or cirq.is_parameterized(tag.gate)
-        ):
-            raise ValueError(
-                "Unsupported resource-state marker; expected an unconditional Z-basis T preparation"
-            )
-        exponent = Fraction(str(tag.gate.exponent)) % 2
-        if exponent not in (Fraction(1, 4), Fraction(7, 4)):
-            raise ValueError("Unsupported resource-state marker; expected T or T dagger")
-        return TState(exponent == Fraction(7, 4))
-    return None
+    if tag is None:
+        return None
+    if (
+        operation.untagged.gate != cirq.I                       # Tags should only be on I gates (I believe - this may change)
+        or len(operation.qubits) != 1                           # Tagged operators should be single-qubit operators, for multi-qubit resource states we want multiple single-qubit-operator tags
+        or operation.classical_controls                         # Tagged operators should not be classically controlled
+        or tag.classical_controls                               # '' ''
+        or cirq.is_parameterized(tag.gate)                      # Future: treat matching adaptive corrections as opaque operation boundaries.
+                                                                # Verify the surrounding segments while retaining the classical records used
+                                                                # by each correction, and match correction targets and control conditions.
+                                                                # This could avoid correction branching, but may reject valid rewrites that
+                                                                # move operations across these boundaries.
+                                                                # For example, we could no longer check
+                                                                # --o-----   -----o--
+                                                                #   |      =      |
+                                                                # --S--Z--   --Z--S--
+        or cirq.qid_shape(tag.gate) != (2,) * tag.num_qubits    # Every leg has been claimed and is one qubit
+        or not 0 <= tag.qubit_index < tag.num_qubits            # Marker validity check
+    ):
+        raise ValueError("Unsupported resource-state marker; expected an unconditional qubit preparation")
+    return tag
 
-# Split a circuit into two parts; resource states and cliffords
+
+def _canonical_gate(gate: cirq.Gate) -> cirq.Gate:
+    # Preserve the existing exact matching of T/T-dagger exponent aliases.
+    # A global phase on a resource preparation does not change its state.
+    if isinstance(gate, cirq.ZPowGate):
+        exponent = Fraction(str(gate.exponent)) % 2
+        if exponent in (Fraction(1, 4), Fraction(7, 4)):
+            return cirq.T if exponent == Fraction(1, 4) else cirq.T**-1
+    return gate
+
+
 def extract_resources(
     circuit: cirq.AbstractCircuit,
-) -> tuple[cirq.Circuit, tuple[tuple[cirq.Qid, TState], ...]]:
+) -> tuple[cirq.Circuit, tuple[ResourceGroup, ...]]:
+    """Replace resource markers with open wires and collect complete preparations.
+
+    The compiler declares one identity per leg. Legs may occur in different
+    moments, but each must be the first use of its wire. Grouping preserves
+    entanglement information that would be lost by matching legs independently.
+    """
     seen: set[cirq.Qid] = set()
-    resources: list[tuple[cirq.Qid, TState]] = []
+    groups: dict[int, dict[int, tuple[cirq.Qid, ResourceStateTag]]] = {}
     moments = []
     for index, moment in enumerate(circuit):
         operations = []
         for operation in moment:
-            # Throw an error if handed a non clifford unitary
             try:
                 reject_non_clifford(operation)
             except NonCliffordError as error:
                 raise NonCliffordError(f"Moment {index}: {error}") from error
-
-            # Check if operator is a ResourceState by utilizing ResourceStateTag
-            state = resource_state(operation)
-            
-            # Check to make sure is not a StatePreparationChannel
-            if state is None and isinstance(operation.untagged.gate, cirq.StatePreparationChannel):
+            tag = resource_state(operation)
+            if tag is None and isinstance(operation.untagged.gate, cirq.StatePreparationChannel): # Open end to extend this to work with StatePreparationChannels - ResourceStateTags were chosen as they are part of the PPM compiler
                 raise ValueError(
                     f"Moment {index}: unsupported state preparation; use a compiler ResourceStateTag"
                 )
-
-            # Currently only support single-qubit resources, but multi-qubit resources could be extended with proper bookkeeping
-            if state is not None:
-                if operation.classical_controls or len(operation.qubits) != 1:
-                    raise ValueError(
-                        f"Moment {index}: resource preparations must be unconditional and single-qubit"
-                    )
-
-                # Make sure resource prep is on a qubit we have yet to see
+            if tag is not None:
                 qubit = operation.qubits[0]
                 if qubit in seen:
                     raise ValueError(
                         f"Moment {index}: resource preparation must be the first use of {qubit}"
                     )
-                resources.append((qubit, state))
+                legs = groups.setdefault(tag.resource_id, {})
+                if tag.qubit_index in legs:
+                    raise ValueError(f"Resource {tag.resource_id}: duplicate leg {tag.qubit_index}")
+                legs[tag.qubit_index] = (qubit, tag)
                 operations.append(cirq.I(qubit))
             else:
                 operations.append(operation)
             seen.update(operation.qubits)
         moments.append(cirq.Moment(operations))
 
-    # Sort by kind (T or T\dagger) then on the Cirq qubit order
+    resources = []
+    for resource_id, legs in groups.items():
+        first = next(iter(legs.values()))[1]
+        gate = _canonical_gate(first.gate)
+        if any(
+            tag.num_qubits != first.num_qubits or _canonical_gate(tag.gate) != gate
+            for _, tag in legs.values()
+        ):
+            raise ValueError(f"Resource {resource_id}: inconsistent preparation descriptors")
+        if set(legs) != set(range(first.num_qubits)):
+            raise ValueError(f"Resource {resource_id}: incomplete preparation")
+        ordered = [legs[j] for j in range(first.num_qubits)]
+        state = ResourceState(gate, tuple(tag.basis for _, tag in ordered))
+        resources.append(ResourceGroup(state, tuple(q for q, _ in ordered)))
+
+    # Pair whole groups deterministically; never reorder legs within a group.
+    # Equal resources are paired by physical qubit order, without permutation search.
     order = {q: j for j, q in enumerate(cirq.QubitOrder.DEFAULT.order_for(circuit.all_qubits()))}
-    resources.sort(key=lambda item: (item[1].dagger, order[item[0]]))
+    resources.sort(
+        key=lambda group: (
+            repr(group.state.gate),
+            tuple(str(basis) for basis in group.state.bases),
+            tuple(order[q] for q in group.qubits),
+        )
+    )
     return cirq.Circuit(moments), tuple(resources)

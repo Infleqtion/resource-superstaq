@@ -1,7 +1,7 @@
 # Clifford channel verification
 
 The sole public entry point is `cliffords_equal(left, right)`. It accepts two Cirq
-circuits; there are no configuration arguments or boundary overrides. The circuits are expected to be Clifford operators with PPM, single-qubit Pauli measurements. T/T† resource preparations are recognized via `ResourceStateTag`, conditional S/S† corrections are handled via branching.
+circuits; there are no configuration arguments or boundary overrides. The circuits are expected to be Clifford operators with PPM, single-qubit Pauli measurements. Grouped resource preparations (including T/T† and CCZ) are recognized via `ResourceStateTag`, conditional S/S† corrections are handled via branching.
 
 ```python
 import cirq
@@ -67,7 +67,7 @@ stabilizer overlaps. It does not require individual branch decompositions to mat
 Review `_split_record` and `channel_mixture` in `tableau_channels.py`, then
 `stabilizer_overlap` and `channel_mixtures_equal` in `stabilizers.py`.
 
-## T-state preparations
+## Resource-state preparations
 
 ```python
 import cirq
@@ -84,16 +84,37 @@ optimized = cirq.Circuit(
 assert cliffords_equal(original, optimized)
 ```
 
-Only unconditional, single-qubit, Z-basis T/T-dagger compiler markers are accepted.
+Unconditional compiler markers for resolved unitary qubit gates are accepted.
+The gate and ordered basis labels are symbolic descriptors; no resource-state
+vector is constructed. Matching declarations certify the same preparation, but
+different declarations of equivalent states may remain inconclusive.
 Use `cirq.T**-1` in the tag for T-dagger. The marker must be the wire's first use.
 The tag is a preparation declaration for this verifier; ordinary Cirq simulation
 still sees an identity operation.
 
-Resources are replaced by open inputs and paired by state kind, then default
-qubit order. Matching descriptors and equal open channels certify equality for
+Resource legs are grouped by circuit-local `resource_id` and ordered by
+`qubit_index`. Each group must contain exactly the declared number of legs with
+a consistent gate. Group IDs need not match between circuits. Whole groups are
+paired by descriptor, then qubit order, and their wires become open inputs. Matching descriptors and equal open channels certify equality for
 the supplied states. Different descriptors or unequal open channels raise
 `NotCertifiedError`: the stronger proof failed, but those particular states may
 still produce equal channels. There is no resource permutation search.
+
+For a three-qubit CCZ resource, declare all three ordered legs with one ID:
+
+```python
+resource_qubits = cirq.LineQubit.range(3)
+ccz_markers = [
+    cirq.I(q).with_tags(ResourceStateTag(cirq.CCZ, 7, i, 3))
+    for i, q in enumerate(resource_qubits)
+]
+ccz_preparation = cirq.Circuit(ccz_markers)
+assert cliffords_equal(ccz_preparation, ccz_preparation)
+```
+
+Different resource instances within a circuit must use distinct IDs. The ordered
+legs of an entangled preparation are matched together, not as independent states.
+All resource wires must still be fresh; mid-circuit resource replacement is not supported.
 
 T gates and other non-Clifford data gates raise `NonCliffordError`.
 Reset/H/T sequences are not resource declarations.
@@ -106,7 +127,7 @@ Read these files in order:
 |---|---|
 | `__init__.py` | Exports only `cliffords_equal`. |
 | `equality.py` | Entry point, logical boundaries, resource pairing, comparison. |
-| `resources.py` | Recognize exact T/T† preparations and reject non-Clifford gates. |
+| `resources.py` | Recognize grouped resource preparations and reject non-Clifford gates. |
 | `controls.py` | Resolve measurement keys and affine Boolean conditions. |
 | `tableau_channels.py` | Build a coherent Choi circuit and evolve it with Cirq. |
 | `stabilizers.py` | Trace discarded wires and canonicalize signed stabilizer generators. |

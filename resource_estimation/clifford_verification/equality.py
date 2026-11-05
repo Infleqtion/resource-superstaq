@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Equality checking procedure for supported Cirq Cliffords with T-state preparations, not a full decision procedure"""
+"""Equality checking procedure for supported Cirq Cliffords with resource preparations, not a full decision procedure"""
 
 from __future__ import annotations
 
@@ -30,12 +30,12 @@ def cliffords_equal(
 
     Offers support for logical quantum channels of Cliffords, PPMs, single qubit measurement, and single-qubit Pauli and S/S-dagger corrections with affine conditions.
     S corrections use exact weighted branching; other measurements remain symbolic.
-    Handles T/T-dagger state preparation by separating out the resource states and checking they are
+    Handles grouped resource-state preparation by separating out the resource states and checking they are
     symbolically equal after performing simulation on the remaining Clifford circuit. Failure to
     certify should not be taken as inequality of logical quantum channels for this reason.
-    Only compiler ResourceStateTag markers are accepted as T-state preparations.
+    Only unconditional compiler ResourceStateTag markers are accepted as resource preparations.
     """
-    # Pull out T-states so we can do clifford simulation on the remainder for left and right circuits
+    # Pull out resource preparations so we can do clifford simulation on the remainder for left and right circuits
     left, left_resources = extract_resources(left)
     right, right_resources = extract_resources(right)
 
@@ -50,8 +50,8 @@ def cliffords_equal(
         left_in = left_out = right_in = right_out = common
 
     # Collections of marked resource qubits
-    left_resource_qubits = tuple(q for q, _ in left_resources)
-    right_resource_qubits = tuple(q for q, _ in right_resources)
+    left_resource_qubits = tuple(q for group in left_resources for q in group.qubits)
+    right_resource_qubits = tuple(q for group in right_resources for q in group.qubits)
 
     # Logical inputs, excluding prepared ancillas and resource inputs.
     left_in = tuple(q for q in left_in if q not in left_resource_qubits)
@@ -64,13 +64,13 @@ def cliffords_equal(
     left_channel = channel_mixture(left, left_in + left_resource_qubits, left_out)
     right_channel = channel_mixture(right, right_in + right_resource_qubits, right_out)
 
-    # Check to make sure the T state preparations match
-    if tuple(state for _, state in left_resources) != tuple(state for _, state in right_resources):
-        raise NotCertifiedError("Not certified: T-state preparations do not match")
+    # Check that whole resource preparations match, including ordered leg bases
+    if tuple(group.state for group in left_resources) != tuple(group.state for group in right_resources):
+        raise NotCertifiedError("Not certified: resource-state preparations do not match")
     equal = channel_mixtures_equal(left_channel, right_channel)
     if not equal and (left_resources or right_resources):
         raise NotCertifiedError(
-            "Not certified: open-resource channels differ. Supplied T states may still make them equal"
+            "Not certified: open-resource channels differ. Supplied resource states may still make them equal"
         )
     return equal
 
