@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, cast
 import cirq
 import cirq_superstaq as css
 import tqdm
+from dataclasses import dataclass
 
 if TYPE_CHECKING:
     from typing import Iterator, Literal, Sequence
@@ -41,6 +42,30 @@ from .layout import Layout, MovementDistillery, MovementLayout
 #   If you requested T, I assume you measure 1 and have to do S
 # ABC -- Always be Cultivating
 
+@dataclass
+class Context:
+    """Initial concept data structure designed to help take responsibilities away from Layout and into the compiler"""
+    roles: dict[int, int]  # Patch id to integer role. {2: ancilla, 3: S, 4: T, 5: CCZ}
+    qid_to_pid: dict[cirq.Qid, int]  # qid to patch id
+    pid_to_qid: dict[int, cirq.Qid]  # patch id to qid
+    factories: dict[int, int]  # The current mapping of patch ids to factory types that are available
+    transversal_cnot: bool  # Can we avoid doing lattice surgery
+    distil_t: bool  # Could be toggled
+    cult_t: bool  # Probably conflicts with the above
+    dynamic: bool  # I plan to remove this...
+
+def contextualize(layout: Layout, arc: Architecture, dynamic: bool = False) -> Context:        
+    context = Context(
+        roles={},
+        qid_to_pid={},
+        pid_to_qid={},
+        factories={},
+        transversal_cnot=cirq.CX in arc.primitives,
+        distil_t=layout.distil,
+        cult_t=not layout.distil,
+        dynamic=dynamic,
+    )
+    return context
 
 # This function is only visual and is extremely finicky, so it is not tested
 def knock_off_tqdm(
@@ -77,9 +102,9 @@ def knock_off_tqdm(
     )
 
 
-def _requires_resource(op: cirq.Operation, transversal_cnot: bool) -> bool:
+def _requires_resource(op: cirq.Operation, context: Context) -> bool:
     """Checks if performing an operation requires a resource state. S is assumed to need a resource state when transversal CNOT is unavailable."""
-    if op in cirq.GateFamily(cirq.S) and not transversal_cnot:
+    if op in cirq.GateFamily(cirq.S) and not context.transversal_cnot:
         return True
     if op in cirq.GateFamily(cirq.T):
         return True
@@ -91,8 +116,9 @@ def _requires_resource(op: cirq.Operation, transversal_cnot: bool) -> bool:
 def replace_cirq_op(
     op: cirq.Operation,
     layout: Layout,
-    transversal_cnot: bool,
-    dynamic: bool = False,
+    context: Context,
+    # transversal_cnot: bool,
+    # dynamic: bool = False,
 ) -> list[cirq.Operation | cirq.Moment]:
     """Replacement logic similar to decomposition for cirq operations to be converted to primitives.
 
@@ -101,7 +127,7 @@ def replace_cirq_op(
     primitives: cirq gates that are allowed in the underlying architecture
     verbose: flag to print more information
     """
-    if op.gate == cirq.CNOT and not transversal_cnot:
+    if op.gate == cirq.CNOT and not context.transversal_cnot:
         ctrl, trgt = op.qubits
         if not (isinstance(ctrl, cirq.GridQubit) and isinstance(trgt, cirq.GridQubit)):
             raise TypeError("Qubits must be instances of `cirq.GridQubit`")
@@ -115,15 +141,15 @@ def replace_cirq_op(
             lsp.Merge(num_qubits=num_qubits - 1, smooth=False).on(*path_patches[1:]),
             lsp.Split(partitions=[1] * (len(path_patches[1:])), smooth=False).on(*path_patches[1:]),
         ]
-    if _requires_resource(op, transversal_cnot):
-        return teleport_resource(op, layout, dynamic)
+    if _requires_resource(op, context):
+        return teleport_resource(op, layout, context)
     raise ValueError(
-        f"Invalid Op for {'transversal' if transversal_cnot else 'non-transversal'} gate: {op.gate}",
+        f"Invalid Op for Layout and Context: {op.gate}",
     )
 
 
 def teleport_resource(
-    op: cirq.Operation, layout: Layout, dynamic: bool = False
+    op: cirq.Operation, layout: Layout, context: Context,
 ) -> list[cirq.Moment | cirq.Operation]:
     distil_t = layout.distil and op in cirq.GateFamily(cirq.T)
     if not all(isinstance(q, cirq.GridQubit) for q in op.qubits):
@@ -138,11 +164,11 @@ def teleport_resource(
     if distil_t:
         ftype = "t"
         prep_gate = lsp.Distil("T")
-        correction = lsp.ResourceCorrection("T") if dynamic else cirq.S
+        correction = lsp.ResourceCorrection("T") if context.dynamic else cirq.S
     elif cultivate_t:
         ftype = "t"
         prep_gate = lsp.Cultivate(pi / 4)
-        correction = lsp.ResourceCorrection("T") if dynamic else cirq.S
+        correction = lsp.ResourceCorrection("T") if context.dynamic else cirq.S
     elif cultivate_s:
         ftype = "s"
         prep_gate = lsp.Cultivate(pi / 2)
@@ -150,7 +176,7 @@ def teleport_resource(
     elif distil_ccz:
         ftype = "ccz"
         prep_gate = lsp.Distil("CCZ")
-        if dynamic:
+        if context.dynamic:
             correction = lsp.ResourceCorrection("CCZ")
         else:
             correction = [
@@ -341,16 +367,15 @@ def _decompose_to_primitives(
     circuit: cirq.Circuit,
     layout: Layout,
     arc: Architecture,
-    dynamic: bool = False,
+    context: Context,
 ) -> cirq.Circuit:
     primitives = cirq.Gateset(
         *(cirq.GateFamily(g._gate, ignore_global_phase=False) for g in arc.primitives.gates),
     )
-    transversal_cnot = cirq.CX in primitives
 
     def _map_fn(op: cirq.Operation) -> cirq.OP_TREE:
         return replace_cirq_op(
-            op=op, layout=layout, transversal_cnot=transversal_cnot, dynamic=dynamic
+            op=op, layout=layout, context=context
         )
 
     # TODO: can we turn layout into a decomposition_context?
@@ -451,8 +476,8 @@ def ft_compile(
         print("Validation Turned Off")
     else:
         validate_ops(circuit, verbose=verbose)
-
-    circuit = _decompose_to_primitives(circuit, layout=layout, arc=arc, dynamic=dynamic)
+    context = contextualize(layout, arc, dynamic=dynamic)
+    circuit = _decompose_to_primitives(circuit, layout=layout, arc=arc, context=context)
 
     # Handling State Prep
     # In a more optimized world this could happen the moment before the first logical operation

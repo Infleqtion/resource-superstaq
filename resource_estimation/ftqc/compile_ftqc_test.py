@@ -66,6 +66,30 @@ def random_circ2() -> cirq.Circuit:
         random_state=73,
     )
 
+@pytest.fixture
+def lattice_context() -> comp.Context:
+    return comp.Context(
+        roles={},
+        qid_to_pid={},
+        pid_to_qid={},
+        factories={},
+        transversal_cnot=False,
+        distil_t=False,
+        cult_t=True,
+        dynamic=False,
+    )
+@pytest.fixture
+def movement_context() -> comp.Context:
+    return comp.Context(
+        roles={},
+        qid_to_pid={},
+        pid_to_qid={},
+        factories={},
+        transversal_cnot=True,
+        distil_t=False,
+        cult_t=True,
+        dynamic=False,
+    )
 
 @pytest.mark.parametrize(
     "with_barriers",
@@ -127,13 +151,14 @@ def test_end2end_distillery() -> None:
     assert all(arc.primitives.validate(op) for op in compiled.all_operations())
 
 
-def test_direct_substitution() -> None:
+def test_direct_substitution(lattice_context: comp.Context, movement_context: comp.Context) -> None:
     dummy_qubits = [cirq.GridQubit(i, j) for i in range(3) for j in range(3)]
     nothing_circuit = cirq.Circuit(cirq.I.on_each(dummy_qubits))
-    layout = Embedded(input_circuit=nothing_circuit)
+    lattice_layout = Embedded(input_circuit=nothing_circuit)
+    movement_layout = MovementLayout(input_circuit=nothing_circuit)
 
     # Test primitives that are the same between movement and no movement
-    for arc in [arch.DefaultMovement(), arch.DefaultLattice()]:
+    for arc, layout in [(arch.DefaultMovement(), movement_layout), (arch.DefaultLattice(), lattice_layout)]:
         for op_to_replace in [
             cirq.I.on(dummy_qubits[0]),
             cirq.H.on(dummy_qubits[0]),
@@ -149,6 +174,7 @@ def test_direct_substitution() -> None:
                 circuit=cirq.Circuit(op_to_replace),
                 layout=layout,
                 arc=arc,
+                context=comp.contextualize(layout, arc)
             )
             assert replacement == cirq.Circuit(op_to_replace)
 
@@ -159,8 +185,9 @@ def test_direct_substitution() -> None:
     ]:
         replacement = comp._decompose_to_primitives(
             circuit=cirq.Circuit(op_to_replace),
-            layout=layout,
+            layout=lattice_layout,
             arc=arch.DefaultLattice(),
+            context=lattice_context,
         )
         assert replacement == cirq.Circuit(op_to_replace)
 
@@ -174,32 +201,33 @@ def test_direct_substitution() -> None:
             circuit=cirq.Circuit(op_to_replace),
             layout=layout,
             arc=arch.DefaultMovement(),
+            context=movement_context,
         )
         assert replacement == cirq.Circuit(op_to_replace)
 
     # Test unrecognized gate
-    with pytest.raises(ValueError, match="Invalid Op for non-transversal gate: Rx"):
+    with pytest.raises(ValueError, match="Invalid Op for Layout and Context: Rx"):
         _ = comp.replace_cirq_op(
             op=cirq.Rx(rads=pi / 2).on(dummy_qubits[0]),
             layout=layout,
-            transversal_cnot=False,
+            context=lattice_context,
         )
 
     # Test TypeError is raised
     with pytest.raises(TypeError, match="Qubits must be instances"):
         _ = comp.replace_cirq_op(
-            cirq.CNOT.on(*cirq.LineQubit.range(2)), layout=layout, transversal_cnot=False
+            cirq.CNOT.on(*cirq.LineQubit.range(2)), layout=layout, context=lattice_context
         )
 
 
-def test_replace_cirq_op_movement(bell_circuit: cirq.Circuit) -> None:
+def test_replace_cirq_op_movement(bell_circuit: cirq.Circuit, movement_context: comp.Context) -> None:
     movement_layout = MovementLayout(bell_circuit, num_t_factories=2, architecture="DSM")
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
     returned_ops = comp.replace_cirq_op(
         op=op_to_replace,
         layout=movement_layout,
-        transversal_cnot=True,
+        context=movement_context,
     )
     ops_flattened = list(cirq.flatten_to_ops(returned_ops))
     expected_types: list[GateKey] = [
@@ -216,11 +244,11 @@ def test_replace_cirq_op_movement(bell_circuit: cirq.Circuit) -> None:
 
 
 @pytest.mark.parametrize("op_type", (cirq.S, cirq.T, cirq.CNOT))
-def test_replace_cirq_op_lattice(op_type: cirq.Gate, bell_circuit: cirq.Circuit) -> None:
+def test_replace_cirq_op_lattice(op_type: cirq.Gate, bell_circuit: cirq.Circuit, lattice_context: comp.Context) -> None:
     layout = Column(bell_circuit)
 
     op_to_replace = op_type.on(*list(layout.mapped_circuit.all_qubits())[: op_type.num_qubits()])
-    returned_ops = comp.replace_cirq_op(op=op_to_replace, layout=layout, transversal_cnot=False)
+    returned_ops = comp.replace_cirq_op(op=op_to_replace, layout=layout, context=lattice_context)
     ops_flattened = list(cirq.flatten_to_ops(returned_ops))
     expected_types: list[GateKey]
     if op_type == cirq.S:
@@ -295,7 +323,9 @@ def test_deterministic_compilation(random_circ: cirq.Circuit) -> None:
     cirq.testing.assert_has_diagram(compiled1, str(compiled2))
 
 
-def test_nondeterministic_compilation_T(random_circ2: cirq.Circuit) -> None:
+def test_nondeterministic_compilation_T(random_circ2: cirq.Circuit, movement_context: comp.Context) -> None:
+    # Overried context
+    movement_context.dynamic = False
     circuit = random_circ2
     lay = MovementDistillery(circuit, num_t_factories=1, architecture="SSM")
     arc = arch.DefaultMovement()
@@ -643,10 +673,12 @@ def test_hm_moves() -> None:
     )
 
 
-def test_replace_cirq_op_distil_t(bell_circuit: cirq.Circuit) -> None:
+def test_replace_cirq_op_distil_t(bell_circuit: cirq.Circuit, movement_context: comp.Context) -> None:
     distillery_layout = MovementDistillery(
         bell_circuit, num_t_factories=2, num_ccz_factories=0, architecture="DSM"
     )
+    # Override context
+    movement_context.distil_t = True
 
     op_to_replace = cirq.T.on(cirq.GridQubit(0, 0))
     ops_flattened = list(
@@ -654,7 +686,7 @@ def test_replace_cirq_op_distil_t(bell_circuit: cirq.Circuit) -> None:
             comp.replace_cirq_op(
                 op=op_to_replace,
                 layout=distillery_layout,
-                transversal_cnot=True,
+                context=movement_context,
             )
         )
     )
@@ -671,7 +703,7 @@ def test_replace_cirq_op_distil_t(bell_circuit: cirq.Circuit) -> None:
         assert op in cirq.GateFamily(expected_type)
 
 
-def test_replace_cirq_op_distil_ccz(random_circ: cirq.Circuit) -> None:
+def test_replace_cirq_op_distil_ccz(random_circ: cirq.Circuit, movement_context: comp.Context) -> None:
     distillery_layout = MovementDistillery(
         random_circ, num_ccz_factories=2, num_t_factories=0, architecture="DSM"
     )
@@ -679,7 +711,7 @@ def test_replace_cirq_op_distil_ccz(random_circ: cirq.Circuit) -> None:
     op_to_replace = cirq.CCZ.on(cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
     returned_ops = list(
         cirq.flatten_to_ops(
-            comp.replace_cirq_op(op=op_to_replace, layout=distillery_layout, transversal_cnot=True)
+            comp.replace_cirq_op(op=op_to_replace, layout=distillery_layout, context=movement_context)
         )
     )
     # We flatten them here to be explicit about the order the operations should be in
@@ -716,15 +748,15 @@ def test_different_rounds_distil() -> None:
                 assert op.gate.rounds == k
 
 
-def test_teleport_resource_exceptions() -> None:
+def test_teleport_resource_exceptions(movement_context: comp.Context) -> None:
     invalid_resource = cirq.CCZ.on(*(cirq.GridQubit(0, i) for i in range(3)))
     layout = MovementLayout(cirq.Circuit(), architecture="DSM")
     with pytest.raises(ValueError, match="Invalid resource"):
-        _ = comp.teleport_resource(invalid_resource, layout)
+        _ = comp.teleport_resource(invalid_resource, layout, movement_context)
 
     invalid_qubit = cirq.LineQubit(0)
     with pytest.raises(TypeError, match="Qubits must be instances"):
-        _ = comp.teleport_resource(cirq.T.on(invalid_qubit), layout)
+        _ = comp.teleport_resource(cirq.T.on(invalid_qubit), layout, movement_context)
 
 
 def test_add_moves() -> None:
