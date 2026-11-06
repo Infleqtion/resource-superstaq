@@ -136,7 +136,7 @@ def cultivate(
     """
     Generates the physical qubit resources required for folded (Yale) or unfolded (Gidney)
     If the final patch size is less than 25 it reads from saved resources instead of calling the functions directly
-    The `for_test` argument is to turn off the loading behvior for the purpose of testing
+    The `for_test` argument is to turn off the loading behavior for the purpose of testing
     """
     if dsurface < 7 and fault_distance == 3:
         warnings.warn(
@@ -174,7 +174,7 @@ def cultivate(
             dsurface=dsurface,
             basis="Y",
             r_growing=1,
-            r_end=dsurface,  # This parameter controls the number of times we a block of Reset -> 8 CX Moments -> Measure (Repeat)
+            r_end=dsurface,  # This parameter controls the number of times we add a block of Reset -> 8 CX Moments -> Measure (Repeat)
             inject_style="unitary",
         )
         resources = count_stim_resources(stim_circuit=stim_circuit)
