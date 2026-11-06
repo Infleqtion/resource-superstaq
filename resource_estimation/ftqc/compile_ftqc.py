@@ -18,6 +18,7 @@ import itertools
 import os
 import sys
 import time
+from dataclasses import dataclass
 from itertools import combinations
 from math import pi
 from typing import TYPE_CHECKING, cast
@@ -25,7 +26,6 @@ from typing import TYPE_CHECKING, cast
 import cirq
 import cirq_superstaq as css
 import tqdm
-from dataclasses import dataclass
 
 if TYPE_CHECKING:
     from typing import Iterator, Literal, Sequence
@@ -42,19 +42,24 @@ from .layout import Layout, MovementDistillery, MovementLayout
 #   If you requested T, I assume you measure 1 and have to do S
 # ABC -- Always be Cultivating
 
+
 @dataclass
 class Context:
     """Initial concept data structure designed to help take responsibilities away from Layout and into the compiler"""
+
     roles: dict[int, int]  # Patch id to integer role. {2: ancilla, 3: S, 4: T, 5: CCZ}
     qid_to_pid: dict[cirq.Qid, int]  # qid to patch id
     pid_to_qid: dict[int, cirq.Qid]  # patch id to qid
-    factories: dict[int, int]  # The current mapping of patch ids to factory types that are available
+    factories: dict[
+        int, int
+    ]  # The current mapping of patch ids to factory types that are available
     transversal_cnot: bool  # Can we avoid doing lattice surgery
     distil_t: bool  # Could be toggled
     cult_t: bool  # Probably conflicts with the above
     dynamic: bool  # I plan to remove this...
 
-def contextualize(layout: Layout, arc: Architecture, dynamic: bool = False) -> Context:        
+
+def contextualize(layout: Layout, arc: Architecture, dynamic: bool = False) -> Context:
     context = Context(
         roles={},
         qid_to_pid={},
@@ -66,6 +71,7 @@ def contextualize(layout: Layout, arc: Architecture, dynamic: bool = False) -> C
         dynamic=dynamic,
     )
     return context
+
 
 # This function is only visual and is extremely finicky, so it is not tested
 def knock_off_tqdm(
@@ -149,7 +155,9 @@ def replace_cirq_op(
 
 
 def teleport_resource(
-    op: cirq.Operation, layout: Layout, context: Context,
+    op: cirq.Operation,
+    layout: Layout,
+    context: Context,
 ) -> list[cirq.Moment | cirq.Operation]:
     distil_t = layout.distil and op in cirq.GateFamily(cirq.T)
     if not all(isinstance(q, cirq.GridQubit) for q in op.qubits):
@@ -374,9 +382,7 @@ def _decompose_to_primitives(
     )
 
     def _map_fn(op: cirq.Operation) -> cirq.OP_TREE:
-        return replace_cirq_op(
-            op=op, layout=layout, context=context
-        )
+        return replace_cirq_op(op=op, layout=layout, context=context)
 
     # TODO: can we turn layout into a decomposition_context?
     ops = cirq.decompose(
