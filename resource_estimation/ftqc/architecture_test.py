@@ -62,6 +62,9 @@ def test_architecture_exceptions(
     with pytest.raises(ValueError, match="Unable to determine"):
         _ = FakeArch(c6_code)
 
+    with pytest.raises(NotImplementedError):
+        _ = good_arch.rounds
+
     # Test other exceptions
     with pytest.raises(ValueError, match="Cultivation cost"):
         bad_cult = arch._require_gate_operation(lsp.Cultivate(1).on(cirq.GridQubit(0, 0)))

@@ -272,11 +272,9 @@ class Architecture(abc.ABC):
     def __init__(
         self,
         code: qldpc.codes.CSSCode,
-        syndrome_rounds: int | None = 1,
         distance_to_use: int | None = None,
     ) -> None:
         self._code = code
-        self.syndrome_rounds: int | None = syndrome_rounds
         self._primitives: cirq.Gateset = cirq.Gateset()
         self._phys_gate_times: dict[GateKey, float]
         self.patch: rss.ftqc.codepatch.CodePatch
@@ -329,6 +327,10 @@ class Architecture(abc.ABC):
     def _cultivate_t_cost(self) -> CostDict:  # pragma: no cover
         raise NotImplementedError
 
+    @property
+    def rounds(self) -> int:
+        raise NotImplementedError
+
     def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
         raise NotImplementedError(
             "Distillation is currently reserved to distillation movement architectures only"
@@ -353,12 +355,6 @@ class Architecture(abc.ABC):
     @cached_property
     def _measure_cost(self) -> CostDict:  # pragma: no cover
         raise NotImplementedError
-
-    @property
-    def rounds(self) -> int:
-        if self.syndrome_rounds is None:
-            return self.d
-        return self.syndrome_rounds
 
     @property
     def phys_gate_times(self) -> dict[GateKey, float]:
@@ -453,15 +449,21 @@ class SurfaceArchitecture(Architecture):
         self.cultivation_repetition: int = cultivation_repetition
         self.cultivation_fault_distance: Literal[3, 5] = cultivation_fault_distance
         self.fold_cultiv: bool = fold_cultiv
+        self.syndrome_rounds: int | None = syndrome_rounds
         self.patch: codepatch.RotatedSurfaceCodePatch = codepatch.RotatedSurfaceCodePatch(
             patch_id=0, d=d
         )
         super().__init__(
             self.patch.qldpc_code,
-            syndrome_rounds=syndrome_rounds,
             distance_to_use=d,
         )
         self.__post_init__()
+
+    @property
+    def rounds(self) -> int:
+        if self.syndrome_rounds is None:
+            return self.d
+        return self.syndrome_rounds
 
     def syndrome_extract_cost(self, op: cirq.Operation, **kwargs: object) -> CostDict:
         cost_dict = _syndrome_extract_cost(
