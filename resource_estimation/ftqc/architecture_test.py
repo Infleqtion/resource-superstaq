@@ -56,6 +56,7 @@ def test_architecture_exceptions(
     good_arch = FakeArch(code=qldpc.codes.SteaneCode())
     assert good_arch.d == 3
     assert good_arch.__name__ == "FakeArch"
+    assert str(good_arch) == "FakeArch(d=3)"
 
     # Test unsuccessful instantiation
     c6_code = qldpc.codes.C6Code()

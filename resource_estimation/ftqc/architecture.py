@@ -419,7 +419,7 @@ class Architecture(abc.ABC):
             cirq.ResetChannel: self.reset_channel_cost,
         }
 
-    def __str__(self) -> str:  # pragma: no cover (remove pragma post future subclasses)
+    def __str__(self) -> str:
         name = self.__name__
         distance = self.d
         return f"{name}(d={distance})"
