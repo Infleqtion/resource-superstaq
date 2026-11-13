@@ -65,6 +65,14 @@ def test_architecture_exceptions(
 
     with pytest.raises(NotImplementedError):
         _ = good_arch.rounds
+    with pytest.raises(NotImplementedError):
+        _ = good_arch._cultivate_t_cost
+    with pytest.raises(NotImplementedError):
+        _ = good_arch._h_cost
+    with pytest.raises(NotImplementedError):
+        _ = good_arch._measure_cost
+    with pytest.raises(NotImplementedError):
+        _ = good_arch.syndrome_extract_cost(cirq.I(cirq.GridQubit(0, 0)))
 
     # Test other exceptions
     with pytest.raises(ValueError, match="Cultivation cost"):

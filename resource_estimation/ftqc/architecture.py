@@ -324,7 +324,7 @@ class Architecture(abc.ABC):
 
     # Since there are many ways to generate T states, each Architecture subclass must specify their particular method
     @cached_property
-    def _cultivate_t_cost(self) -> CostDict:  # pragma: no cover
+    def _cultivate_t_cost(self) -> CostDict:
         raise NotImplementedError
 
     @property
@@ -337,7 +337,7 @@ class Architecture(abc.ABC):
         )
 
     @cached_property
-    def _h_cost(self) -> CostDict:  # pragma: no cover
+    def _h_cost(self) -> CostDict:
         raise NotImplementedError
 
     @cached_property
@@ -353,7 +353,7 @@ class Architecture(abc.ABC):
         return CostDict(op_time=0, moment_cost={}, gate_cost={})
 
     @cached_property
-    def _measure_cost(self) -> CostDict:  # pragma: no cover
+    def _measure_cost(self) -> CostDict:
         raise NotImplementedError
 
     @property
@@ -376,9 +376,7 @@ class Architecture(abc.ABC):
     ### Top Level Cost Methods ###
     # Functions used to interpret the costs of Primitives in the form of cirq operations
     # The ones here are common among all architectures currently
-    def syndrome_extract_cost(
-        self, op: cirq.Operation, **kwargs: object
-    ) -> CostDict:  # pragma: no cover
+    def syndrome_extract_cost(self, op: cirq.Operation, **kwargs: object) -> CostDict:
         raise NotImplementedError
 
     def error_correct_cost(self, op: cirq.GateOperation, **kwargs: object) -> CostDict:
