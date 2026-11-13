@@ -54,11 +54,11 @@ from resource_estimation.ftqc.lattice_surgery_primitives import (
     custom_resolver,
 )
 from resource_estimation.ftqc.layout import (
-    Column,
-    Embedded,
-    FactorySandwich,
+    # Column,
+    # Embedded,
+    # FactorySandwich,
     Layout,
-    MovementLayout,
+    # MovementLayout,
 )
 from resource_estimation.ftqc.stim_functions import (
     STR2GATE,

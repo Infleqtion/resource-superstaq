@@ -27,8 +27,10 @@ import numpy as np
 
 import resource_estimation.ftqc.codepatch as codepatch
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
+import resource_estimation.ftqc.layout as lyt
+import resource_estimation.ftqc.mappers as mps
 from resource_estimation.ftqc.distil import precompute_distil_cost
-from resource_estimation.ftqc.layout import MovementDistillery, MovementLayout
+# from resource_estimation.ftqc.layout import MovementDistillery, MovementLayout
 from resource_estimation.ftqc.stim_functions import cultivate
 from resource_estimation.typing import CostDict, GateCounts, GateKey, _require_gate_operation
 
@@ -307,7 +309,8 @@ class Architecture(abc.ABC):
         gate_op = _require_gate_operation(op=op)
         try:
             return self.op_cost[type(gate_op.gate)](gate_op, **kwargs).op_time
-        except KeyError:
+        except KeyError as e:
+            print(e)
             raise ValueError("Gate not recognized")
 
     def moment_cost(self, op: cirq.Operation, **kwargs: object) -> GateCounts:
@@ -529,6 +532,7 @@ class DefaultLattice(Architecture):
             cirq.Z,
             cirq.MeasurementGate,
             cirq.ResetChannel,
+            lsp.ResourceCorrection,
         )
         self._phys_gate_times = NEUTRAL_GATES.copy()
         del self._phys_gate_times[css.MovementGate]  # Remove MovementGate
@@ -818,7 +822,11 @@ class DefaultMovement(Architecture):
         return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
 
     def move_cost(
-        self, op: cirq.GateOperation, layout: MovementLayout, **kwargs: object
+        self, 
+        op: cirq.GateOperation, 
+        layout: lyt.Layout,
+        context: mps.Context,
+        **kwargs: object
     ) -> CostDict:
         """
         Costs for pre-compiled movement patterns for types of logical moves
@@ -829,27 +837,65 @@ class DefaultMovement(Architecture):
         The SITE_SPACING parameter gives the distance in microns between qubits that are nearest neighbor in the atom array
         Moves with vertical and horizontal components get penalized independently for each direction
         """
+        # print("Starting Move Cost")
+        # In a later version I would like to have dynamic costs where we ask the layout where things are *right now*
         ctrl, trgt = op.qubits
-        if not (isinstance(ctrl, cirq.GridQubit) and isinstance(trgt, cirq.GridQubit)):
-            raise TypeError("Operation qubits must be instances of cirq.GridQubit")
-        move_type = layout.layout_graph.nodes[trgt]["patch_type"]
+        # if not (isinstance(ctrl, cirq.GridQubit) and isinstance(trgt, cirq.GridQubit)):
+        #     raise TypeError("Operation qubits must be instances of cirq.GridQubit")
+        # ctrl_pid = context.qid_to_pid[ctrl]
+        # trgt_pid = context.qid_to_pid[trgt]
+        # trgt_role = context.roles[trgt_pid]
+        # if trgt_role == 6:
+        #     move_type = "Interaction"
+        # elif trgt_role == 7:
+        #     move_type= "Measurement"
+        # else:
+        #     raise ValueError("Invalid move type")
+
+        # print("Defining position")
+        def position(qid: cirq.Qid) -> tuple[int, int]:
+            # print("In position function")
+            # print(qid)
+            if qid not in context.qid_to_pid:
+                print(context.qid_to_pid)
+                raise ValueError("QID not in Context")
+            pid = context.qid_to_pid[qid]
+            role = context.roles[pid]
+            # print(pid, role)
+            # Get slot in Measurement/Interaction Zone
+            if role in (6, 7):
+                region = layout.regions[0 if role == 6 else 1]
+                zone_pids = sorted(p for p, r in context.roles.items() if r == role)
+                zone_slot = zone_pids.index(pid)
+                return region.row, region.col + zone_slot
+            # Get placement coordinates
+            placement = next(p for p in layout.placements.values() if isinstance(p.element, codepatch.CodePatch) and p.element.patch_id==pid)
+            return placement.row, placement.col
+        # move_type = layout.layout_graph.nodes[trgt]["patch_type"]
         site_spacing = layout.site_spacing
-        dx = abs(trgt.col - ctrl.col)  # number of logical patches horizontally
-        dy = abs(trgt.row - ctrl.row)  # number of logical patches vertically
+        patch_length = 2*self.d - 1
+        ctrl_row, ctrl_col = position(ctrl)
+        trgt_row, trgt_col = position(trgt)
+        dx = abs(trgt_col - ctrl_col) / patch_length  # number of logical patches horizontally
+        dy = abs(trgt_row - ctrl_row) / patch_length  # number of logical patches vertically
         patch_length = 2 * self.d
-        if move_type == "mzone":
+        # print("This should be an error now")
+        ctrl_role = context.roles[context.qid_to_pid[ctrl]]
+        if ctrl_role == 7:
             return _measurement_zone_move_precompiled(
                 dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
             )
-        elif move_type == "izone":
+        elif ctrl_role == 6:
             return _interaction_zone_move_precompiled(
                 dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
             )
         else:
-            bottom_right = max(layout.layout_graph.nodes)
+            # bottom_right = max(layout.layout_graph.nodes)
             # +1 accounts for one extra unit to get to the corner from the bottom right
-            scratch_dx = abs(bottom_right.col - trgt.row) + 1
-            scratch_dy = abs(bottom_right.row - trgt.row) + 1
+            # scratch_dx = abs(bottom_right.col - trgt.row) + 1
+            # scratch_dy = abs(bottom_right.row - trgt.row) + 1
+            scratch_dx = (layout.cols - ctrl_col) / patch_length
+            scratch_dy = (layout.rows - ctrl_row) / patch_length
             return _inplace_entanglement_move_precompiled(
                 dx=dx,
                 dy=dy,
@@ -902,17 +948,25 @@ class DefaultMovement(Architecture):
         return CostDict(op_time=new_time, gate_cost=new_gate_cost, moment_cost=new_moment_cost)
 
     def distil_cost(
-        self, op: cirq.GateOperation, layout: MovementDistillery, **kwargs: object
+        self, op: cirq.GateOperation, 
+        layout: lyt.Layout, 
+        context: mps.Context,
+        **kwargs: object
     ) -> CostDict:
         if not isinstance(op.gate, lsp.Distil):
             raise TypeError("Operation is not an instance of Distil")
-        if not isinstance(layout, MovementDistillery):
-            raise TypeError("layout must be a MovementDistillery for distil_cost().")
-        return self._distil_cost(op.gate._resource, layout=layout)
+        # if not isinstance(layout, MovementDistillery):
+        #     raise TypeError("layout must be a MovementDistillery for distil_cost().")
+        return self._distil_cost(op.gate._resource, layout=layout, context=context)
 
-    def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
+    def _distil_cost(
+            self, 
+            resource: Literal["T", "CCZ"], 
+            layout: lyt.Layout,
+            context: mps.Context,
+        ) -> CostDict:
         # Calculates cost for single repetition based on precompiled circuit
-        base_cost = precompute_distil_cost(resource=resource, layout=layout, arc=self)
+        base_cost = precompute_distil_cost(resource=resource, layout=layout, arc=self, context=context)
         op_time = base_cost.op_time * self.distillation_repetition
         moment_cost = collections.Counter(
             {key: val * self.distillation_repetition for key, val in base_cost.moment_cost.items()}

@@ -21,8 +21,12 @@ import cirq
 from resource_estimation.ftqc.compile_ftqc import add_moves
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
-from resource_estimation.ftqc.layout import MovementDistillery
+# from resource_estimation.ftqc.layout import MovementDistillery
 from resource_estimation.typing import CostDict
+import resource_estimation.ftqc.layout as lyt
+import resource_estimation.ftqc.mappers as mps
+import resource_estimation.ftqc.compile_ftqc as comp  # Might be circular?
+from dataclasses import replace
 
 if TYPE_CHECKING:
     from resource_estimation.ftqc.architecture import Architecture
@@ -190,7 +194,10 @@ def ccz_8_to_1() -> cirq.Circuit:
 
 
 def precompute_distil_cost(
-    resource: Literal["T", "CCZ"], layout: MovementDistillery, arc: Architecture
+    resource: Literal["T", "CCZ"], 
+    layout: lyt.Layout, 
+    arc: Architecture,
+    context: mps.Context,
 ) -> CostDict:
     """Precompute the cost of a T/CCZ distillation circuit on a specific layout.
 
@@ -242,5 +249,64 @@ def precompute_distil_cost(
     op_time = estimator.parallel_circuit_time(remapped_circuit_with_moves, layout=layout)
     moment_cost = estimator.parallel_circuit_cost(remapped_circuit_with_moves, layout=layout)
     gate_cost = estimator.serial_circuit_cost(remapped_circuit_with_moves, layout=layout)
+
+    return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
+
+
+def precompute_distil_cost(
+    resource: Literal["T", "CCZ"], 
+    layout: lyt.Layout, 
+    arc: Architecture,
+    context: mps.Context,
+) -> CostDict:
+    independent_circuit_factory: tuple[cirq.GridQubit, ...]
+    if resource == "T":
+        independent_circuit = distil_15_to_1()
+        independent_circuit_factory = (cirq.GridQubit(7, 2),)
+        resource_id = 4
+        # layout_factory = layout.all_factories("t")[0]
+        # layout_factory = comp._find_factories_simple(context=context, resource_id=4, num_qubits=1).pop()
+    elif resource == "CCZ":
+        independent_circuit = ccz_8_to_1()
+        independent_circuit_factory = (
+            cirq.GridQubit(5, 0),
+            cirq.GridQubit(5, 1),
+            cirq.GridQubit(5, 2),
+        )
+        resource_id = 5
+        # layout_factory = layout.all_factories("ccz")[0]
+        # layout_factory = comp._find_factories_simple(context=context, resource_id=5, num_qubits=3).pop()
+    else:
+        raise ValueError(f"Unknown distillation resource: {resource!r}")
+
+    circuit_block = (
+        tuple(
+            sorted(
+                q for q in independent_circuit.all_qubits() if q not in independent_circuit_factory
+            )
+        )
+        + independent_circuit_factory
+    )
+    
+    num_outputs = len(independent_circuit_factory)
+    block_size = cirq.num_qubits(independent_circuit) - num_outputs
+    factories = comp._find_factories_simple(context, resource_id, num_outputs)
+    temp_context = replace(context, factories={f: resource_id for f in factories})
+    blocks = comp._find_blocks_simple(temp_context, resource_id, block_size)
+    factory_pids = min(factories)
+    block_pids = min(blocks)
+
+    layout_block = tuple(context.pid_to_qid[pid] for pid in (*block_pids, *factory_pids))
+    qmap = dict(zip(circuit_block, layout_block, strict=True))
+
+    # Map the qubits in the standalone circuit to the qubits in the actual layout
+    remapped_circuit = independent_circuit.transform_qubits(qmap)
+    remapped_circuit_with_moves = add_moves(remapped_circuit, context=context, layout=layout)
+
+    # Collect resources of the embedded circuit
+    estimator = ResourceEstimator(arc)
+    op_time = estimator.parallel_circuit_time(remapped_circuit_with_moves, layout=layout, context=context)
+    moment_cost = estimator.parallel_circuit_cost(remapped_circuit_with_moves, layout=layout, context=context)
+    gate_cost = estimator.serial_circuit_cost(remapped_circuit_with_moves, layout=layout, context=context)
 
     return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)

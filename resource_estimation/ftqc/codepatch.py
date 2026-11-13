@@ -22,6 +22,7 @@ from qldpc.objects import Pauli
 from sympy.abc import x, y
 import numpy as np
 from dataclasses import dataclass, field
+from . import layout as lyt
 
 
 def _validate_id(value: int, name: str) -> int:
@@ -173,12 +174,12 @@ class CodePatch(abc.ABC):
         return self.num_data_qubits + self.num_measure_qubits
 
     @property
-    def footprint(self) -> Rect:
+    def footprint(self) -> lyt.Rect:
         qubits = self.default_layout()
         rows = [q.local_coord[0] for q in qubits]
         cols = [q.local_coord[1] for q in qubits]
 
-        return Rect(
+        return lyt.Rect(
             rows=max(rows) - min(rows) + 1,
             cols=max(cols) - min(cols) + 1,
         )   
@@ -342,109 +343,30 @@ class BBCodePatch(CSSCodePatch):
             meas_qubit = PhysicalQubit(patch_id=self.patch_id, local_coord=meas_local_coord, role=("measure", basis))
             qubits.extend([data_qubit, meas_qubit])
         return qubits
-
-
-@dataclass(frozen=True)
-class Rect:
-    rows: int
-    cols: int
-    def __post_init__(self):
-        if self.rows <= 0 or self.cols <= 0:
-            raise ValueError("Rect dimensions must be positive")
-
-class Placeable(typing.Protocol):
-    @property
-    def footprint(self) -> Rect:
-        ...
-
-@dataclass(frozen=True)
-class Placement:
-    element: Placeable
-    row: int
-    col: int
-
-    @property
-    def row_end(self) -> int:
-        return self.row + self.element.footprint.rows
-
-    @property
-    def col_end(self) -> int:
-        return self.col + self.element.footprint.cols
-
-    def overlaps(self, placement: Placement):
-        return not (
-            placement.row_end <= self.row
-            or self.row_end <= placement.row
-            or placement.col_end <= self.col
-            or self.col_end <= placement.col
-        )
-
-@dataclass
-class Zone:
-    rows: int
-    cols: int
-    role: str
-
-    @property
-    def footprint(self) -> Rect:
-        return Rect(self.rows, self.cols)
-
-@dataclass
-class Layout2:
-    rows: int
-    cols: int
-    spacing: float = 1.0
-    placements: dict[int, Placement] = field(default_factory=dict)
-    regions: dict[int, Zone] = field(default_factory=dict)
-
-    def add(self, element: Placeable, row, col) -> int:
-        """Adds a new proposed placement if possible, returning its unique identifier"""
-        candidate_placement = Placement(element=element, row=row, col=col)
-        if not self.in_bounds(placement=candidate_placement):
-            raise ValueError("This placement is out of bounds")
-        if self.occupied(placement=candidate_placement):
-            raise ValueError("This space is already occupied")
-        next_id = max(self.placements, default=0) + 1
-        self.placements[next_id] = candidate_placement
-        return next_id
-
-    def remove(self, placement_id: int):
-        """Removes the Placement at placement_id"""
-        del self.placements[placement_id]
-
-    def move(self, placement_id: int, row: int, col: int) -> None:
-        """Moves the anchor of a Placement with placement_id to the given row, col coordinate"""
-        prior_placement = self.placements[placement_id]
-        candidate_placement = Placement(element=prior_placement.element, row=row, col=col)
-        if not self.in_bounds(candidate_placement):
-            raise ValueError("This placement is out of bounds")
-        if self.occupied(placement=candidate_placement, exclude=placement_id):
-            raise ValueError("This space is already occupied")
-        self.placements[placement_id] = candidate_placement
-
-    def global_coord(self, placement_id: int, local_coord: tuple[int, int]) -> tuple[int, int]:
-        """Returns global coordinate for a local object within the Placement with the given placement_id"""
-        placement = self.placements[placement_id]
-        r, c = local_coord
-        return placement.row + r, placement.col + c
         
-    def occupied(self, placement: Placement, exclude: int | None = None) -> bool:
-        """Returns True if the proposed Placement overlaps with any existing placement, subject to excluding one placement"""
-        return any(placement.overlaps(prior_placement) for pid, prior_placement in self.placements.items() if pid != exclude)
+# Goal: Remake the default MovementLayout in this framework
+from math import ceil, sqrt
+def make_default_movement_layout(surface_distance: int, num_qubits: int) -> Layout2:
+    bbox_length = 2*surface_distance - 1
+    patch_grid_length = ceil(sqrt(num_qubits))
+    layout_length = bbox_length * patch_grid_length
 
-    def in_bounds(self, placement: Placement):
-        """Returns True if the proposed placement is within the bounds of the Layout"""
-        return (
-            placement.row >= 0
-            and placement.col >= 0
-            and placement.row_end <= self.rows
-            and placement.col_end <= self.cols
-        )
+    layout = Layout2(rows=layout_length, cols=layout_length)
+    for patch_id in range(num_qubits):
+        patch_row = patch_id // patch_grid_length
+        patch_col = patch_id % patch_grid_length
+        anchor_row = bbox_length*patch_row
+        anchor_col = bbox_length*patch_col
+        patch = RotatedSurfaceCodePatch(patch_id=patch_id, d=surface_distance)
+        layout.add(patch, anchor_row, anchor_col)
+    return layout
 
-    def get_patch(self, patch_id: int):
-        for placement in self.placements.values():
-            element = placement.element
-            if isinstance(element, CodePatch) and element.patch_id == patch_id:
-                return element
-        raise ValueError(f"Found no CodePatch with patch_id={patch_id} in Layout")
-        
+
+
+
+
+# layout = make_default_movement(3, 3, 2)
+# fig, ax = plot_layout_footprints(layout)
+# plt.show()
+
+
