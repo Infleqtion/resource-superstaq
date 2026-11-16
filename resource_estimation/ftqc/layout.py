@@ -37,7 +37,7 @@ class Rect:
 
 class Placeable(typing.Protocol):
     @property
-    def footprint(self) -> Rect:
+    def footprint(self) -> Rect:  # pragma: no cover
         ...
 
 @dataclass(frozen=True)
@@ -64,7 +64,8 @@ class Placement:
         )
     def borders(self, other: Placement) -> bool:
         # For now only handle cases where the objects have the same shape
-        assert other.element.footprint == self.element.footprint
+        if other.element.footprint != self.element.footprint:
+            raise ValueError("Both placements must have the same footprint")
         return (
             (self.row_end == other.row or self.row == other.row_end)
             and self.col < other.col_end
@@ -85,22 +86,24 @@ class Zone:
     def footprint(self) -> Rect:
         return Rect(self.rows, self.cols)
 
-def contains(self, placement: Placement) -> bool:
-    return (
-        0 <= placement.row
-        and placement.row_end <= self.rows
-        and 0 <= placement.col
-        and placement.col_end <= self.cols
-    )
+    # Hopefully useful later
+    # def contains(self, placement: Placement) -> bool:
+    #     return (
+    #         0 <= placement.row
+    #         and placement.row_end <= self.rows
+    #         and 0 <= placement.col
+    #         and placement.col_end <= self.cols
+    #     )
 
 @dataclass
 class Layout:
     rows: int
     cols: int
-    spacing: float = 1.0
     placements: dict[int, Placement] = field(default_factory=dict)
     regions: dict[int, Placement] = field(default_factory=dict)
-    site_spacing: int = 4
+    site_spacing: int = 4  # um between grid locations
+
+    # Might want a method that checks no overlapping placements or something similar
 
     def add(self, element: Placeable, row, col) -> int:
         """Adds a new proposed placement if possible, returning its unique identifier"""
@@ -115,6 +118,8 @@ class Layout:
 
     def remove(self, placement_id: int):
         """Removes the Placement at placement_id"""
+        if placement_id not in self.placements:
+            raise ValueError(f"No entry found for placement id {placement_id}")
         del self.placements[placement_id]
 
     def move(self, placement_id: int, row: int, col: int) -> None:
@@ -146,7 +151,7 @@ class Layout:
             and placement.col_end <= self.cols
         )
 
-    def get_patch(self, patch_id: int):
+    def get_patch(self, patch_id: int) -> cpa.CodePatch:
         for placement in self.placements.values():
             element = placement.element
             if isinstance(element, cpa.CodePatch) and element.patch_id == patch_id:
