@@ -39,14 +39,10 @@ from . import layout as lyt
 from . import codepatch as cpa
 import resource_estimation.ftqc.mappers as mps
 import resource_estimation.ftqc.architecture as arch
-# from .layout import Layout, MovementDistillery, MovementLayout
 
-# IMPORTANT NOTES
-# Classical control is in the process of being implemented
-#   If you requested S, I assume you measure 1 and have to do Z
-#   If you requested T, I assume you measure 1 and have to do S
-# ABC -- Always be Cultivating
-
+## Some questions I still have:
+##  Which functions should be private and which should not?
+##  Can I simplify context to not need things like idling, post-op correction etc?
 
 # This function is only visual and is extremely finicky, so it is not tested
 def knock_off_tqdm(
@@ -101,10 +97,9 @@ def route_lattice_cnot(
     ancilla_role = 2
     # Just do a dumb routing algorithm for now
     last = context.qid_to_pid[ctrl]
-    first  = context.qid_to_pid[trgt]
+    first = context.qid_to_pid[trgt]
     paths = [[first]]
-    counter = 0
-    while not any(last in path for path in paths) and counter < 5:
+    while not any(last in path for path in paths):
         new_paths = []
         for path in paths:
             last_placement = pid_to_placement[path[-1]]
@@ -114,8 +109,9 @@ def route_lattice_cnot(
                 is_not_in_path = pid not in path
                 if is_adjacent and is_valid_step and is_not_in_path:
                     new_paths.append(path + [pid])
+        if not new_paths:
+            raise ValueError(f"Could not find valid path from {ctrl} to {trgt}")
         paths = new_paths
-        counter += 1
     best_path = min(
         [path for path in paths if last in path], 
         key=len
@@ -180,6 +176,7 @@ def _determine_resource(op: cirq.Operation, context: mps.Context) -> tuple[cirq.
         prep_gate = lsp.Distil("CCZ")
         if context.dynamic:
             correction = lsp.ResourceCorrection("CCZ")
+            resource_id = 5
         else:
             correction = [
                 *cirq.H.on_each(*op.qubits),
@@ -211,7 +208,10 @@ def _nearest_factory(qids: tuple[cirq.Qid, ...], resource_id: int, layout: lyt.L
         if isinstance(placement.element, cpa.RotatedSurfaceCodePatch):
             patch_placements[placement.element.patch_id] = placement
     resource_states = set(factory for factory, rid in context.factories.items() if rid == resource_id)
-    # print(resource_states)
+    if not resource_states:
+        raise ValueError(
+            f"No available factories for resource ID {resource_id}"
+        )
     def dist(resource_state: tuple[int, ...]) -> int:
         total = 0
         for resource_pid in resource_state:
@@ -245,6 +245,11 @@ def _find_factories_simple(context: mps.Context, resource_id: int, num_qubits: i
     return found_factories
 
 def _find_blocks_simple(context: mps.Context, resource_id: int, block_size: int) -> set[tuple[int, ...]]:
+    assigned_blocks = {
+        pid
+        for block in context.blocks.values()
+        for pid in block
+    }
     assigned_factories = {pid for factory, rid in context.factories.items() for pid in factory if rid == resource_id}
     if resource_id == 3:
         max_blocks = context.num_s_factories
@@ -257,9 +262,9 @@ def _find_blocks_simple(context: mps.Context, resource_id: int, block_size: int)
     found_blocks = set()
     current_block = []
     for pid, role in context.roles.items():
-        if len(found_blocks) == max_blocks:
+        if pid in assigned_factories or pid in assigned_blocks:
             continue
-        if pid in assigned_factories:
+        if len(found_blocks) == max_blocks:
             continue
         if role == resource_id:
             current_block.append(pid)
@@ -277,18 +282,29 @@ def teleport_resource(
 
     # Get available Factories and Blocks
     available_factories = set(pid for pid, rid in context.factories.items() if rid == resource_id)
-    available_blocks = set(pid for pid, rid in context.blocks.items() if rid == resource_id)
     # Reload Factories if needed
     if not available_factories:
         all_factories = _find_factories_simple(context=context, resource_id=resource_id, num_qubits=cirq.num_qubits(op))
         for factory_qubits in all_factories:
             context.factories.update({factory_qubits: resource_id})
-    # Reload Blocks if needed
-    if block_size and not available_blocks:
-        all_blocks = _find_blocks_simple(context=context, resource_id=resource_id, block_size=block_size)
-        for factory in context.factories:
-            context.blocks.update({factory: all_blocks.pop()})
+    # Reload blocks if needed
+    if block_size:
+        missing_factories = [
+            factory
+            for factory, rid in context.factories.items()
+            if rid == resource_id and factory not in context.blocks
+        ]
 
+        if missing_factories:
+            all_blocks = _find_blocks_simple(
+                context, resource_id, block_size
+            )
+
+            if len(all_blocks) < len(missing_factories):
+                raise ValueError("Not enough resource blocks available")
+
+            for factory in missing_factories:
+                context.blocks[factory] = all_blocks.pop()
     # Route qubits in operation to the nearest factory
     routed_factory = _nearest_factory(op.qubits, resource_id, layout, context)
 
@@ -323,38 +339,11 @@ def handle_idling(
     circuit: cirq.Circuit,
     arc: arch.Architecture,
     context: mps.Context,
-    # layout: Layout,
-    # with_barriers: bool,
-    # rounds: int,
     verbose: int = 0,
 ) -> cirq.Circuit:
     """Helper function for the compiler that handles idling. This way we can experiment with different kinds of idling or even turn it off entirely.
     This function is still a work in progress, but it is likely to take the form of various compiler passes.
     """
-    # TODO: This pass is a main bottleneck for larger experiments, so make it faster
-    # Assemble Qubits that will be subject to Idling
-    # G = layout.layout_graph
-    # logical_qubits: list[cirq.GridQubit] = list(
-    #     node for node in G.nodes if G.nodes[node]["patch_type"] == "data"
-    # )
-    # logical_qubits 
-    # t_factories: list[cirq.GridQubit] = list(
-    #     node
-    #     for node in G.nodes
-    #     if G.nodes[node]["patch_type"] == "factory" and G.nodes[node]["ftype"] == "t"
-    # )
-    # s_factories: list[cirq.GridQubit] = list(
-    #     node
-    #     for node in G.nodes
-    #     if G.nodes[node]["patch_type"] == "factory" and G.nodes[node]["ftype"] == "s"
-    # )
-    # non_ancillas_candidates: set[cirq.GridQubit] = set(logical_qubits + s_factories + t_factories)
-    # # Ensures no idling happens on qubits that are not used in the circuit
-    # # This is a bit faster
-    # non_ancillas: set[cirq.Qid] = {
-    #     q for op in circuit.all_operations() for q in op.qubits if q in non_ancillas_candidates
-    # }
-
     non_ancillas = {context.pid_to_qid[pid] for pid, rid in context.roles.items() if rid != 2}
 
     # Build circuit where Syndrome Extract is performed on Idling qubits that are not being acted upon
@@ -379,9 +368,6 @@ def handle_idling(
         idling_qubits = non_ancillas - moment.qubits
 
         moment = cirq.Moment(*moment, *se.on_each(*idling_qubits), _flatten_contents=False)
-
-        # if with_barriers:
-        #     return [moment, cirq.Moment(css.barrier(*circuit.all_qubits()))]
 
         return moment
 
@@ -426,11 +412,8 @@ def add_zones_to_context(context: mps.Context, arc: arch.Architecture, layout: l
 
 def post_op_syndrome_extraction(
     circuit: cirq.Circuit,
-    context: mps.Context,
+    # context: mps.Context,
     arc: Architecture,
-    # with_barriers: bool,
-    # movement: bool,
-    # rounds: int,
     verbose: int = 0,
 ) -> cirq.Circuit:
     """For movement, it has been suggested that we just do syndrome extraction (for a single round) right after a logical operations."""
@@ -463,9 +446,6 @@ def post_op_syndrome_extraction(
 
         yield op
 
-        # if with_barriers and not isinstance(op.gate, css.Barrier):
-        #     yield barrier
-
         qubits_to_correct = [
             q
             for q in op.qubits
@@ -473,9 +453,6 @@ def post_op_syndrome_extraction(
         ]
         if qubits_to_correct:
             yield from syndrome_extract.on_each(*qubits_to_correct)
-
-            # if with_barriers:
-            #     yield barrier
 
     return cirq.map_operations_and_unroll(circuit, _map_fn, raise_if_add_qubits=False)
 
@@ -510,10 +487,10 @@ def _decompose_to_primitives(
     arc: Architecture,
     context: mps.Context,
 ) -> cirq.Circuit:
+    # TODO: Is this function still necessary if it is just a wrapper for replace_cirq_op?
     primitives = cirq.Gateset(
         *(cirq.GateFamily(g._gate, ignore_global_phase=False) for g in arc.primitives.gates),
     )
-    # print("Starting _decompose_to_primitives block")
     def _map_fn(op: cirq.Operation) -> cirq.OP_TREE:
         return replace_cirq_op(
             op=op, layout=layout, context=context
@@ -544,8 +521,6 @@ def add_moves(
     total = len(circuit)
     tstart = time.time()
 
-    # interaction_cycle = itertools.cycle(layout.zone_qubits("interact"))
-    # measurement_cycle = itertools.cycle(layout.zone_qubits("measure"))
     interaction_cycle = itertools.cycle([
         context.pid_to_qid[pid] for pid, rid in context.roles.items() if rid == 6
     ])
@@ -595,7 +570,9 @@ def add_moves(
                 op_sequence = []
                 for q in op.qubits:
                     zone_qubit = next(measurement_cycle)
-                    op_sequence.extend([move.on(q, zone_qubit), op, move_dg.on(q, zone_qubit)])
+                    # TODO: Upgrade to contain more information like key
+                    single_measure = cirq.MeasurementGate(1).on(q)
+                    op_sequence.extend([move.on(q, zone_qubit), single_measure, move_dg.on(q, zone_qubit)])
             for op in op_sequence:
                 yield op
 
@@ -604,32 +581,34 @@ def add_moves(
 def allocate_qubits_simple(
         circuit: cirq.Circuit, 
         layout: lyt.Layout, 
+        distil_t: bool,
         num_t_factories: int,
         num_ccz_factories: int,
     ) -> tuple[dict[cirq.Qid, int], dict[int, int]]:
     num_logical_qubits = cirq.num_qubits(circuit)
-    code_patches = [
-        p.element for p in layout.placements.values() if isinstance(p.element, cpa.RotatedSurfaceCodePatch)
-    ]
-    if num_logical_qubits + num_t_factories + num_ccz_factories > len(code_patches):
+    patches_per_t_factory = 31 if distil_t else 1
+    num_required_patches = num_logical_qubits + patches_per_t_factory*num_t_factories+23*num_ccz_factories
+    num_code_patches = sum(isinstance(p.element, cpa.RotatedSurfaceCodePatch) for p in layout.placements.values())
+    if num_required_patches > num_code_patches:
         raise ValueError("Layout does not have enough patches")
+    
     # Map qids in original circuit to patch ids in Layout
     qid_to_pid = {qid: idx for idx, qid in enumerate(circuit.all_qubits())}
     # Assign roles to patches
     roles = {pid: 1 for pid in qid_to_pid.values()}
-    t_qids = cirq.NamedQubit.range(num_t_factories, prefix="t")
+    t_qids = cirq.NamedQubit.range(num_t_factories*patches_per_t_factory, prefix="t")
     for idx, qid in enumerate(t_qids):
         pid = num_logical_qubits + idx
         qid_to_pid[qid] = pid
         roles[pid] = 4
     ccz_qids = cirq.NamedQubit.range(23*num_ccz_factories, prefix="ccz")
     for idx, qid in enumerate(ccz_qids):
-        pid = num_logical_qubits + num_t_factories + idx
+        pid = num_logical_qubits + num_t_factories * patches_per_t_factory + idx
         qid_to_pid[qid] = pid
         roles[pid] = 5
     return qid_to_pid, roles
 
-def ft_compile2(
+def ft_compile(
         circuit: cirq.Circuit,
         arc: Architecture,
         layout: lyt.Layout,
@@ -647,7 +626,7 @@ def ft_compile2(
 
     # Add SyndromeExtraction after logical operations
     if context.post_op_syndrome_extraction:
-        circuit = post_op_syndrome_extraction(circuit=circuit, context=context, arc=arc)
+        circuit = post_op_syndrome_extraction(circuit=circuit, arc=arc)
     # Add SyndromeExtraction to idling logical qubits
     if context.idling:
         circuit = handle_idling(circuit=circuit, arc=arc, context=context)
@@ -662,71 +641,71 @@ def ft_compile2(
 
 
 
-def ft_compile(
-    layout: Layout,
-    arc: Architecture,
-    verbose: int = 1,
-    with_barriers: bool = False,
-    skip_validation: bool = False,
-    dynamic: bool = False,
-) -> cirq.Circuit:
-    """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T + CCZ gateset to a cirq circuit of primitives.
-    The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
-    The architecture input contains information about what primtives are accessible to the compiler and which extra passes should be added to the primitive circuit.
-    The passes available are post op correction and idling.
-    The architecture is also the source of information for how many rounds of syndrome extraction should be performed when syndrome extraction is called for.
-    """
-    zone_ops_but_no_zones = arc.zone_ops.gates and not (
-        layout.measure_zones or layout.interaction_zones
-    )
-    zones_but_no_zone_ops = (
-        layout.measure_zones or layout.interaction_zones
-    ) and not arc.zone_ops.gates
-    if zone_ops_but_no_zones or zones_but_no_zone_ops:
-        raise ValueError("Mismatch between Architecture zone ops and Layout zones")
-    layout = copy.deepcopy(layout)
-    layout.reset_graph()
-    G = layout.layout_graph
+# def ft_compile(
+#     layout: Layout,
+#     arc: Architecture,
+#     verbose: int = 1,
+#     with_barriers: bool = False,
+#     skip_validation: bool = False,
+#     dynamic: bool = False,
+# ) -> cirq.Circuit:
+#     """Basic read/replace compiler that converts a cirq Circuit over the Clifford + T + CCZ gateset to a cirq circuit of primitives.
+#     The layout input contains the input circuit and information about any routing that might be necessary during the compilation process.
+#     The architecture input contains information about what primtives are accessible to the compiler and which extra passes should be added to the primitive circuit.
+#     The passes available are post op correction and idling.
+#     The architecture is also the source of information for how many rounds of syndrome extraction should be performed when syndrome extraction is called for.
+#     """
+#     zone_ops_but_no_zones = arc.zone_ops.gates and not (
+#         layout.measure_zones or layout.interaction_zones
+#     )
+#     zones_but_no_zone_ops = (
+#         layout.measure_zones or layout.interaction_zones
+#     ) and not arc.zone_ops.gates
+#     if zone_ops_but_no_zones or zones_but_no_zone_ops:
+#         raise ValueError("Mismatch between Architecture zone ops and Layout zones")
+#     layout = copy.deepcopy(layout)
+#     layout.reset_graph()
+#     G = layout.layout_graph
 
-    circuit = layout.mapped_circuit
-    if skip_validation:  # pragma: no cover
-        print("Validation Turned Off")
-    else:
-        validate_ops(circuit, verbose=verbose)
-    context = contextualize(layout, arc, dynamic=dynamic)
-    circuit = _decompose_to_primitives(circuit, layout=layout, arc=arc, context=context)
+#     circuit = layout.mapped_circuit
+#     if skip_validation:  # pragma: no cover
+#         print("Validation Turned Off")
+#     else:
+#         validate_ops(circuit, verbose=verbose)
+#     context = contextualize(layout, arc, dynamic=dynamic)
+#     circuit = _decompose_to_primitives(circuit, layout=layout, arc=arc, context=context)
 
-    # Handling State Prep
-    # In a more optimized world this could happen the moment before the first logical operation
-    logical_qubits = [node for node in G.nodes if G.nodes[node]["patch_type"] == "data"]
-    state_prep = cirq.Circuit(lsp.SyndromeExtract(1, rounds=arc.rounds).on_each(*logical_qubits))
-    if with_barriers:
-        state_prep += css.barrier(*sorted(circuit.all_qubits()))
-    circuit = state_prep + circuit
+#     # Handling State Prep
+#     # In a more optimized world this could happen the moment before the first logical operation
+#     logical_qubits = [node for node in G.nodes if G.nodes[node]["patch_type"] == "data"]
+#     state_prep = cirq.Circuit(lsp.SyndromeExtract(1, rounds=arc.rounds).on_each(*logical_qubits))
+#     if with_barriers:
+#         state_prep += css.barrier(*sorted(circuit.all_qubits()))
+#     circuit = state_prep + circuit
 
-    if arc.post_op_correction:
-        circuit = post_op_syndrome_extraction(
-            circuit=circuit,
-            movement=arc.movement,
-            with_barriers=with_barriers,
-            rounds=arc.rounds,
-            verbose=verbose,
-        )
+#     if arc.post_op_correction:
+#         circuit = post_op_syndrome_extraction(
+#             circuit=circuit,
+#             movement=arc.movement,
+#             with_barriers=with_barriers,
+#             rounds=arc.rounds,
+#             verbose=verbose,
+#         )
 
-    if arc.idling:
-        circuit = handle_idling(
-            circuit=circuit,
-            layout=layout,
-            with_barriers=with_barriers,
-            rounds=arc.rounds,
-            verbose=verbose,
-        )
+#     if arc.idling:
+#         circuit = handle_idling(
+#             circuit=circuit,
+#             layout=layout,
+#             with_barriers=with_barriers,
+#             rounds=arc.rounds,
+#             verbose=verbose,
+#         )
 
-    if isinstance(layout, MovementLayout):
-        circuit = add_moves(
-            circuit=circuit,
-            layout=layout,
-            verbose=verbose,
-        )
+#     if isinstance(layout, MovementLayout):
+#         circuit = add_moves(
+#             circuit=circuit,
+#             layout=layout,
+#             verbose=verbose,
+#         )
 
-    return circuit
+#     return circuit
