@@ -78,10 +78,18 @@ def test_distil() -> None:
 
 
 def test_resource_correct() -> None:
+    # T Resource Correction
     gate = lsp.ResourceCorrection("T")
+    assert gate.resource == "T"
     assert str(gate) == "ResourceCorrection(T)"
+    assert repr(gate) == "lsp.ResourceCorrection(T)"
+
+    # CCZ Resource Correction
     gate = lsp.ResourceCorrection("CCZ")
+    assert gate.resource == "CCZ"
     assert str(gate) == "ResourceCorrection(CCZ)"
+    assert repr(gate) == "lsp.ResourceCorrection(CCZ)"
+    
     # Checking an invalid resource necessitates ignoring the Literals in the argument
     with pytest.raises(ValueError, match="Invalid resource"):
         _ = lsp.ResourceCorrection("Toffoli")  # type: ignore[arg-type]
