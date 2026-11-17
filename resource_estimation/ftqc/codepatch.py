@@ -34,7 +34,7 @@ def _validate_id(value: int, name: str) -> int:
 
 class PhysicalQubit(cirq.Qid):
     """A physical qubit represented as a wire in a Cirq circuit"""
-    def __init__(self, patch_id: int, local_coord: tuple[int, int], role: tuple[typing.Literal['data', 'measure'], typing.Literal['X', 'Z'] | None], info: dict[str, int] | None = None) -> None:
+    def __init__(self, patch_id: int, local_coord: tuple[int, int], role: int, info: dict[str, int] | None = None) -> None:
         """
         patch_id: the patch id of the CodePatch object to which this physical qubit belongs
         local_coord: local coordinate tuple representing the position of this qubit in the footprint of the CodePatch
@@ -54,7 +54,7 @@ class PhysicalQubit(cirq.Qid):
         return self._local_coord
 
     @property
-    def role(self) -> tuple[typing.Literal['data', 'measure'], typing.Literal['X', 'Z'] | None]:
+    def role(self) -> int:
         return self._role
 
     @property
@@ -66,13 +66,13 @@ class PhysicalQubit(cirq.Qid):
         return 2
 
     def _comparison_key(self) -> tuple[int, int, int, typing.Literal["data", "measure"], typing.Literal["X", "Z"] | None]:
-        return self.patch_id, self.local_coord[0], self.local_coord[1], self.role[0], self.role[1]
+        return self.patch_id, self.local_coord[0], self.local_coord[1], self.role
 
     def __str__(self) -> str:
-        return f"{self.patch_id}:({self.local_coord[0], self.local_coord[1]}, {self.role[1] if self.role[1] else self.role[0]})"
+        return f"{self.patch_id}:{self.local_coord[0], self.local_coord[1], self.role}"
 
     def __repr__(self) -> str:
-        return f"codepatch.PhysicalQubit({self.patch_id!r}, {self.local_coord!r}, {self.role})"    
+        return f"cpa.PhysicalQubit({self.patch_id!r}, {self.local_coord!r}, {self.role})"    
 
 
 class LogicalQubit(cirq.Qid):
@@ -125,7 +125,7 @@ class LogicalQubit(cirq.Qid):
         return f"{self.patch_id}:{self.logical_index}"
 
     def __repr__(self) -> str:
-        return f"codepatch.LogicalQubit({self.patch_id!r}, {self.logical_index!r})"
+        return f"cpa.LogicalQubit({self.patch_id!r}, {self.logical_index!r})"
 
 
 class CodePatch(abc.ABC):
@@ -261,7 +261,7 @@ class RotatedSurfaceCodePatch(CSSCodePatch):
             f"n={self.n!r}",
             f"k={self.k!r}",
         ]
-        return f"codepatch.RotatedSurfaceCodePatch({', '.join(args)})"
+        return f"cpa.RotatedSurfaceCodePatch({', '.join(args)})"
 
     def default_layout(self) -> list[PhysicalQubit]:
         def transform(x: int, y: int) -> tuple[int, int]:
@@ -274,13 +274,11 @@ class RotatedSurfaceCodePatch(CSSCodePatch):
         for r in range(self.d):
             for c in range(self.d):
                 local_coord = transform(2*r, 2*c)
-                role = ("data", None)
-                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
+                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=0))
         # Interior weight 4 checks
         for r in range(self.d-1):
             for c in range(self.d-1):
-                basis = "X" if (r+c)%2==0 else "Z"
-                role = ("measure", basis)
+                role = 1 if (r+c)%2==0 else 2
                 local_coord = transform(2*r+1, 2*c+1)
                 qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
         # Boundary weight 2 checks
@@ -288,21 +286,17 @@ class RotatedSurfaceCodePatch(CSSCodePatch):
             if k%2==0:
                 # Top Z Boundary
                 local_coord = transform(-1, 2*k+1)
-                role = ("measure", "Z")
-                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
+                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=2))
                 # Right X Boundary
                 local_coord = transform(2*k+1, 2*self.d-1)
-                role = ("measure", "X")
-                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
+                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=1))
             else:
                 # Bottom Z Boundary
                 local_coord = transform(2*self.d-1, 2*k+1)
-                role = ("measure", "Z")
-                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
+                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=2))
                 # Left X Boundary
                 local_coord = transform(2*k+1, -1)
-                role = ("measure", "X")
-                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
+                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=1))
         return qubits
 
 class BBCodePatch(CSSCodePatch):
@@ -323,7 +317,7 @@ class BBCodePatch(CSSCodePatch):
             f"l={self.qldpc_code.orders[0]!r}",
             f"m={self.qldpc_code.orders[1]!r}",
         ]
-        return f"codepatch.BBCodePatch({', '.join(args)})"
+        return f"cpa.BBCodePatch({', '.join(args)})"
 
     def default_layout(self) -> list[PhysicalQubit]:
         """Produces a plaquette-based physical layout for the physical qubits in the code patch"""
@@ -334,39 +328,22 @@ class BBCodePatch(CSSCodePatch):
             if half == 0:  # L data + X check
                 data_local_coord = (2 * row, 2 * col)
                 meas_local_coord = (2 * row, 2 * col + 1)
-                basis = "X"
+                meas_role = 1
             else:  # R data + Z check
                 data_local_coord = (2 * row + 1, 2 * col + 1)
                 meas_local_coord = (2 * row + 1, 2 * col)
-                basis = "Z"
-            data_qubit = PhysicalQubit(patch_id=self.patch_id, local_coord=data_local_coord, role=("data", None))
-            meas_qubit = PhysicalQubit(patch_id=self.patch_id, local_coord=meas_local_coord, role=("measure", basis))
+                meas_role = 2
+            data_qubit = PhysicalQubit(
+                patch_id=self.patch_id, 
+                local_coord=data_local_coord, 
+                role=0
+            )
+            meas_qubit = PhysicalQubit(
+                patch_id=self.patch_id, 
+                local_coord=meas_local_coord, 
+                role=meas_role
+            )
             qubits.extend([data_qubit, meas_qubit])
         return qubits
-        
-# Goal: Remake the default MovementLayout in this framework
-from math import ceil, sqrt
-def make_default_movement_layout(surface_distance: int, num_qubits: int) -> Layout2:
-    bbox_length = 2*surface_distance - 1
-    patch_grid_length = ceil(sqrt(num_qubits))
-    layout_length = bbox_length * patch_grid_length
-
-    layout = Layout2(rows=layout_length, cols=layout_length)
-    for patch_id in range(num_qubits):
-        patch_row = patch_id // patch_grid_length
-        patch_col = patch_id % patch_grid_length
-        anchor_row = bbox_length*patch_row
-        anchor_col = bbox_length*patch_col
-        patch = RotatedSurfaceCodePatch(patch_id=patch_id, d=surface_distance)
-        layout.add(patch, anchor_row, anchor_col)
-    return layout
-
-
-
-
-
-# layout = make_default_movement(3, 3, 2)
-# fig, ax = plot_layout_footprints(layout)
-# plt.show()
 
 
