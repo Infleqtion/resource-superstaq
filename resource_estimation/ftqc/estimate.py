@@ -89,7 +89,7 @@ class ResourceEstimator:
         return max(qubit_times.values())
 
     def critical_path(
-        self, circuit: cirq.Circuit, layout: Layout, verbose: int = 0
+        self, circuit: cirq.Circuit, layout: Layout, context: mps.Context, verbose: int = 0
     ) -> list[cirq.Operation]:
         """Returns the circuit's critical path in terms of the logical primitive operations
         Is very slow and expensive
@@ -114,7 +114,7 @@ class ResourceEstimator:
             big_path = qubit_paths[big_qubit]
             big_time = qubit_times[big_qubit]
             big_path.append(op)
-            big_time += self.arc.op_time(op, layout=layout)
+            big_time += self.arc.op_time(op, layout=layout, context=context)
             for qubit in op_qubits:
                 qubit_paths[qubit] = big_path.copy()
                 qubit_times[qubit] = big_time
