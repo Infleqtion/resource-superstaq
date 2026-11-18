@@ -880,12 +880,12 @@ class DefaultMovement(Architecture):
         dy = abs(trgt_row - ctrl_row) / patch_length  # number of logical patches vertically
         patch_length = 2 * self.d
         # print("This should be an error now")
-        ctrl_role = context.roles[context.qid_to_pid[ctrl]]
-        if ctrl_role == 7:
+        trgt_role = context.roles[context.qid_to_pid[trgt]]
+        if trgt_role == 7:
             return _measurement_zone_move_precompiled(
                 dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
             )
-        elif ctrl_role == 6:
+        elif trgt_role == 6:
             return _interaction_zone_move_precompiled(
                 dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
             )
