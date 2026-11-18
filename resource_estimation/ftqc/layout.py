@@ -13,32 +13,28 @@
 # limitations under the License.
 from __future__ import annotations
 
-import abc
-import collections
-import itertools
+import math
 import typing
 from dataclasses import dataclass, field
-from math import ceil, sqrt
 
-import cirq
-import networkx as nx
-import numpy as np
-import numpy.typing as npt
-import math
 import resource_estimation.ftqc.codepatch as cpa
+
 
 @dataclass(frozen=True)
 class Rect:
     rows: int
     cols: int
+
     def __post_init__(self):
         if self.rows <= 0 or self.cols <= 0:
             raise ValueError("Rect dimensions must be positive")
+
 
 class Placeable(typing.Protocol):
     @property
     def footprint(self) -> Rect:  # pragma: no cover
         ...
+
 
 @dataclass(frozen=True)
 class Placement:
@@ -62,6 +58,7 @@ class Placement:
             or placement.col_end <= self.col
             or self.col_end <= placement.col
         )
+
     def borders(self, other: Placement) -> bool:
         # For now only handle cases where the objects have the same shape
         if other.element.footprint != self.element.footprint:
@@ -75,6 +72,7 @@ class Placement:
             and self.row < other.row_end
             and other.row < self.row_end
         )
+
 
 @dataclass
 class Zone:
@@ -94,6 +92,7 @@ class Zone:
     #         and 0 <= placement.col
     #         and placement.col_end <= self.cols
     #     )
+
 
 @dataclass
 class Layout:
@@ -137,10 +136,14 @@ class Layout:
         placement = self.placements[placement_id]
         r, c = local_coord
         return placement.row + r, placement.col + c
-        
+
     def occupied(self, placement: Placement, exclude: int | None = None) -> bool:
         """Returns True if the proposed Placement overlaps with any existing placement, subject to excluding one placement"""
-        return any(placement.overlaps(prior_placement) for pid, prior_placement in self.placements.items() if pid != exclude)
+        return any(
+            placement.overlaps(prior_placement)
+            for pid, prior_placement in self.placements.items()
+            if pid != exclude
+        )
 
     def in_bounds(self, placement: Placement):
         """Returns True if the proposed placement is within the bounds of the Layout"""
@@ -160,15 +163,15 @@ class Layout:
 
 
 def generate_movement_layout(
-        surface_code_program_qubits: int,
-        surface_code_distance: int,
-        t_cultivation_factories: int,
-        t_distillation_factories: int,
-        ccz_distillation_factories: int,
-        interaction_zone: bool,
-        measure_zone: bool,
-        **kwargs,
-    ) -> Layout:
+    surface_code_program_qubits: int,
+    surface_code_distance: int,
+    t_cultivation_factories: int,
+    t_distillation_factories: int,
+    ccz_distillation_factories: int,
+    interaction_zone: bool,
+    measure_zone: bool,
+    **kwargs,
+) -> Layout:
     """Generate a populated `Layout` based on the input circuit and other important parameters"""
     total_surface_code_patches = (
         surface_code_program_qubits  # Logical qubits required by the circuit
@@ -177,10 +180,8 @@ def generate_movement_layout(
         + 23 * ccz_distillation_factories  # 8 Cult + 12 Ancilla + 3 Out
     )
     patch_grid_length = math.ceil(math.sqrt(total_surface_code_patches))
-    patch_length = 2*surface_code_distance - 1
-    required_rows = math.ceil(
-        total_surface_code_patches / patch_grid_length
-    ) * patch_length
+    patch_length = 2 * surface_code_distance - 1
+    required_rows = math.ceil(total_surface_code_patches / patch_grid_length) * patch_length
     required_cols = patch_grid_length * patch_length
     zone_offset = 0
     zones = {}
@@ -188,63 +189,53 @@ def generate_movement_layout(
         required_rows += patch_length
         zone_offset = patch_length
         zones[0] = Placement(
-            element=Zone(
-                rows=patch_length,
-                cols=required_cols,
-                role="Interaction"
-            ),
+            element=Zone(rows=patch_length, cols=required_cols, role="Interaction"),
             row=0,
             col=0,
         )
     if measure_zone:
         required_rows += patch_length
         zones[1] = Placement(
-            Zone(
-                rows=patch_length,
-                cols=required_cols,
-                role="Measure"
-            ),
+            Zone(rows=patch_length, cols=required_cols, role="Measure"),
             row=required_rows - patch_length,
-            col=0
+            col=0,
         )
     placements = {}
-    for idx, pid in enumerate(range(total_surface_code_patches)):  # <- is this like super pointless?
+    for idx, pid in enumerate(
+        range(total_surface_code_patches)
+    ):  # <- is this like super pointless?
         patch_row = pid // patch_grid_length
         patch_col = pid % patch_grid_length
-        anchor_row = patch_length*patch_row + zone_offset
-        anchor_col = patch_length*patch_col
+        anchor_row = patch_length * patch_row + zone_offset
+        anchor_col = patch_length * patch_col
         patch_to_add = cpa.RotatedSurfaceCodePatch(pid, surface_code_distance)
         placements[idx] = Placement(patch_to_add, anchor_row, anchor_col)
-    return Layout(
-        rows=required_rows,
-        cols=required_cols,
-        placements=placements,
-        regions=zones
-    )
+    return Layout(rows=required_rows, cols=required_cols, placements=placements, regions=zones)
+
 
 def generate_column_layout(
-        surface_code_program_qubits: int,
-        surface_code_distance: int,
-        # t_cultivation_factories: int,
-        # t_distillation_factories: int,
-        # ccz_distillation_factories: int,
-        # interaction_zone: bool,
-        # measure_zone: bool
-        **kwargs,
-    ) -> Layout:
+    surface_code_program_qubits: int,
+    surface_code_distance: int,
+    # t_cultivation_factories: int,
+    # t_distillation_factories: int,
+    # ccz_distillation_factories: int,
+    # interaction_zone: bool,
+    # measure_zone: bool
+    **kwargs,
+) -> Layout:
     """Generate a populated `Layout` based on the input circuit and other important parameters"""
     rows_of_patches = surface_code_program_qubits + surface_code_program_qubits % 2
     cols_of_patches = 7
     # total_surface_code_patches = rows_of_patches * cols_of_patches
-    patch_length = 2*surface_code_distance - 1
-    required_rows = rows_of_patches*patch_length
-    required_cols = cols_of_patches*patch_length
+    patch_length = 2 * surface_code_distance - 1
+    required_rows = rows_of_patches * patch_length
+    required_cols = cols_of_patches * patch_length
     placements = {}
     pid = 0
     for patch_row in range(rows_of_patches):
         for patch_col in range(cols_of_patches):
-            anchor_row = patch_row*patch_length
-            anchor_col = patch_col*patch_length
+            anchor_row = patch_row * patch_length
+            anchor_col = patch_col * patch_length
             placements[pid] = Placement(
                 cpa.RotatedSurfaceCodePatch(pid, surface_code_distance),
                 row=anchor_row,

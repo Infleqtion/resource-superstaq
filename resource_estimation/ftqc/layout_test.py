@@ -11,31 +11,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import cirq
 import pytest
-from . import layout as lyt
+
 from . import codepatch as cpa
+from . import layout as lyt
+
 
 def placed_zone(row: int, col: int, rows: int, cols: int) -> lyt.Placement:
     """Build simple placement from rectangular footprint"""
     return lyt.Placement(lyt.Zone(rows, cols, "Test"), row, col)
+
 
 # def placed_patch(row: int, col: int, pid: int = 0) -> lyt.Placement:
 #     return lyt.Placement(cpa.RotatedSurfaceCodePatch(pid, 3), row, col)
 # def patch(row: int, col: int, pid: int = 0, distance: int = 3) -> lyt.Placement:
 #     return lyt.Placement(cpa.RotatedSurfaceCodePatch(pid, distance), row, col)
 
+
 def test_rect_dimensions() -> None:
     rect = lyt.Rect(2, 3)
     assert rect.rows == 2
     assert rect.cols == 3
 
-@pytest.mark.parametrize(
-    "rows, cols", [(0, 1), (1, 0), (-1, 1), (1, -1), (-1, -2)]
-)
+
+@pytest.mark.parametrize("rows, cols", [(0, 1), (1, 0), (-1, 1), (1, -1), (-1, -2)])
 def test_rect_nonpositive(rows: int, cols: int) -> None:
     with pytest.raises(ValueError, match="must be positive"):
         _ = lyt.Rect(rows, cols)
+
 
 def test_basic_placement() -> None:
     p = placed_zone(2, 3, 4, 5)
@@ -46,11 +49,13 @@ def test_basic_placement() -> None:
     assert p.row_end == 6
     assert p.col_end == 8
 
+
 def test_basic_zone() -> None:
     z = lyt.Zone(2, 3, "Test")
     assert z.rows == 2
     assert z.cols == 3
     assert z.role == "Test"
+
 
 def test_placement_overlap() -> None:
     middle = placed_zone(8, 8, 3, 3)
@@ -70,16 +75,17 @@ def test_placement_overlap() -> None:
     assert middle.overlaps(thin_strip)
     assert thin_strip.overlaps(middle)
 
+
 @pytest.mark.parametrize(
     "row, col, truth",
     [
-        (2, 0, True),       # Along the bottom edge
-        (2, 1, True),       # Partially shared bottom edge
-        (0, 3, True),       # Along the right edge
-        (1, 3, True),       # Partially shared right edge
-        (2, 3, False),      # Corner contact isn't a border
-        (3, 0, False),      # Gap between rectangles
-        (1, 1, False),      # Overlapping interiors
+        (2, 0, True),  # Along the bottom edge
+        (2, 1, True),  # Partially shared bottom edge
+        (0, 3, True),  # Along the right edge
+        (1, 3, True),  # Partially shared right edge
+        (2, 3, False),  # Corner contact isn't a border
+        (3, 0, False),  # Gap between rectangles
+        (1, 1, False),  # Overlapping interiors
     ],
 )
 def test_placement_borders(row, col, truth) -> None:
@@ -88,9 +94,11 @@ def test_placement_borders(row, col, truth) -> None:
     assert first.borders(second) == truth
     assert second.borders(first) == truth
 
+
 def test_placement_requires_equal_footprints() -> None:
     with pytest.raises(ValueError, match="Both placements must have the same footprint"):
         _ = placed_zone(0, 0, 3, 3).borders(placed_zone(3, 3, 4, 5))
+
 
 def test_layout_add_assigns_ids_and_allows_edge_touching():
     layout = lyt.Layout(rows=10, cols=10)
@@ -103,8 +111,9 @@ def test_layout_add_assigns_ids_and_allows_edge_touching():
     assert layout.placements[first].element.footprint == lyt.Rect(5, 5)
     assert layout.placements[second].col == 5
     assert layout.placements[second].col_end == 10 == layout.cols
-    assert layout.placements[third].row == 5 
+    assert layout.placements[third].row == 5
     assert layout.placements[third].row_end == 10 == layout.rows
+
 
 def test_layout_rejects_occupied_placement_without_changing_state() -> None:
     layout = lyt.Layout(8, 8)
@@ -114,12 +123,14 @@ def test_layout_rejects_occupied_placement_without_changing_state() -> None:
         _ = layout.add(cpa.RotatedSurfaceCodePatch(1, 3), 3, 3)
     assert layout.placements == before
 
+
 @pytest.mark.parametrize("row, col", [(-1, 0), (0, -1), (4, 0), (0, 5)])
 def test_layout_rejects_out_of_bounds(row: int, col: int) -> None:
     layout = lyt.Layout(8, 8)
     with pytest.raises(ValueError, match="This placement is out of bounds"):
         layout.add(cpa.RotatedSurfaceCodePatch(0, 3), row, col)
     assert layout.placements == {}
+
 
 def test_layout_remove() -> None:
     layout = lyt.Layout(5, 5)
@@ -130,9 +141,8 @@ def test_layout_remove() -> None:
     with pytest.raises(ValueError, match="No entry found"):
         _ = layout.remove(placed)
 
-@pytest.mark.parametrize(
-        "row, col, truth", 
-        [(0, 0, True), (4, 4, True), (5, 5, False)])
+
+@pytest.mark.parametrize("row, col, truth", [(0, 0, True), (4, 4, True), (5, 5, False)])
 def test_layout_occupied(row: int, col: int, truth: bool) -> None:
     layout = lyt.Layout(10, 10)
     layout.add(cpa.RotatedSurfaceCodePatch(0, 3), 0, 0)
@@ -144,17 +154,11 @@ def test_layout_occupied(row: int, col: int, truth: bool) -> None:
     zone = layout.add(lyt.Zone(2, 3, "exclude"), 7, 6)
     assert layout.occupied(to_place, exclude=zone) == truth
 
+
 @pytest.mark.parametrize(
-        "row, col, truth", 
-        [
-            (1, 0, True), 
-            (-1, 4, False), 
-            (3, -2, False),
-            (3, 3, True),
-            (4, 3, False),
-            (3, 4, False)
-        ]
-    )
+    "row, col, truth",
+    [(1, 0, True), (-1, 4, False), (3, -2, False), (3, 3, True), (4, 3, False), (3, 4, False)],
+)
 def test_layout_in_bounds(row: int, col: int, truth: bool) -> None:
     layout = lyt.Layout(8, 8)
     to_place = lyt.Placement(
@@ -177,6 +181,7 @@ def test_layout_move() -> None:
     # Check global coords matches local coords plus (row, col)
     assert layout.global_coord(pid, (1, 2)) == (3, 5)
 
+
 def test_layout_unallowed_moves() -> None:
     layout = lyt.Layout(10, 10)
     patch1 = cpa.RotatedSurfaceCodePatch(0, 3)
@@ -196,6 +201,7 @@ def test_layout_unallowed_moves() -> None:
             layout.move(moving, *dest)
         assert layout.placements == before
 
+
 def test_layout_get_patch() -> None:
     layout = lyt.Layout(25, 25)
     d3_patch = layout.add(cpa.RotatedSurfaceCodePatch(0, 3), 0, 0)
@@ -209,17 +215,14 @@ def test_layout_get_patch() -> None:
     with pytest.raises(ValueError, match="Found no CodePatch"):
         layout.get_patch(1)
 
+
 @pytest.mark.parametrize(
-        "t_cult, t_dist, ccz_dist, expected_patches",
-        [
-            (0, 0, 0, 3),
-            (3, 0, 0, 6),
-            (0, 1, 0, 34),
-            (0, 0, 2, 49),
-            (1, 1, 1, 58)
-        ]
+    "t_cult, t_dist, ccz_dist, expected_patches",
+    [(0, 0, 0, 3), (3, 0, 0, 6), (0, 1, 0, 34), (0, 0, 2, 49), (1, 1, 1, 58)],
 )
-def test_generate_movement_patch_count(t_cult: int, t_dist: int, ccz_dist: int, expected_patches: int) -> None:
+def test_generate_movement_patch_count(
+    t_cult: int, t_dist: int, ccz_dist: int, expected_patches: int
+) -> None:
     layout = lyt.generate_movement_layout(
         surface_code_program_qubits=3,
         surface_code_distance=5,
@@ -230,19 +233,29 @@ def test_generate_movement_patch_count(t_cult: int, t_dist: int, ccz_dist: int, 
         measure_zone=False,
     )
     assert len(layout.placements) == expected_patches
-    assert all(isinstance(p.element, cpa.RotatedSurfaceCodePatch) for p in layout.placements.values())
+    assert all(
+        isinstance(p.element, cpa.RotatedSurfaceCodePatch) for p in layout.placements.values()
+    )
     assert all(p.element.d == 5 for p in layout.placements.values())
     assert {p.element.patch_id for p in layout.placements.values()} == set(range(expected_patches))
     assert layout.regions == {}
 
+
 @pytest.mark.parametrize(
-        "interaction_zone, measure_zone, expected_rows, expected_zone_ids",
-        [(False, False, 10, set()), (True, False, 15, {0}), (False, True, 15, {1}), (True, True, 20, {0, 1})]
+    "interaction_zone, measure_zone, expected_rows, expected_zone_ids",
+    [
+        (False, False, 10, set()),
+        (True, False, 15, {0}),
+        (False, True, 15, {1}),
+        (True, True, 20, {0, 1}),
+    ],
 )
-def test_generate_movement_zones(interaction_zone: bool, measure_zone: bool, expected_rows: int, expected_zone_ids: set) -> None:
+def test_generate_movement_zones(
+    interaction_zone: bool, measure_zone: bool, expected_rows: int, expected_zone_ids: set
+) -> None:
     layout = lyt.generate_movement_layout(
         surface_code_program_qubits=5,
-        surface_code_distance=3, 
+        surface_code_distance=3,
         t_cultivation_factories=1,
         t_distillation_factories=0,
         ccz_distillation_factories=0,
@@ -266,6 +279,7 @@ def test_generate_movement_zones(interaction_zone: bool, measure_zone: bool, exp
         assert region.col == 0
         assert region.element.footprint == lyt.Rect(5, 15)
 
+
 def test_generate_movement_coordinates() -> None:
     # 5 program + 1 T Cult + 31 T Dist + 23 CCZ Dist = 60 patches
     layout = lyt.generate_movement_layout(
@@ -275,7 +289,7 @@ def test_generate_movement_coordinates() -> None:
         t_distillation_factories=1,
         ccz_distillation_factories=1,
         interaction_zone=True,
-        measure_zone=True
+        measure_zone=True,
     )
     assert layout.rows == 90
     assert layout.cols == 72
@@ -296,10 +310,8 @@ def test_generate_movement_coordinates() -> None:
     assert layout.regions[1].row == 81
     assert layout.regions[1].col == 0
 
-@pytest.mark.parametrize(
-    "program_qubits, rows_of_patches",
-    [(1, 2), (2, 2), (3, 4), (4, 4)]
-)
+
+@pytest.mark.parametrize("program_qubits, rows_of_patches", [(1, 2), (2, 2), (3, 4), (4, 4)])
 def test_generate_column(program_qubits: int, rows_of_patches: int) -> None:
     layout = lyt.generate_column_layout(
         surface_code_program_qubits=program_qubits,
@@ -307,13 +319,13 @@ def test_generate_column(program_qubits: int, rows_of_patches: int) -> None:
         extra_keyword=True,  # Make sure kwargs accepted
     )
     assert layout.rows == rows_of_patches * 5
-    assert layout.cols == 7*5
-    assert len(layout.placements) == rows_of_patches*7
-    assert set(layout.placements) == set(range(rows_of_patches*7))
+    assert layout.cols == 7 * 5
+    assert len(layout.placements) == rows_of_patches * 7
+    assert set(layout.placements) == set(range(rows_of_patches * 7))
 
     for pid, p in layout.placements.items():
-        assert p.row == (pid//7)*5
-        assert p.col == (pid%7)*5
+        assert p.row == (pid // 7) * 5
+        assert p.col == (pid % 7) * 5
         assert p.element.patch_id == pid
         assert p.element.d == 3
         assert p.element.footprint == lyt.Rect(5, 5)

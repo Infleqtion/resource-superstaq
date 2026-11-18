@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import typing
 from math import pi
-from unittest import mock
 
 import cirq
 import networkx as nx
@@ -27,9 +26,9 @@ import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 import resource_estimation.ftqc.layout as lyt
-from resource_estimation.ftqc import ResourceEstimator, ccz_8_to_1, distil_15_to_1
-from resource_estimation.typing import GateKey
 import resource_estimation.ftqc.mappers as mps
+from resource_estimation.ftqc import ccz_8_to_1, distil_15_to_1
+from resource_estimation.typing import GateKey
 
 
 @pytest.fixture
@@ -60,12 +59,12 @@ def movement_estimator() -> est.ResourceEstimator:
 
 
 def get_movement_layout_and_context(
-        circuit: cirq.Circuit, 
-        estimator: est.ResourceEstimator,
-        t_cultivation_factories: int = 0,
-        t_distillation_factories: int = 0,
-        ccz_distillation_factories: int = 0,
-    ) -> tuple[lyt.Layout, mps.Context]:
+    circuit: cirq.Circuit,
+    estimator: est.ResourceEstimator,
+    t_cultivation_factories: int = 0,
+    t_distillation_factories: int = 0,
+    ccz_distillation_factories: int = 0,
+) -> tuple[lyt.Layout, mps.Context]:
     layout = lyt.generate_movement_layout(
         surface_code_program_qubits=cirq.num_qubits(circuit),
         surface_code_distance=estimator.arc.d,
@@ -84,6 +83,7 @@ def get_movement_layout_and_context(
     )
     return layout, context
 
+
 def get_lattice_layout_and_context(
     circuit: cirq.Circuit,
     estimator: est.ResourceEstimator,
@@ -98,6 +98,7 @@ def get_lattice_layout_and_context(
         surface_code_distance=estimator.arc.d,
     )
     return layout, context
+
 
 @pytest.mark.parametrize(
     "estimator",
@@ -158,15 +159,9 @@ def test_all_primitives(estimator: est.ResourceEstimator) -> None:
             ccz_distillation_factories=1,
         )
 
-        t_block = tuple(
-            context.pid_to_qid[pid]
-            for pid, role in context.roles.items()
-            if role == 4
-        )
+        t_block = tuple(context.pid_to_qid[pid] for pid, role in context.roles.items() if role == 4)
         ccz_block = tuple(
-            context.pid_to_qid[pid]
-            for pid, role in context.roles.items()
-            if role == 5
+            context.pid_to_qid[pid] for pid, role in context.roles.items() if role == 5
         )
 
         circuit += [cirq.CNOT.on(dummy_qubits[i], dummy_qubits[i + 1]) for i in range(8)]
@@ -295,7 +290,9 @@ def test_self_returns(
     #     t_distillation_factories=0,
     #     ccz_distillation_factories=0
     # )
-    cost = movement_estimator.serial_circuit_cost(circuit=circuit, layout=movement_layout, context=movement_context)
+    cost = movement_estimator.serial_circuit_cost(
+        circuit=circuit, layout=movement_layout, context=movement_context
+    )
     assert cost == {
         cirq.ResetChannel: 49,
     }
@@ -315,7 +312,9 @@ def test_self_returns(
         layout=lattice_layout,
         surface_code_distance=lattice_estimator.arc.d,
     )
-    cost = lattice_estimator.serial_circuit_cost(circuit=circuit, layout=lattice_estimator, context=lattice_context)
+    cost = lattice_estimator.serial_circuit_cost(
+        circuit=circuit, layout=lattice_estimator, context=lattice_context
+    )
     assert cost == {
         cirq.ResetChannel: 2 * 49,
     }
@@ -329,7 +328,9 @@ def test_error_handling(
     bad_circuit = cirq.Circuit([lsp.Cultivate(pi / 2).on(qubit_a), cirq.CNOT.on(qubit_a, qubit_b)])
     column_layout, column_context = get_lattice_layout_and_context(bad_circuit, lattice_estimator)
     with pytest.raises(ValueError, match="incompatible"):
-        _ = lattice_estimator.serial_circuit_cost(bad_circuit, layout=column_layout, context=column_context)
+        _ = lattice_estimator.serial_circuit_cost(
+            bad_circuit, layout=column_layout, context=column_context
+        )
 
     # Check Bad Movement Circuit
     bad_circuit = cirq.Circuit(
@@ -339,9 +340,13 @@ def test_error_handling(
             cirq.CNOT.on(qubit_a, qubit_b),
         ],
     )
-    movement_layout, movement_context = get_movement_layout_and_context(bad_circuit, movement_estimator)
+    movement_layout, movement_context = get_movement_layout_and_context(
+        bad_circuit, movement_estimator
+    )
     with pytest.raises(ValueError, match="incompatible"):
-        _ = movement_estimator.serial_circuit_cost(bad_circuit, layout=movement_layout, context=movement_context)
+        _ = movement_estimator.serial_circuit_cost(
+            bad_circuit, layout=movement_layout, context=movement_context
+        )
 
 
 # TODO: Might be worth having one or two more example tests for the critical path algorithm
@@ -495,6 +500,7 @@ def test_physical_qubit_count(lattice_estimator: est.ResourceEstimator) -> None:
 
 
 ### Tests exclusively for reaction depth functionality ###
+
 
 def local_pauli(pauli: cirq.Pauli, qubit_index: int = 0) -> cirq.PauliString[cirq.LineQubit]:
     return cirq.PauliString(pauli(cirq.LineQubit(qubit_index)))

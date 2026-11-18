@@ -13,20 +13,21 @@
 # limitations under the License.
 from __future__ import annotations
 
+from dataclasses import replace
 from math import pi
 from typing import TYPE_CHECKING, Literal
 
 import cirq
 
+import resource_estimation.ftqc.compile_ftqc as comp  # Might be circular?
+import resource_estimation.ftqc.layout as lyt
+import resource_estimation.ftqc.mappers as mps
 from resource_estimation.ftqc.compile_ftqc import add_moves
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
+
 # from resource_estimation.ftqc.layout import MovementDistillery
 from resource_estimation.typing import CostDict
-import resource_estimation.ftqc.layout as lyt
-import resource_estimation.ftqc.mappers as mps
-import resource_estimation.ftqc.compile_ftqc as comp  # Might be circular?
-from dataclasses import replace
 
 if TYPE_CHECKING:
     from resource_estimation.ftqc.architecture import Architecture
@@ -194,8 +195,8 @@ def ccz_8_to_1() -> cirq.Circuit:
 
 
 def precompute_distil_cost(
-    resource: Literal["T", "CCZ"], 
-    layout: lyt.Layout, 
+    resource: Literal["T", "CCZ"],
+    layout: lyt.Layout,
     arc: Architecture,
     context: mps.Context,
 ) -> CostDict:
@@ -223,11 +224,11 @@ def precompute_distil_cost(
         )
         + independent_circuit_factory
     )
-    
+
     num_outputs = len(independent_circuit_factory)
     block_size = cirq.num_qubits(independent_circuit) - num_outputs
     factories = comp._find_factories_simple(context, resource_id, num_outputs)
-    temp_context = replace(context, factories={f: resource_id for f in factories})
+    temp_context = replace(context, factories=dict.fromkeys(factories, resource_id))
     blocks = comp._find_blocks_simple(temp_context, resource_id, block_size)
     factory_pids = min(factories)
     block_pids = min(blocks)
@@ -241,8 +242,14 @@ def precompute_distil_cost(
 
     # Collect resources of the embedded circuit
     estimator = ResourceEstimator(arc)
-    op_time = estimator.parallel_circuit_time(remapped_circuit_with_moves, layout=layout, context=context)
-    moment_cost = estimator.parallel_circuit_cost(remapped_circuit_with_moves, layout=layout, context=context)
-    gate_cost = estimator.serial_circuit_cost(remapped_circuit_with_moves, layout=layout, context=context)
+    op_time = estimator.parallel_circuit_time(
+        remapped_circuit_with_moves, layout=layout, context=context
+    )
+    moment_cost = estimator.parallel_circuit_cost(
+        remapped_circuit_with_moves, layout=layout, context=context
+    )
+    gate_cost = estimator.serial_circuit_cost(
+        remapped_circuit_with_moves, layout=layout, context=context
+    )
 
     return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)

@@ -30,6 +30,7 @@ import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 import resource_estimation.ftqc.layout as lyt
 import resource_estimation.ftqc.mappers as mps
 from resource_estimation.ftqc.distil import precompute_distil_cost
+
 # from resource_estimation.ftqc.layout import MovementDistillery, MovementLayout
 from resource_estimation.ftqc.stim_functions import cultivate
 from resource_estimation.typing import CostDict, GateCounts, GateKey, _require_gate_operation
@@ -822,11 +823,7 @@ class DefaultMovement(Architecture):
         return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
 
     def move_cost(
-        self, 
-        op: cirq.GateOperation, 
-        layout: lyt.Layout,
-        context: mps.Context,
-        **kwargs: object
+        self, op: cirq.GateOperation, layout: lyt.Layout, context: mps.Context, **kwargs: object
     ) -> CostDict:
         """
         Costs for pre-compiled movement patterns for types of logical moves
@@ -869,11 +866,16 @@ class DefaultMovement(Architecture):
                 zone_slot = zone_pids.index(pid)
                 return region.row, region.col + zone_slot
             # Get placement coordinates
-            placement = next(p for p in layout.placements.values() if isinstance(p.element, codepatch.CodePatch) and p.element.patch_id==pid)
+            placement = next(
+                p
+                for p in layout.placements.values()
+                if isinstance(p.element, codepatch.CodePatch) and p.element.patch_id == pid
+            )
             return placement.row, placement.col
+
         # move_type = layout.layout_graph.nodes[trgt]["patch_type"]
         site_spacing = layout.site_spacing
-        patch_length = 2*self.d - 1
+        patch_length = 2 * self.d - 1
         ctrl_row, ctrl_col = position(ctrl)
         trgt_row, trgt_col = position(trgt)
         dx = abs(trgt_col - ctrl_col) / patch_length  # number of logical patches horizontally
@@ -948,10 +950,7 @@ class DefaultMovement(Architecture):
         return CostDict(op_time=new_time, gate_cost=new_gate_cost, moment_cost=new_moment_cost)
 
     def distil_cost(
-        self, op: cirq.GateOperation, 
-        layout: lyt.Layout, 
-        context: mps.Context,
-        **kwargs: object
+        self, op: cirq.GateOperation, layout: lyt.Layout, context: mps.Context, **kwargs: object
     ) -> CostDict:
         if not isinstance(op.gate, lsp.Distil):
             raise TypeError("Operation is not an instance of Distil")
@@ -960,13 +959,15 @@ class DefaultMovement(Architecture):
         return self._distil_cost(op.gate._resource, layout=layout, context=context)
 
     def _distil_cost(
-            self, 
-            resource: Literal["T", "CCZ"], 
-            layout: lyt.Layout,
-            context: mps.Context,
-        ) -> CostDict:
+        self,
+        resource: Literal["T", "CCZ"],
+        layout: lyt.Layout,
+        context: mps.Context,
+    ) -> CostDict:
         # Calculates cost for single repetition based on precompiled circuit
-        base_cost = precompute_distil_cost(resource=resource, layout=layout, arc=self, context=context)
+        base_cost = precompute_distil_cost(
+            resource=resource, layout=layout, arc=self, context=context
+        )
         op_time = base_cost.op_time * self.distillation_repetition
         moment_cost = collections.Counter(
             {key: val * self.distillation_repetition for key, val in base_cost.moment_cost.items()}

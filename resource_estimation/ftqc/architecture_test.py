@@ -14,22 +14,21 @@
 import collections
 from collections.abc import Callable
 from math import ceil, isclose, pi
+from unittest import mock
 
 import cirq
 import cirq_superstaq as css
 import numpy as np
 import pytest
-from unittest import mock
 
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.codepatch as codepatch
+import resource_estimation.ftqc.compile_ftqc as comp
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 import resource_estimation.ftqc.layout as lyt
-from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
+import resource_estimation.ftqc.mappers as mps
 from resource_estimation.ftqc.stim_functions import cultivate
 from resource_estimation.typing import GateCounts, _require_gate_operation
-import resource_estimation.ftqc.mappers as mps
-import resource_estimation.ftqc.compile_ftqc as comp
 
 
 @pytest.fixture
@@ -42,8 +41,7 @@ def movement_architecture() -> arch.DefaultMovement:
     return arch.DefaultMovement()
 
 
-def test_architecture_exceptions(
-    lattice_architecture: arch.DefaultLattice) -> None:
+def test_architecture_exceptions(lattice_architecture: arch.DefaultLattice) -> None:
     with pytest.raises(ValueError, match="Cultivation cost"):
         bad_cult = arch._require_gate_operation(lsp.Cultivate(1).on(cirq.GridQubit(0, 0)))
         _ = lattice_architecture.cultivate_cost(bad_cult)
@@ -775,7 +773,7 @@ def test_logical_moves(
         t_distillation_factories=0,
         ccz_distillation_factories=0,
         interaction_zone=True,
-        measure_zone=True
+        measure_zone=True,
     )
     # dsm_layout = lyt.MovementLayout(
     #     input_circuit=circuit,
@@ -795,13 +793,9 @@ def test_logical_moves(
     logical1 = context.pid_to_qid[0]
     logical2 = context.pid_to_qid[1]
 
-    interaction = next(
-        context.pid_to_qid[pid] for pid, role in context.roles.items() if role == 6
-    )
-    measurement = next(
-        context.pid_to_qid[pid] for pid, role in context.roles.items() if role == 7
-    )
-    
+    interaction = next(context.pid_to_qid[pid] for pid, role in context.roles.items() if role == 6)
+    measurement = next(context.pid_to_qid[pid] for pid, role in context.roles.items() if role == 7)
+
     interaction_move = css.MovementGate({0: 1}).on(cirq.GridQubit(0, 1), cirq.GridQubit(-1, 2))
     interaction_move = _require_gate_operation(interaction_move)
 
@@ -938,7 +932,7 @@ def test_distillation_cases(
         t_distillation_factories=1,
         ccz_distillation_factories=1,
         interaction_zone=False,
-        measure_zone=False
+        measure_zone=False,
     )
     context = mps.build_movement_context(
         circuit=empty_circuit,
@@ -961,7 +955,9 @@ def test_distillation_cases(
     # )
     # Confirm distil_cost raises TypeError when called on a non-Distil gate
     with pytest.raises(TypeError, match="Operation is not an instance of Distil"):
-        _ = movement_architecture.distil_cost(op=cirq.X.on(cirq.GridQubit(0, 0)), layout=layout, context=context)
+        _ = movement_architecture.distil_cost(
+            op=cirq.X.on(cirq.GridQubit(0, 0)), layout=layout, context=context
+        )
         # _ = movement_architecture.distil_cost(op=cirq.X.on(cirq.GridQubit(0, 0)), layout=t_layout)
     # Confirm that distil is only available to movement archs
     with pytest.raises(NotImplementedError, match="movement architectures only"):
@@ -1023,6 +1019,7 @@ def test_dynamic_T_resource_counts(mock_randint: mock.MagicMock) -> None:
     assert arc.op_time(dynamic_correction) == static_correction_time
     assert arc.op_time(static_correction) == static_correction_time
 
+
 @mock.patch("resource_estimation.ftqc.architecture.randint")
 def test_dynamic_CCZ_resource_counts(mock_randint: mock.MagicMock) -> None:
     arc = arch.DefaultMovement()
@@ -1054,8 +1051,7 @@ def test_dynamic_CCZ_resource_counts(mock_randint: mock.MagicMock) -> None:
     dynamic_op: cirq.Operation = lsp.ResourceCorrection("CCZ").on(qubit_a, qubit_b, qubit_c)
     mock_randint.side_effect = [1, 0, 1, 0, 1, 0]
     correction_gate_cost = sum(
-        [collections.Counter(arc.gate_cost(op)) for op in correction_ops], 
-        collections.Counter()
+        [collections.Counter(arc.gate_cost(op)) for op in correction_ops], collections.Counter()
     )
     gate_cost_no_correction = arc.gate_cost(dynamic_op)  # 1
     assert gate_cost_no_correction == {}

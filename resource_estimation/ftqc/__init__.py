@@ -60,11 +60,10 @@ from resource_estimation.ftqc.layout import (
     Layout,
     # MovementLayout,
 )
-
 from resource_estimation.ftqc.mappers import (
     Context,
-    build_movement_context,
     build_column_context,
+    build_movement_context,
 )
 from resource_estimation.ftqc.stim_functions import (
     STR2GATE,

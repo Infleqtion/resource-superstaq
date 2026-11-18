@@ -28,8 +28,8 @@ if typing.TYPE_CHECKING:  # pragma: no cover
     from resource_estimation.ftqc.layout import Layout
     from resource_estimation.typing import GateCounts, GateKey
 
-from resource_estimation.typing import _require_gate_operation
 import resource_estimation.ftqc.mappers as mps
+from resource_estimation.typing import _require_gate_operation
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -68,10 +68,14 @@ class ResourceEstimator:
             cost += collections.Counter(self.arc.gate_cost(op, layout=layout, context=context))
         return {op: val for op, val in cost.items()}
 
-    def serial_circuit_time(self, circuit: cirq.Circuit, layout: Layout, context: mps.Context) -> float:
+    def serial_circuit_time(
+        self, circuit: cirq.Circuit, layout: Layout, context: mps.Context
+    ) -> float:
         """Adds up the total physical time from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
-        return sum(self.arc.op_time(op, layout=layout, context=context) for op in circuit.all_operations())
+        return sum(
+            self.arc.op_time(op, layout=layout, context=context) for op in circuit.all_operations()
+        )
 
     def parallel_circuit_time(
         self, circuit: cirq.Circuit, layout: Layout, context: mps.Context, verbose: int = 0

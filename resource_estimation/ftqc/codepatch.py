@@ -17,11 +17,11 @@ import abc
 import typing
 
 import cirq
+import numpy as np
 from qldpc import codes
 from qldpc.objects import Pauli
 from sympy.abc import x, y
-import numpy as np
-from dataclasses import dataclass, field
+
 from . import layout as lyt
 
 
@@ -32,9 +32,17 @@ def _validate_id(value: int, name: str) -> int:
         raise ValueError(f"{name} must be nonnegative.")
     return value
 
+
 class PhysicalQubit(cirq.Qid):
     """A physical qubit represented as a wire in a Cirq circuit"""
-    def __init__(self, patch_id: int, local_coord: tuple[int, int], role: int, info: dict[str, int] | None = None) -> None:
+
+    def __init__(
+        self,
+        patch_id: int,
+        local_coord: tuple[int, int],
+        role: int,
+        info: dict[str, int] | None = None,
+    ) -> None:
         """
         patch_id: the patch id of the CodePatch object to which this physical qubit belongs
         local_coord: local coordinate tuple representing the position of this qubit in the footprint of the CodePatch
@@ -60,19 +68,21 @@ class PhysicalQubit(cirq.Qid):
     @property
     def info(self) -> dict[str, int] | None:
         return self._info
-    
+
     @property
     def dimension(self) -> int:
         return 2
 
-    def _comparison_key(self) -> tuple[int, int, int, typing.Literal["data", "measure"], typing.Literal["X", "Z"] | None]:
+    def _comparison_key(
+        self,
+    ) -> tuple[int, int, int, typing.Literal["data", "measure"], typing.Literal["X", "Z"] | None]:
         return self.patch_id, self.local_coord[0], self.local_coord[1], self.role
 
     def __str__(self) -> str:
         return f"{self.patch_id}:{self.local_coord[0], self.local_coord[1], self.role}"
 
     def __repr__(self) -> str:
-        return f"cpa.PhysicalQubit({self.patch_id!r}, {self.local_coord!r}, {self.role})"    
+        return f"cpa.PhysicalQubit({self.patch_id!r}, {self.local_coord!r}, {self.role})"
 
 
 class LogicalQubit(cirq.Qid):
@@ -182,7 +192,7 @@ class CodePatch(abc.ABC):
         return lyt.Rect(
             rows=max(rows) - min(rows) + 1,
             cols=max(cols) - min(cols) + 1,
-        )   
+        )
 
 
 class CSSCodePatch(CodePatch):
@@ -266,38 +276,52 @@ class RotatedSurfaceCodePatch(CSSCodePatch):
     def default_layout(self) -> list[PhysicalQubit]:
         def transform(x: int, y: int) -> tuple[int, int]:
             return (
-                (x + y)//2,
-                (x - y + 2 * (self.d - 1))//2,
+                (x + y) // 2,
+                (x - y + 2 * (self.d - 1)) // 2,
             )
+
         qubits = []
         # Data Qubits
         for r in range(self.d):
             for c in range(self.d):
-                local_coord = transform(2*r, 2*c)
-                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=0))
+                local_coord = transform(2 * r, 2 * c)
+                qubits.append(
+                    PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=0)
+                )
         # Interior weight 4 checks
-        for r in range(self.d-1):
-            for c in range(self.d-1):
-                role = 1 if (r+c)%2==0 else 2
-                local_coord = transform(2*r+1, 2*c+1)
-                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role))
+        for r in range(self.d - 1):
+            for c in range(self.d - 1):
+                role = 1 if (r + c) % 2 == 0 else 2
+                local_coord = transform(2 * r + 1, 2 * c + 1)
+                qubits.append(
+                    PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role)
+                )
         # Boundary weight 2 checks
         for k in range(self.d - 1):
-            if k%2==0:
+            if k % 2 == 0:
                 # Top Z Boundary
-                local_coord = transform(-1, 2*k+1)
-                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=2))
+                local_coord = transform(-1, 2 * k + 1)
+                qubits.append(
+                    PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=2)
+                )
                 # Right X Boundary
-                local_coord = transform(2*k+1, 2*self.d-1)
-                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=1))
+                local_coord = transform(2 * k + 1, 2 * self.d - 1)
+                qubits.append(
+                    PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=1)
+                )
             else:
                 # Bottom Z Boundary
-                local_coord = transform(2*self.d-1, 2*k+1)
-                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=2))
+                local_coord = transform(2 * self.d - 1, 2 * k + 1)
+                qubits.append(
+                    PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=2)
+                )
                 # Left X Boundary
-                local_coord = transform(2*k+1, -1)
-                qubits.append(PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=1))
+                local_coord = transform(2 * k + 1, -1)
+                qubits.append(
+                    PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=1)
+                )
         return qubits
+
 
 class BBCodePatch(CSSCodePatch):
     """A Bivariate Bicyle code patch generated from the qldpc library"""
@@ -333,17 +357,9 @@ class BBCodePatch(CSSCodePatch):
                 data_local_coord = (2 * row + 1, 2 * col + 1)
                 meas_local_coord = (2 * row + 1, 2 * col)
                 meas_role = 2
-            data_qubit = PhysicalQubit(
-                patch_id=self.patch_id, 
-                local_coord=data_local_coord, 
-                role=0
-            )
+            data_qubit = PhysicalQubit(patch_id=self.patch_id, local_coord=data_local_coord, role=0)
             meas_qubit = PhysicalQubit(
-                patch_id=self.patch_id, 
-                local_coord=meas_local_coord, 
-                role=meas_role
+                patch_id=self.patch_id, local_coord=meas_local_coord, role=meas_role
             )
             qubits.extend([data_qubit, meas_qubit])
         return qubits
-
-

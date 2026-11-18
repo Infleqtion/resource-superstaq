@@ -28,26 +28,18 @@ import resource_estimation.ftqc.lattice_surgery_primitives as lsp
         (0, (1, 1), 1, {"x": 0}),
         (1, (0, 1), 2, {"z": 1}),
         (2, (3, 3), 0, {"data": 2}),
-
-    ]
+    ],
 )
 def test_physical_qubit_initializations(
-    patch_id: int,
-    coord: tuple[int, int],
-    role: int,
-    info: dict[str, int]
+    patch_id: int, coord: tuple[int, int], role: int, info: dict[str, int]
 ) -> None:
-    qubit = cpa.PhysicalQubit(
-        patch_id=patch_id,
-        local_coord=coord,
-        role=role,
-        info=info
-    )
+    qubit = cpa.PhysicalQubit(patch_id=patch_id, local_coord=coord, role=role, info=info)
     assert qubit.patch_id == patch_id
     assert qubit.local_coord == coord
     assert qubit.role == role
     assert qubit.info == info
     assert qubit.dimension == 2
+
 
 def test_physical_qubit_others() -> None:
     q1 = cpa.PhysicalQubit(0, (0, 1), 0)
@@ -227,6 +219,7 @@ def test_surface_code_patch_counts_match_legacy(d: int) -> None:
     )
     assert patch.total_x_check_weight() == legacy_patch.total_x_syndrome_cnots()
     assert patch.total_z_check_weight() == legacy_patch.total_z_syndrome_cnots()
+
 
 @pytest.mark.parametrize("d", (3, 5))
 def test_rotated_codepatch_footprint(d: int) -> None:

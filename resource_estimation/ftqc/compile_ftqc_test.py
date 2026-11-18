@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import collections
 import textwrap
 from math import pi
 
@@ -20,12 +19,12 @@ import cirq_superstaq as css
 import pytest
 
 import resource_estimation.ftqc.architecture as arch
+import resource_estimation.ftqc.codepatch as cpa
 import resource_estimation.ftqc.compile_ftqc as comp
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 import resource_estimation.ftqc.layout as lyt
-import resource_estimation.ftqc.codepatch as cpa
 import resource_estimation.ftqc.mappers as mps
-from resource_estimation.typing import GateKey, _require_gate_operation
+
 
 def make_context(roles: dict[int, int], **overrides: object) -> mps.Context:
     pid_to_qid = {pid: cirq.NamedQubit(f"p{pid}") for pid in roles}
@@ -33,7 +32,7 @@ def make_context(roles: dict[int, int], **overrides: object) -> mps.Context:
         roles=dict(roles),
         pid_to_qid=pid_to_qid,
         qid_to_pid={v: k for k, v in pid_to_qid.items()},
-        factories = {},
+        factories={},
         blocks={},
         num_s_factories=0,
         num_t_factories=0,
@@ -62,64 +61,58 @@ def test_validate_ops(verbose) -> None:
         cirq.CNOT.on(*qubits[:2]),
         cirq.CCZ.on(*qubits),
         cirq.measure(qubits[0]),
-        cirq.reset(qubits[1])
+        cirq.reset(qubits[1]),
     )
     invalid_circuit = valid_circuit + cirq.rx(7).on(qubits[2])
     # Check valid circuit produces no errors
     comp.validate_ops(valid_circuit, verbose=verbose)
-    with pytest.raises(ValueError, match=r"This compiler only handles Clifford \+ T \+ CCZ circuits"):
+    with pytest.raises(
+        ValueError, match=r"This compiler only handles Clifford \+ T \+ CCZ circuits"
+    ):
         comp.validate_ops(invalid_circuit, verbose=verbose)
 
+
 @pytest.mark.parametrize(
-        "op, transversal_cnot, expected",
-        [
-            (cirq.S.on(cirq.LineQubit(0)), True, False),
-            (cirq.S.on(cirq.LineQubit(0)), False, True),
-            (cirq.T.on(cirq.LineQubit(0)), True, True),
-            (cirq.CCZ.on(*cirq.LineQubit.range(3)), True, True),
-        ]
+    "op, transversal_cnot, expected",
+    [
+        (cirq.S.on(cirq.LineQubit(0)), True, False),
+        (cirq.S.on(cirq.LineQubit(0)), False, True),
+        (cirq.T.on(cirq.LineQubit(0)), True, True),
+        (cirq.CCZ.on(*cirq.LineQubit.range(3)), True, True),
+    ],
 )
 def test_requires_resource(op: cirq.Operation, transversal_cnot: bool, expected: bool) -> None:
     context = make_context(roles={}, transversal_cnot=transversal_cnot)
     print(context.transversal_cnot, transversal_cnot)
     assert comp._requires_resource(op, context) == expected
 
+
 @pytest.mark.parametrize(
-        "op, expected_prep, expected_correct, expected_rid",
-        [
-            (
-                cirq.CCZ.on(*cirq.LineQubit.range(3)), 
-                lsp.Distil("CCZ"), 
-                lsp.ResourceCorrection("CCZ"),
-                5,
-            ),
-            (
-                cirq.S.on(cirq.LineQubit(0)), 
-                lsp.Cultivate(pi/2), 
-                cirq.Z,
-                3,
-            ),
-            (
-                cirq.T.on(cirq.LineQubit(0)),
-                lsp.Cultivate(pi/4),
-                lsp.ResourceCorrection("T"),
-                4
-            ),
-            (
-                cirq.T.on(cirq.LineQubit(0)),
-                lsp.Distil("T"),
-                lsp.ResourceCorrection("T"),
-                4
-            ),
-        ]
+    "op, expected_prep, expected_correct, expected_rid",
+    [
+        (
+            cirq.CCZ.on(*cirq.LineQubit.range(3)),
+            lsp.Distil("CCZ"),
+            lsp.ResourceCorrection("CCZ"),
+            5,
+        ),
+        (
+            cirq.S.on(cirq.LineQubit(0)),
+            lsp.Cultivate(pi / 2),
+            cirq.Z,
+            3,
+        ),
+        (cirq.T.on(cirq.LineQubit(0)), lsp.Cultivate(pi / 4), lsp.ResourceCorrection("T"), 4),
+        (cirq.T.on(cirq.LineQubit(0)), lsp.Distil("T"), lsp.ResourceCorrection("T"), 4),
+    ],
 )
 def test_determine_resource_dynamic(
-        op: cirq.Operation, 
-        expected_prep: cirq.Operation,
-        expected_correct: cirq.Operation,
-        expected_rid: int,
-    ) -> None:
-    distil_t =  expected_prep == lsp.Distil("T")
+    op: cirq.Operation,
+    expected_prep: cirq.Operation,
+    expected_correct: cirq.Operation,
+    expected_rid: int,
+) -> None:
+    distil_t = expected_prep == lsp.Distil("T")
     context = make_context(roles={}, distil_t=distil_t, dynamic=True)
     prep_gate, correction, resource_id = comp._determine_resource(op, context)
     assert prep_gate == expected_prep
@@ -148,17 +141,19 @@ def test_determine_resource_ccz_static() -> None:
     assert correct == expected_correct
     assert rid == expected_rid
 
+
 @pytest.mark.parametrize("distil_t", (True, False))
 def test_determine_resource_t_static(distil_t: bool) -> None:
     context = make_context(roles={}, distil_t=distil_t, dynamic=False)
     base_op = cirq.T.on(cirq.LineQubit(0))
-    expected_prep = lsp.Distil("T") if distil_t else lsp.Cultivate(pi/4)
+    expected_prep = lsp.Distil("T") if distil_t else lsp.Cultivate(pi / 4)
     expected_correct = cirq.S
     expected_rid = 4
     prep, correct, rid = comp._determine_resource(base_op, context)
     assert prep == expected_prep
     assert correct == expected_correct
     assert rid == expected_rid
+
 
 def test_determine_resource_raises_error() -> None:
     context = make_context(roles={})
@@ -173,7 +168,7 @@ def test_determine_resource_raises_error() -> None:
         (3, 1, {(1,), (2,)}),
         (4, 1, {(3,), (4,)}),
         (5, 3, {(5, 6, 7), (8, 9, 10)}),
-        (-1, 1, set())  # To raise error
+        (-1, 1, set()),  # To raise error
     ],
 )
 def test_find_factories_simple(
@@ -183,9 +178,11 @@ def test_find_factories_simple(
 ) -> None:
     roles = {
         0: 1,  # Logical qubit
-        1: 3, 2: 3,  # S factory patches
-        3: 4, 4: 4,  # T factory patches
-        **{pid: 5 for pid in range(5, 11)},  # CCZ factory patches
+        1: 3,
+        2: 3,  # S factory patches
+        3: 4,
+        4: 4,  # T factory patches
+        **dict.fromkeys(range(5, 11), 5),  # CCZ factory patches
     }
     context = make_context(
         roles,
@@ -201,6 +198,7 @@ def test_find_factories_simple(
         result = comp._find_factories_simple(context, resource_id, num_qubits)
         assert result == expected
 
+
 @pytest.mark.parametrize(
     "resource_id, block_size, expected",
     [
@@ -208,7 +206,7 @@ def test_find_factories_simple(
         (4, 2, {(5, 6), (7, 8)}),
         (5, 3, {(14, 15, 16), (17, 18, 19)}),
         (-1, 1, set()),
-    ]
+    ],
 )
 def test_find_blocks_simple(
     resource_id: int,
@@ -217,10 +215,12 @@ def test_find_blocks_simple(
 ) -> None:
     roles = {
         0: 1,
-        1: 3, 2: 3,
-        **{pid: 4 for pid in range(3, 11)},
-        **{pid: 5 for pid in range(11, 20)},
-        20: 3, 21: 3,  # Available S blocks
+        1: 3,
+        2: 3,
+        **dict.fromkeys(range(3, 11), 4),
+        **dict.fromkeys(range(11, 20), 5),
+        20: 3,
+        21: 3,  # Available S blocks
     }
     context = make_context(
         roles,
@@ -243,13 +243,14 @@ def test_find_blocks_simple(
         result = comp._find_blocks_simple(context, resource_id, block_size)
         assert result == expected
 
+
 @pytest.mark.parametrize(
     "distil_t, num_t_factories, num_ccz_factories",
     [
         (False, 2, 0),  # T cultivation
-        (True, 2, 0),   # T distillation
+        (True, 2, 0),  # T distillation
         (False, 1, 1),  # T cultivation + CCZ
-        (True, 1, 1),   # T distillation + CCZ
+        (True, 1, 1),  # T distillation + CCZ
     ],
 )
 def test_allocate_qubits_simple(
@@ -280,8 +281,8 @@ def test_allocate_qubits_simple(
     expected_roles = {
         0: 1,
         1: 1,
-        **{pid: 4 for pid in range(2, ccz_start)},
-        **{pid: 5 for pid in range(ccz_start, ccz_start + 23 * num_ccz_factories)},
+        **dict.fromkeys(range(2, ccz_start), 4),
+        **dict.fromkeys(range(ccz_start, ccz_start + 23 * num_ccz_factories), 5),
     }
 
     assert roles == expected_roles
@@ -291,37 +292,28 @@ def test_allocate_qubits_simple(
     # Remove one patch to induce error
     layout.remove(1)
     with pytest.raises(ValueError, match="Layout does not have enough patches"):
-        _ = comp.allocate_qubits_simple(circuit, layout, distil_t, num_t_factories, num_ccz_factories)
+        _ = comp.allocate_qubits_simple(
+            circuit, layout, distil_t, num_t_factories, num_ccz_factories
+        )
+
 
 def test_nearest_factory() -> None:
     layout = lyt.Layout(
         rows=100,
         cols=100,
         placements={
-            1: lyt.Placement(
-                cpa.RotatedSurfaceCodePatch(0, 3),
-                row=0,
-                col=0
-            ),
-            2: lyt.Placement(
-                cpa.RotatedSurfaceCodePatch(1, 3),
-                row=10,
-                col=0
-            ),
-            3: lyt.Placement(
-                cpa.RotatedSurfaceCodePatch(2, 3),
-                row=10,
-                col=10
-            ),
-        }
+            1: lyt.Placement(cpa.RotatedSurfaceCodePatch(0, 3), row=0, col=0),
+            2: lyt.Placement(cpa.RotatedSurfaceCodePatch(1, 3), row=10, col=0),
+            3: lyt.Placement(cpa.RotatedSurfaceCodePatch(2, 3), row=10, col=10),
+        },
     )
     source_factory = (cirq.NamedQubit("p0"),)
     # Most basic example
-    context = make_context(roles={0: 1, 1: 4, 2: 4}, factories={(1,):4, (2,): 4})
+    context = make_context(roles={0: 1, 1: 4, 2: 4}, factories={(1,): 4, (2,): 4})
     expected_nearest_factory = (1,)
     assert comp._nearest_factory(source_factory, 4, layout, context) == expected_nearest_factory
     # Check that removing closest factory changes answer
-    context = make_context(roles={0: 1, 1: 4, 2: 4}, factories={(2,):4})
+    context = make_context(roles={0: 1, 1: 4, 2: 4}, factories={(2,): 4})
     expected_nearest_factory = (2,)
     assert comp._nearest_factory(source_factory, 4, layout, context) == expected_nearest_factory
     # Raises error when factory is unavailable
@@ -330,6 +322,7 @@ def test_nearest_factory() -> None:
     # Make sure closest does not change in context of other factories
     context = make_context(roles={0: 1, 1: 5, 2: 4}, factories={(1,): 5, (2,): 4})
     assert comp._nearest_factory(source_factory, 4, layout, context) == (2,)
+
 
 def test_teleport_resource() -> None:
     # Use the generator in layout to easily generate layouts that can be interrogated
@@ -345,9 +338,9 @@ def test_teleport_resource() -> None:
     # Start with factories initially unassigned
     context = make_context(
         roles={
-            **{i: 1 for i in range(5)},
-            **{i: 4 for i in range(5, 8)},
-            **{i: 5 for i in range(8, 54)},
+            **dict.fromkeys(range(5), 1),
+            **dict.fromkeys(range(5, 8), 4),
+            **dict.fromkeys(range(8, 54), 5),
         },
         num_t_factories=3,
         num_ccz_factories=2,
@@ -365,9 +358,7 @@ def test_teleport_resource() -> None:
 
     factory_qubits = tuple(context.pid_to_qid[i] for i in (8, 9, 10))
 
-    assert result[1] == cirq.Moment(
-        cirq.CNOT.on(f, q) for f, q in zip(factory_qubits, qubits)
-    )
+    assert result[1] == cirq.Moment(cirq.CNOT.on(f, q) for f, q in zip(factory_qubits, qubits))
     assert result[2] == cirq.Moment(cirq.measure(q, key="") for q in factory_qubits)
     assert result[3] == cirq.Moment(cirq.reset(q) for q in factory_qubits)
     assert result[4] == lsp.ResourceCorrection("CCZ").on(*qubits)
@@ -375,7 +366,7 @@ def test_teleport_resource() -> None:
     # Check that the consumed resources are no longer available
     assert (8, 9, 10) not in context.factories
     assert len(context.factories) == 1
-    assert len(context.blocks) == 1    
+    assert len(context.blocks) == 1
 
     second_result = comp.teleport_resource(op, layout, context)
 
@@ -392,9 +383,9 @@ def test_teleport_resource() -> None:
     with pytest.raises(ValueError, match="Not enough resource blocks available"):
         _ = comp.teleport_resource(op, layout, context)
 
+
 @pytest.mark.parametrize(
-    "interaction_zone, measure_zone", 
-    [(False, False), (False, True), (True, False), (True, True)]
+    "interaction_zone, measure_zone", [(False, False), (False, True), (True, False), (True, True)]
 )
 def test_add_zones_to_context(interaction_zone: bool, measure_zone: bool) -> None:
     layout = lyt.generate_movement_layout(
@@ -408,9 +399,9 @@ def test_add_zones_to_context(interaction_zone: bool, measure_zone: bool) -> Non
     )
     context = make_context(
         roles={
-            **{i: 1 for i in range(5)},
-            **{i: 4 for i in range(5, 8)},
-            **{i: 5 for i in range(8, 54)},
+            **dict.fromkeys(range(5), 1),
+            **dict.fromkeys(range(5, 8), 4),
+            **dict.fromkeys(range(8, 54), 5),
         },
         num_t_factories=3,
         num_ccz_factories=2,
@@ -428,11 +419,11 @@ def test_add_zones_to_context(interaction_zone: bool, measure_zone: bool) -> Non
     next_pid = 54
 
     if interaction_zone:
-        expected_roles.update({pid: 6 for pid in range(next_pid, next_pid + 8)})
+        expected_roles.update(dict.fromkeys(range(next_pid, next_pid + 8), 6))
         next_pid += 8
 
     if measure_zone:
-        expected_roles.update({pid: 7 for pid in range(next_pid, next_pid + 8)})
+        expected_roles.update(dict.fromkeys(range(next_pid, next_pid + 8), 7))
 
     assert new_context.roles == expected_roles
     assert context.roles == original_roles
@@ -441,6 +432,7 @@ def test_add_zones_to_context(interaction_zone: bool, measure_zone: bool) -> Non
     assert set(new_context.pid_to_qid) == set(expected_roles)
     for pid, qid in new_context.pid_to_qid.items():
         assert new_context.qid_to_pid[qid] == pid
+
 
 @pytest.mark.parametrize("verbose", (False, True))
 def test_post_op_syndrome_extraction(verbose: bool) -> None:
@@ -455,7 +447,9 @@ def test_post_op_syndrome_extraction(verbose: bool) -> None:
     movement_architecture = arch.DefaultMovement()
     lattice_architecture = arch.DefaultLattice()
 
-    movement_replacement = comp.post_op_syndrome_extraction(circuit, movement_architecture, verbose=verbose)
+    movement_replacement = comp.post_op_syndrome_extraction(
+        circuit, movement_architecture, verbose=verbose
+    )
     cirq.testing.assert_has_diagram(
         movement_replacement,
         textwrap.dedent(
@@ -466,11 +460,13 @@ def test_post_op_syndrome_extraction(verbose: bool) -> None:
                                           │
             2: ───X───────────────────────X───SE(1)───
             """
-        )
+        ),
     )
 
     # This is actually an unfeasible circuit for lattice surgery, but it shows the purpose of the pass
-    lattice_replacement = comp.post_op_syndrome_extraction(circuit, lattice_architecture, verbose=verbose)
+    lattice_replacement = comp.post_op_syndrome_extraction(
+        circuit, lattice_architecture, verbose=verbose
+    )
     cirq.testing.assert_has_diagram(
         lattice_replacement,
         textwrap.dedent(
@@ -481,8 +477,9 @@ def test_post_op_syndrome_extraction(verbose: bool) -> None:
                                           │
             2: ───X───────────────────────X───SE(7)───
             """
-        )
+        ),
     )
+
 
 @pytest.mark.parametrize("verbose", (True, False))
 def test_handle_idling(verbose: bool) -> None:
@@ -495,13 +492,13 @@ def test_handle_idling(verbose: bool) -> None:
     split = lsp.Split(partitions=[1, 1], smooth=True).on(p0, anc)
 
     circuit = cirq.Circuit(
-        cirq.Moment([se.on(p0)]),               # Initial state prep
-        cirq.Moment([cirq.X(p0)]),              # p1 is idle
-        cirq.Moment([split]),                   # Split-only moment
-        cirq.Moment(se.on_each(p0, p1)),        # All logical qubits receive SE
-        cirq.Moment([cirq.X(p1)]),              # p0 is idle
+        cirq.Moment([se.on(p0)]),  # Initial state prep
+        cirq.Moment([cirq.X(p0)]),  # p1 is idle
+        cirq.Moment([split]),  # Split-only moment
+        cirq.Moment(se.on_each(p0, p1)),  # All logical qubits receive SE
+        cirq.Moment([cirq.X(p1)]),  # p0 is idle
         cirq.Moment([cirq.X(p0), cirq.X(p1)]),  # No logical qubits idle
-        cirq.Moment([cirq.X(anc)]),             # Ancilla active, both logical qubits idle
+        cirq.Moment([cirq.X(anc)]),  # Ancilla active, both logical qubits idle
     )
 
     expected = cirq.Circuit(
@@ -517,6 +514,7 @@ def test_handle_idling(verbose: bool) -> None:
     result = comp.handle_idling(circuit, arc, context, verbose=verbose)
     assert result == expected
 
+
 def test_route_and_decompose_lattice_cnot() -> None:
     # Patch positions in grid coordinates: (row, col)
     positions = {
@@ -524,14 +522,14 @@ def test_route_and_decompose_lattice_cnot() -> None:
         1: (0, 1),  # Routing ancilla
         2: (0, 0),  # Target
         3: (1, 0),  # Farther option
-        4: (1, 1)
+        4: (1, 1),
     }
 
     distance = 3
     patch_size = 2 * distance - 1
 
     layout = lyt.Layout(
-        rows=2*patch_size,
+        rows=2 * patch_size,
         cols=3 * patch_size,
         placements={
             pid: lyt.Placement(
@@ -545,21 +543,13 @@ def test_route_and_decompose_lattice_cnot() -> None:
     context = make_context(roles={0: 1, 1: 2, 2: 1, 3: 1, 4: 2})
 
     best_route = comp.route_lattice_cnot(
-        context.pid_to_qid[0],
-        context.pid_to_qid[2],
-        layout,
-        context
+        context.pid_to_qid[0], context.pid_to_qid[2], layout, context
     )
     assert best_route == [2, 1, 0]  # Does not take longer route
     # Change role and check that route no longer exists
     context.roles[1] = 1
     with pytest.raises(ValueError, match="Could not find valid path"):
-        _ = comp.route_lattice_cnot(
-                context.pid_to_qid[0],
-                context.pid_to_qid[2],
-                layout,
-                context
-            )
+        _ = comp.route_lattice_cnot(context.pid_to_qid[0], context.pid_to_qid[2], layout, context)
 
     # Cover the decomposition while we are here
     context.roles[1] = 2  # Fix the overwritten role
@@ -582,13 +572,13 @@ def test_route_and_decompose_lattice_cnot() -> None:
         layout=layout,
         arc=arch.DefaultLattice(d=distance),
         context=context,
-    ) 
+    )
     assert list(decomposed.all_operations()) == expected
+
 
 @pytest.mark.parametrize("verbose", (True, False))
 @pytest.mark.parametrize(
-    "interaction_zone, measure_zone", 
-    [(False, False), (False, True), (True, False), (True, True)]
+    "interaction_zone, measure_zone", [(False, False), (False, True), (True, False), (True, True)]
 )
 def test_add_moves(interaction_zone: bool, measure_zone: bool, verbose: bool) -> None:
     layout = lyt.generate_movement_layout(
@@ -600,8 +590,7 @@ def test_add_moves(interaction_zone: bool, measure_zone: bool, verbose: bool) ->
         interaction_zone=interaction_zone,
         measure_zone=measure_zone,
     )
-    context = make_context(
-        roles={i: 1 for i in range(3)})
+    context = make_context(roles=dict.fromkeys(range(3), 1))
 
     context = comp.add_zones_to_context(
         context=context,
@@ -613,20 +602,12 @@ def test_add_moves(interaction_zone: bool, measure_zone: bool, verbose: bool) ->
         cirq.X.on(qubits[0]),
         cirq.CNOT.on(qubits[0], qubits[1]),
         cirq.CNOT.on(qubits[1], qubits[2]),
-        cirq.measure(qubits[2], key="")
+        cirq.measure(qubits[2], key=""),
     )
     result = comp.add_moves(circuit, context, layout, verbose=verbose)
 
-    interaction_qids = [
-        context.pid_to_qid[pid]
-        for pid, role in context.roles.items()
-        if role == 6
-    ]
-    measurement_qids = [
-        context.pid_to_qid[pid]
-        for pid, role in context.roles.items()
-        if role == 7
-    ]
+    interaction_qids = [context.pid_to_qid[pid] for pid, role in context.roles.items() if role == 6]
+    measurement_qids = [context.pid_to_qid[pid] for pid, role in context.roles.items() if role == 7]
     move = css.MovementGate({0: 1})
     move_dg = css.MovementGate({1: 0})
 
@@ -635,19 +616,23 @@ def test_add_moves(interaction_zone: bool, measure_zone: bool, verbose: bool) ->
     for ctrl, trgt in [(qubits[0], qubits[1]), (qubits[1], qubits[2])]:
         if interaction_zone:
             zone = interaction_qids.pop(0)
-            expected.append([
-                move.on(ctrl, zone),
-                move.on(trgt, zone),
-                cirq.CNOT(ctrl, trgt),
-                move_dg.on(trgt, zone),
-                move_dg.on(ctrl, zone),
-            ])
+            expected.append(
+                [
+                    move.on(ctrl, zone),
+                    move.on(trgt, zone),
+                    cirq.CNOT(ctrl, trgt),
+                    move_dg.on(trgt, zone),
+                    move_dg.on(ctrl, zone),
+                ]
+            )
         else:
-            expected.append([
-                move.on(ctrl, trgt),
-                cirq.CNOT(ctrl, trgt),
-                move_dg.on(ctrl, trgt),
-            ])
+            expected.append(
+                [
+                    move.on(ctrl, trgt),
+                    cirq.CNOT(ctrl, trgt),
+                    move_dg.on(ctrl, trgt),
+                ]
+            )
 
     if measure_zone:
         zone = measurement_qids[0]
@@ -666,13 +651,10 @@ def test_replace_cirq_op() -> None:
     base_circuit = cirq.Circuit(cirq.I.on_each(*cirq.LineQubit.range(2)))
     # replace a CNOT in a column layout
     lattice_layout = lyt.generate_column_layout(
-        surface_code_program_qubits=2,
-        surface_code_distance=3
+        surface_code_program_qubits=2, surface_code_distance=3
     )
     lattice_context = mps.build_column_context(
-        base_circuit, 
-        lattice_layout, 
-        surface_code_distance=3
+        base_circuit, lattice_layout, surface_code_distance=3
     )
     ctrl = cirq.NamedQubit("1-0-4")
     trgt = cirq.LineQubit(1)
@@ -693,8 +675,8 @@ def test_replace_cirq_op() -> None:
         t_cultivation_factories=1,
         t_distillation_factories=0,
         ccz_distillation_factories=0,
-        interaction_zone=False, 
-        measure_zone=False
+        interaction_zone=False,
+        measure_zone=False,
     )
     movement_context = mps.build_movement_context(
         base_circuit,
@@ -702,11 +684,9 @@ def test_replace_cirq_op() -> None:
         t_cultivation_factories=1,
         t_distillation_factories=0,
         ccz_distillation_factories=0,
-        dynamic=False
+        dynamic=False,
     )
-    logical_pid = next(
-        pid for pid, role in movement_context.roles.items() if role == 1
-    )
+    logical_pid = next(pid for pid, role in movement_context.roles.items() if role == 1)
     t_qubit = movement_context.pid_to_qid[logical_pid]
     op_to_replace = cirq.T.on(t_qubit)
 
@@ -721,7 +701,8 @@ def test_replace_cirq_op() -> None:
             cirq.TOFFOLI.on(*cirq.LineQubit.range(3)),
             movement_layout,
             movement_context,
-        )    
+        )
+
 
 @pytest.mark.parametrize("movement", (False, True))
 def test_ft_compile(movement: bool) -> None:
@@ -770,6 +751,7 @@ def test_ft_compile(movement: bool) -> None:
 
     assert compiled == expected
     assert new_context.roles == context.roles
+
 
 # @pytest.fixture
 # def bell_circuit() -> cirq.Circuit:
@@ -1246,9 +1228,9 @@ def test_ft_compile(movement: bool) -> None:
 #             """
 #                                                               ┌────────────┐                             ┌───────────┐
 #            (-1, 0): ─────────────────────────────────┤   0├────┤   0├──────────────────┤1   ├───┤1   ├───────────────────────────────────────────────────────────────────────────────────────────
-                                                        
+
 #            (-1, 1): ─────────────────────────────────────────────────┤   0├────────────────────────────────────┤   0├────────────┤1   ├───┤1   ├─────────────────────────────────────────────────
-                                                        
+
 #            (0, 0): ────SE(1)─────────H───────SE(1)───┤0   ├────────────────────@────────────────┤   1├────SE(1)──────────SE(1)───SE(1)────SE(1)────SE(1)───SE(1)─────────────────────────────────
 #                                                                                │
 #            (0, 1): ────SE(1)─────────SE(1)───SE(1)─────────────┤0   ├──────────X───────┤   1├───SE(1)──────────┤0   ├────X───────┤   1├───SE(1)────S───────SE(1)────SE(1)────────────────────────
@@ -1256,9 +1238,9 @@ def test_ft_compile(movement: bool) -> None:
 #            (1, 0): ────CULT(0.785)───SE(1)───SE(1)───SE(1)─────SE(1)───────────SE(1)───SE(1)────SE(1)─────SE(1)──────────┼───────────────────────────────────────────────────────────────────────
 #                                                                                                                          │
 #            (1, 1): ────CULT(0.785)───SE(1)───SE(1)───SE(1)───────────┤0   ├──────────────────────────────────────────────@────────────────┤   1├───SE(1)───┤0   ├───M('')───┤   1├───SE(1)───R───
-                                                        
+
 #            (2, 0): ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤   0├───────────┤1   ├───────────────
-#                                                               └────────────┘                             └───────────┘   
+#                                                               └────────────┘                             └───────────┘
 #             """,
 #         ),
 #     )
@@ -1283,7 +1265,7 @@ def test_ft_compile(movement: bool) -> None:
 #             """
 #                                     ┌──────────┐   ┌──────────┐                                   ┌──────────┐   ┌──────────┐
 #            (0, 0): ───CULT(1.571)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───────────────────────────────────
-                                                                                                                                                                                                                        
+
 #            (0, 2): ───SE(1)──────────H──────────────MERGE─────────SPLIT───SE(1)───SE(1)───SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───SE(1)───────────────────
 #                                                     │             │
 #            (0, 3): ─────────────────────────────────#2────────────#2──────MERGE───────────SPLIT─────────────────────────────────────────────────────────────────────────────────
@@ -1299,7 +1281,7 @@ def test_ft_compile(movement: bool) -> None:
 #            (1, 5): ──────────────────#2─────────────#2─────────────────────────────────────────────MERGE──────────SPLIT─────────────────────────────────────────────────────────
 #                                      │              │
 #            (1, 6): ───CULT(0.785)────MERGE──────────SPLIT─────────M('')───SE(1)───R───────SE(1)────SE(1)──────────SE(1)─────────SE(1)───SE(1)───SE(1)───────────────────────────
-#                                     └──────────┘   └──────────┘                                   └──────────┘   └──────────┘        
+#                                     └──────────┘   └──────────┘                                   └──────────┘   └──────────┘
 #             """
 #         ),
 #     )
