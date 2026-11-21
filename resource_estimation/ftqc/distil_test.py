@@ -18,7 +18,6 @@ import pytest
 
 import resource_estimation.ftqc.compile_ftqc as comp
 
-# from resource_estimation.ftqc.layout import MovementDistillery
 import resource_estimation.ftqc.layout as lyt
 import resource_estimation.ftqc.mappers as mps
 from resource_estimation.ftqc.architecture import DefaultMovement

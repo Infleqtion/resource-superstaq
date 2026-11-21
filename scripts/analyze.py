@@ -265,6 +265,7 @@ def main(args: argparse.Namespace | None = None) -> int:
         )
         # layt = res.ftqc.MovementLayout(num_t_factories=facts, input_circuit=clifford_t_circuit)
     else:
+        # Column Layout is only one implemented currently
         layt = res.ftqc.layout.generate_column_layout(
             surface_code_program_qubits=cirq.num_qubits(clifford_t_circuit),
             surface_code_distance=distance,
@@ -272,11 +273,6 @@ def main(args: argparse.Namespace | None = None) -> int:
         context = res.ftqc.mappers.build_column_context(
             circuit=clifford_t_circuit, layout=layt, surface_code_distance=distance, dynamic=False
         )
-        # layt = res.ftqc.FactorySandwich(
-        #     input_circuit=clifford_t_circuit,
-        #     num_t_factories=facts,
-        #     num_s_factories=facts,
-        # )
     primitive_circuit, end_context = res.ftqc.ft_compile(
         circuit=clifford_t_circuit,
         arc=arch,

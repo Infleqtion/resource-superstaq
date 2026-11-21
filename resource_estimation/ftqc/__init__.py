@@ -54,11 +54,7 @@ from resource_estimation.ftqc.lattice_surgery_primitives import (
     custom_resolver,
 )
 from resource_estimation.ftqc.layout import (
-    # Column,
-    # Embedded,
-    # FactorySandwich,
     Layout,
-    # MovementLayout,
 )
 from resource_estimation.ftqc.mappers import (
     Context,
@@ -83,7 +79,6 @@ __all__ = [
     "DefaultLattice",
     "DefaultMovement",
     "DualSpeciesMovement",
-    # "Embedded",
     "EndpointPatch",
     "ErrorCorrect",
     "FactorySandwich",
@@ -92,7 +87,6 @@ __all__ = [
     "LogicalQubit",
     "Merge",
     "MeasureZonesOnly",
-    # "MovementLayout",
     "ResourceCorrection",
     "ReactionDepthEstimator",
     "ReactionDynamics",

@@ -933,8 +933,6 @@ class DefaultMovement(Architecture):
     ) -> CostDict:
         if not isinstance(op.gate, lsp.Distil):
             raise TypeError("Operation is not an instance of Distil")
-        # if not isinstance(layout, MovementDistillery):
-        #     raise TypeError("layout must be a MovementDistillery for distil_cost().")
         return self._distil_cost(op.gate._resource, layout=layout, context=context)
 
     def _distil_cost(

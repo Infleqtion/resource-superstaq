@@ -129,7 +129,6 @@ def _decompose_lattice_cnot(
 ) -> list[cirq.Operation | cirq.Moment]:
     path_patch_ids = route_lattice_cnot(ctrl, trgt, layout, context=context)
     path_qubits = [context.pid_to_qid[patch_id] for patch_id in path_patch_ids]
-    # path_qubits.reverse()
     num_qubits = len(path_qubits)
     decomposition: list[cirq.Operation | cirq.Moment] = [
         lsp.Merge(num_qubits=num_qubits - 1, smooth=True).on(*path_qubits[:-1]),
@@ -437,7 +436,6 @@ def add_zones_to_context(
 
 def post_op_syndrome_extraction(
     circuit: cirq.Circuit,
-    # context: mps.Context,
     arc: Architecture,
     verbose: int = 0,
 ) -> cirq.Circuit:
@@ -455,7 +453,6 @@ def post_op_syndrome_extraction(
 
     rounds = arc.d if arc.syndrome_rounds is None else arc.syndrome_rounds
     syndrome_extract = lsp.SyndromeExtract(1, rounds)
-    # barrier = css.barrier(*sorted(circuit.all_qubits()))
 
     total = len(circuit)
     tstart = time.time()
@@ -531,7 +528,6 @@ def _decompose_to_primitives(
 
 def add_moves(
     circuit: cirq.Circuit,
-    # arc: arch.Architecture,
     context: mps.Context,
     layout: lyt.Layout,
     verbose: int = 0,
@@ -668,10 +664,8 @@ def ft_compile(
     # Add SyndromeExtraction to idling logical qubits
     if context.idling:
         circuit = handle_idling(circuit=circuit, arc=arc, context=context)
-    # This is where movement was originally...
-    # So I'll keep it here for now...
+    # Add moves to the circuit
     if isinstance(arc, arch.DefaultMovement):
-        # context = add_zones_to_context(context=context, arc=arc, layout=layout)
         context = add_zones_to_context(context=context, arc=arc, layout=layout)
         circuit = add_moves(circuit=circuit, context=context, layout=layout)
 

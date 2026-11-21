@@ -955,7 +955,6 @@ def test_dynamic_T_resource_counts(mock_randint: mock.MagicMock) -> None:
 def test_dynamic_CCZ_resource_counts(mock_randint: mock.MagicMock) -> None:
     arc = arch.DefaultMovement()
     qubit_a, qubit_b, qubit_c = (cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
-    # correction_circuit = cirq.Circuit()
     # The circuit excludes syndrome extraction costs since those are handled during compilation, so
     # the CCZ correction cost should be identical to just doing these gates with no syndrome
     # extraction
@@ -989,7 +988,6 @@ def test_dynamic_CCZ_resource_counts(mock_randint: mock.MagicMock) -> None:
     gate_cost_yes_correction = arc.gate_cost(dynamic_op)  # 0
     assert gate_cost_yes_correction == correction_gate_cost
 
-    # normal_correction_time = est.parallel_circuit_time(correction_circuit, layout=layout)
     op_time_no_correction = arc.op_time(dynamic_op)  # 1
     assert op_time_no_correction == 0.0
     op_time_yes_correction = arc.op_time(dynamic_op)  # 0
