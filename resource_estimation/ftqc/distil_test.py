@@ -17,7 +17,6 @@ import cirq
 import pytest
 
 import resource_estimation.ftqc.compile_ftqc as comp
-
 import resource_estimation.ftqc.layout as lyt
 import resource_estimation.ftqc.mappers as mps
 from resource_estimation.ftqc.architecture import DefaultMovement

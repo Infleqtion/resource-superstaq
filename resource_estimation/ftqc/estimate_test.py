@@ -368,6 +368,7 @@ def test_critical_path() -> None:
         assert all(op in cirq.GateFamily(expected) for op, expected in zip(path1, expected_types))
         assert all(op in cirq.GateFamily(expected) for op, expected in zip(path2, expected_types))
 
+
 def test_physical_qubit_count(lattice_estimator: est.ResourceEstimator) -> None:
     test_circuit = cirq.Circuit(
         [

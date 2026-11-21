@@ -26,8 +26,6 @@ import cirq
 import cirq_superstaq as css
 import tqdm
 
-import resource_estimation as rss
-
 if TYPE_CHECKING:
     from typing import Iterator, Sequence
 

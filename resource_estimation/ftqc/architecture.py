@@ -32,7 +32,6 @@ import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 import resource_estimation.ftqc.layout as lyt
 import resource_estimation.ftqc.mappers as mps
 from resource_estimation.ftqc.distil import precompute_distil_cost
-
 from resource_estimation.ftqc.stim_functions import cultivate
 from resource_estimation.typing import CostDict, GateCounts, GateKey, _require_gate_operation
 
@@ -891,6 +890,7 @@ class DefaultMovement(SurfaceArchitecture):
         """
         # In a later version I would like to have dynamic costs where we ask the layout where things are *right now*
         ctrl, trgt = op.qubits
+
         def position(qid: cirq.Qid) -> tuple[int, int]:
             if qid not in context.qid_to_pid:
                 print(context.qid_to_pid)
