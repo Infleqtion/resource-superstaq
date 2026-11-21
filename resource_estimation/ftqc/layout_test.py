@@ -88,7 +88,7 @@ def test_placement_overlap() -> None:
         (1, 1, False),  # Overlapping interiors
     ],
 )
-def test_placement_borders(row, col, truth) -> None:
+def test_placement_borders(row: int, col: int, truth: bool) -> None:
     first = placed_zone(0, 0, 2, 3)
     second = placed_zone(row, col, 2, 3)
     assert first.borders(second) == truth
@@ -100,7 +100,7 @@ def test_placement_requires_equal_footprints() -> None:
         _ = placed_zone(0, 0, 3, 3).borders(placed_zone(3, 3, 4, 5))
 
 
-def test_layout_add_assigns_ids_and_allows_edge_touching():
+def test_layout_add_assigns_ids_and_allows_edge_touching() -> None:
     layout = lyt.Layout(rows=10, cols=10)
     first = layout.add(cpa.RotatedSurfaceCodePatch(0, 3), 0, 0)
     second = layout.add(cpa.RotatedSurfaceCodePatch(1, 3), 0, 5)
@@ -139,7 +139,7 @@ def test_layout_remove() -> None:
     assert layout.placements == {}
 
     with pytest.raises(ValueError, match="No entry found"):
-        _ = layout.remove(placed)
+        layout.remove(placed)
 
 
 @pytest.mark.parametrize("row, col, truth", [(0, 0, True), (4, 4, True), (5, 5, False)])
@@ -233,11 +233,12 @@ def test_generate_movement_patch_count(
         measure_zone=False,
     )
     assert len(layout.placements) == expected_patches
-    assert all(
-        isinstance(p.element, cpa.RotatedSurfaceCodePatch) for p in layout.placements.values()
-    )
-    assert all(p.element.d == 5 for p in layout.placements.values())
-    assert {p.element.patch_id for p in layout.placements.values()} == set(range(expected_patches))
+    patch_ids: set[int] = set()
+    for p in layout.placements.values():
+        assert isinstance(p.element, cpa.RotatedSurfaceCodePatch)
+        assert p.element.d == 5
+        patch_ids.add(p.element.patch_id)
+    assert set(range(expected_patches)) == patch_ids
     assert layout.regions == {}
 
 
@@ -251,7 +252,7 @@ def test_generate_movement_patch_count(
     ],
 )
 def test_generate_movement_zones(
-    interaction_zone: bool, measure_zone: bool, expected_rows: int, expected_zone_ids: set
+    interaction_zone: bool, measure_zone: bool, expected_rows: int, expected_zone_ids: set[int]
 ) -> None:
     layout = lyt.generate_movement_layout(
         surface_code_program_qubits=5,
@@ -268,12 +269,14 @@ def test_generate_movement_zones(
     assert set(layout.regions) == expected_zone_ids
     if interaction_zone:
         region = layout.regions[0]
+        assert isinstance(region.element, lyt.Zone)
         assert region.element.role == "Interaction"
         assert region.row == 0
         assert region.col == 0
         assert region.element.footprint == lyt.Rect(5, 15)
     if measure_zone:
         region = layout.regions[1]
+        assert isinstance(region.element, lyt.Zone)
         assert region.element.role == "Measure"
         assert region.row == expected_rows - 5
         assert region.col == 0
@@ -326,6 +329,7 @@ def test_generate_column(program_qubits: int, rows_of_patches: int) -> None:
     for pid, p in layout.placements.items():
         assert p.row == (pid // 7) * 5
         assert p.col == (pid % 7) * 5
+        assert isinstance(p.element, cpa.RotatedSurfaceCodePatch)
         assert p.element.patch_id == pid
         assert p.element.d == 3
         assert p.element.footprint == lyt.Rect(5, 5)

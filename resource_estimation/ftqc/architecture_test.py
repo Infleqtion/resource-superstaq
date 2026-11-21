@@ -800,13 +800,13 @@ def test_logical_moves(
     interaction_move = _require_gate_operation(interaction_move)
 
     for move_location, expected_move_gates in [(logical2, 3), (interaction, 3), (measurement, 2)]:
-        op = css.MovementGate({0: 1}).on(logical1, move_location)
+        op = _require_gate_operation(css.MovementGate({0: 1}).on(logical1, move_location))
         op_cost = movement_architecture.move_cost(op, layout=layout, context=context)
         assert op_cost.gate_cost == {css.MovementGate: expected_move_gates}
 
     # Test that qubits not in context raise error
     with pytest.raises(ValueError, match="QID not in Context"):
-        op = css.MovementGate({0: 1}).on(logical1, cirq.NamedQubit("fake"))
+        op = _require_gate_operation(css.MovementGate({0: 1}).on(logical1, cirq.NamedQubit("fake")))
         _ = movement_architecture.move_cost(op, layout=layout, context=context)
 
     # # Parameters consistend for all considered moves
@@ -962,7 +962,7 @@ def test_distillation_cases(
     # Confirm that distil is only available to movement archs
     with pytest.raises(NotImplementedError, match="movement architectures only"):
         # The arguents in here feel like a bit of a mismatch with expectations
-        _ = lattice_architecture._distil_cost(resource="T", layout=layout)
+        _ = lattice_architecture._distil_cost(resource="T", layout=layout, context=context)
         # _ = lattice_architecture._distil_cost(
         #     resource="T", layout=lyt.MovementDistillery(input_circuit=distil_15_to_1())
         # )
@@ -982,7 +982,7 @@ def test_distillation_cases(
     distil_thrice = arch.DefaultMovement(distillation_repetition=3)
     t_once = distil_once._distil_cost("T", layout=layout, context=context).op_time
 
-    t_op = lsp.Distil("T").on(*cirq.LineQubit.range(31))
+    t_op = _require_gate_operation(lsp.Distil("T").on(*cirq.LineQubit.range(31)))
     result = distil_once.distil_cost(t_op, layout=layout, context=context)
     assert result.op_time == t_once
 

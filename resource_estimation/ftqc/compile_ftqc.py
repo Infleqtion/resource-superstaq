@@ -115,6 +115,8 @@ def route_lattice_cnot(
         if not new_paths:
             raise ValueError(f"Could not find valid path from {ctrl} to {trgt}")
         paths = new_paths
+        print(paths)
+    print("Found a path!")
     best_path = min([path for path in paths if last in path], key=len)
     return best_path
 
@@ -129,7 +131,7 @@ def _decompose_lattice_cnot(
     path_qubits = [context.pid_to_qid[patch_id] for patch_id in path_patch_ids]
     # path_qubits.reverse()
     num_qubits = len(path_qubits)
-    decomposition = [
+    decomposition: list[cirq.Operation | cirq.Moment] = [
         lsp.Merge(num_qubits=num_qubits - 1, smooth=True).on(*path_qubits[:-1]),
         lsp.Split(partitions=[1, len(path_qubits[:-1]) - 1], smooth=True).on(
             *path_qubits[:-1],
@@ -173,7 +175,9 @@ def replace_cirq_op(
 
 def _determine_resource(
     op: cirq.Operation, context: mps.Context
-) -> tuple[cirq.Operation, cirq.Operation, int]:
+) -> tuple[cirq.Gate, cirq.Gate | list[cirq.Operation], int]:
+    prep_gate: lsp.Cultivate | lsp.Distil
+    correction: cirq.Gate | list[cirq.Operation]
     if op in cirq.GateFamily(cirq.CCZ):
         prep_gate = lsp.Distil("CCZ")
         if context.dynamic:
@@ -242,8 +246,8 @@ def _find_factories_simple(
         max_facts = context.num_ccz_factories
     else:
         raise ValueError(f"Cannot parse resource id {resource_id}")
-    found_factories = set()
-    current_factory = []
+    found_factories: set[tuple[int, ...]] = set()
+    current_factory: list[int] = []
     for pid, role in context.roles.items():
         if len(found_factories) == max_facts:
             break
@@ -270,8 +274,8 @@ def _find_blocks_simple(
         max_blocks = context.num_ccz_factories
     else:
         raise ValueError(f"Cannot parse resource id {resource_id}")
-    found_blocks = set()
-    current_block = []
+    found_blocks: set[tuple[int, ...]] = set()
+    current_block: list[int] = []
     for pid, role in context.roles.items():
         if pid in assigned_factories or pid in assigned_blocks:
             continue
@@ -322,11 +326,11 @@ def teleport_resource(
     routed_factory = _nearest_factory(op.qubits, resource_id, layout, context)
 
     # Map patch ids for factory and block to qids
-    factory_qids = tuple(map(context.pid_to_qid.get, routed_factory))
+    factory_qids = tuple(context.pid_to_qid[pid] for pid in routed_factory)
     block_qids = (
-        tuple(map(context.pid_to_qid.get, context.blocks[routed_factory]))
+        tuple(context.pid_to_qid[pid] for pid in context.blocks[routed_factory])
         if block_size
-        else tuple()
+        else ()
     )
 
     # Write replacement injection operation
@@ -339,7 +343,7 @@ def teleport_resource(
         cnots.append(cirq.CNOT.on(factory_qubit, program_qubit))
         measurements.append(cirq.MeasurementGate(1, key="").on(factory_qubit))
         resets.append(cirq.ResetChannel().on(factory_qubit))
-    operations = [
+    operations: list[cirq.Operation | cirq.Moment] = [
         resource_state_prep,
         cirq.Moment(cnots),
         cirq.Moment(measurements),
@@ -411,7 +415,7 @@ def add_zones_to_context(
         qids = cirq.NamedQubit.range(num_zone_qubits, prefix="IZ")
         next_pid = max(new_context.pid_to_qid) + 1
         pids = range(next_pid, next_pid + len(qids))
-        update_qid_to_pid = {qid: pid for qid, pid in zip(qids, pids)}
+        update_qid_to_pid: dict[cirq.Qid, int] = {qid: pid for qid, pid in zip(qids, pids)}
         update_pid_to_qid = {pid: qid for pid, qid in zip(pids, qids)}
         update_roles = dict.fromkeys(pids, 6)
         new_context.qid_to_pid.update(update_qid_to_pid)
@@ -548,12 +552,18 @@ def add_moves(
         [context.pid_to_qid[pid] for pid, rid in context.roles.items() if rid == 7]
     )
     ops_to_replace: list[GateKey] = [cirq.CNOT]
-    if any(region.element.role == "Measure" for region in layout.regions.values()):
+    if any(
+        isinstance(region.element, lyt.Zone) and region.element.role == "Measure"
+        for region in layout.regions.values()
+    ):
         ops_to_replace.append(cirq.MeasurementGate)
         measure_zones = True
     else:
         measure_zones = False
-    if any(region.element.role == "Interaction" for region in layout.regions.values()):
+    if any(
+        isinstance(region.element, lyt.Zone) and region.element.role == "Interaction"
+        for region in layout.regions.values()
+    ):
         inplace_cnot, interaction_zones = False, True
     else:
         inplace_cnot, interaction_zones = True, False
@@ -641,7 +651,7 @@ def ft_compile(
     arc: Architecture,
     layout: lyt.Layout,
     context: mps.Context,
-):
+) -> tuple[cirq.Circuit, mps.Context]:
     # Decompose CNOTs and add resource state injections
     circuit = _decompose_to_primitives(circuit=circuit, layout=layout, arc=arc, context=context)
 

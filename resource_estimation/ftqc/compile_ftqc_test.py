@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 import textwrap
 from math import pi
 
@@ -26,30 +28,43 @@ import resource_estimation.ftqc.layout as lyt
 import resource_estimation.ftqc.mappers as mps
 
 
-def make_context(roles: dict[int, int], **overrides: object) -> mps.Context:
-    pid_to_qid = {pid: cirq.NamedQubit(f"p{pid}") for pid in roles}
-    values = dict(
+def make_context(
+    roles: dict[int, int],
+    *,
+    transversal_cnot: bool = False,
+    distil_t: bool = False,
+    cult_t: bool = True,
+    dynamic: bool = False,
+    num_s_factories: int = 0,
+    num_t_factories: int = 0,
+    num_ccz_factories: int = 0,
+    factories: dict[tuple[int, ...], int] | None = None,
+    blocks: dict[tuple[int, ...], tuple[int, ...]] | None = None,
+    post_op_syndrome_extraction: bool = False,
+    idling: bool = False,
+) -> mps.Context:
+    pid_to_qid: dict[int, cirq.Qid] = {pid: cirq.NamedQubit(f"p{pid}") for pid in roles}
+
+    return mps.Context(
         roles=dict(roles),
         pid_to_qid=pid_to_qid,
-        qid_to_pid={v: k for k, v in pid_to_qid.items()},
-        factories={},
-        blocks={},
-        num_s_factories=0,
-        num_t_factories=0,
-        num_ccz_factories=0,
-        transversal_cnot=False,
-        distil_t=False,
-        cult_t=True,
-        dynamic=False,
-        post_op_syndrome_extraction=False,
-        idling=False,
+        qid_to_pid={qid: pid for pid, qid in pid_to_qid.items()},
+        factories={} if factories is None else dict(factories),
+        blocks={} if blocks is None else dict(blocks),
+        num_s_factories=num_s_factories,
+        num_t_factories=num_t_factories,
+        num_ccz_factories=num_ccz_factories,
+        transversal_cnot=transversal_cnot,
+        distil_t=distil_t,
+        cult_t=cult_t,
+        dynamic=dynamic,
+        post_op_syndrome_extraction=post_op_syndrome_extraction,
+        idling=idling,
     )
-    values.update(**overrides)
-    return mps.Context(**values)
 
 
 @pytest.mark.parametrize("verbose", (True, False))
-def test_validate_ops(verbose) -> None:
+def test_validate_ops(verbose: bool) -> None:
     qubits = cirq.LineQubit.range(3)
     valid_circuit = cirq.Circuit(
         cirq.T.on(qubits[0]),
@@ -353,8 +368,10 @@ def test_teleport_resource() -> None:
 
     # Check the returned operations
     assert len(result) == 5
-    assert result[0].gate == lsp.Distil("CCZ")
-    assert len(result[0].qubits) == 23
+    first_op = result[0]
+    assert isinstance(first_op, cirq.GateOperation)
+    assert first_op.gate == lsp.Distil("CCZ")
+    assert len(first_op.qubits) == 23
 
     factory_qubits = tuple(context.pid_to_qid[i] for i in (8, 9, 10))
 
@@ -369,9 +386,10 @@ def test_teleport_resource() -> None:
     assert len(context.blocks) == 1
 
     second_result = comp.teleport_resource(op, layout, context)
-
+    second_op = second_result[0]
+    assert isinstance(second_op, cirq.GateOperation)
     # The second teleportation uses a different factory
-    assert second_result[0].qubits[:3] != result[0].qubits[:3]
+    assert second_op.qubits[:3] != first_op.qubits[:3]
 
     # Both CCZ factories and their blocks have been consumed
     assert not context.factories
@@ -661,7 +679,11 @@ def test_replace_cirq_op() -> None:
     op_to_replace = cirq.CNOT.on(ctrl, trgt)
     decomposition = comp.replace_cirq_op(op_to_replace, lattice_layout, lattice_context)
     assert len(decomposition) == 4
-    assert [type(op.gate) for op in decomposition] == [
+    gate_types = []
+    for op in decomposition:
+        assert isinstance(op, cirq.GateOperation)
+        gate_types.append(type(op.gate))
+    assert gate_types == [
         lsp.Merge,
         lsp.Split,
         lsp.Merge,
@@ -691,9 +713,13 @@ def test_replace_cirq_op() -> None:
     op_to_replace = cirq.T.on(t_qubit)
 
     decomposition = comp.replace_cirq_op(op_to_replace, movement_layout, movement_context)
+    first_op = decomposition[0]
+    last_op = decomposition[-1]
+    assert isinstance(first_op, cirq.GateOperation)
+    assert isinstance(last_op, cirq.GateOperation)
     assert len(decomposition) == 5
-    assert decomposition[0].gate == lsp.Cultivate(pi / 4)
-    assert decomposition[-1] == cirq.S.on(t_qubit)
+    assert first_op.gate == lsp.Cultivate(pi / 4)
+    assert last_op == cirq.S.on(t_qubit)
 
     # Test that some operations cannot be replaced
     with pytest.raises(ValueError, match="Invalid Op for the given layout and context"):
@@ -709,6 +735,7 @@ def test_ft_compile(movement: bool) -> None:
     # Simple integration test
     # Core mechanisms are covered elsewhere
     distance = 3
+    arc: arch.DefaultMovement | arch.DefaultLattice
     if movement:
         arc = arch.DefaultMovement(d=distance, syndrome_rounds=1)
         layout = lyt.generate_movement_layout(

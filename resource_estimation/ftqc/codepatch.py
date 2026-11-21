@@ -75,7 +75,7 @@ class PhysicalQubit(cirq.Qid):
 
     def _comparison_key(
         self,
-    ) -> tuple[int, int, int, typing.Literal["data", "measure"], typing.Literal["X", "Z"] | None]:
+    ) -> tuple[int, int, int, int]:
         return self.patch_id, self.local_coord[0], self.local_coord[1], self.role
 
     def __str__(self) -> str:
@@ -193,6 +193,11 @@ class CodePatch(abc.ABC):
             rows=max(rows) - min(rows) + 1,
             cols=max(cols) - min(cols) + 1,
         )
+
+    @abc.abstractmethod
+    def default_layout(self) -> list[PhysicalQubit]:  # pragma: no cover
+        """Return the physical qubits in their default layout."""
+        ...
 
 
 class CSSCodePatch(CodePatch):
@@ -334,6 +339,11 @@ class BBCodePatch(CSSCodePatch):
         poly_b = 1 + y**-3 + x**-1 * y**-2 + x**-1 * y**-4
         qldpc_code = codes.BBCode(orders, poly_a, poly_b)
         super().__init__(patch_id=patch_id, qldpc_code=qldpc_code)
+
+    @property
+    def qldpc_code(self) -> codes.BBCode:
+        assert isinstance(self._qldpc_code, codes.BBCode)
+        return self._qldpc_code
 
     def __repr__(self) -> str:
         args = [

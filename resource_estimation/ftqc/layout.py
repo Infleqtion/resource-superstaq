@@ -25,7 +25,7 @@ class Rect:
     rows: int
     cols: int
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.rows <= 0 or self.cols <= 0:
             raise ValueError("Rect dimensions must be positive")
 
@@ -50,7 +50,7 @@ class Placement:
     def col_end(self) -> int:
         return self.col + self.element.footprint.cols
 
-    def overlaps(self, placement: Placement):
+    def overlaps(self, placement: Placement) -> bool:
         # TODO: This might have a bug because I think there should be and statements in here
         return not (
             placement.row_end <= self.row
@@ -104,7 +104,7 @@ class Layout:
 
     # Might want a method that checks no overlapping placements or something similar
 
-    def add(self, element: Placeable, row, col) -> int:
+    def add(self, element: Placeable, row: int, col: int) -> int:
         """Adds a new proposed placement if possible, returning its unique identifier"""
         candidate_placement = Placement(element=element, row=row, col=col)
         if not self.in_bounds(placement=candidate_placement):
@@ -115,7 +115,7 @@ class Layout:
         self.placements[next_id] = candidate_placement
         return next_id
 
-    def remove(self, placement_id: int):
+    def remove(self, placement_id: int) -> None:
         """Removes the Placement at placement_id"""
         if placement_id not in self.placements:
             raise ValueError(f"No entry found for placement id {placement_id}")
@@ -145,7 +145,7 @@ class Layout:
             if pid != exclude
         )
 
-    def in_bounds(self, placement: Placement):
+    def in_bounds(self, placement: Placement) -> bool:
         """Returns True if the proposed placement is within the bounds of the Layout"""
         return (
             placement.row >= 0
@@ -170,7 +170,7 @@ def generate_movement_layout(
     ccz_distillation_factories: int,
     interaction_zone: bool,
     measure_zone: bool,
-    **kwargs,
+    **kwargs: object,
 ) -> Layout:
     """Generate a populated `Layout` based on the input circuit and other important parameters"""
     total_surface_code_patches = (
@@ -221,7 +221,7 @@ def generate_column_layout(
     # ccz_distillation_factories: int,
     # interaction_zone: bool,
     # measure_zone: bool
-    **kwargs,
+    **kwargs: object,
 ) -> Layout:
     """Generate a populated `Layout` based on the input circuit and other important parameters"""
     rows_of_patches = surface_code_program_qubits + surface_code_program_qubits % 2

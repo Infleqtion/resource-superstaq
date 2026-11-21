@@ -336,7 +336,9 @@ class Architecture(abc.ABC):
     def _cultivate_t_cost(self) -> CostDict:  # pragma: no cover
         raise NotImplementedError
 
-    def _distil_cost(self, resource: Literal["T", "CCZ"], layout: MovementDistillery) -> CostDict:
+    def _distil_cost(
+        self, resource: Literal["T", "CCZ"], layout: lyt.Layout, context: mps.Context
+    ) -> CostDict:
         raise NotImplementedError(
             "Distillation is currently reserved to distillation movement architectures only"
         )
@@ -878,8 +880,8 @@ class DefaultMovement(Architecture):
         patch_length = 2 * self.d - 1
         ctrl_row, ctrl_col = position(ctrl)
         trgt_row, trgt_col = position(trgt)
-        dx = abs(trgt_col - ctrl_col) / patch_length  # number of logical patches horizontally
-        dy = abs(trgt_row - ctrl_row) / patch_length  # number of logical patches vertically
+        dx = abs(trgt_col - ctrl_col) // patch_length  # number of logical patches horizontally
+        dy = abs(trgt_row - ctrl_row) // patch_length  # number of logical patches vertically
         patch_length = 2 * self.d
         # print("This should be an error now")
         trgt_role = context.roles[context.qid_to_pid[trgt]]
@@ -896,8 +898,8 @@ class DefaultMovement(Architecture):
             # +1 accounts for one extra unit to get to the corner from the bottom right
             # scratch_dx = abs(bottom_right.col - trgt.row) + 1
             # scratch_dy = abs(bottom_right.row - trgt.row) + 1
-            scratch_dx = (layout.cols - ctrl_col) / patch_length
-            scratch_dy = (layout.rows - ctrl_row) / patch_length
+            scratch_dx = (layout.cols - ctrl_col) // patch_length
+            scratch_dy = (layout.rows - ctrl_row) // patch_length
             return _inplace_entanglement_move_precompiled(
                 dx=dx,
                 dy=dy,

@@ -313,7 +313,7 @@ def test_self_returns(
         surface_code_distance=lattice_estimator.arc.d,
     )
     cost = lattice_estimator.serial_circuit_cost(
-        circuit=circuit, layout=lattice_estimator, context=lattice_context
+        circuit=circuit, layout=lattice_layout, context=lattice_context
     )
     assert cost == {
         cirq.ResetChannel: 2 * 49,

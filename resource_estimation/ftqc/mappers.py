@@ -49,7 +49,7 @@ def build_movement_context(
     t_distillation_factories: int = 0,
     ccz_distillation_factories: int = 0,
     dynamic: bool = False,
-    **kwargs,
+    **kwargs: object,
 ) -> Context:
     """
     A replacement for much of the logic that was in the various flavors of `MovementLayout` previously.
@@ -63,7 +63,6 @@ def build_movement_context(
         An error is raised if both types of factories is requested
     `ccz_distillation_factories` is the number of factories distilling CCZ states (23 patches per factory)
         It also includes extra space for cultivating T states within its block, like the old version
-    # `arc` is the Architecture--currently only used to supply the availability of transversal CNOT
     `dynamic` is a compiler keyword argument that should eventually become obselete
     The main role of this function is to create an initial mapping between patch ids and qids and to assign patch ids to roles before compilation begins.
     In a better world, this mapping and allocation would happen dynamically during compilation, but the first step is getting the context out of the Layout class.
@@ -132,7 +131,7 @@ def build_column_context(
     surface_code_distance: int,
     # arc: arch.Architecture,
     dynamic: bool = False,
-    **kwargs,
+    **kwargs: object,
 ) -> Context:
     """
     This function largely replaces the `ColumnLayout`.
@@ -154,7 +153,7 @@ def build_column_context(
         )
     expected_length = 2 * surface_code_distance - 1
 
-    def get_patch_id_at(logical_row, logical_col):
+    def get_patch_id_at(logical_row: int, logical_col: int) -> int:
         anchor_row, anchor_col = logical_row * expected_length, logical_col * expected_length
         match_placements = {
             obj
@@ -162,7 +161,9 @@ def build_column_context(
             if obj.row == anchor_row and obj.col == anchor_col
         }
         assert len(match_placements) == 1
-        return match_placements.pop().element.patch_id
+        patch = match_placements.pop().element
+        assert isinstance(patch, cpa.RotatedSurfaceCodePatch)
+        return patch.patch_id
 
     qid_to_pid = {}
     roles = {}
