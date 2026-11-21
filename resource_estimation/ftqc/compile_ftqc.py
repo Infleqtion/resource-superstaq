@@ -26,6 +26,8 @@ import cirq
 import cirq_superstaq as css
 import tqdm
 
+import resource_estimation as rss
+
 if TYPE_CHECKING:
     from typing import Iterator, Sequence
 
@@ -358,7 +360,7 @@ def teleport_resource(
 
 def handle_idling(
     circuit: cirq.Circuit,
-    arc: arch.Architecture,
+    arc: arch.SurfaceArchitecture,
     context: mps.Context,
     verbose: int = 0,
 ) -> cirq.Circuit:
@@ -372,7 +374,7 @@ def handle_idling(
     total = len(circuit)
     tstart = time.time()
 
-    rounds = arc.d if arc.syndrome_rounds is None else arc.syndrome_rounds
+    rounds = arc.rounds
     se = lsp.SyndromeExtract(1, rounds)
 
     def _map_fn(moment: cirq.Moment, moment_idx: int) -> cirq.Moment | Sequence[cirq.Moment]:
@@ -436,7 +438,7 @@ def add_zones_to_context(
 
 def post_op_syndrome_extraction(
     circuit: cirq.Circuit,
-    arc: Architecture,
+    arc: arch.SurfaceArchitecture,
     verbose: int = 0,
 ) -> cirq.Circuit:
     """For movement, it has been suggested that we just do syndrome extraction (for a single round) right after a logical operations."""
@@ -451,7 +453,7 @@ def post_op_syndrome_extraction(
     if isinstance(arc, arch.DefaultMovement):
         ops_to_correct.append(cirq.H)
 
-    rounds = arc.d if arc.syndrome_rounds is None else arc.syndrome_rounds
+    rounds = arc.rounds
     syndrome_extract = lsp.SyndromeExtract(1, rounds)
 
     total = len(circuit)
@@ -644,7 +646,7 @@ def allocate_qubits_simple(
 
 def ft_compile(
     circuit: cirq.Circuit,
-    arc: Architecture,
+    arc: arch.SurfaceArchitecture,
     layout: lyt.Layout,
     context: mps.Context,
 ) -> tuple[cirq.Circuit, mps.Context]:
@@ -654,7 +656,7 @@ def ft_compile(
     # Prepare initial logical states
     # I would like to replace this with a dedicated gate, rather than SyndromeExtraction
     logical_qubits = [context.pid_to_qid[pid] for pid, rid in context.roles.items() if rid == 1]
-    rounds = arc.d if arc.syndrome_rounds is None else arc.syndrome_rounds
+    rounds = arc.rounds
     state_prep = cirq.Circuit(lsp.SyndromeExtract(1, rounds).on_each(*logical_qubits))
     circuit = state_prep + circuit
 

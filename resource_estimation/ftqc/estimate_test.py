@@ -135,6 +135,7 @@ def test_all_primitives(estimator: est.ResourceEstimator) -> None:
     circuit += [lsp.SyndromeExtract(1, 1).on(q) for q in dummy_qubits]
     circuit += [lsp.ErrorCorrect(1).on(q) for q in dummy_qubits]
     arc = estimator.arc
+    assert isinstance(arc, arch.SurfaceArchitecture)
     layout: lyt.Layout
     if arc.movement:
         layout, context = get_movement_layout_and_context(
