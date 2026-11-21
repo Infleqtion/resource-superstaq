@@ -647,6 +647,7 @@ def ft_compile(
     arc: arch.SurfaceArchitecture,
     layout: lyt.Layout,
     context: mps.Context,
+    verbose: int = 0,
 ) -> tuple[cirq.Circuit, mps.Context]:
     # Decompose CNOTs and add resource state injections
     circuit = _decompose_to_primitives(circuit=circuit, layout=layout, arc=arc, context=context)
@@ -660,13 +661,13 @@ def ft_compile(
 
     # Add SyndromeExtraction after logical operations
     if context.post_op_syndrome_extraction:
-        circuit = post_op_syndrome_extraction(circuit=circuit, arc=arc)
+        circuit = post_op_syndrome_extraction(circuit=circuit, arc=arc, verbose=verbose)
     # Add SyndromeExtraction to idling logical qubits
     if context.idling:
-        circuit = handle_idling(circuit=circuit, arc=arc, context=context)
+        circuit = handle_idling(circuit=circuit, arc=arc, context=context, verbose=verbose)
     # Add moves to the circuit
     if isinstance(arc, arch.DefaultMovement):
         context = add_zones_to_context(context=context, arc=arc, layout=layout)
-        circuit = add_moves(circuit=circuit, context=context, layout=layout)
+        circuit = add_moves(circuit=circuit, context=context, layout=layout, verbose=verbose)
 
     return circuit, context
