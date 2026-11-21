@@ -169,7 +169,6 @@ def test_movement_gate_costs(d: int) -> None:
     qubit_a, qubit_b = cirq.GridQubit(0, 0), cirq.GridQubit(0, 1)
 
     # Check Cultivate
-
     op = lsp.Cultivate(pi / 4).on(qubit_a)
     if d < 7:
         with pytest.warns(UserWarning, match="Returning result for d=7"):
@@ -775,18 +774,6 @@ def test_logical_moves(
         interaction_zone=True,
         measure_zone=True,
     )
-    # dsm_layout = lyt.MovementLayout(
-    #     input_circuit=circuit,
-    #     num_t_factories=0,
-    #     num_ccz_factories=0,
-    #     architecture="DSM",
-    # )
-    # ssm_layout = lyt.MovementLayout(
-    #     input_circuit=circuit,
-    #     num_t_factories=0,
-    #     num_ccz_factories=0,
-    #     architecture="SSM",
-    # )
     context = mps.build_movement_context(circuit, layout)
     context = comp.add_zones_to_context(context, movement_architecture, layout)
 
@@ -808,41 +795,6 @@ def test_logical_moves(
     with pytest.raises(ValueError, match="QID not in Context"):
         op = _require_gate_operation(css.MovementGate({0: 1}).on(logical1, cirq.NamedQubit("fake")))
         _ = movement_architecture.move_cost(op, layout=layout, context=context)
-
-    # # Parameters consistend for all considered moves
-    # dx, dy, patch_length, site_spacing = 1, 1, 14, 4
-    # # Parameters for inplace only
-    # scratch_dx, scratch_dy = 1, 2
-
-    # # Test MovementGate involving interaction zone qubit yields precompiled interaction zone cost
-    # expected_result = arch._interaction_zone_move_precompiled(
-    #     dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
-    # ).op_time
-    # returned_result = movement_architecture.move_cost(interaction_move, layout=ssm_layout).op_time
-    # assert isclose(expected_result, returned_result)
-
-    # # Test MovementGate involving measurement zone qubit yields precompiled measurement zone cost
-    # measurement_move = css.MovementGate({0: 1}).on(cirq.GridQubit(1, 1), cirq.GridQubit(2, 2))
-    # measurement_move = _require_gate_operation(measurement_move)
-    # expected_result = arch._measurement_zone_move_precompiled(
-    #     dx=dx, dy=dy, patch_length=patch_length, site_spacing=site_spacing
-    # ).op_time
-    # returned_result = movement_architecture.move_cost(measurement_move, layout=ssm_layout).op_time
-    # assert isclose(expected_result, returned_result)
-
-    # # Test MovementGate on logical qubits yields precompiled inplace cost
-    # inplace_move = css.MovementGate({0: 1}).on(cirq.GridQubit(0, 0), cirq.GridQubit(1, 1))
-    # inplace_move = _require_gate_operation(inplace_move)
-    # expected_result = arch._inplace_entanglement_move_precompiled(
-    #     dx=dx,
-    #     dy=dy,
-    #     patch_length=patch_length,
-    #     site_spacing=site_spacing,
-    #     scratch_dx=scratch_dx,
-    #     scratch_dy=scratch_dy,
-    # ).op_time
-    # returned_result = movement_architecture.move_cost(inplace_move, layout=dsm_layout).op_time
-    # assert isclose(expected_result, returned_result)
 
 
 def test_physical_move_time() -> None:
@@ -941,18 +893,6 @@ def test_distillation_cases(
         t_distillation_factories=1,
         ccz_distillation_factories=1,
     )
-    # t_layout = lyt.MovementDistillery(
-    #     input_circuit=distil_15_to_1(),
-    #     num_t_factories=1,
-    #     num_ccz_factories=0,
-    #     architecture="SSM",
-    # )
-    # ccz_layout = lyt.MovementDistillery(
-    #     input_circuit=ccz_8_to_1(),
-    #     num_t_factories=0,
-    #     num_ccz_factories=1,
-    #     architecture="SSM",
-    # )
     # Confirm distil_cost raises TypeError when called on a non-Distil gate
     with pytest.raises(TypeError, match="Operation is not an instance of Distil"):
         _ = movement_architecture.distil_cost(
@@ -963,15 +903,6 @@ def test_distillation_cases(
     with pytest.raises(NotImplementedError, match="movement architectures only"):
         # The arguents in here feel like a bit of a mismatch with expectations
         _ = lattice_architecture._distil_cost(resource="T", layout=layout, context=context)
-        # _ = lattice_architecture._distil_cost(
-        #     resource="T", layout=lyt.MovementDistillery(input_circuit=distil_15_to_1())
-        # )
-    # # Confirm distil_cost raises TypeError when provided wrong layout
-    # with pytest.raises(TypeError, match="layout must be a MovementDistillery"):
-    #     _ = movement_architecture.distil_cost(
-    #         op=lsp.Distil("T").on(*cirq.LineQubit.range(31)),  # type: ignore[arg-type]
-    #         layout=lyt.MovementLayout(input_circuit=distil_15_to_1()),  # type: ignore[arg-type]
-    #     )
     # Confirm _distil_cost raises ValueError when given invalid resource
     with pytest.raises(ValueError, match="Unknown distillation resource"):
         _ = movement_architecture._distil_cost(resource="Toffoli", layout=layout, context=context)  # type: ignore[arg-type]
@@ -1047,7 +978,6 @@ def test_dynamic_CCZ_resource_counts(mock_randint: mock.MagicMock) -> None:
         + 3 * arc.op_time(cirq.CNOT(qubit_a, qubit_b))
         + 4 * arc.op_time(se_gate.on(qubit_a))
     )
-    # layout = lyt.MovementLayout(correction_circuit, architecture="SSM")
     dynamic_op: cirq.Operation = lsp.ResourceCorrection("CCZ").on(qubit_a, qubit_b, qubit_c)
     mock_randint.side_effect = [1, 0, 1, 0, 1, 0]
     correction_gate_cost = sum(

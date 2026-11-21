@@ -129,7 +129,6 @@ def build_column_context(
     circuit: cirq.Circuit,
     layout: lyt.Layout,
     surface_code_distance: int,
-    # arc: arch.Architecture,
     dynamic: bool = False,
     **kwargs: object,
 ) -> Context:

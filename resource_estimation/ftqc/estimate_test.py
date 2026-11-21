@@ -137,21 +137,6 @@ def test_all_primitives(estimator: est.ResourceEstimator) -> None:
     arc = estimator.arc
     layout: lyt.Layout
     if arc.movement:
-        # layout = lyt.generate_movement_layout(
-        #     surface_code_program_qubits=len(dummy_qubits),
-        #     surface_code_distance=arc.d,
-        #     t_cultivation_factories=0,
-        #     t_distillation_factories=1,
-        #     ccz_distillation_factories=1,
-        #     interaction_zone=False,
-        #     measure_zone=False,
-        # )
-        # context = mps.build_movement_context(
-        #     circuit,
-        #     layout,
-        #     t_distillation_factories=1,
-        #     ccz_distillation_factories=1,
-        # )
         layout, context = get_movement_layout_and_context(
             circuit=circuit,
             estimator=estimator,
@@ -176,16 +161,6 @@ def test_all_primitives(estimator: est.ResourceEstimator) -> None:
             lsp.Merge(2, smooth=False).on(*dummy_qubits[1:3]),
             lsp.Split([1, 1], smooth=False).on(*dummy_qubits[1:3]),
         ]
-
-        # layout = lyt.generate_column_layout(
-        #     surface_code_program_qubits=len(dummy_qubits),
-        #     surface_code_distance=arc.d,
-        # )
-        # context = mps.build_column_context(
-        #     circuit,
-        #     layout,
-        #     surface_code_distance=arc.d,
-        # )
         layout, context = get_lattice_layout_and_context(circuit, estimator)
     circuit += [lsp.Cultivate(pi / 4).on(q) for q in dummy_qubits]
 
@@ -216,16 +191,6 @@ def test_parallel_circuit_cost(
         lsp.Merge(2, smooth=True).on(qubit_b, qubit_c),
     )
     column_layout, column_context = get_lattice_layout_and_context(circuit, lattice_estimator)
-    # column_layout = lyt.generate_column_layout(
-    #     surface_code_program_qubits=cirq.num_qubits(circuit),
-    #     surface_code_distance = lattice_estimator.arc.d
-    # )
-    # column_context = mps.build_column_context(
-    #     circuit=circuit,
-    #     layout=column_layout,
-    #     surface_code_distance=lattice_estimator.arc.d
-    # )
-    # column_layout = lyt.Column(input_circuit=circuit)
     estimated_moment_cost = lattice_estimator.parallel_circuit_cost(
         circuit=circuit, layout=column_layout, context=column_context
     )
@@ -272,24 +237,6 @@ def test_self_returns(
         [lsp.ErrorCorrect(2).on(qubit_a, qubit_b), cirq.ResetChannel().on(qubit_a)],
     )
     movement_layout, movement_context = get_movement_layout_and_context(circuit, movement_estimator)
-    # # These two calls below might be better as a function definition above.
-    # # I think they are repeated in other tests as well
-    # movement_layout = lyt.generate_movement_layout(
-    #     surface_code_program_qubits=cirq.num_qubits(circuit),
-    #     surface_code_distance=movement_estimator.arc.d,
-    #     t_cultivation_factories=0,
-    #     t_distillation_factories=0,
-    #     ccz_distillation_factories=0,
-    #     interaction_zone=False,
-    #     measure_zone=False,
-    # )
-    # movement_context = mps.build_movement_context(
-    #     circuit=circuit,
-    #     layout=movement_layout,
-    #     t_cultivation_factories=0,
-    #     t_distillation_factories=0,
-    #     ccz_distillation_factories=0
-    # )
     cost = movement_estimator.serial_circuit_cost(
         circuit=circuit, layout=movement_layout, context=movement_context
     )
@@ -419,73 +366,6 @@ def test_critical_path() -> None:
         path2 = estim.critical_path(ccz_distilled, layout=layout, context=context)
         assert all(op in cirq.GateFamily(expected) for op, expected in zip(path1, expected_types))
         assert all(op in cirq.GateFamily(expected) for op, expected in zip(path2, expected_types))
-
-
-# @mock.patch("resource_estimation.ftqc.architecture.randint")
-# def test_dynamic_T_resource_counts(mock_randint: mock.MagicMock) -> None:
-#     arc = arch.DefaultMovement()
-#     qubit = cirq.GridQubit(0, 0)
-#     static_correction = cirq.S.on(qubit)
-#     dynamic_correction = lsp.ResourceCorrection("T").on(qubit)
-#     mock_randint.side_effect = [1, 0, 1, 0]
-#     static_s_gate_cost = arc.gate_cost(static_correction)
-#     assert arc.gate_cost(dynamic_correction) == {}
-#     assert arc.gate_cost(static_correction) == static_s_gate_cost
-
-#     assert arc.gate_cost(dynamic_correction) == static_s_gate_cost
-#     assert arc.gate_cost(static_correction) == static_s_gate_cost
-
-#     static_correction_time = arc.op_time(static_correction)
-#     assert arc.op_time(dynamic_correction) == 0.0
-#     assert arc.op_time(static_correction) == static_correction_time
-
-#     assert arc.op_time(dynamic_correction) == static_correction_time
-#     assert arc.op_time(static_correction) == static_correction_time
-
-
-# @mock.patch("resource_estimation.ftqc.architecture.randint")
-# def test_dynamic_CCZ_resource_counts(mock_randint: mock.MagicMock) -> None:
-#     arc = arch.DefaultMovement()
-#     qubit_a, qubit_b, qubit_c = (cirq.GridQubit(0, 0), cirq.GridQubit(0, 1), cirq.GridQubit(0, 2))
-#     correction_circuit = cirq.Circuit()
-#     # The circuit excludes syndrome extraction costs since those are handled during compilation, so
-#     # the CCZ correction cost should be identical to just doing these gates with no syndrome
-#     # extraction
-#     se_gate = lsp.SyndromeExtract(num_qubits=1, rounds=arc.rounds)
-#     correction_circuit.append(cirq.H.on_each(*(qubit_a, qubit_b, qubit_c)))
-#     correction_circuit.append(se_gate.on_each(*(qubit_a, qubit_b, qubit_c)))
-#     correction_circuit.append(cirq.X.on_each(*(qubit_a, qubit_b, qubit_c)))
-#     correction_circuit.append(cirq.CNOT.on(qubit_a, qubit_b))
-#     correction_circuit.append(se_gate.on_each(*(qubit_a, qubit_b)))
-#     correction_circuit.append(cirq.CNOT.on(qubit_a, qubit_c))
-#     correction_circuit.append(se_gate.on_each(*(qubit_a, qubit_c)))
-#     correction_circuit.append(cirq.CNOT.on(qubit_b, qubit_c))
-#     correction_circuit.append(se_gate.on_each(*(qubit_b, qubit_c)))
-#     correction_circuit.append(cirq.H.on_each(*(qubit_a, qubit_b, qubit_c)))
-#     layout = lyt.MovementLayout(correction_circuit, architecture="SSM")
-#     dynamic_op: cirq.Operation = lsp.ResourceCorrection("CCZ").on(qubit_a, qubit_b, qubit_c)
-#     mock_randint.side_effect = [1, 0, 1, 0, 1, 0]
-#     est = ResourceEstimator(arc)
-#     normal_correction_cost = est.serial_circuit_cost(correction_circuit, layout=layout)
-#     operation_dynamic_cost = arc.gate_cost(dynamic_op)
-#     assert {} == operation_dynamic_cost
-#     # Should be correction applied on second flip
-#     operation_dynamic_cost = arc.gate_cost(dynamic_op)
-#     assert normal_correction_cost == operation_dynamic_cost
-
-#     normal_correction_time = est.parallel_circuit_time(correction_circuit, layout=layout)
-#     operation_dynamic_time = arc.op_time(dynamic_op)
-#     assert 0.0 == operation_dynamic_time
-#     operation_dynamic_time = arc.op_time(dynamic_op)
-#     assert isclose(normal_correction_time, operation_dynamic_time)
-
-#     parallel_correction_cost = est.parallel_circuit_cost(correction_circuit, layout=layout)
-#     moment_dynamic_cost = arc.moment_cost(dynamic_op)
-#     assert {} == moment_dynamic_cost
-#     # Should be correction applied on second flip
-#     moment_dynamic_cost = arc.moment_cost(dynamic_op)
-#     assert parallel_correction_cost == moment_dynamic_cost
-
 
 def test_physical_qubit_count(lattice_estimator: est.ResourceEstimator) -> None:
     test_circuit = cirq.Circuit(
