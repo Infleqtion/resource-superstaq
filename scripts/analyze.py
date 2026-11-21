@@ -245,16 +245,44 @@ def main(args: argparse.Namespace | None = None) -> int:
         )
 
     t1 = time.time()
-    layt: res.ftqc.MovementLayout | res.ftqc.FactorySandwich
     if isinstance(arch, res.ftqc.DefaultMovement):
-        layt = res.ftqc.MovementLayout(num_t_factories=facts, input_circuit=clifford_t_circuit)
-    else:
-        layt = res.ftqc.FactorySandwich(
-            input_circuit=clifford_t_circuit,
-            num_t_factories=facts,
-            num_s_factories=facts,
+        layt = res.ftqc.layout.generate_movement_layout(
+            surface_code_program_qubits=cirq.num_qubits(clifford_t_circuit),
+            surface_code_distance=distance,
+            t_cultivation_factories=facts,
+            t_distillation_factories=0,
+            ccz_distillation_factories=0,
+            interaction_zone=True,
+            measure_zone=True,
         )
-    primitive_circuit = res.ftqc.ft_compile(arc=arch, layout=layt, verbose=verbose)
+        context = res.ftqc.mappers.build_movement_context(
+            circuit=clifford_t_circuit,
+            layout=layt,
+            t_cultivation_factories=facts,
+            t_distillation_factories=0,
+            ccz_distillation_factories=0,
+            dynamic=False,
+        )
+        # layt = res.ftqc.MovementLayout(num_t_factories=facts, input_circuit=clifford_t_circuit)
+    else:
+        layt = res.ftqc.layout.generate_column_layout(
+            surface_code_program_qubits=cirq.num_qubits(clifford_t_circuit),
+            surface_code_distance=distance,
+        )
+        context = res.ftqc.mappers.build_column_context(
+            circuit=clifford_t_circuit, layout=layt, surface_code_distance=distance, dynamic=False
+        )
+        # layt = res.ftqc.FactorySandwich(
+        #     input_circuit=clifford_t_circuit,
+        #     num_t_factories=facts,
+        #     num_s_factories=facts,
+        # )
+    primitive_circuit, end_context = res.ftqc.ft_compile(
+        circuit=clifford_t_circuit,
+        arc=arch,
+        layout=layt,
+        context=context,
+    )
     t2 = time.time()
 
     report.primitive_width = cirq.num_qubits(primitive_circuit)
@@ -264,15 +292,18 @@ def main(args: argparse.Namespace | None = None) -> int:
 
     t1 = time.time()
     est = res.ftqc.ResourceEstimator(arc=arch)
-    serial_gate_counts = est.serial_circuit_cost(primitive_circuit, verbose=verbose, layout=layt)
+    serial_gate_counts = est.serial_circuit_cost(
+        circuit=primitive_circuit, layout=layt, context=end_context, verbose=verbose
+    )
     serial_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in serial_gate_counts.items()
     }
     total_time_serial = sum(serial_gate_times.values())
     parallel_gate_counts = est.parallel_circuit_cost(
-        primitive_circuit,
-        verbose=verbose,
+        circuit=primitive_circuit,
         layout=layt,
+        context=end_context,
+        verbose=verbose,
     )
     parallel_gate_times = {
         key: val * arch.phys_gate_times[key] for key, val in parallel_gate_counts.items()
