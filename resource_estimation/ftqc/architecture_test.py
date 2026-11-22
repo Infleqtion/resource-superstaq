@@ -933,7 +933,6 @@ def test_distillation_cases(
         _ = movement_architecture.distil_cost(
             op=cirq.X.on(cirq.GridQubit(0, 0)), layout=layout, context=context
         )
-        # _ = movement_architecture.distil_cost(op=cirq.X.on(cirq.GridQubit(0, 0)), layout=t_layout)
     # Confirm that distil is only available to movement archs
     with pytest.raises(NotImplementedError, match="movement architectures only"):
         # The arguents in here feel like a bit of a mismatch with expectations

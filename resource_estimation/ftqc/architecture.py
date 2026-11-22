@@ -304,7 +304,6 @@ class Architecture(abc.ABC):
         try:
             return self.op_cost[type(gate_op.gate)](gate_op, **kwargs).op_time
         except KeyError as e:
-            print(e)
             raise ValueError("Gate not recognized")
 
     def moment_cost(self, op: cirq.Operation, **kwargs: object) -> GateCounts:
