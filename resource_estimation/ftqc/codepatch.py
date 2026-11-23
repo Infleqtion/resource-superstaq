@@ -17,8 +17,12 @@ import abc
 import typing
 
 import cirq
+import numpy as np
 from qldpc import codes
 from qldpc.objects import Pauli
+from sympy.abc import x, y
+
+from . import layout as lyt
 
 
 def _validate_id(value: int, name: str) -> int:
@@ -27,6 +31,58 @@ def _validate_id(value: int, name: str) -> int:
     if value < 0:
         raise ValueError(f"{name} must be nonnegative.")
     return value
+
+
+class PhysicalQubit(cirq.Qid):
+    """A physical qubit represented as a wire in a Cirq circuit"""
+
+    def __init__(
+        self,
+        patch_id: int,
+        local_coord: tuple[int, int],
+        role: int,
+        info: dict[str, int] | None = None,
+    ) -> None:
+        """
+        patch_id: the patch id of the CodePatch object to which this physical qubit belongs
+        local_coord: local coordinate tuple representing the position of this qubit in the footprint of the CodePatch
+        role: Designation of the job of the physical qubit as a data or measure qubit
+        """
+        self._patch_id = _validate_id(patch_id, "patch_id")
+        self._local_coord = local_coord
+        self._role = role
+        self._info = info
+
+    @property
+    def patch_id(self) -> int:
+        return self._patch_id
+
+    @property
+    def local_coord(self) -> tuple[int, int]:
+        return self._local_coord
+
+    @property
+    def role(self) -> int:
+        return self._role
+
+    @property
+    def info(self) -> dict[str, int] | None:
+        return self._info
+
+    @property
+    def dimension(self) -> int:
+        return 2
+
+    def _comparison_key(
+        self,
+    ) -> tuple[int, int, int, int]:
+        return self.patch_id, self.local_coord[0], self.local_coord[1], self.role
+
+    def __str__(self) -> str:
+        return f"{self.patch_id}:{self.local_coord[0], self.local_coord[1], self.role}"
+
+    def __repr__(self) -> str:
+        return f"cpa.PhysicalQubit({self.patch_id!r}, {self.local_coord!r}, {self.role})"
 
 
 class LogicalQubit(cirq.Qid):
@@ -79,7 +135,7 @@ class LogicalQubit(cirq.Qid):
         return f"{self.patch_id}:{self.logical_index}"
 
     def __repr__(self) -> str:
-        return f"codepatch.LogicalQubit({self.patch_id!r}, {self.logical_index!r})"
+        return f"cpa.LogicalQubit({self.patch_id!r}, {self.logical_index!r})"
 
 
 class CodePatch(abc.ABC):
@@ -126,6 +182,22 @@ class CodePatch(abc.ABC):
     def num_physical_qubits(self) -> int:
         """The total number of data and measurement qubits in the code patch."""
         return self.num_data_qubits + self.num_measure_qubits
+
+    @property
+    def footprint(self) -> lyt.Rect:
+        qubits = self.default_layout()
+        rows = [q.local_coord[0] for q in qubits]
+        cols = [q.local_coord[1] for q in qubits]
+
+        return lyt.Rect(
+            rows=max(rows) - min(rows) + 1,
+            cols=max(cols) - min(cols) + 1,
+        )
+
+    @abc.abstractmethod
+    def default_layout(self) -> list[PhysicalQubit]:  # pragma: no cover
+        """Return the physical qubits in their default layout."""
+        ...
 
 
 class CSSCodePatch(CodePatch):
@@ -204,4 +276,104 @@ class RotatedSurfaceCodePatch(CSSCodePatch):
             f"n={self.n!r}",
             f"k={self.k!r}",
         ]
-        return f"codepatch.RotatedSurfaceCodePatch({', '.join(args)})"
+        return f"cpa.RotatedSurfaceCodePatch({', '.join(args)})"
+
+    @property
+    def footprint(self) -> lyt.Rect:
+        length = 2 * self.d - 1
+        return lyt.Rect(length, length)
+
+    def default_layout(self) -> list[PhysicalQubit]:
+        def transform(x: int, y: int) -> tuple[int, int]:
+            return (
+                (x + y) // 2,
+                (x - y + 2 * (self.d - 1)) // 2,
+            )
+
+        qubits = []
+        # Data Qubits
+        for r in range(self.d):
+            for c in range(self.d):
+                local_coord = transform(2 * r, 2 * c)
+                qubits.append(
+                    PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=0)
+                )
+        # Interior weight 4 checks
+        for r in range(self.d - 1):
+            for c in range(self.d - 1):
+                role = 1 if (r + c) % 2 == 0 else 2
+                local_coord = transform(2 * r + 1, 2 * c + 1)
+                qubits.append(
+                    PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=role)
+                )
+        # Boundary weight 2 checks
+        for k in range(self.d - 1):
+            if k % 2 == 0:
+                # Top Z Boundary
+                local_coord = transform(-1, 2 * k + 1)
+                qubits.append(
+                    PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=2)
+                )
+                # Right X Boundary
+                local_coord = transform(2 * k + 1, 2 * self.d - 1)
+                qubits.append(
+                    PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=1)
+                )
+            else:
+                # Bottom Z Boundary
+                local_coord = transform(2 * self.d - 1, 2 * k + 1)
+                qubits.append(
+                    PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=2)
+                )
+                # Left X Boundary
+                local_coord = transform(2 * k + 1, -1)
+                qubits.append(
+                    PhysicalQubit(patch_id=self._patch_id, local_coord=local_coord, role=1)
+                )
+        return qubits
+
+
+class BBCodePatch(CSSCodePatch):
+    """A Bivariate Bicyle code patch generated from the qldpc library"""
+
+    def __init__(self, patch_id: int, l: int, m: int):
+        # polynomial used in https://arxiv.org/abs/2606.25011v1
+        orders = {x: l, y: m}
+        poly_a = 1 + y**3 + x * y**2 + x * y**4
+        poly_b = 1 + y**-3 + x**-1 * y**-2 + x**-1 * y**-4
+        qldpc_code = codes.BBCode(orders, poly_a, poly_b)
+        super().__init__(patch_id=patch_id, qldpc_code=qldpc_code)
+
+    @property
+    def qldpc_code(self) -> codes.BBCode:
+        assert isinstance(self._qldpc_code, codes.BBCode)
+        return self._qldpc_code
+
+    def __repr__(self) -> str:
+        args = [
+            f"patch_id={self.patch_id!r}",
+            f"l={self.qldpc_code.orders[0]!r}",
+            f"m={self.qldpc_code.orders[1]!r}",
+        ]
+        return f"cpa.BBCodePatch({', '.join(args)})"
+
+    def default_layout(self) -> list[PhysicalQubit]:
+        """Produces a plaquette-based physical layout for the physical qubits in the code patch"""
+        qubits = []
+        l, m = self.qldpc_code.orders
+        for index in range(self.n):
+            half, col, row = map(int, np.unravel_index(index, (2, l, m)))
+            if half == 0:  # L data + X check
+                data_local_coord = (2 * row, 2 * col)
+                meas_local_coord = (2 * row, 2 * col + 1)
+                meas_role = 1
+            else:  # R data + Z check
+                data_local_coord = (2 * row + 1, 2 * col + 1)
+                meas_local_coord = (2 * row + 1, 2 * col)
+                meas_role = 2
+            data_qubit = PhysicalQubit(patch_id=self.patch_id, local_coord=data_local_coord, role=0)
+            meas_qubit = PhysicalQubit(
+                patch_id=self.patch_id, local_coord=meas_local_coord, role=meas_role
+            )
+            qubits.extend([data_qubit, meas_qubit])
+        return qubits

@@ -35,6 +35,11 @@ from resource_estimation.ftqc.compile_ftqc import (
     teleport_resource,
     validate_ops,
 )
+from resource_estimation.ftqc.context import (
+    Context,
+    build_column_context,
+    build_movement_context,
+)
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.estimate import (
     ReactionDepthEstimator,
@@ -55,11 +60,7 @@ from resource_estimation.ftqc.lattice_surgery_primitives import (
     custom_resolver,
 )
 from resource_estimation.ftqc.layout import (
-    Column,
-    Embedded,
-    FactorySandwich,
     Layout,
-    MovementLayout,
 )
 from resource_estimation.ftqc.stim_functions import (
     STR2GATE,
@@ -75,11 +76,11 @@ __all__ = [
     "CSSCodePatch",
     "CodePatch",
     "Column",
+    "Context",
     "Cultivate",
     "DefaultLattice",
     "DefaultMovement",
     "DualSpeciesMovement",
-    "Embedded",
     "EndpointPatch",
     "ErrorCorrect",
     "FactorySandwich",
@@ -88,7 +89,6 @@ __all__ = [
     "LogicalQubit",
     "Merge",
     "MeasureZonesOnly",
-    "MovementLayout",
     "ResourceCorrection",
     "ReactionDepthEstimator",
     "ReactionDynamics",
@@ -100,6 +100,8 @@ __all__ = [
     "SyndromeExtract",
     "STR2GATE",
     "add_moves",
+    "build_movement_context",
+    "build_column_context",
     "count_stim_resources",
     "cultivate",
     "custom_resolver",
