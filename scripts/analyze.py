@@ -255,7 +255,7 @@ def main(args: argparse.Namespace | None = None) -> int:
             interaction_zone=True,
             measure_zone=True,
         )
-        context = res.ftqc.mappers.build_movement_context(
+        context = res.ftqc.context.build_movement_context(
             circuit=clifford_t_circuit,
             layout=layt,
             t_cultivation_factories=facts,
@@ -270,7 +270,7 @@ def main(args: argparse.Namespace | None = None) -> int:
             surface_code_program_qubits=cirq.num_qubits(clifford_t_circuit),
             surface_code_distance=distance,
         )
-        context = res.ftqc.mappers.build_column_context(
+        context = res.ftqc.context.build_column_context(
             circuit=clifford_t_circuit, layout=layt, surface_code_distance=distance, dynamic=False
         )
     primitive_circuit, end_context = res.ftqc.ft_compile(

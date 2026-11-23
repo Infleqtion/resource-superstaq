@@ -35,6 +35,11 @@ from resource_estimation.ftqc.compile_ftqc import (
     teleport_resource,
     validate_ops,
 )
+from resource_estimation.ftqc.context import (
+    Context,
+    build_column_context,
+    build_movement_context,
+)
 from resource_estimation.ftqc.distil import ccz_8_to_1, distil_15_to_1
 from resource_estimation.ftqc.estimate import (
     ReactionDepthEstimator,
@@ -56,11 +61,6 @@ from resource_estimation.ftqc.lattice_surgery_primitives import (
 )
 from resource_estimation.ftqc.layout import (
     Layout,
-)
-from resource_estimation.ftqc.mappers import (
-    Context,
-    build_column_context,
-    build_movement_context,
 )
 from resource_estimation.ftqc.stim_functions import (
     STR2GATE,

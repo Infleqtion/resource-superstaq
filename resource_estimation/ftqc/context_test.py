@@ -15,7 +15,7 @@ import cirq
 import pytest
 
 import resource_estimation.ftqc.layout as lyt
-import resource_estimation.ftqc.mappers as mps
+import resource_estimation.ftqc.context as ctx
 
 
 def simplified_movement_layout(
@@ -38,7 +38,7 @@ def simplified_movement_layout(
 def test_bare_movement_context() -> None:
     circuit = cirq.Circuit(cirq.I.on_each(cirq.LineQubit.range(3)))
     layout = simplified_movement_layout(3, 0, 0, 0)
-    context = mps.build_movement_context(circuit, layout)
+    context = ctx.build_movement_context(circuit, layout)
     expected_roles = {0: 1, 1: 1, 2: 1}
 
     assert context.roles == expected_roles
@@ -60,7 +60,7 @@ def test_bare_movement_context() -> None:
     # Test that removing a patch raises an error
     layout.remove(1)
     with pytest.raises(ValueError, match="does not equal patches expected"):
-        _ = mps.build_movement_context(circuit, layout)
+        _ = ctx.build_movement_context(circuit, layout)
 
 
 @pytest.mark.parametrize(
@@ -81,7 +81,7 @@ def test_movement_context_with_factories(t_cults: int, t_dists: int, ccz_dists: 
         with pytest.raises(
             ValueError, match="Current compilation does not support two types of T generation"
         ):
-            _ = mps.build_movement_context(
+            _ = ctx.build_movement_context(
                 circuit,
                 layout,
                 t_cultivation_factories=t_cults,
@@ -89,7 +89,7 @@ def test_movement_context_with_factories(t_cults: int, t_dists: int, ccz_dists: 
                 ccz_distillation_factories=ccz_dists,
             )
         return
-    context = mps.build_movement_context(
+    context = ctx.build_movement_context(
         circuit,
         layout,
         t_cultivation_factories=t_cults,
@@ -109,7 +109,7 @@ def test_movement_context_with_factories(t_cults: int, t_dists: int, ccz_dists: 
 def test_column_context() -> None:
     circuit = cirq.Circuit(cirq.I.on_each(cirq.LineQubit.range(3)))
     layout = lyt.generate_column_layout(3, 3)
-    context = mps.build_column_context(circuit, layout, 3)
+    context = ctx.build_column_context(circuit, layout, 3)
     expected_roles = {
         0: 3,
         1: 2,
@@ -165,4 +165,4 @@ def test_column_context() -> None:
     # Test that removing a patch raises an error
     layout.remove(1)
     with pytest.raises(ValueError, match="does not equal patches expected"):
-        _ = mps.build_column_context(circuit, layout, 3)
+        _ = ctx.build_column_context(circuit, layout, 3)

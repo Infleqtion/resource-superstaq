@@ -28,7 +28,7 @@ if typing.TYPE_CHECKING:  # pragma: no cover
     from resource_estimation.ftqc.layout import Layout
     from resource_estimation.typing import GateCounts, GateKey
 
-import resource_estimation.ftqc.mappers as mps
+import resource_estimation.ftqc.context as ctx
 from resource_estimation.typing import _require_gate_operation
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -53,7 +53,7 @@ class ResourceEstimator:
         self,
         circuit: cirq.Circuit,
         layout: Layout,
-        context: mps.Context,
+        context: ctx.Context,
         verbose: int = 0,
     ) -> dict[GateKey, int]:
         """Counts up the total physical gates from all logical primitives in the input circuit"""
@@ -69,7 +69,7 @@ class ResourceEstimator:
         return {op: val for op, val in cost.items()}
 
     def serial_circuit_time(
-        self, circuit: cirq.Circuit, layout: Layout, context: mps.Context
+        self, circuit: cirq.Circuit, layout: Layout, context: ctx.Context
     ) -> float:
         """Adds up the total physical time from all logical primitives in the input circuit"""
         self.validate_circuit_ops(circuit=circuit)
@@ -78,7 +78,7 @@ class ResourceEstimator:
         )
 
     def parallel_circuit_time(
-        self, circuit: cirq.Circuit, layout: Layout, context: mps.Context, verbose: int = 0
+        self, circuit: cirq.Circuit, layout: Layout, context: ctx.Context, verbose: int = 0
     ) -> float:
         """Estimation of the critical path in the input circuit according to the most expensive operation per moment"""
         qubit_times: dict[cirq.Qid, float] = dict.fromkeys(circuit.all_qubits(), 0.0)
@@ -93,7 +93,7 @@ class ResourceEstimator:
         return max(qubit_times.values())
 
     def critical_path(
-        self, circuit: cirq.Circuit, layout: Layout, context: mps.Context, verbose: int = 0
+        self, circuit: cirq.Circuit, layout: Layout, context: ctx.Context, verbose: int = 0
     ) -> list[cirq.Operation]:
         """Returns the circuit's critical path in terms of the logical primitive operations
         Is very slow and expensive
@@ -130,7 +130,7 @@ class ResourceEstimator:
         self,
         circuit: cirq.Circuit,
         layout: Layout,
-        context: mps.Context,
+        context: ctx.Context,
         verbose: int = 0,
     ) -> GateCounts:
         """Estimation of the physical operations in critical path of the input circuit according to the most expensive operation per moment"""

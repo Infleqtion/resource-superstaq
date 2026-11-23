@@ -332,8 +332,7 @@ class BBCodePatch(CSSCodePatch):
     """A Bivariate Bicyle code patch generated from the qldpc library"""
 
     def __init__(self, patch_id: int, l: int, m: int):
-        ## Using the polynomial from Quera STAR paper  ##
-        # Probably needs better logic for choosing coeffs
+        # polynomial used in https://arxiv.org/abs/2606.25011v1
         orders = {x: l, y: m}
         poly_a = 1 + y**3 + x * y**2 + x * y**4
         poly_b = 1 + y**-3 + x**-1 * y**-2 + x**-1 * y**-4

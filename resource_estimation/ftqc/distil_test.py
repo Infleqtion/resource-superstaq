@@ -17,8 +17,8 @@ import cirq
 import pytest
 
 import resource_estimation.ftqc.compile_ftqc as comp
+import resource_estimation.ftqc.context as ctx
 import resource_estimation.ftqc.layout as lyt
-import resource_estimation.ftqc.mappers as mps
 from resource_estimation.ftqc.architecture import DefaultMovement
 from resource_estimation.ftqc.distil import distil_15_to_1, precompute_distil_cost
 from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
@@ -53,7 +53,7 @@ def test_precompute_distil_cost(interaction_zone: bool, measure_zone: bool) -> N
         interaction_zone=interaction_zone,
         measure_zone=measure_zone,
     )
-    context = mps.build_movement_context(
+    context = ctx.build_movement_context(
         circuit=empty_circuit,
         layout=layout,
         t_cultivation_factories=0,

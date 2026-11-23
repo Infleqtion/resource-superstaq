@@ -23,9 +23,9 @@ import pytest
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.codepatch as cpa
 import resource_estimation.ftqc.compile_ftqc as comp
+import resource_estimation.ftqc.context as ctx
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 import resource_estimation.ftqc.layout as lyt
-import resource_estimation.ftqc.mappers as mps
 
 
 def make_context(
@@ -42,10 +42,10 @@ def make_context(
     blocks: dict[tuple[int, ...], tuple[int, ...]] | None = None,
     post_op_syndrome_extraction: bool = False,
     idling: bool = False,
-) -> mps.Context:
+) -> ctx.Context:
     pid_to_qid: dict[int, cirq.Qid] = {pid: cirq.NamedQubit(f"p{pid}") for pid in roles}
 
-    return mps.Context(
+    return ctx.Context(
         roles=dict(roles),
         pid_to_qid=pid_to_qid,
         qid_to_pid={qid: pid for pid, qid in pid_to_qid.items()},
@@ -671,7 +671,7 @@ def test_replace_cirq_op() -> None:
     lattice_layout = lyt.generate_column_layout(
         surface_code_program_qubits=2, surface_code_distance=3
     )
-    lattice_context = mps.build_column_context(
+    lattice_context = ctx.build_column_context(
         base_circuit, lattice_layout, surface_code_distance=3
     )
     ctrl = cirq.NamedQubit("1-0-4")
@@ -700,7 +700,7 @@ def test_replace_cirq_op() -> None:
         interaction_zone=False,
         measure_zone=False,
     )
-    movement_context = mps.build_movement_context(
+    movement_context = ctx.build_movement_context(
         base_circuit,
         movement_layout,
         t_cultivation_factories=1,

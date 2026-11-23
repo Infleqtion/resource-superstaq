@@ -201,15 +201,13 @@ def generate_movement_layout(
             col=0,
         )
     placements = {}
-    for idx, pid in enumerate(
-        range(total_surface_code_patches)
-    ):  # <- is this like super pointless?
+    for pid in range(total_surface_code_patches):
         patch_row = pid // patch_grid_length
         patch_col = pid % patch_grid_length
         anchor_row = patch_length * patch_row + zone_offset
         anchor_col = patch_length * patch_col
         patch_to_add = cpa.RotatedSurfaceCodePatch(pid, surface_code_distance)
-        placements[idx] = Placement(patch_to_add, anchor_row, anchor_col)
+        placements[pid] = Placement(patch_to_add, anchor_row, anchor_col)
     return Layout(rows=required_rows, cols=required_cols, placements=placements, regions=zones)
 
 

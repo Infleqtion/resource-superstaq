@@ -28,9 +28,9 @@ import qldpc
 
 import resource_estimation as rss
 import resource_estimation.ftqc.codepatch as codepatch
+import resource_estimation.ftqc.context as ctx
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 import resource_estimation.ftqc.layout as lyt
-import resource_estimation.ftqc.mappers as mps
 from resource_estimation.ftqc.distil import precompute_distil_cost
 from resource_estimation.ftqc.stim_functions import cultivate
 from resource_estimation.typing import CostDict, GateCounts, GateKey, _require_gate_operation
@@ -333,7 +333,7 @@ class Architecture(abc.ABC):
         raise NotImplementedError
 
     def _distil_cost(
-        self, resource: Literal["T", "CCZ"], layout: lyt.Layout, context: mps.Context
+        self, resource: Literal["T", "CCZ"], layout: lyt.Layout, context: ctx.Context
     ) -> CostDict:
         raise NotImplementedError(
             "Distillation is currently reserved to distillation movement architectures only"
@@ -876,7 +876,7 @@ class DefaultMovement(SurfaceArchitecture):
         return CostDict(op_time=op_time, moment_cost=moment_cost, gate_cost=gate_cost)
 
     def move_cost(
-        self, op: cirq.GateOperation, layout: lyt.Layout, context: mps.Context, **kwargs: object
+        self, op: cirq.GateOperation, layout: lyt.Layout, context: ctx.Context, **kwargs: object
     ) -> CostDict:
         """
         Costs for pre-compiled movement patterns for types of logical moves
@@ -982,7 +982,7 @@ class DefaultMovement(SurfaceArchitecture):
         return CostDict(op_time=new_time, gate_cost=new_gate_cost, moment_cost=new_moment_cost)
 
     def distil_cost(
-        self, op: cirq.GateOperation, layout: lyt.Layout, context: mps.Context, **kwargs: object
+        self, op: cirq.GateOperation, layout: lyt.Layout, context: ctx.Context, **kwargs: object
     ) -> CostDict:
         if not isinstance(op.gate, lsp.Distil):
             raise TypeError("Operation is not an instance of Distil")
@@ -992,7 +992,7 @@ class DefaultMovement(SurfaceArchitecture):
         self,
         resource: Literal["T", "CCZ"],
         layout: lyt.Layout,
-        context: mps.Context,
+        context: ctx.Context,
     ) -> CostDict:
         # Calculates cost for single repetition based on precompiled circuit
         base_cost = precompute_distil_cost(

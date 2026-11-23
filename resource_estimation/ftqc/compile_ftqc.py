@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from resource_estimation.typing import GateKey
 
 import resource_estimation.ftqc.architecture as arch
-import resource_estimation.ftqc.mappers as mps
+import resource_estimation.ftqc.context as ctx
 
 from . import codepatch as cpa
 from . import lattice_surgery_primitives as lsp
@@ -83,7 +83,7 @@ def route_lattice_cnot(
     ctrl: cirq.Qid,
     trgt: cirq.Qid,
     layout: lyt.Layout,
-    context: mps.Context,
+    context: ctx.Context,
 ) -> list[int]:
     """
     Extremely dumb routing algorithm for routing a merge operation.
@@ -125,7 +125,7 @@ def _decompose_lattice_cnot(
     ctrl: cirq.Qid,
     trgt: cirq.Qid,
     layout: lyt.Layout,
-    context: mps.Context,
+    context: ctx.Context,
 ) -> list[cirq.Operation | cirq.Moment]:
     path_patch_ids = route_lattice_cnot(ctrl, trgt, layout, context=context)
     path_qubits = [context.pid_to_qid[patch_id] for patch_id in path_patch_ids]
@@ -141,7 +141,7 @@ def _decompose_lattice_cnot(
     return decomposition
 
 
-def _requires_resource(op: cirq.Operation, context: mps.Context) -> bool:
+def _requires_resource(op: cirq.Operation, context: ctx.Context) -> bool:
     """Checks if performing an operation requires a resource state. S is assumed to need a resource state when transversal CNOT is unavailable."""
     if op in cirq.GateFamily(cirq.S) and not context.transversal_cnot:
         return True
@@ -153,7 +153,7 @@ def _requires_resource(op: cirq.Operation, context: mps.Context) -> bool:
 
 
 def replace_cirq_op(
-    op: cirq.Operation, layout: lyt.Layout, context: mps.Context
+    op: cirq.Operation, layout: lyt.Layout, context: ctx.Context
 ) -> list[cirq.Operation | cirq.Moment]:
     """Replacement logic similar to decomposition for cirq operations to be converted to primitives.
 
@@ -173,7 +173,7 @@ def replace_cirq_op(
 
 
 def _determine_resource(
-    op: cirq.Operation, context: mps.Context
+    op: cirq.Operation, context: ctx.Context
 ) -> tuple[cirq.Gate, cirq.Gate | list[cirq.Operation], int]:
     prep_gate: lsp.Cultivate | lsp.Distil
     correction: cirq.Gate | list[cirq.Operation]
@@ -208,7 +208,7 @@ def _determine_resource(
 
 
 def _nearest_factory(
-    qids: tuple[cirq.Qid, ...], resource_id: int, layout: lyt.Layout, context: mps.Context
+    qids: tuple[cirq.Qid, ...], resource_id: int, layout: lyt.Layout, context: ctx.Context
 ) -> tuple[int, ...]:
     pids = set(context.qid_to_pid[qid] for qid in qids)
     patch_placements = {}
@@ -235,7 +235,7 @@ def _nearest_factory(
 
 
 def _find_factories_simple(
-    context: mps.Context, resource_id: int, num_qubits: int
+    context: ctx.Context, resource_id: int, num_qubits: int
 ) -> set[tuple[int, ...]]:
     if resource_id == 3:
         max_facts = context.num_s_factories
@@ -259,7 +259,7 @@ def _find_factories_simple(
 
 
 def _find_blocks_simple(
-    context: mps.Context, resource_id: int, block_size: int
+    context: ctx.Context, resource_id: int, block_size: int
 ) -> set[tuple[int, ...]]:
     assigned_blocks = {pid for block in context.blocks.values() for pid in block}
     assigned_factories = {
@@ -291,7 +291,7 @@ def _find_blocks_simple(
 def teleport_resource(
     op: cirq.Operation,
     layout: lyt.Layout,
-    context: mps.Context,
+    context: ctx.Context,
 ) -> list[cirq.Moment | cirq.Operation]:
     prep_gate, correction, resource_id = _determine_resource(op, context)
     block_size = cirq.num_qubits(prep_gate) - cirq.num_qubits(op)
@@ -359,7 +359,7 @@ def teleport_resource(
 def handle_idling(
     circuit: cirq.Circuit,
     arc: arch.SurfaceArchitecture,
-    context: mps.Context,
+    context: ctx.Context,
     verbose: int = 0,
 ) -> cirq.Circuit:
     """Helper function for the compiler that handles idling. This way we can experiment with different kinds of idling or even turn it off entirely.
@@ -398,8 +398,8 @@ def handle_idling(
 
 
 def add_zones_to_context(
-    context: mps.Context, arc: arch.Architecture, layout: lyt.Layout
-) -> mps.Context:
+    context: ctx.Context, arc: arch.Architecture, layout: lyt.Layout
+) -> ctx.Context:
     """
     Add qids to the context to represent locations in the layout's zone.
     I want to make this closer to a compiler pass than having it statically defined at the Context initialization.
@@ -507,7 +507,7 @@ def _decompose_to_primitives(
     circuit: cirq.Circuit,
     layout: lyt.Layout,
     arc: Architecture,
-    context: mps.Context,
+    context: ctx.Context,
 ) -> cirq.Circuit:
     # TODO: Is this function still necessary if it is just a wrapper for replace_cirq_op?
     primitives = cirq.Gateset(
@@ -528,7 +528,7 @@ def _decompose_to_primitives(
 
 def add_moves(
     circuit: cirq.Circuit,
-    context: mps.Context,
+    context: ctx.Context,
     layout: lyt.Layout,
     verbose: int = 0,
 ) -> cirq.Circuit:
@@ -646,9 +646,9 @@ def ft_compile(
     circuit: cirq.Circuit,
     arc: arch.SurfaceArchitecture,
     layout: lyt.Layout,
-    context: mps.Context,
+    context: ctx.Context,
     verbose: int = 0,
-) -> tuple[cirq.Circuit, mps.Context]:
+) -> tuple[cirq.Circuit, ctx.Context]:
     # Decompose CNOTs and add resource state injections
     circuit = _decompose_to_primitives(circuit=circuit, layout=layout, arc=arc, context=context)
 

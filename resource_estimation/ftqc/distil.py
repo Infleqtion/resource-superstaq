@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING, Literal
 import cirq
 
 import resource_estimation.ftqc.compile_ftqc as comp  # Might be circular?
+import resource_estimation.ftqc.context as ctx
 import resource_estimation.ftqc.layout as lyt
-import resource_estimation.ftqc.mappers as mps
 from resource_estimation.ftqc.compile_ftqc import add_moves
 from resource_estimation.ftqc.estimate import ResourceEstimator
 from resource_estimation.ftqc.lattice_surgery_primitives import Cultivate
@@ -198,7 +198,7 @@ def precompute_distil_cost(
     resource: Literal["T", "CCZ"],
     layout: lyt.Layout,
     arc: Architecture,
-    context: mps.Context,
+    context: ctx.Context,
 ) -> CostDict:
     independent_circuit_factory: tuple[cirq.GridQubit, ...]
     if resource == "T":

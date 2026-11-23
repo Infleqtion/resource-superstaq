@@ -25,9 +25,9 @@ import qldpc
 import resource_estimation.ftqc.architecture as arch
 import resource_estimation.ftqc.codepatch as codepatch
 import resource_estimation.ftqc.compile_ftqc as comp
+import resource_estimation.ftqc.context as ctx
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 import resource_estimation.ftqc.layout as lyt
-import resource_estimation.ftqc.mappers as mps
 from resource_estimation.ftqc.stim_functions import cultivate
 from resource_estimation.typing import GateCounts, _require_gate_operation
 
@@ -809,7 +809,7 @@ def test_logical_moves(
         interaction_zone=True,
         measure_zone=True,
     )
-    context = mps.build_movement_context(circuit, layout)
+    context = ctx.build_movement_context(circuit, layout)
     context = comp.add_zones_to_context(context, movement_architecture, layout)
 
     logical1 = context.pid_to_qid[0]
@@ -921,7 +921,7 @@ def test_distillation_cases(
         interaction_zone=False,
         measure_zone=False,
     )
-    context = mps.build_movement_context(
+    context = ctx.build_movement_context(
         circuit=empty_circuit,
         layout=layout,
         t_cultivation_factories=0,

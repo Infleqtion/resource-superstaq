@@ -23,10 +23,10 @@ import pytest
 from numpy import isclose
 
 import resource_estimation.ftqc.architecture as arch
+import resource_estimation.ftqc.context as ctx
 import resource_estimation.ftqc.estimate as est
 import resource_estimation.ftqc.lattice_surgery_primitives as lsp
 import resource_estimation.ftqc.layout as lyt
-import resource_estimation.ftqc.mappers as mps
 from resource_estimation.ftqc import ccz_8_to_1, distil_15_to_1
 from resource_estimation.typing import GateKey
 
@@ -64,7 +64,7 @@ def get_movement_layout_and_context(
     t_cultivation_factories: int = 0,
     t_distillation_factories: int = 0,
     ccz_distillation_factories: int = 0,
-) -> tuple[lyt.Layout, mps.Context]:
+) -> tuple[lyt.Layout, ctx.Context]:
     layout = lyt.generate_movement_layout(
         surface_code_program_qubits=cirq.num_qubits(circuit),
         surface_code_distance=estimator.arc.d,
@@ -74,7 +74,7 @@ def get_movement_layout_and_context(
         interaction_zone=False,
         measure_zone=False,
     )
-    context = mps.build_movement_context(
+    context = ctx.build_movement_context(
         circuit,
         layout,
         t_cultivation_factories=t_cultivation_factories,
@@ -87,12 +87,12 @@ def get_movement_layout_and_context(
 def get_lattice_layout_and_context(
     circuit: cirq.Circuit,
     estimator: est.ResourceEstimator,
-) -> tuple[lyt.Layout, mps.Context]:
+) -> tuple[lyt.Layout, ctx.Context]:
     layout = lyt.generate_column_layout(
         surface_code_program_qubits=cirq.num_qubits(circuit),
         surface_code_distance=estimator.arc.d,
     )
-    context = mps.build_column_context(
+    context = ctx.build_column_context(
         circuit,
         layout,
         surface_code_distance=estimator.arc.d,
@@ -255,7 +255,7 @@ def test_self_returns(
         surface_code_program_qubits=cirq.num_qubits(circuit),
         surface_code_distance=lattice_estimator.arc.d,
     )
-    lattice_context = mps.build_column_context(
+    lattice_context = ctx.build_column_context(
         circuit=circuit,
         layout=lattice_layout,
         surface_code_distance=lattice_estimator.arc.d,
