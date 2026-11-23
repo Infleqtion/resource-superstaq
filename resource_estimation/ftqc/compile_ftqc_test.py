@@ -566,7 +566,7 @@ def test_route_and_decompose_lattice_cnot() -> None:
     assert best_route == [2, 1, 0]  # Does not take longer route
     # Change role and check that route no longer exists
     context.roles[1] = 1
-    with pytest.raises(ValueError, match="Could not find valid path"):
+    with pytest.raises(ValueError, match="No valid path between control and target"):
         _ = comp.route_lattice_cnot(context.pid_to_qid[0], context.pid_to_qid[2], layout, context)
 
     # Cover the decomposition while we are here

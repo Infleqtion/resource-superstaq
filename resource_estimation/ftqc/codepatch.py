@@ -278,6 +278,11 @@ class RotatedSurfaceCodePatch(CSSCodePatch):
         ]
         return f"cpa.RotatedSurfaceCodePatch({', '.join(args)})"
 
+    @property
+    def footprint(self) -> lyt.Rect:
+        length = 2 * self.d - 1
+        return lyt.Rect(length, length)
+
     def default_layout(self) -> list[PhysicalQubit]:
         def transform(x: int, y: int) -> tuple[int, int]:
             return (

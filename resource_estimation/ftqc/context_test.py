@@ -14,8 +14,8 @@
 import cirq
 import pytest
 
-import resource_estimation.ftqc.layout as lyt
 import resource_estimation.ftqc.context as ctx
+import resource_estimation.ftqc.layout as lyt
 
 
 def simplified_movement_layout(

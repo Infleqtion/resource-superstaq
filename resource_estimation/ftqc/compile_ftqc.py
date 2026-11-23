@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import collections
 import copy
 import itertools
 import os
@@ -80,45 +81,60 @@ def knock_off_tqdm(
 
 
 def route_lattice_cnot(
-    ctrl: cirq.Qid,
-    trgt: cirq.Qid,
-    layout: lyt.Layout,
-    context: ctx.Context,
+    ctrl: cirq.Qid, trgt: cirq.Qid, layout: lyt.Layout, context: ctx.Context
 ) -> list[int]:
+    """Route a CNOT between two `RotatedSurfaceCodePatch`s according to a few rules.
+    Intermediate patches must be nearest neighbor and have the ancilla qubit role (2).
+    No loops are allowed.
+    This algorithm uses a breadth-first search to find the shortest path.
     """
-    Extremely dumb routing algorithm for routing a merge operation.
-    Explores all possible paths according to set constraints.
-    Path must go through logical nearest neighbors.
-    QIDs in path must be ancilla patches (or ctrl/trgt).
-    No loops allowed.
-    """
+    start = context.qid_to_pid[trgt]
+    goal = context.qid_to_pid[ctrl]
     pid_to_placement = {
         p.element.patch_id: p
         for p in layout.placements.values()
         if isinstance(p.element, cpa.RotatedSurfaceCodePatch)
+        and (p.element.patch_id in (start, goal) or context.roles[p.element.patch_id] == 2)
     }
-    ancilla_role = 2
-    # Just do a dumb routing algorithm for now
-    last = context.qid_to_pid[ctrl]
-    first = context.qid_to_pid[trgt]
-    paths = [[first]]
-    while not any(last in path for path in paths):
-        new_paths = []
-        for path in paths:
-            last_placement = pid_to_placement[path[-1]]
-            for pid, placement in pid_to_placement.items():
-                is_adjacent = placement.borders(last_placement)
-                is_valid_step = context.roles[pid] == ancilla_role or pid == last
-                is_not_in_path = pid not in path
-                if is_adjacent and is_valid_step and is_not_in_path:
-                    new_paths.append(path + [pid])
-        if not new_paths:
-            raise ValueError(f"Could not find valid path from {ctrl} to {trgt}")
-        paths = new_paths
-        print(paths)
-    print("Found a path!")
-    best_path = min([path for path in paths if last in path], key=len)
-    return best_path
+    up: dict[int, list[int]] = collections.defaultdict(list)
+    down: dict[int, list[int]] = collections.defaultdict(list)
+    left: dict[int, list[int]] = collections.defaultdict(list)
+    right: dict[int, list[int]] = collections.defaultdict(list)
+
+    for pid, p in pid_to_placement.items():
+        up[p.row].append(pid)
+        down[p.row_end].append(pid)
+        left[p.col].append(pid)
+        right[p.col_end].append(pid)
+
+    queue = collections.deque([start])
+    previous: dict[int, int | None] = {start: None}
+    while queue:
+        current = queue.popleft()
+        if current == goal:
+            # reconstruct path
+            path = []
+            node: int | None = current
+            while node is not None:
+                path.append(node)
+                node = previous[node]
+            return path[::-1]
+        placement = pid_to_placement[current]
+        # Consider the four nearest neighbors
+        candidates = itertools.chain(
+            up[placement.row_end],
+            down[placement.row],
+            left[placement.col_end],
+            right[placement.col],
+        )
+        for neighbor in candidates:
+            if neighbor in previous:
+                continue
+            if not placement.borders(pid_to_placement[neighbor]):
+                continue
+            previous[neighbor] = current
+            queue.append(neighbor)
+    raise ValueError("No valid path between control and target")
 
 
 def _decompose_lattice_cnot(
@@ -127,7 +143,7 @@ def _decompose_lattice_cnot(
     layout: lyt.Layout,
     context: ctx.Context,
 ) -> list[cirq.Operation | cirq.Moment]:
-    path_patch_ids = route_lattice_cnot(ctrl, trgt, layout, context=context)
+    path_patch_ids = route_lattice_cnot(ctrl, trgt, layout, context)
     path_qubits = [context.pid_to_qid[patch_id] for patch_id in path_patch_ids]
     num_qubits = len(path_qubits)
     decomposition: list[cirq.Operation | cirq.Moment] = [
