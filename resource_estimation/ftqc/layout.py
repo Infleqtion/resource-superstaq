@@ -51,7 +51,6 @@ class Placement:
         return self.col + self.element.footprint.cols
 
     def overlaps(self, placement: Placement) -> bool:
-        # TODO: This might have a bug because I think there should be and statements in here
         return not (
             placement.row_end <= self.row
             or self.row_end <= placement.row
